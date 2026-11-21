@@ -214,13 +214,52 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitInvalidParameterTypeError):
             st.datetime_input("The label", step=(1, 0))
         with pytest.raises(
-            StreamlitValueOutOfRangeError, match=r"\[60 seconds, 23 hours\]"
+            StreamlitValueOutOfRangeError, match=r"\[1 second, 23 hours\]"
         ):
-            st.datetime_input("The label", step=30)
+            st.datetime_input("The label", step=0)
         with pytest.raises(
-            StreamlitValueOutOfRangeError, match=r"\[60 seconds, 23 hours\]"
+            StreamlitValueOutOfRangeError, match=r"\[1 second, 23 hours\]"
         ):
             st.datetime_input("The label", step=timedelta(hours=24))
+
+    def test_sub_minute_step_preserves_seconds(self):
+        """Sub-minute steps keep seconds in the wire value and returned datetime."""
+        value = datetime(2024, 5, 10, 13, 47, 30)
+        result = st.datetime_input("The label", value=value, step=30)
+
+        assert result == value
+        proto = self.get_delta_from_queue().new_element.date_time_input
+        assert proto.step == 30
+        assert proto.default == ["2024-05-10T13:47:30"]
+
+    def test_default_step_strips_seconds(self):
+        """Default minute-aligned step strips seconds from value and wire."""
+        value = datetime(2024, 5, 10, 13, 47, 30)
+        result = st.datetime_input("The label", value=value)
+
+        assert result == datetime(2024, 5, 10, 13, 47, 0)
+        proto = self.get_delta_from_queue().new_element.date_time_input
+        assert proto.default == ["2024-05-10T13:47"]
+
+    def test_date_only_max_value_keeps_seconds_for_sub_minute_step(self):
+        """A date-only max_value with step=30 serializes through 23:59:59."""
+        st.datetime_input(
+            "The label",
+            value=datetime(2024, 5, 10, 13, 47, 30),
+            max_value=date(2024, 12, 31),
+            step=30,
+        )
+
+        proto = self.get_delta_from_queue().new_element.date_time_input
+        assert proto.max == "2024-12-31T23:59:59"
+
+    def test_default_max_keeps_seconds_for_sub_minute_step(self):
+        """When max_value is None, sub-minute steps keep :59 on the default max."""
+        value = datetime(2024, 5, 10, 13, 47, 30)
+        st.datetime_input("The label", value=value, step=30)
+
+        proto = self.get_delta_from_queue().new_element.date_time_input
+        assert proto.max.endswith("T23:59:59")
 
     def test_format_validation(self):
         """Test invalid format raises."""
@@ -444,6 +483,27 @@ def test_datetime_input_interaction():
     at = widget.set_value(None).run()
     widget = at.datetime_input[0]
     assert widget.value is None
+
+
+def test_datetime_input_apptest_set_value_with_sub_minute_step() -> None:
+    """AppTest set_value round-trips seconds when step is sub-minute."""
+
+    def script():
+        from datetime import datetime
+
+        import streamlit as st
+
+        st.datetime_input(
+            "the label",
+            value=datetime(2024, 5, 10, 13, 47, 0),
+            step=30,
+        )
+
+    at = AppTest.from_function(script).run()
+    assert at.datetime_input[0].value == datetime(2024, 5, 10, 13, 47, 0)
+
+    at = at.datetime_input[0].set_value(datetime(2024, 5, 10, 13, 47, 30)).run()
+    assert at.datetime_input[0].value == datetime(2024, 5, 10, 13, 47, 30)
 
 
 def test_datetime_input_required_is_exposed_in_app_test() -> None:
@@ -820,6 +880,43 @@ class TestDateTimeInputSerdeISO:
         )
         result = serde.deserialize(["2025-06-20T14:30"])
         assert result == datetime(2025, 6, 20, 14, 30)
+
+    def test_deserialize_iso_with_seconds_round_trips_for_sub_minute_step(self):
+        """Sub-minute steps keep seconds when deserializing HH:MM:SS."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 1, 15, 10, 0, 0),
+            min=datetime(2020, 1, 1, 0, 0),
+            max=datetime(2030, 12, 31, 23, 59, 59),
+            step=30,
+        )
+        result = serde.deserialize(["2025-06-20T14:30:30"])
+        assert result == datetime(2025, 6, 20, 14, 30, 30)
+        assert serde.serialize(result) == ["2025-06-20T14:30:30"]
+
+    def test_deserialize_iso_without_seconds_defaults_second_for_sub_minute_step(
+        self,
+    ):
+        """Minute-only ISO values deserialize with second=0 under step=30."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 1, 15, 10, 0, 0),
+            min=datetime(2020, 1, 1, 0, 0),
+            max=datetime(2030, 12, 31, 23, 59, 59),
+            step=30,
+        )
+        result = serde.deserialize(["2025-06-20T14:30"])
+        assert result == datetime(2025, 6, 20, 14, 30, 0)
+
+    def test_deserialize_iso_with_seconds_truncates_for_minute_step(self):
+        """Minute-aligned steps accept HH:MM:SS URL values and drop seconds."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 1, 15, 10, 0),
+            min=datetime(2020, 1, 1, 0, 0),
+            max=datetime(2030, 12, 31, 23, 59),
+            step=900,
+        )
+        result = serde.deserialize(["2025-06-20T14:30:30"])
+        assert result == datetime(2025, 6, 20, 14, 30, 0)
+        assert serde.serialize(result) == ["2025-06-20T14:30"]
 
     def test_deserialize_invalid_format_reverts_to_default(self):
         """Test that unparseable strings revert to the default value."""
