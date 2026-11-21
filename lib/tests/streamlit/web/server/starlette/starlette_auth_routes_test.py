@@ -318,6 +318,42 @@ class TestCreateOAuthClientConfig:
         generate_mock.assert_called_once_with(auth_section)
         assert client.client_id == "generated-cid"
 
+    def test_ignores_logout_params_key(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test that a reserved logout_params table is not treated as a provider."""
+        auth_section = MagicMock()
+        auth_section.to_dict.return_value = {
+            "logout_params": {"logout_hint": "{email}"},
+            "google": {
+                "client_id": "cid",
+                "client_secret": "sec",
+                "server_metadata_url": self._SERVER_METADATA_URL,
+            },
+        }
+        monkeypatch.setattr(
+            starlette_auth_routes, "get_secrets_auth_section", lambda: auth_section
+        )
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "get_redirect_uri",
+            lambda section: "http://localhost:8501/oauth2callback",
+        )
+
+        captured: dict[str, Any] = {}
+        real_authlib_config = starlette_auth_routes._AuthlibConfig
+
+        def spy_authlib_config(config: dict[str, Any]) -> Any:
+            captured["config"] = config
+            return real_authlib_config(config)
+
+        monkeypatch.setattr(starlette_auth_routes, "_AuthlibConfig", spy_authlib_config)
+
+        client, _ = _create_oauth_client("google")
+
+        # The real provider client is still created successfully.
+        assert client.client_id == "cid"
+        # The reserved logout_params key is dropped before building the config.
+        assert "logout_params" not in captured["config"]
+
 
 def test_redirect_without_provider(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that login redirects to root when no provider is specified."""
@@ -1249,6 +1285,61 @@ class TestGetProviderLogoutUrl:
         assert "localhost" in result
         # Verify id_token_hint is included when tokens cookie has id_token
         assert "id_token_hint=test-id-token" in result
+
+    @patch_config_options({"server.cookieSecret": "test-secret"})
+    def test_applies_logout_params_config(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that logout_params templates from claims and removes params."""
+
+        def mock_get_cookie(request: Any, name: str) -> bytes | None:
+            if name == USER_COOKIE_NAME:
+                return b'{"provider": "testprovider", "email": "a@b.com", "sub": "123"}'
+            if name == TOKENS_COOKIE_NAME:
+                return b'{"id_token": "test-id-token"}'
+            return None
+
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_get_cookie_value_from_request",
+            mock_get_cookie,
+        )
+
+        class MockClient:
+            client_id = "test-client-id"
+
+            async def load_server_metadata(self) -> dict[str, Any]:
+                return {
+                    "issuer": "https://example.com",
+                    "end_session_endpoint": "https://example.com/logout",
+                }
+
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_create_oauth_client",
+            lambda provider: (MockClient(), "/redirect"),
+        )
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "get_validated_redirect_uri",
+            lambda: "http://localhost:8501/oauth2callback",
+        )
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "get_logout_params_config",
+            lambda: {"logout_hint": "{email}", "id_token_hint": ""},
+        )
+
+        mock_request = MagicMock()
+        result = asyncio.run(_get_provider_logout_url(mock_request))
+
+        assert result is not None
+        # {email} is substituted from the user cookie claims.
+        assert "logout_hint=a%40b.com" in result
+        # id_token_hint is removed even though the tokens cookie has an id_token.
+        assert "id_token_hint=" not in result
+        # Untouched default params remain.
+        assert "post_logout_redirect_uri" in result
 
     @patch_config_options({"server.cookieSecret": "test-secret"})
     def test_returns_none_when_redirect_uri_invalid(
