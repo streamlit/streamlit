@@ -684,6 +684,7 @@ class SnowflakeConnection(BaseSnowflakeConnection):
         # Otherwise, attempt to create a new connection from whatever credentials we
         # have available.
         st_secrets = self._secrets.to_dict()
+        used_container_env = False
         try:
             if len(st_secrets):
                 _LOGGER.info(
@@ -700,6 +701,7 @@ class SnowflakeConnection(BaseSnowflakeConnection):
                         "No connections.toml found. Connecting to Snowflake using the "
                         "SNOWFLAKE_* environment variables and the service token file."
                     )
+                    used_container_env = True
                     return snowflake.connector.connect(
                         **{
                             **_get_container_connection_params(),
@@ -725,7 +727,9 @@ class SnowflakeConnection(BaseSnowflakeConnection):
 
             return snowflake.connector.connect(**kwargs)
         except SnowflakeError:
-            if not len(st_secrets) and not kwargs:
+            # The container fallback supplies its own settings, so a failure there is
+            # a real connection error, not a missing configuration.
+            if not len(st_secrets) and not kwargs and not used_container_env:
                 raise StreamlitAPIException(
                     "Missing Snowflake connection configuration. "
                     "Did you forget to set this in `secrets.toml`, a Snowflake configuration file, "

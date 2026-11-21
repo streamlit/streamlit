@@ -259,6 +259,23 @@ class TestSnowflakeConnectionConfiguration:
             SnowflakeConnection("snowflake")
         connector.connect.assert_called_once_with()
 
+    def test_container_fallback_reraises_original_connector_error(
+        self, tmp_path: Path
+    ) -> None:
+        """A connector failure on the container fallback is not reported as missing config."""
+        env, token_file = self._container_env(tmp_path)
+        with (
+            self._patched_snowflake() as connector,
+            patch.dict(os.environ, env),
+            patch(
+                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
+                str(token_file),
+            ),
+        ):
+            connector.connect.side_effect = connector.Error("token rejected")
+            with pytest.raises(connector.Error, match="token rejected"):
+                SnowflakeConnection("snowflake")
+
     def test_connect_reraises_connector_error_when_config_is_present(self) -> None:
         """A connector error is re-raised when kwargs provide configuration."""
         with self._patched_snowflake() as connector:
