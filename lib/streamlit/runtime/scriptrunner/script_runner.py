@@ -947,14 +947,16 @@ class ScriptRunner:
                                 _mpa_v1(self._main_script_path)
                             else:
                                 exec(code, module.__dict__)  # noqa: S102
-                            coordinator.join()
+                            with _recording_parallel_fragment_wait(ctx):
+                                coordinator.join()
                         except BaseException:
                             # Always drain so in-flight worker fragments
                             # don't outlive the script run, regardless of
                             # whether the escape was a script-control
                             # exception, an uncaught user error, or an
                             # interrupt.
-                            coordinator.drain()
+                            with _recording_parallel_fragment_wait(ctx):
+                                coordinator.drain()
                             raise
                         self._fragment_storage.clear(
                             new_fragment_ids=ctx.shared.new_fragment_ids.snapshot()
@@ -998,6 +1000,7 @@ class ScriptRunner:
                                 else None
                             ),
                             server_uptime_seconds=server_uptime_seconds,
+                            run_start=start_time,
                         )
                     )
                 except Exception as ex:
@@ -1091,6 +1094,27 @@ def _clean_problem_modules() -> None:
         except Exception:  # noqa: S110
             # We don't want to crash the app if we can't close matplotlib
             pass
+
+
+@contextmanager
+def _recording_parallel_fragment_wait(
+    ctx: ScriptRunContext,
+) -> Generator[None, None, None]:
+    """Add the block's duration to ``parallel_fragment_usage.wait_time``.
+
+    The block is where the script thread waits for parallel fragments to finish.
+    """
+    start = timer()
+    try:
+        yield
+    finally:
+        if ctx.gather_usage_stats:
+            try:
+                ctx.shared.parallel_fragments.add_wait_time(timer() - start)
+            except Exception as ex:
+                # The block can be re-raising a script-control exception or the
+                # script's error, which telemetry must never replace.
+                _LOGGER.debug("Failed to record parallel fragment wait", exc_info=ex)
 
 
 # The reason this is not a decorator is because we want to make it clear at the

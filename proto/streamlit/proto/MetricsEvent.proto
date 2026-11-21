@@ -89,8 +89,11 @@ message MetricsEvent {
   CacheUsage cache_usage = 50;
   // Same as PageProfile.server_uptime_seconds.
   optional int64 server_uptime_seconds = 51;
+  // 52-55 are held for planned CPU-time fields.
+  // Same as PageProfile.parallel_fragment_usage.
+  ParallelFragmentUsage parallel_fragment_usage = 56;
 
-  // Next ID: 52
+  // Next ID: 57
 }
 
 message BrowserInfo {

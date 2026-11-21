@@ -30,8 +30,20 @@ from streamlit import config, file_util, type_util, util
 from streamlit.errors import LocalizableStreamlitException, StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.PageProfile_pb2 import Argument, Command, PageProfile
+from streamlit.proto.PageProfile_pb2 import (
+    Argument,
+    CacheUsage,
+    Command,
+    PageProfile,
+)
+from streamlit.proto.PageProfile_pb2 import (
+    ParallelFragmentRun as ParallelFragmentRunProto,
+)
 from streamlit.runtime.agent import usage as agent_usage
+from streamlit.runtime.scriptrunner_utils.cache_run_stats import (
+    CacheTotals,
+    RunCacheTotals,
+)
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     FragmentThreadState,
@@ -48,6 +60,10 @@ _MAX_TRACKED_COMMANDS: Final = 400
 # commands excessively (e.g. calling write thousands of times in one rerun)
 # making the page profile useless.
 _MAX_TRACKED_PER_COMMAND: Final = 25
+# Most parallel fragment runs that get their own page profile entry. Later runs
+# are combined into one overflow entry, which caps the payload for apps that
+# start a fragment per item in a loop.
+_MAX_PARALLEL_FRAGMENT_RUNS: Final = 25
 
 # A mapping to convert from the actual name to preferred/shorter representations
 _OBJECT_NAME_MAPPING: Final = {
@@ -625,14 +641,36 @@ def _record_command_time(
     seconds: float,
     *,
     is_command_listed: bool,
+    thread_state: FragmentThreadState | None,
 ) -> None:
-    """Set a tracked command's time and, if the command is listed, report it to the
-    run's cache totals, so a cached call running meanwhile leaves it out of its
-    times.
+    """Set a tracked command's time, and report it if the command is listed.
+
+    A listed command's time is added to:
+
+    - the parallel fragment's run, on a parallel fragment's worker thread;
+    - the run's cache totals, while a recorded cached call runs on this thread,
+      so that call leaves the command out of its times;
+    - otherwise, the cached computation that attached this thread, which
+      subtracts it from its compute time.
     """
-    command_telemetry.time = to_microseconds(seconds)
-    if ctx is not None and is_command_listed:
-        ctx.shared.cache_stats.record_tracked_command_time(seconds)
+    try:
+        command_telemetry.time = to_microseconds(seconds)
+        if ctx is None or not is_command_listed:
+            return
+        run = thread_state.parallel_fragment_run if thread_state is not None else None
+        if run is not None:
+            run.add_command_time(seconds)
+        if ctx.shared.cache_stats.record_tracked_command_time(seconds):
+            return
+        scope = thread_state.cache_compute if thread_state is not None else None
+        # A long-lived attached thread keeps the scope after the computation
+        # ends; skip it then rather than take its lock for nothing.
+        if scope is not None and scope.is_active:
+            scope.add_command_time(seconds)
+    except Exception as ex:
+        # This runs after the command returns or raises RerunException, so
+        # telemetry must never replace its result.
+        _LOGGER.debug("Failed to record command time", exc_info=ex)
 
 
 @overload
@@ -765,6 +803,7 @@ def gather_metrics(
                     command_telemetry,
                     timer() - exec_start,
                     is_command_listed=is_command_listed,
+                    thread_state=thread_state,
                 )
             raise
         finally:
@@ -780,6 +819,7 @@ def gather_metrics(
                 command_telemetry,
                 timer() - exec_start,
                 is_command_listed=is_command_listed,
+                thread_state=thread_state,
             )
 
         return result
@@ -794,13 +834,10 @@ def gather_metrics(
     return cast("F", wrapped_func)
 
 
-def _fill_cache_usage(page_profile: PageProfile, ctx: ScriptRunContext) -> None:
-    """Copy the run's cached-call totals onto the profile."""
-    cache_usage = page_profile.cache_usage
-    cache_data, cache_resource = ctx.shared.cache_stats.totals()
+def _copy_cache_totals(run_totals: RunCacheTotals, cache_usage: CacheUsage) -> None:
     for totals, usage in (
-        (cache_data, cache_usage.cache_data),
-        (cache_resource, cache_usage.cache_resource),
+        (run_totals.cache_data, cache_usage.cache_data),
+        (run_totals.cache_resource, cache_usage.cache_resource),
     ):
         if totals.calls == 0:
             continue
@@ -814,6 +851,70 @@ def _fill_cache_usage(page_profile: PageProfile, ctx: ScriptRunContext) -> None:
         usage.overhead_time = to_microseconds(totals.overhead_time)
 
 
+def _fill_cache_usage(
+    page_profile: PageProfile, ctx: ScriptRunContext, now: float
+) -> None:
+    """Copy the run's cached-call totals onto the profile."""
+    _copy_cache_totals(ctx.shared.cache_stats.totals(now), page_profile.cache_usage)
+
+
+def _set_parallel_fragment_run_times(
+    entry: ParallelFragmentRunProto,
+    exec_time: float,
+    command_time: float,
+    cache: CacheTotals,
+) -> None:
+    entry.exec_time = to_microseconds(exec_time)
+    entry.command_time = to_microseconds(command_time)
+    entry.cache_compute_time = to_microseconds(cache.compute_time)
+    entry.cache_wait_time = to_microseconds(cache.wait_time)
+    entry.cache_overhead_time = to_microseconds(cache.overhead_time)
+
+
+def _fill_parallel_fragment_usage(
+    page_profile: PageProfile, ctx: ScriptRunContext, run_start: float, now: float
+) -> None:
+    """Copy the times of the run's parallel fragments onto the profile.
+
+    ``run_start`` and ``now`` are ``time.perf_counter()`` values: when the script
+    run started, and when the profile is built.
+    """
+    stats = ctx.shared.parallel_fragments
+    runs = stats.runs
+    if not runs:
+        return
+    usage = page_profile.parallel_fragment_usage
+    usage.run_count = len(runs)
+    usage.wait_time = to_microseconds(stats.wait_time)
+
+    all_runs_totals = RunCacheTotals()
+    overflow_exec_time = 0.0
+    overflow_command_time = 0.0
+    overflow_cache = CacheTotals()
+    for index, run in enumerate(runs):
+        run_totals = RunCacheTotals()
+        run.cache_stats.add_to(run_totals.cache_data, run_totals.cache_resource, now)
+        all_runs_totals.cache_data.add(run_totals.cache_data)
+        all_runs_totals.cache_resource.add(run_totals.cache_resource)
+        exec_time = (run.end if run.end is not None else now) - run.start
+        if index < _MAX_PARALLEL_FRAGMENT_RUNS:
+            cache = CacheTotals()
+            cache.add(run_totals.cache_data)
+            cache.add(run_totals.cache_resource)
+            entry = usage.runs.add(start_time=to_microseconds(run.start - run_start))
+            _set_parallel_fragment_run_times(entry, exec_time, run.command_time, cache)
+        else:
+            overflow_exec_time += exec_time
+            overflow_command_time += run.command_time
+            overflow_cache.add(run_totals.cache_data)
+            overflow_cache.add(run_totals.cache_resource)
+    if len(runs) > _MAX_PARALLEL_FRAGMENT_RUNS:
+        _set_parallel_fragment_run_times(
+            usage.overflow, overflow_exec_time, overflow_command_time, overflow_cache
+        )
+    _copy_cache_totals(all_runs_totals, usage.cache_usage)
+
+
 def create_page_profile_message(
     commands: Sequence[Command],
     exec_time: int,
@@ -821,8 +922,13 @@ def create_page_profile_message(
     uncaught_exception: str | None = None,
     *,
     server_uptime_seconds: int | None = None,
+    run_start: float | None = None,
 ) -> ForwardMsg:
-    """Create and return the full PageProfile ForwardMsg."""
+    """Create and return the full PageProfile ForwardMsg.
+
+    ``run_start`` is the ``time.perf_counter()`` value when the script run
+    started. Without it, the profile has no ``parallel_fragment_usage``.
+    """
     msg = ForwardMsg()
     page_profile = msg.page_profile
 
@@ -876,7 +982,10 @@ def create_page_profile_message(
     if server_uptime_seconds is not None:
         page_profile.server_uptime_seconds = server_uptime_seconds
     if ctx is not None:
-        _fill_cache_usage(page_profile, ctx)
+        now = time.perf_counter()
+        _fill_cache_usage(page_profile, ctx, now)
+        if run_start is not None:
+            _fill_parallel_fragment_usage(page_profile, ctx, run_start, now)
 
     # Skill/agent detection lives in ``streamlit.web.skills`` (co-located with
     # the installer it must stay aligned with); imported lazily to avoid a

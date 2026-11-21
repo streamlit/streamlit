@@ -57,6 +57,9 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
+from streamlit.runtime.scriptrunner_utils.parallel_fragment_stats import (
+    ParallelFragmentRun,
+)
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
     ThreadState,
@@ -2174,6 +2177,64 @@ def test_run_parallel_fragment_handles_fragment_handled_exception() -> None:
 
     mock_coordinator.request_rerun.assert_not_called()
     mock_coordinator.request_stop.assert_not_called()
+
+
+@pytest.mark.parametrize("gather_usage_stats", [True, False])
+def test_run_parallel_fragment_records_its_own_run(gather_usage_stats: bool) -> None:
+    """A worker records its run only with usage stats on, replacing any run
+    copied from a parent worker.
+    """
+    mock_ctx = MagicMock()
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.gather_usage_stats = gather_usage_stats
+    parent_run = ParallelFragmentRun(0.0)
+    runs_seen: list[ParallelFragmentRun | None] = []
+
+    def fragment() -> None:
+        runs_seen.append(ThreadState.get().parallel_fragment_run)
+
+    with (
+        patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx),
+        patch("streamlit.delta_generator_singletons.context_dg_stack"),
+    ):
+        ThreadState.initialize(parallel_fragment_run=parent_run)
+        _run_parallel_fragment("test_id", fragment, [])
+
+    recorded = mock_ctx.shared.parallel_fragments.runs
+    if gather_usage_stats:
+        assert len(recorded) == 1
+        assert runs_seen == [recorded[0]]
+        assert recorded[0].end is not None
+    else:
+        assert recorded == ()
+        assert runs_seen == [None]
+
+
+def test_run_parallel_fragment_runs_when_recording_fails() -> None:
+    """A failure to start recording leaves the fragment running, unrecorded."""
+    mock_ctx = MagicMock()
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.gather_usage_stats = True
+    runs_seen: list[ParallelFragmentRun | None] = []
+
+    def fragment() -> None:
+        runs_seen.append(ThreadState.get().parallel_fragment_run)
+
+    with (
+        patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx),
+        patch("streamlit.delta_generator_singletons.context_dg_stack"),
+        patch.object(
+            mock_ctx.shared.parallel_fragments,
+            "recording_run",
+            side_effect=RuntimeError("bug"),
+        ),
+    ):
+        ThreadState.initialize(parallel_fragment_run=ParallelFragmentRun(0.0))
+        _run_parallel_fragment("test_id", fragment, [])
+
+    assert runs_seen == [None]
+    mock_ctx.parallel_coordinator.request_rerun.assert_not_called()
+    mock_ctx.parallel_coordinator.request_stop.assert_not_called()
 
 
 def test_nested_parallel_fragment_dispatches_from_worker() -> None:
