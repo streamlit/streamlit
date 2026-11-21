@@ -185,6 +185,10 @@ export function parsePastedDateTime(
 /**
  * Apply step-snapping to a CalendarDateTime based on segment type and step.
  * Returns the new datetime if snapping applies, or null if default behavior should be used.
+ *
+ * Time-segment arrows wrap within the same calendar day (e.g. 23:59:30 + 30s
+ * → 00:00:00 on the same date). They do not roll the date forward or back;
+ * date changes stay on the date segments / calendar.
  */
 export function computeStepSnap(
   current: CalendarDateTime,

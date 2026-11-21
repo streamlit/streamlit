@@ -343,10 +343,14 @@ describe("computeStepSnap", () => {
     })
   })
 
-  it("wraps total-seconds snap past midnight", () => {
+  it("wraps total-seconds snap past midnight on the same calendar day", () => {
+    // 2025-11-19 23:59:30 + 30s → 00:00:00 still on the 19th, not the 20th.
     const dt = new CalendarDateTime(2025, 11, 19, 23, 59, 30)
     const result = computeStepSnap(dt, "second", 30, true)
     expect(result).toMatchObject({
+      year: 2025,
+      month: 11,
+      day: 19,
       hour: 0,
       minute: 0,
       second: 0,
