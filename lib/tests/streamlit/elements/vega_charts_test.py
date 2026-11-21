@@ -41,9 +41,11 @@ from streamlit.elements.vega_charts import (
     VegaLiteState,
     VegaLiteStateSerde,
     _extract_selection_parameters,
+    _is_geojson_or_topojson_payload,
     _parse_selection_mode,
     _reset_counter_pattern,
     _stabilize_vega_json_spec,
+    _to_arrow_dataset,
     arrow_buffers,
     loads_data_from_url,
 )
@@ -5118,3 +5120,47 @@ def test_arrow_buffers_lists_inline_and_named_datasets() -> None:
 def test_loads_data_from_url_at_any_depth(spec: Any, expected: bool) -> None:
     """A URL anywhere a Vega-Lite spec takes data counts; a value named url does not."""
     assert loads_data_from_url(spec) is expected
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        pytest.param(
+            {"type": "Feature", "geometry": {"type": "Point", "coordinates": [0, 0]}},
+            True,
+            id="feature",
+        ),
+        pytest.param({"type": "Feature", "id": 1}, False, id="feature-no-geometry"),
+        pytest.param(
+            {"type": "GeometryCollection", "geometries": []},
+            True,
+            id="geometry-collection",
+        ),
+        pytest.param(
+            {"type": "GeometryCollection", "values": [1]},
+            False,
+            id="geometry-collection-no-geometries",
+        ),
+    ],
+)
+def test_is_geojson_or_topojson_payload_requires_geometry_member(
+    data: dict[str, Any], expected: bool
+) -> None:
+    """GeoJSON Features and GeometryCollections need their geometry member."""
+    assert _is_geojson_or_topojson_payload(data) is expected
+
+
+def test_to_arrow_dataset_stores_geojson_unchanged() -> None:
+    """GeoJSON data is stored as-is under a hash of its JSON, not as Arrow bytes."""
+    payload = {
+        "type": "Feature",
+        "geometry": {"type": "Point", "coordinates": [1, 2]},
+        "properties": {"name": "a"},
+    }
+    datasets: dict[str, Any] = {}
+
+    result = _to_arrow_dataset(payload, datasets)
+
+    expected_name = calc_hash(json.dumps(payload, sort_keys=True))
+    assert result == {"name": expected_name}
+    assert datasets == {expected_name: payload}

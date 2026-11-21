@@ -27,6 +27,8 @@ from streamlit.elements.plotly_chart import (
     PlotlyMixin,
     PlotlySelectionState,
     PlotlyState,
+    _expand_typed_arrays,
+    _plotly_data,
     _resolve_content_height,
     _resolve_content_width,
 )
@@ -866,3 +868,39 @@ def test_plotly_state_wraps_plain_selection_dict_and_other_keys() -> None:
     assert isinstance(selection, PlotlySelectionState)
     assert state["selection"] is selection
     assert state["other"] == 3
+
+
+@pytest.mark.parametrize("spec_json", ["", "{not json"], ids=["empty", "malformed"])
+def test_plotly_data_without_parseable_spec_is_none(spec_json: str) -> None:
+    """An empty or malformed figure specification reports no agent data."""
+    assert _plotly_data(spec_json) is None
+
+
+@pytest.mark.parametrize(
+    "template",
+    [
+        "plotly_dark",
+        {"data": {"bar": [{"marker": {"color": "red"}}]}},
+        {"layout": "not a dict"},
+    ],
+    ids=["string_template", "template_without_layout", "non_dict_template_layout"],
+)
+def test_plotly_data_drops_template_without_layout_content(template: object) -> None:
+    """A template with no usable layout content is dropped entirely and named."""
+    spec = {"data": [], "layout": {"title": {"text": "Sales"}, "template": template}}
+
+    data = _plotly_data(json.dumps(spec))
+
+    assert data is not None
+    assert data["spec"]["layout"] == {"title": {"text": "Sales"}}
+    assert data["spec_omitted"] == ["layout.template"]
+
+
+def test_expand_typed_arrays_keeps_undecodable_typed_array() -> None:
+    """A typed array that cannot be decoded is kept as-is; valid ones are expanded."""
+    undecodable = {"dtype": "not-a-dtype", "bdata": "AAAAAAAA8D8="}
+    decodable = {"dtype": "f8", "bdata": "AAAAAAAA8D8="}
+
+    result = _expand_typed_arrays({"x": undecodable, "y": decodable})
+
+    assert result == {"x": undecodable, "y": [1.0]}

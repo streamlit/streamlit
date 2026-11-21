@@ -48,6 +48,7 @@ from streamlit.elements.widgets.data_editor import (
     _apply_dataframe_edits,
     _apply_row_additions,
     _apply_row_deletions,
+    _assign_row_values,
     _check_column_names,
     _check_type_compatibilities,
     _compute_data_editor_signature,
@@ -2046,3 +2047,36 @@ class DataEditorOnChangeModeTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue(1).new_element.dataframe
         assert c.ignore_rerun is True
+
+
+def _rejecting_frame(error: Exception) -> MagicMock:
+    """Return a DataFrame stand-in whose ``.loc`` row assignment raises ``error``."""
+    frame = MagicMock(columns=["a", "b"])
+    frame.loc.__setitem__.side_effect = error
+    return frame
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        TypeError("bad type"),
+        ValueError("bad value"),
+        OverflowError("too large"),
+    ],
+    ids=["type_error", "value_error", "overflow_error"],
+)
+def test_assign_row_values_logs_and_skips_rejected_row(error: Exception) -> None:
+    """A row pandas rejects is skipped with a logged warning."""
+    frame = _rejecting_frame(error)
+    with patch("streamlit.elements.widgets.data_editor._LOGGER") as mock_logger:
+        assert _assign_row_values(frame, 3, [1, 2]) is False
+    mock_logger.warning.assert_called_once_with(
+        "Failed to add row. Row addition skipped.", exc_info=error
+    )
+
+
+def test_assign_row_values_propagates_unexpected_errors() -> None:
+    """Errors outside the handled pandas rejection types propagate."""
+    frame = _rejecting_frame(KeyError("missing"))
+    with pytest.raises(KeyError, match="missing"):
+        _assign_row_values(frame, 3, [1, 2])

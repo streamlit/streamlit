@@ -39,6 +39,7 @@ from streamlit.elements.lib.column_config_utils import (
     _determine_data_kind_via_pandas_dtype,
     apply_data_specific_configs,
     described_column_config,
+    described_hide_index,
     determine_dataframe_schema,
     extract_button_column_configs,
     is_type_compatible,
@@ -650,3 +651,36 @@ def test_described_column_config_drops_presentation_and_keeps_index_meaning() ->
         is None
     )
     assert described_column_config("unchanged") == "unchanged"
+
+
+def test_described_column_config_keeps_non_dict_entries() -> None:
+    """Entries that are not config dicts are reported unchanged."""
+    assert described_column_config({"a": None, "b": {"width": 10}}) == {"a": None}
+
+
+@pytest.mark.parametrize(
+    ("column_config_mapping", "expected"),
+    [
+        ({INDEX_IDENTIFIER: {"hidden": True}}, True),
+        ({INDEX_IDENTIFIER: {"hidden": False, "label": "Idx"}}, False),
+        ({INDEX_IDENTIFIER: {"label": "Idx"}}, None),
+        ({INDEX_IDENTIFIER: {"hidden": "yes"}}, None),
+        ({INDEX_IDENTIFIER: None}, None),
+        ({"a": {"hidden": True}}, None),
+        ("not a mapping", None),
+    ],
+    ids=[
+        "hidden",
+        "shown",
+        "no_flag",
+        "non_bool_flag",
+        "non_dict_index",
+        "no_index_entry",
+        "non_dict_mapping",
+    ],
+)
+def test_described_hide_index(
+    column_config_mapping: object, expected: bool | None
+) -> None:
+    """Only a boolean ``hidden`` flag on the index entry is reported."""
+    assert described_hide_index(column_config_mapping) is expected

@@ -1718,6 +1718,27 @@ def test_deserialize_returns_read_only_state() -> None:
         ]
 
 
+def test_echarts_state_wraps_plain_selection_and_reads_other_keys() -> None:
+    """A plain ``selection`` dict is wrapped once; other keys stay read-only.
+
+    The wrapped selection is cached so repeated access returns the same
+    instance. Nested dicts under other keys are wrapped read-only, and a
+    missing key raises ``KeyError``.
+    """
+    state = EChartsState({"selection": {"selected": [], "areas": []}, "extra": {}})
+
+    selection = state["selection"]
+    assert isinstance(selection, EChartsSelectionState)
+    assert state.selection is selection
+
+    extra = state["extra"]
+    assert not isinstance(extra, EChartsSelectionState)
+    with pytest.raises(TypeError, match="read-only"):
+        extra["a"] = 1
+    with pytest.raises(KeyError):
+        state["missing"]
+
+
 def test_resolve_content_width_passthrough() -> None:
     """Non-content widths pass through unchanged."""
     assert _resolve_content_width("stretch", spec={}) == "stretch"
@@ -1796,6 +1817,50 @@ def test_resolve_content_height_uses_pyecharts_height() -> None:
     """A pyecharts chart's own height is used for content height."""
     chart = _FakeEChart(_BASIC_SPEC, height="360px")
     assert _resolve_content_height("content", spec=chart) == 360
+
+
+@pytest.mark.parametrize(
+    ("option", "expected"),
+    [
+        ({"aria": {"label": "not a dict"}}, None),
+        ({"aria": {"label": {"description": "   "}}}, None),
+        (
+            {
+                "aria": {"label": "not a dict"},
+                "baseOption": {"aria": {"label": {"description": "Base text"}}},
+            },
+            "Base text",
+        ),
+    ],
+    ids=["non_dict_label", "blank_description", "falls_through_to_base_option"],
+)
+def test_author_aria_label_description(
+    option: dict[str, Any], expected: str | None
+) -> None:
+    """Malformed or blank aria labels are skipped in favor of later variants."""
+    assert echarts_chart_module._author_aria_label_description(option) == expected
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (True, None),
+        (480, 480),
+        (512.7, 512),
+        (0, None),
+        (-10, None),
+        (["640px"], None),
+    ],
+    ids=["bool", "int", "float", "zero", "negative", "non_string"],
+)
+def test_extract_chart_dimension_non_string_values(
+    value: Any, expected: int | None
+) -> None:
+    """Numeric sizes are used when positive; bools and other types are ignored."""
+    assert (
+        echarts_chart_module._extract_chart_dimension(value, "900px", "width")
+        == expected
+    )
 
 
 def test_echarts_mixin_dg_returns_self() -> None:

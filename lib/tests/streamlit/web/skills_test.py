@@ -1900,6 +1900,95 @@ class TestInstallSkillCopyEdgeCases:
         assert not result.skipped
         assert not result.installed
 
+    def test_skips_foreign_symlink(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A symlink to a non-Streamlit target is left alone and skipped."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        unrelated = tmp_path / "unrelated"
+        unrelated.mkdir()
+        target.symlink_to(unrelated, target_is_directory=True)
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                set(),
+            )
+
+        expected_path = Path("~", "target", "skills", "developing-with-streamlit")
+        assert result.skipped == [f"{expected_path} (existing symlink)"]
+        assert not result.installed
+        assert target.resolve() == unrelated.resolve()
+
+    def test_removes_stale_temp_dir_before_replacing(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A temp dir left by an interrupted update is cleared before the swap."""
+        target_dir = tmp_path / "target" / "skills"
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir(parents=True)
+        (target / "SKILL.md").write_text("# Old version\n", encoding="utf-8")
+        stale_temp = target_dir / ".developing-with-streamlit.tmp"
+        stale_temp.mkdir()
+        (stale_temp / "leftover.txt").write_text("stale", encoding="utf-8")
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert len(result.installed) == 1
+        assert (target / "SKILL.md").read_text(encoding="utf-8") == "# Test Skill\n"
+        assert not (target / "leftover.txt").exists()
+        assert not stale_temp.exists()
+
+    def test_cleans_up_partial_temp_copy_on_failure(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A copy that fails midway removes its partial temp dir and keeps the
+        working installation.
+        """
+        target_dir = tmp_path / "target" / "skills"
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir(parents=True)
+        (target / "SKILL.md").write_text("# Old version\n", encoding="utf-8")
+        temp_path = target_dir / ".developing-with-streamlit.tmp"
+
+        def partial_copytree(source: Path, destination: Path) -> None:
+            Path(destination).mkdir()
+            (Path(destination) / "SKILL.md").write_text("# Partial", encoding="utf-8")
+            raise OSError(errno.ENOSPC, "No space left on device")
+
+        result = skills._InstallResult()
+        with (
+            patch("pathlib.Path.home", return_value=tmp_path),
+            patch.object(skills.shutil, "copytree", side_effect=partial_copytree),
+        ):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert not temp_path.exists()
+        assert (target / "SKILL.md").read_text(encoding="utf-8") == "# Old version\n"
+        assert any("copy failed" in entry for entry in result.errored)
+        assert not result.installed
+
 
 class TestInstallSkillSymlinkEdgeCases:
     """Additional edge case tests for _install_skill_symlink."""
@@ -1987,6 +2076,105 @@ class TestInstallSkillSymlinkEdgeCases:
         assert not success
         assert not result.errored
         assert not result.installed
+
+    def test_skips_foreign_symlink(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """A symlink to a non-Streamlit target is reported, not replaced."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir = tmp_path / "project" / ".agents" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        unrelated = tmp_path / "unrelated"
+        unrelated.mkdir()
+        target.symlink_to(unrelated, target_is_directory=True)
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.cwd", return_value=tmp_path / "project"):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                set(),
+            )
+
+        assert success
+        expected_path = Path(".agents", "skills", "developing-with-streamlit")
+        assert result.skipped == [f"{expected_path} (existing symlink)"]
+        assert not result.installed
+        assert target.resolve() == unrelated.resolve()
+
+    def test_replaces_owned_symlink_that_cannot_be_resolved(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """An owned symlink that can't be resolved is still replaced, because the
+        installer falls back to the ownership check.
+        """
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir = tmp_path / "project" / ".agents" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.symlink_to("../../old-env/developing-with-streamlit")
+        real_resolve = Path.resolve
+
+        def resolve(path: Path, *args: Any, **kwargs: Any) -> Path:
+            if path == target:
+                raise OSError(errno.ELOOP, "Too many levels of symbolic links")
+            return real_resolve(path, *args, **kwargs)
+
+        result = skills._InstallResult()
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path / "project"),
+            patch.object(Path, "resolve", autospec=True, side_effect=resolve),
+        ):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        assert success
+        expected_path = Path(".agents", "skills", "developing-with-streamlit")
+        assert str(expected_path) in result.installed
+        assert (
+            target.resolve()
+            == (mock_source_skills_dir / "developing-with-streamlit").resolve()
+        )
+
+    def test_uses_absolute_source_when_relative_path_fails(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """When no relative path exists (e.g. across Windows drives), the link
+        points at the absolute source path instead.
+        """
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir = tmp_path / "project" / ".agents" / "skills"
+        source = mock_source_skills_dir / "developing-with-streamlit"
+
+        result = skills._InstallResult()
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path / "project"),
+            patch.object(
+                skills.os.path,
+                "relpath",
+                side_effect=ValueError("path is on mount 'C:', start on mount 'D:'"),
+            ),
+        ):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+                {"developing-with-streamlit"},
+            )
+
+        target = target_dir / "developing-with-streamlit"
+        assert success
+        assert os.readlink(target) == os.path.realpath(source)
+        assert target.resolve() == source.resolve()
 
 
 class TestPromptInstallModeRetry:
