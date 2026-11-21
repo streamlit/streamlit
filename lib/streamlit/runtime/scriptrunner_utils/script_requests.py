@@ -292,6 +292,24 @@ class ScriptRequests:
         self._lock = threading.Lock()
         self._state = ScriptRequestType.CONTINUE
         self._rerun_data = RerunData()
+        self._is_between_runs = False
+
+    @property
+    def has_finished_running(self) -> bool:
+        """True once the ScriptRunner has completed its last run and stopped.
+
+        Unlike the STOP state, which ``request_stop`` sets while a script may
+        still be running, this means the last run has emitted all its events.
+        """
+        with self._lock:
+            return self._state == ScriptRequestType.STOP and self._is_between_runs
+
+    def on_script_run_completed(self) -> None:
+        """Called by the ScriptRunner after it emitted the terminal event of a
+        run that does not continue into another run on its own.
+        """
+        with self._lock:
+            self._is_between_runs = True
 
     def request_stop(self) -> None:
         """Request that the ScriptRunner stop running. A stopped ScriptRunner
@@ -505,6 +523,7 @@ class ScriptRequests:
             # Whether consumed or abandoned below, the queue releases its copy.
             if self._state == ScriptRequestType.RERUN:
                 self._state = ScriptRequestType.CONTINUE
+                self._is_between_runs = False
                 rerun_data = self._rerun_data
                 if rerun_data.replay_trigger_values is not None:
                     self._rerun_data = replace(rerun_data, replay_trigger_values=None)
@@ -513,6 +532,7 @@ class ScriptRequests:
             # If we don't have a rerun request, unconditionally change our
             # state to STOP.
             self._state = ScriptRequestType.STOP
+            self._is_between_runs = True
             if self._rerun_data.replay_trigger_values is not None:
                 self._rerun_data = replace(self._rerun_data, replay_trigger_values=None)
             return ScriptRequest(ScriptRequestType.STOP)
