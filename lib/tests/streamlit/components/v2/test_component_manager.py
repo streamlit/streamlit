@@ -25,6 +25,7 @@ from unittest.mock import patch
 from streamlit.components.v2 import component as component_api
 from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.components.v2.component_registry import BidiComponentDefinition
+from streamlit.components.v2.inline_asset_store import InlineAssetStore
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
 
 if TYPE_CHECKING:
@@ -497,3 +498,35 @@ def test_ensure_definition_fills_a_manifest_discovery(tmp_path: Path) -> None:
     assert not stored.is_manifest_discovery
     assert manager._api_inputs[name].css is None
     assert manager._api_inputs[name].js is None
+
+
+def test_register_pins_inline_js_and_unregister_releases_it() -> None:
+    """Registered inline JS stays stored; unregistering makes it evictable."""
+    manager = BidiComponentManager()
+    manager._inline_assets = InlineAssetStore(max_chars=4)
+    js = "aa"
+    manager.register(BidiComponentDefinition(name="comp", js=js))
+    url = manager.get_inline_js_url(js)
+
+    manager.get_inline_js_url("bbbb")
+    assert manager.get_inline_asset(url) == js
+
+    manager.unregister("comp")
+    manager.get_inline_js_url("cccc")
+    assert manager.get_inline_asset(url) is None
+
+
+def test_identical_inline_js_from_two_components_shares_one_url() -> None:
+    """Two components with the same source store one content-addressed URL."""
+    js = "export default () => 1"
+    manager = BidiComponentManager()
+    manager.register(BidiComponentDefinition(name="a", js=js))
+    manager.register(BidiComponentDefinition(name="b", js=js))
+
+    url_a = manager.get_inline_js_url(js)
+    url_b = manager.get_inline_js_url(js)
+    assert url_a == url_b
+    assert manager.get_inline_asset(url_a) == js
+
+    manager.unregister("a")
+    assert manager.get_inline_asset(url_a) == js

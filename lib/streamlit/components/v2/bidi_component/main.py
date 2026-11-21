@@ -405,8 +405,14 @@ class BidiComponentMixin:
         bidi_component_proto = BidiComponentProto()
         bidi_component_proto.component_name = component_name
         bidi_component_proto.isolate_styles = isolate_styles
-        bidi_component_proto.js_content = component_def.js_content or ""
-        bidi_component_proto.js_source_path = component_def.js_url or ""
+        # File-backed JS uses js_url. Inline JS uses a content-addressed path
+        # so the proto carries that URL instead of the source.
+        inline_js = component_def.js_content
+        bidi_component_proto.js_source_path = (
+            registry.get_inline_js_url(inline_js)
+            if inline_js
+            else component_def.js_url or ""
+        )
         bidi_component_proto.html_content = component_def.html_content or ""
         bidi_component_proto.css_content = component_def.css_content or ""
         bidi_component_proto.css_source_path = component_def.css_url or ""

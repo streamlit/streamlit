@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from typing import Any
@@ -382,8 +383,34 @@ class BidiComponentTest(DeltaGeneratorTestCase):
         delta = self.get_delta_from_queue()
         bidi_component_proto = delta.new_element.bidi_component
         assert bidi_component_proto.component_name == "js_only_component"
-        assert bidi_component_proto.js_content == "console.log('hello world');"
+        assert bidi_component_proto.js_content == ""
+        js_digest = hashlib.sha256(b"console.log('hello world');").hexdigest()
+        assert bidi_component_proto.js_source_path == f"__inline__/{js_digest}.js"
+        assert (
+            self.mock_component_manager.get_inline_asset(
+                bidi_component_proto.js_source_path
+            )
+            == "console.log('hello world');"
+        )
         assert bidi_component_proto.html_content == ""
+
+    def test_identical_inline_js_shares_one_source_path(self):
+        """Different component names with the same inline JS share one URL."""
+        js = "export default function() {}"
+        self.mock_component_manager.register(
+            BidiComponentDefinition(name="shared_a", js=js)
+        )
+        self.mock_component_manager.register(
+            BidiComponentDefinition(name="shared_b", js=js)
+        )
+
+        st._bidi_component("shared_a")
+        first = self.get_delta_from_queue().new_element.bidi_component
+        st._bidi_component("shared_b")
+        second = self.get_delta_from_queue().new_element.bidi_component
+        assert first.js_source_path == second.js_source_path
+        assert first.js_source_path.startswith("__inline__/")
+        assert first.component_name != second.component_name
 
     def test_component_with_html_content_only(self):
         """Test component with only HTML content."""
@@ -449,7 +476,8 @@ class BidiComponentTest(DeltaGeneratorTestCase):
         delta = self.get_delta_from_queue()
         bidi_component_proto = delta.new_element.bidi_component
         assert bidi_component_proto.component_name == "full_component"
-        assert bidi_component_proto.js_content == "console.log('hello world');"
+        assert bidi_component_proto.js_content == ""
+        assert bidi_component_proto.js_source_path.startswith("__inline__/")
         assert bidi_component_proto.html_content == "<div>Hello World</div>"
         assert bidi_component_proto.css_content == "div { color: red; }"
 
