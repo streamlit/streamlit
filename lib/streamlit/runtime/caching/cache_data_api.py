@@ -931,8 +931,8 @@ class DataCache(Cache[R]):
 
     def read_result(self, value_key: str) -> CachedResult[R]:
         """Read a value and messages from the cache. Raise `CacheKeyNotFoundError`
-        if the value doesn't exist, and `CacheError` if the value exists but can't
-        be unpickled.
+        if the value doesn't exist or is corrupt, and `CacheError` if the storage
+        can't be read.
         """
         try:
             pickled_entry = self.storage.get(value_key)
@@ -949,8 +949,12 @@ class DataCache(Cache[R]):
                 self.storage.delete(value_key)
                 raise CacheKeyNotFoundError()
             return entry
-        except pickle.UnpicklingError as exc:
-            raise CacheError(f"Failed to unpickle {value_key}") from exc
+        except (pickle.UnpicklingError, EOFError) as exc:
+            # A truncated or corrupt entry, for example from an interrupted disk
+            # write. Remove it and let the caller rerun the function.
+            _LOGGER.warning("Discarding unreadable cache entry %s", value_key)
+            self.storage.delete(value_key)
+            raise CacheKeyNotFoundError() from exc
 
     def _is_stale(self, result: CachedResult[R]) -> bool:
         """Whether a present entry is past its freshness TTL.

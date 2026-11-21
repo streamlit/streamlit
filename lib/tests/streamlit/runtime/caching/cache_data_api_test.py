@@ -554,6 +554,13 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.cache_storage_manager = LocalDiskCacheStorageManager()
         Runtime._instance = mock_runtime
+        # These tests mock file writes under a fake home folder, so the rename
+        # that moves a written cache file into place has nothing to move.
+        replace_patcher = patch(
+            "streamlit.runtime.caching.storage.local_disk_cache_storage.os.replace"
+        )
+        replace_patcher.start()
+        self.addCleanup(replace_patcher.stop)
 
     def tearDown(self) -> None:
         st.cache_data.clear()
@@ -568,8 +575,9 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         foo()
         mock_write.assert_not_called()
 
+    @patch("streamlit.runtime.caching.storage.local_disk_cache_storage.os.replace")
     @patch("streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_write")
-    def test_persist_path(self, mock_write):
+    def test_persist_path(self, mock_write, mock_replace):
         """Ensure we're writing to ~/.streamlit/cache/*.memo"""
 
         @st.cache_data(persist="disk")
@@ -578,10 +586,12 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
 
         foo()
         mock_write.assert_called_once()
+        mock_replace.assert_called_once()
 
-        write_path = mock_write.call_args[0][0]
+        temp_path, final_path = mock_replace.call_args[0]
+        assert mock_write.call_args[0][0] == temp_path
         match = re.fullmatch(
-            r"/mock/home/folder/.streamlit/cache/.*?\.memo", write_path
+            r"/mock/home/folder/.streamlit/cache/.*?\.memo", final_path
         )
         assert match is not None
 
@@ -623,23 +633,34 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         mock_read.assert_called_once()
         assert str(error.value) == "Unable to read from cache"
 
-    @patch("streamlit.file_util.os.stat", MagicMock())
-    @patch("streamlit.file_util.open", mock_open(read_data=b"bad_binary_pickled_value"))
-    @patch(
-        "streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_read",
-        wraps=file_util.streamlit_read,
+    @parameterized.expand(
+        [
+            ("corrupt", b"bad_binary_pickled_value"),
+            ("truncated", b"\x80\x05"),
+        ]
     )
-    def test_read_bad_persisted_binary_data(self, mock_read):
-        """If our persisted data is bad, we raise an exception."""
+    def test_read_bad_persisted_binary_data(self, _name, bad_data):
+        """If our persisted data can't be unpickled, we discard it and recompute."""
 
         @st.cache_data(persist="disk")
         def foo():
             return "actual_value"
 
-        with pytest.raises(CacheError) as error:
-            foo()
-        mock_read.assert_called_once()
-        assert "Failed to unpickle" in str(error.value)
+        with (
+            patch("streamlit.file_util.os.stat", MagicMock()),
+            patch("streamlit.file_util.open", mock_open(read_data=bad_data)),
+            patch(
+                "streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_write"
+            ) as mock_write,
+            patch(
+                "streamlit.runtime.caching.storage.local_disk_cache_storage.os.remove"
+            ) as mock_remove,
+        ):
+            assert foo() == "actual_value"
+
+        mock_write.assert_called_once()
+        removed_paths = [call.args[0] for call in mock_remove.call_args_list]
+        assert any(path.endswith(".memo") for path in removed_paths)
 
     def test_bad_persist_value(self):
         """Throw an error if an invalid value is passed to 'persist'."""

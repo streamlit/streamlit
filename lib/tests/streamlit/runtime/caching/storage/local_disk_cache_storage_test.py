@@ -220,6 +220,37 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
             self.storage.set("uniqueKey", b"new-value")
         assert str(e.value) == "Unable to write to cache"
 
+    def test_storage_set_leaves_no_temporary_file(self):
+        """Test that storage.set() moves its temporary file into place."""
+        self.storage.set("new-key", b"new-value")
+        assert os.listdir(self.tempdir.path) == ["func-key-new-key.memo"]
+
+    def test_storage_set_failed_rename_keeps_existing_value(self):
+        """Test that a failed storage.set() keeps the old value and cleans up."""
+        self.storage.set("some-key", b"old-value")
+
+        with (
+            patch(
+                "streamlit.runtime.caching.storage.local_disk_cache_storage.os.replace",
+                side_effect=OSError("mock exception"),
+            ),
+            pytest.raises(CacheStorageError, match="Unable to write to cache"),
+        ):
+            self.storage.set("some-key", b"new-value")
+
+        assert self.storage.get("some-key") == b"old-value"
+        assert os.listdir(self.tempdir.path) == ["func-key-some-key.memo"]
+
+    def test_storage_get_empty_file_is_a_miss(self):
+        """Test that an empty cache file is treated as missing and removed."""
+        path = os.path.join(self.tempdir.path, "func-key-some-key.memo")
+        with open(path, "wb"):
+            pass
+
+        with pytest.raises(CacheStorageKeyNotFoundError):
+            self.storage.get("some-key")
+        assert not os.path.exists(path)
+
     def test_storage_set_override(self):
         """Test that storage.set() overrides the value of an existing key."""
         self.storage.set("another_key", b"another_value")
