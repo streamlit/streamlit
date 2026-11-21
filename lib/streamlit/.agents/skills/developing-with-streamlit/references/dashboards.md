@@ -72,7 +72,7 @@ with st.container(border=True):
         definition_drawer("mrr_by_plan")  # An @st.dialog(..., position="right")
 ```
 
-- A label that is only `:material/more_vert:` (or `:material/more_horiz:` or `:material/menu:`) makes an icon-only trigger without a chevron.
+- A label that is only `:material/more_vert:` or `:material/more_horiz:` (announced as "More options"), or `:material/menu:` (announced as "Menu"), makes an icon-only trigger without a chevron. Screen readers use that purpose name, not the icon name.
 - `st.menu_button` returns the picked option only on the rerun it triggers. To toggle a chart option from the menu, flip a Session State flag in its `on_click` callback, so the card already reads the new value when it redraws.
 - Show definitions and record details in a side drawer, `@st.dialog(..., position="right")`, and the query behind a section in `st.popover("SQL", icon=":material/data_object:")` with `st.code(sql, language="sql")`. In a `@st.fragment(parallel=True)`, open the drawer only on the rerun a click triggers, as the menu above does: calling `@st.dialog` during the parallel full-app run raises.
 - For a certified KPI, add `:green[:material/verified:]` to the `st.metric` label and its definition to `help`.
