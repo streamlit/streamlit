@@ -62,6 +62,7 @@ def _snowflake_connector_modules() -> dict[str, types.ModuleType]:
     connector_mod.connect = MagicMock()
     constants_mod = types.ModuleType("snowflake.connector.constants")
     constants_mod.CONNECTIONS_FILE = pathlib.Path("/nonexistent/connections.toml")
+    constants_mod.CONFIG_FILE = pathlib.Path("/nonexistent/config.toml")
     connector_mod.constants = constants_mod
     snowflake_mod.connector = connector_mod
     return {
@@ -209,6 +210,8 @@ class TestSnowflakeConnectionConfiguration:
                 str(token_file),
             ),
         ):
+            for name in ("SNOWFLAKE_SCHEMA", "SNOWFLAKE_PROTOCOL", "SNOWFLAKE_PORT"):
+                os.environ.pop(name, None)
             SnowflakeConnection("snowflake")
         connector.connect.assert_called_once_with(
             authenticator="oauth",
@@ -220,12 +223,32 @@ class TestSnowflakeConnectionConfiguration:
             token="service-token",
         )
 
-    def test_connect_ignores_container_env_when_connections_file_exists(
+    def test_container_fallback_kwargs_override_env_params(
         self, tmp_path: Path
     ) -> None:
-        """An existing connections.toml takes precedence over the env var fallback."""
+        """Keyword arguments are forwarded and override the env-derived parameters."""
         env, token_file = self._container_env(tmp_path)
-        connections_file = tmp_path / "connections.toml"
+        with (
+            self._patched_snowflake() as connector,
+            patch.dict(os.environ, {**env, "SNOWFLAKE_DATABASE": "db"}),
+            patch(
+                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
+                str(token_file),
+            ),
+        ):
+            SnowflakeConnection("snowflake", warehouse="wh", database="other")
+        kwargs = connector.connect.call_args.kwargs
+        assert kwargs["warehouse"] == "wh"
+        assert kwargs["database"] == "other"
+        assert kwargs["token"] == "service-token"
+
+    @pytest.mark.parametrize("constant_name", ["CONNECTIONS_FILE", "CONFIG_FILE"])
+    def test_connect_ignores_container_env_when_connector_config_file_exists(
+        self, tmp_path: Path, constant_name: str
+    ) -> None:
+        """An existing connections.toml or config.toml takes precedence over the fallback."""
+        env, token_file = self._container_env(tmp_path)
+        connections_file = tmp_path / "connector_config.toml"
         connections_file.write_text("", encoding="utf-8")
         with (
             self._patched_snowflake() as connector,
@@ -236,7 +259,7 @@ class TestSnowflakeConnectionConfiguration:
             ),
             patch.object(
                 sys.modules["snowflake.connector.constants"],
-                "CONNECTIONS_FILE",
+                constant_name,
                 connections_file,
             ),
         ):

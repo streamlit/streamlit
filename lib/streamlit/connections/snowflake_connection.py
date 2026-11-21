@@ -472,7 +472,9 @@ class SnowflakeConnection(BaseSnowflakeConnection):
     ``secrets.toml``. However, if you name your connection ``"snowflake"`` and
     don't have a ``[connections.snowflake]`` dictionary in your
     ``secrets.toml`` file, Streamlit will ignore any keyword arguments and use
-    the default Snowflake connection as described in Example 5 and Example 6.
+    the default Snowflake connection as described in Example 5 and Example 6
+    (except for the container fallback described after Example 6, which
+    forwards keyword arguments).
     To configure your connection using only keyword arguments, declare a name
     for the connection other than ``"snowflake"``.
 
@@ -600,12 +602,13 @@ class SnowflakeConnection(BaseSnowflakeConnection):
         conn = st.connection("snowflake")
         df = conn.query("SELECT * FROM my_table")
 
-    If no ``connections.toml`` file exists and your app runs in a Snowflake
-    container, ``st.connection("snowflake")`` connects using the container's
+    If no Streamlit secrets or ``connections.toml`` file exist and your app runs
+    in Snowpark Container Services, ``st.connection("snowflake")`` connects using the container's
     ``SNOWFLAKE_ACCOUNT`` and ``SNOWFLAKE_HOST`` environment variables and the
     service token at ``/snowflake/session/token``. It also uses
     ``SNOWFLAKE_DATABASE``, ``SNOWFLAKE_SCHEMA``, ``SNOWFLAKE_PROTOCOL``, and
-    ``SNOWFLAKE_PORT`` when they are set. This connection uses the service's
+    ``SNOWFLAKE_PORT`` when they are set. Keyword arguments passed to
+    ``st.connection`` override these values. This connection uses the service's
     identity, not the caller's. For the caller's identity, use
     ``"snowflake-callers-rights"`` as described in the next example.
 
@@ -657,9 +660,6 @@ class SnowflakeConnection(BaseSnowflakeConnection):
     def _connect(self, **kwargs: Any) -> InternalSnowflakeConnection:
         import snowflake.connector  # type:ignore[import]
         from snowflake.connector import Error as SnowflakeError  # type:ignore[import]
-        from snowflake.connector.constants import (  # type:ignore[import]
-            CONNECTIONS_FILE,
-        )
 
         # If we're running in SiS-on-warehouses, just call get_active_session() and
         # retrieve the lower-level connection from it.
@@ -696,9 +696,20 @@ class SnowflakeConnection(BaseSnowflakeConnection):
 
             # Use the default configuration as defined in https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection
             if self._connection_name == "snowflake":
-                if not CONNECTIONS_FILE.exists() and _can_connect_from_container_env():
+                from snowflake.connector.constants import (  # type:ignore[import]
+                    CONFIG_FILE,
+                    CONNECTIONS_FILE,
+                )
+
+                # Any connector config file takes precedence over the fallback, so
+                # a configured user or role is never silently replaced.
+                if (
+                    not CONNECTIONS_FILE.exists()
+                    and not CONFIG_FILE.exists()
+                    and _can_connect_from_container_env()
+                ):
                     _LOGGER.info(
-                        "No connections.toml found. Connecting to Snowflake using the "
+                        "No connector config file found. Connecting to Snowflake using the "
                         "SNOWFLAKE_* environment variables and the service token file."
                     )
                     used_container_env = True
@@ -760,8 +771,8 @@ def _get_container_connection_params() -> dict[str, str | bool]:
         "authenticator": "oauth",
         # OCSP checks do not work in Snowflake containers.
         "ocsp_fail_open": True,
-        # We want to keep this alive, as the user token will expire fairly quickly
-        # - so we can't create a new session on expiration.
+        # Keep the session alive, because the short-lived token it was opened with
+        # can't be used to reopen it once it expires.
         "client_session_keep_alive": True,
     }
     for param_name, env_var_name in (
@@ -777,8 +788,8 @@ def _get_container_connection_params() -> dict[str, str | bool]:
             )
         params[param_name] = value
 
-    # Forward these only when the container sets them. The owner "snowflake"
-    # connection reads the same settings from the mounted default connection file.
+    # Forward these only when the container sets them. When the container mounts a
+    # default connection file, the "snowflake" connection reads them from that file instead.
     # - Database and schema: some containers do not mount them. The session then
     #   has no default namespace, so queries need fully qualified names.
     # - Protocol and port: some containers route the connector through a local
@@ -945,8 +956,7 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
     @classmethod
     def _read_token_file(cls) -> str:
         """Returns the contents of the Snowpark token file on disk."""
-        with open(SNOWPARK_CONNECTION_TOKEN_FILE, encoding="utf-8") as token_file:
-            return token_file.read()
+        return _read_service_token()
 
     @classmethod
     def _get_connection_params(cls) -> dict[str, str | bool]:
