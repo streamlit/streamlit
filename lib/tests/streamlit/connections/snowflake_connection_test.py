@@ -200,7 +200,7 @@ class TestSnowflakeConnectionConfiguration:
     def test_connect_falls_back_to_container_env_without_connections_file(
         self, tmp_path: Path
     ) -> None:
-        """Without connections.toml, env vars and the service token build the connection."""
+        """Without connections.toml, env vars and the service token file build the connection."""
         env, token_file = self._container_env(tmp_path)
         with (
             self._patched_snowflake() as connector,
@@ -220,7 +220,7 @@ class TestSnowflakeConnectionConfiguration:
             account="acct",
             host="acct.example.com",
             database="db",
-            token="service-token",
+            token_file_path=str(token_file),
         )
 
     def test_container_fallback_kwargs_override_env_params(
@@ -240,7 +240,8 @@ class TestSnowflakeConnectionConfiguration:
         kwargs = connector.connect.call_args.kwargs
         assert kwargs["warehouse"] == "wh"
         assert kwargs["database"] == "other"
-        assert kwargs["token"] == "service-token"
+        assert kwargs["token_file_path"] == str(token_file)
+        assert "token" not in kwargs
 
     @pytest.mark.parametrize("constant_name", ["CONNECTIONS_FILE", "CONFIG_FILE"])
     def test_connect_ignores_container_env_when_connector_config_file_exists(
@@ -297,7 +298,7 @@ class TestSnowflakeConnectionConfiguration:
         ):
             os.environ.pop("SNOWFLAKE_CONNECTIONS", None)
             SnowflakeConnection("snowflake")
-        assert connector.connect.call_args.kwargs["token"] == "service-token"
+        assert connector.connect.call_args.kwargs["token_file_path"] == str(token_file)
 
     def test_connect_ignores_container_env_without_token_file(
         self, tmp_path: Path

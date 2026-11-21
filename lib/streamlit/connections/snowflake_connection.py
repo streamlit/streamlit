@@ -720,7 +720,7 @@ class SnowflakeConnection(BaseSnowflakeConnection):
                     return snowflake.connector.connect(
                         **{
                             **_get_container_connection_params(),
-                            "token": _read_service_token(),
+                            "token_file_path": SNOWPARK_CONNECTION_TOKEN_FILE,
                             **kwargs,
                         }
                     )

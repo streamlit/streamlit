@@ -113,7 +113,7 @@ dependencies = [
 # Optional dependency required for Snowflake connection:
 snowflake = [
   "snowflake-snowpark-python[modin]>=1.17.0",
-  "snowflake-connector-python>=3.3.0",
+  "snowflake-connector-python>=3.11.0",
 ]
 # Optional dependency required for PDF rendering:
 pdf = ["streamlit-pdf>=2.1.0"]
