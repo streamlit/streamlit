@@ -121,6 +121,21 @@ def _reject_async_lifecycle_callback(
         )
 
 
+def _has_params(
+    cache: ResourceCache[Any],
+    fresh_ttl_seconds: float,
+    max_entries: float,
+    refresh_mode: RefreshMode,
+    validate: ValidateFunc | None,
+) -> bool:
+    return (
+        cache.fresh_ttl_seconds == fresh_ttl_seconds
+        and cache.max_entries == max_entries
+        and cache.refresh_mode == refresh_mode
+        and _equal_validate_funcs(cache.validate, validate)
+    )
+
+
 class ResourceCaches(StatsProvider):
     """Manages all ResourceCache instances."""
 
@@ -167,6 +182,17 @@ class ResourceCaches(StatsProvider):
         else:
             session_id = get_session_id_or_throw()
 
+        # Every call on every cached function looks up its cache here, so reuse
+        # skips the registry lock. Dict reads are atomic, and the cache returned is
+        # one a locked lookup could also have returned just before a concurrent
+        # replacement or clear.
+        session_caches = self._function_caches.get(session_id)
+        cache = session_caches.get(key) if session_caches is not None else None
+        if cache is not None and _has_params(
+            cache, fresh_ttl_seconds, max_entries, refresh_mode, validate
+        ):
+            return cache
+
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
         with self._caches_lock:
@@ -175,12 +201,8 @@ class ResourceCaches(StatsProvider):
                 session_caches = self._function_caches[session_id] = {}
 
             cache = session_caches.get(key)
-            if (
-                cache is not None
-                and cache.fresh_ttl_seconds == fresh_ttl_seconds
-                and cache.max_entries == max_entries
-                and cache.refresh_mode == refresh_mode
-                and _equal_validate_funcs(cache.validate, validate)
+            if cache is not None and _has_params(
+                cache, fresh_ttl_seconds, max_entries, refresh_mode, validate
             ):
                 return cache
 

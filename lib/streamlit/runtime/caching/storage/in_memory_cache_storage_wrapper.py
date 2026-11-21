@@ -202,24 +202,26 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         self._persist_storage.close()
 
     def _read_from_mem_cache(self, key: str) -> bytes:
+        # Logging happens outside the lock to keep the critical section that
+        # every hit on this function takes as short as possible.
         with self._mem_cache_lock:
             try:
                 entry = bytes(self._mem_cache[key])
             except KeyError:
-                _LOGGER.debug("Memory cache MISS: %s", key)
-                raise CacheStorageKeyNotFoundError(
-                    "Key not found in mem cache"
-                ) from None
-
-            generation = self._generations.get(key)
-            if generation is not None and self._global_budget.is_enabled:
-                self._global_budget.record_read(
-                    self._global_storage_id,
-                    key,
-                    generation,
-                )
-            _LOGGER.debug("Memory cache HIT: %s", key)
-            return entry
+                entry = None
+            else:
+                generation = self._generations.get(key)
+                if generation is not None and self._global_budget.is_enabled:
+                    self._global_budget.record_read(
+                        self._global_storage_id,
+                        key,
+                        generation,
+                    )
+        if entry is None:
+            _LOGGER.debug("Memory cache MISS: %s", key)
+            raise CacheStorageKeyNotFoundError("Key not found in mem cache")
+        _LOGGER.debug("Memory cache HIT: %s", key)
+        return entry
 
     def _write_to_mem_cache(self, key: str, entry_bytes: bytes) -> None:
         should_warn = False
