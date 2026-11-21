@@ -72,7 +72,9 @@ message PageProfile {
 // from user code time leaves the time spent outside the cache. Like command
 // times, times from threads that ran at the same time are added together and
 // can exceed wall-clock time; ParallelFragmentUsage reports the share of
-// parallel fragments.
+// parallel fragments. On one thread, async cached calls awaited at the same
+// time are scaled down together, so their times add up to at most the
+// wall-clock time they span, minus command times.
 // lib/streamlit/runtime/caching/cache_call_timer.py lists which calls are
 // recorded.
 message CacheUsage {

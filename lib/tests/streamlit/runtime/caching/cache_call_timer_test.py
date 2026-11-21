@@ -344,6 +344,51 @@ def test_call_started_while_another_async_call_waits_is_recorded(
     assert _cache_totals_for(ctx, "cache_resource").calls == 1
 
 
+@pytest.mark.parametrize(("cache_name", "cache_decorator"), CACHE_DECORATORS)
+def test_async_cache_code_never_yields_the_event_loop(
+    ctx: ScriptRunContext, cache_name: str, cache_decorator: Any
+) -> None:
+    """A call that starts while another call on the thread runs cache code is
+    treated as nested, which is only right if cache code never awaits. Another
+    task checks, at every point where the event loop runs it, that no open call
+    is in cache code.
+    """
+    stats = ctx.shared.cache_stats.current_thread_stats()
+    seen: list[tuple[bool, bool]] = []
+
+    @cache_decorator(show_spinner=False)
+    async def load(x: int) -> int:
+        await asyncio.sleep(0)
+        if x < 0:
+            raise ValueError("boom")
+        return x
+
+    async def observe(done: asyncio.Event) -> None:
+        while not done.is_set():
+            seen.append((stats.is_in_call, stats.is_in_cache_code))
+            await asyncio.sleep(0)
+
+    async def main() -> list[Any]:
+        done = asyncio.Event()
+        observer = asyncio.create_task(observe(done))
+        # A miss and a caller waiting for it, a hit, and a miss that raises.
+        results: list[Any] = await asyncio.gather(load(1), load(1))
+        results.append(await load(1))
+        results.append(
+            (await asyncio.gather(load(-1), return_exceptions=True))[0].args[0]
+        )
+        done.set()
+        await observer
+        return results
+
+    assert asyncio.run(main()) == [1, 1, 1, "boom"]
+    totals = _cache_totals_for(ctx, cache_name)
+    assert (totals.calls, totals.hits, totals.misses, totals.waits) == (4, 2, 2, 1)
+    # The observer ran while calls were open, but never during cache code.
+    assert any(in_call for in_call, _ in seen)
+    assert not any(in_cache_code for _, in_cache_code in seen)
+
+
 def test_async_waiter_that_retries_after_owner_fails_is_a_miss(
     ctx: ScriptRunContext,
 ) -> None:
