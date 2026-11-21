@@ -609,7 +609,9 @@ class SnowflakeConnection(BaseSnowflakeConnection):
     ``SNOWFLAKE_DATABASE``, ``SNOWFLAKE_SCHEMA``, ``SNOWFLAKE_PROTOCOL``, and
     ``SNOWFLAKE_PORT`` when they are set. Keyword arguments passed to
     ``st.connection`` override these values. This connection uses the service's
-    identity, not the caller's. For the caller's identity, use
+    identity, not the caller's. The fallback is skipped if a connector
+    ``config.toml`` exists or the ``SNOWFLAKE_CONNECTIONS`` environment variable
+    is set. For the caller's identity, use
     ``"snowflake-callers-rights"`` as described in the next example.
 
     **Example 7: Caller's rights connection when running in Snowpark Container Services**
@@ -701,11 +703,13 @@ class SnowflakeConnection(BaseSnowflakeConnection):
                     CONNECTIONS_FILE,
                 )
 
-                # Any connector config file takes precedence over the fallback, so
-                # a configured user or role is never silently replaced.
+                # Any connector config file, or connection configuration supplied
+                # through SNOWFLAKE_CONNECTIONS, takes precedence over the fallback,
+                # so a configured user or role is never silently replaced.
                 if (
                     not CONNECTIONS_FILE.exists()
                     and not CONFIG_FILE.exists()
+                    and not os.getenv("SNOWFLAKE_CONNECTIONS")
                     and _can_connect_from_container_env()
                 ):
                     _LOGGER.info(

@@ -266,6 +266,39 @@ class TestSnowflakeConnectionConfiguration:
             SnowflakeConnection("snowflake")
         connector.connect.assert_called_once_with()
 
+    def test_connect_ignores_container_env_when_snowflake_connections_set(
+        self, tmp_path: Path
+    ) -> None:
+        """SNOWFLAKE_CONNECTIONS takes precedence over the container env fallback."""
+        env, token_file = self._container_env(tmp_path)
+        with (
+            self._patched_snowflake() as connector,
+            patch.dict(os.environ, {**env, "SNOWFLAKE_CONNECTIONS": "{}"}),
+            patch(
+                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
+                str(token_file),
+            ),
+        ):
+            SnowflakeConnection("snowflake")
+        connector.connect.assert_called_once_with()
+
+    def test_connect_uses_container_env_when_snowflake_connections_unset(
+        self, tmp_path: Path
+    ) -> None:
+        """Without SNOWFLAKE_CONNECTIONS, the container env fallback still runs."""
+        env, token_file = self._container_env(tmp_path)
+        with (
+            self._patched_snowflake() as connector,
+            patch.dict(os.environ, env),
+            patch(
+                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
+                str(token_file),
+            ),
+        ):
+            os.environ.pop("SNOWFLAKE_CONNECTIONS", None)
+            SnowflakeConnection("snowflake")
+        assert connector.connect.call_args.kwargs["token"] == "service-token"
+
     def test_connect_ignores_container_env_without_token_file(
         self, tmp_path: Path
     ) -> None:
