@@ -170,6 +170,10 @@ instead of the `connections.toml` entry. Likewise, passing connection keyword ar
 named entry entirely—those kwargs are forwarded to the connector as-is, so the
 `connections.toml` entry is not used in that case.
 
+In a Snowflake container with no `connections.toml`, `st.connection("snowflake")` falls
+back to the container's `SNOWFLAKE_*` environment variables and the service token file,
+connecting as the service rather than the caller.
+
 ## Chat with Cortex (Snowflake Cortex required)
 
 > **Prerequisite:** This feature requires the `snowflake.cortex` package and a Snowflake account with Cortex access. It is primarily used in Streamlit in Snowflake deployments.

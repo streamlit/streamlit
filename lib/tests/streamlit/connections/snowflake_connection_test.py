@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import importlib
 import os
+import pathlib
 import sys
 import threading
 import types
@@ -59,8 +60,15 @@ def _snowflake_connector_modules() -> dict[str, types.ModuleType]:
     connector_mod = types.ModuleType("snowflake.connector")
     connector_mod.Error = type("SnowflakeError", (Exception,), {})
     connector_mod.connect = MagicMock()
+    constants_mod = types.ModuleType("snowflake.connector.constants")
+    constants_mod.CONNECTIONS_FILE = pathlib.Path("/nonexistent/connections.toml")
+    connector_mod.constants = constants_mod
     snowflake_mod.connector = connector_mod
-    return {"snowflake": snowflake_mod, "snowflake.connector": connector_mod}
+    return {
+        "snowflake": snowflake_mod,
+        "snowflake.connector": connector_mod,
+        "snowflake.connector.constants": constants_mod,
+    }
 
 
 @contextmanager
@@ -178,6 +186,78 @@ class TestSnowflakeConnectionConfiguration:
         connector.connect.assert_called_once_with(
             account="acct", user="alice", warehouse="wh"
         )
+
+    @staticmethod
+    def _container_env(tmp_path: Path) -> tuple[dict[str, str], Path]:
+        """Return container env vars and a service token file containing a token."""
+        token_file = tmp_path / "token"
+        token_file.write_text("service-token\n", encoding="utf-8")
+        return {"SNOWFLAKE_ACCOUNT": "acct", "SNOWFLAKE_HOST": "acct.example.com"}, (
+            token_file
+        )
+
+    def test_connect_falls_back_to_container_env_without_connections_file(
+        self, tmp_path: Path
+    ) -> None:
+        """Without connections.toml, env vars and the service token build the connection."""
+        env, token_file = self._container_env(tmp_path)
+        with (
+            self._patched_snowflake() as connector,
+            patch.dict(os.environ, {**env, "SNOWFLAKE_DATABASE": "db"}),
+            patch(
+                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
+                str(token_file),
+            ),
+        ):
+            SnowflakeConnection("snowflake")
+        connector.connect.assert_called_once_with(
+            authenticator="oauth",
+            ocsp_fail_open=True,
+            client_session_keep_alive=True,
+            account="acct",
+            host="acct.example.com",
+            database="db",
+            token="service-token",
+        )
+
+    def test_connect_ignores_container_env_when_connections_file_exists(
+        self, tmp_path: Path
+    ) -> None:
+        """An existing connections.toml takes precedence over the env var fallback."""
+        env, token_file = self._container_env(tmp_path)
+        connections_file = tmp_path / "connections.toml"
+        connections_file.write_text("", encoding="utf-8")
+        with (
+            self._patched_snowflake() as connector,
+            patch.dict(os.environ, env),
+            patch(
+                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
+                str(token_file),
+            ),
+            patch.object(
+                sys.modules["snowflake.connector.constants"],
+                "CONNECTIONS_FILE",
+                connections_file,
+            ),
+        ):
+            SnowflakeConnection("snowflake")
+        connector.connect.assert_called_once_with()
+
+    def test_connect_ignores_container_env_without_token_file(
+        self, tmp_path: Path
+    ) -> None:
+        """Env vars alone, without the service token file, do not trigger the fallback."""
+        env, _ = self._container_env(tmp_path)
+        with (
+            self._patched_snowflake() as connector,
+            patch.dict(os.environ, env),
+            patch(
+                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
+                str(tmp_path / "missing"),
+            ),
+        ):
+            SnowflakeConnection("snowflake")
+        connector.connect.assert_called_once_with()
 
     def test_connect_reraises_connector_error_when_config_is_present(self) -> None:
         """A connector error is re-raised when kwargs provide configuration."""

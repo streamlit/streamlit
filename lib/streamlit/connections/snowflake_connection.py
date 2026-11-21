@@ -600,6 +600,15 @@ class SnowflakeConnection(BaseSnowflakeConnection):
         conn = st.connection("snowflake")
         df = conn.query("SELECT * FROM my_table")
 
+    If no ``connections.toml`` file exists and your app runs in a Snowflake
+    container, ``st.connection("snowflake")`` connects using the container's
+    ``SNOWFLAKE_ACCOUNT`` and ``SNOWFLAKE_HOST`` environment variables and the
+    service token at ``/snowflake/session/token``. It also uses
+    ``SNOWFLAKE_DATABASE``, ``SNOWFLAKE_SCHEMA``, ``SNOWFLAKE_PROTOCOL``, and
+    ``SNOWFLAKE_PORT`` when they are set. This connection uses the service's
+    identity, not the caller's. For the caller's identity, use
+    ``"snowflake-callers-rights"`` as described in the next example.
+
     **Example 7: Caller's rights connection when running in Snowpark Container Services**
 
     You can use ``"snowflake-callers-rights"`` type connections in any
@@ -648,6 +657,9 @@ class SnowflakeConnection(BaseSnowflakeConnection):
     def _connect(self, **kwargs: Any) -> InternalSnowflakeConnection:
         import snowflake.connector  # type:ignore[import]
         from snowflake.connector import Error as SnowflakeError  # type:ignore[import]
+        from snowflake.connector.constants import (  # type:ignore[import]
+            CONNECTIONS_FILE,
+        )
 
         # If we're running in SiS-on-warehouses, just call get_active_session() and
         # retrieve the lower-level connection from it.
@@ -683,6 +695,18 @@ class SnowflakeConnection(BaseSnowflakeConnection):
 
             # Use the default configuration as defined in https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection
             if self._connection_name == "snowflake":
+                if not CONNECTIONS_FILE.exists() and _can_connect_from_container_env():
+                    _LOGGER.info(
+                        "No connections.toml found. Connecting to Snowflake using the "
+                        "SNOWFLAKE_* environment variables and the service token file."
+                    )
+                    return snowflake.connector.connect(
+                        **{
+                            **_get_container_connection_params(),
+                            "token": _read_service_token(),
+                            **kwargs,
+                        }
+                    )
                 _LOGGER.info(
                     "Connecting to Snowflake using the default configuration as defined "
                     "in https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection"
@@ -712,6 +736,76 @@ class SnowflakeConnection(BaseSnowflakeConnection):
                     error_id="snowflake-missing-connection-config",
                 )
             raise
+
+
+def _get_container_connection_params() -> dict[str, str | bool]:
+    """Return OAuth connection params derived from the container's ``SNOWFLAKE_*`` env vars.
+
+    The result has no ``token``; callers add the token appropriate for their use.
+
+    Raises
+    ------
+        StreamlitAPIException: if ``SNOWFLAKE_ACCOUNT`` or ``SNOWFLAKE_HOST``
+        is unset.
+    """
+    # See Snowflake docs:
+    # https://docs.snowflake.com/en/developer-guide/snowpark-container-services/additional-considerations-services-jobs#configuring-caller-s-rights-for-your-service
+
+    # Base parameters, common to all connections.
+    params: dict[str, str | bool] = {
+        "authenticator": "oauth",
+        # OCSP checks do not work in Snowflake containers.
+        "ocsp_fail_open": True,
+        # We want to keep this alive, as the user token will expire fairly quickly
+        # - so we can't create a new session on expiration.
+        "client_session_keep_alive": True,
+    }
+    for param_name, env_var_name in (
+        ("account", "SNOWFLAKE_ACCOUNT"),
+        ("host", "SNOWFLAKE_HOST"),
+    ):
+        value = os.getenv(env_var_name)
+        if value is None:
+            raise StreamlitAPIException(
+                f"Environment variable `{env_var_name}` not found. Is this app "
+                "running in a Snowflake container environment?",
+                error_id="snowflake-env-var-not-found",
+            )
+        params[param_name] = value
+
+    # Forward these only when the container sets them. The owner "snowflake"
+    # connection reads the same settings from the mounted default connection file.
+    # - Database and schema: some containers do not mount them. The session then
+    #   has no default namespace, so queries need fully qualified names.
+    # - Protocol and port: some containers route the connector through a local
+    #   proxy (for example, http and 8082). Otherwise the connector uses https
+    #   on port 443.
+    for param_name, env_var_name in (
+        ("database", "SNOWFLAKE_DATABASE"),
+        ("schema", "SNOWFLAKE_SCHEMA"),
+        ("protocol", "SNOWFLAKE_PROTOCOL"),
+        ("port", "SNOWFLAKE_PORT"),
+    ):
+        value = os.getenv(env_var_name)
+        if value is not None:
+            params[param_name] = value
+
+    return params
+
+
+def _read_service_token() -> str:
+    """Return the contents of the Snowpark service token file, without whitespace."""
+    with open(SNOWPARK_CONNECTION_TOKEN_FILE, encoding="utf-8") as token_file:
+        return token_file.read().strip()
+
+
+def _can_connect_from_container_env() -> bool:
+    """Return whether the container env vars and service token file are all present."""
+    return (
+        os.getenv("SNOWFLAKE_ACCOUNT") is not None
+        and os.getenv("SNOWFLAKE_HOST") is not None
+        and os.path.exists(SNOWPARK_CONNECTION_TOKEN_FILE)
+    )
 
 
 # Module names of Python's import machinery, frozen or not.
@@ -863,47 +957,7 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
         # Local import needed to avoid cycles.
         from streamlit import context as st_context
 
-        # See Snowflake docs:
-        # https://docs.snowflake.com/en/developer-guide/snowpark-container-services/additional-considerations-services-jobs#configuring-caller-s-rights-for-your-service
-
-        # Base parameters, common to all connections.
-        params: dict[str, str | bool] = {
-            "authenticator": "oauth",
-            # OCSP checks do not work in Snowflake containers.
-            "ocsp_fail_open": True,
-            # We want to keep this alive, as the user token will expire fairly quickly
-            # - so we can't create a new session on expiration.
-            "client_session_keep_alive": True,
-        }
-        for param_name, env_var_name in (
-            ("account", "SNOWFLAKE_ACCOUNT"),
-            ("host", "SNOWFLAKE_HOST"),
-        ):
-            value = os.getenv(env_var_name)
-            if value is None:
-                raise StreamlitAPIException(
-                    f"Environment variable `{env_var_name}` not found. Is this app "
-                    "running in a Snowflake container environment?",
-                    error_id="snowflake-env-var-not-found",
-                )
-            params[param_name] = value
-
-        # Forward these only when the container sets them. The owner "snowflake"
-        # connection reads the same settings from the mounted default connection file.
-        # - Database and schema: some containers do not mount them. The session then
-        #   has no default namespace, so queries need fully qualified names.
-        # - Protocol and port: some containers route the connector through a local
-        #   proxy (for example, http and 8082). Otherwise the connector uses https
-        #   on port 443.
-        for param_name, env_var_name in (
-            ("database", "SNOWFLAKE_DATABASE"),
-            ("schema", "SNOWFLAKE_SCHEMA"),
-            ("protocol", "SNOWFLAKE_PROTOCOL"),
-            ("port", "SNOWFLAKE_PORT"),
-        ):
-            value = os.getenv(env_var_name)
-            if value is not None:
-                params[param_name] = value
+        params = _get_container_connection_params()
 
         # Validate the token file exists, and read it.
         if not os.path.exists(SNOWPARK_CONNECTION_TOKEN_FILE):
