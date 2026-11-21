@@ -19,6 +19,7 @@ import { type RefObject, useState } from "react"
 import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import type { AxiosProgressEvent } from "axios"
+import type { MockInstance } from "vitest"
 
 import {
   ChatInput as ChatInputProto,
@@ -1181,6 +1182,107 @@ describe("ChatInput widget", () => {
         expect(screen.getByTestId("stChatInputMicButton")).toBeVisible()
       }
     )
+
+    it.each([
+      { description: "a zero pixel height", heightConfig: { pixelHeight: 0 } },
+      { description: "an empty config", heightConfig: {} },
+    ])(
+      "falls back to the default textarea min-height for $description",
+      ({ heightConfig }) => {
+        render(<ChatInput {...getProps({}, { heightConfig })} />)
+
+        const textarea = screen.getByTestId("stChatInputTextArea")
+        expect(textarea).toHaveStyle({ minHeight: "1.5rem" })
+        expect(textarea).not.toHaveStyle({ height: "100%" })
+      }
+    )
+  })
+
+  describe("stacked layout", () => {
+    const LONG_TEXT = "a".repeat(30)
+    const INLINE_STYLE = { width: "auto", order: "0" }
+    const STACKED_STYLE = { width: "100%", order: "-1" }
+
+    const getTextareaWrapper = (): HTMLElement => {
+      const wrapper = screen.getByTestId("stChatInputTextArea").parentElement
+      if (!wrapper) {
+        throw new Error("Expected the textarea to have a wrapper")
+      }
+      return wrapper
+    }
+
+    let clientWidthSpy: MockInstance<() => number>
+
+    beforeEach(() => {
+      clientWidthSpy = vi
+        .spyOn(HTMLElement.prototype, "clientWidth", "get")
+        .mockReturnValue(200)
+      vi.spyOn(
+        CanvasRenderingContext2D.prototype,
+        "measureText"
+      ).mockImplementation(
+        (text: string) => ({ width: text.length * 10 }) as TextMetrics
+      )
+    })
+
+    it("moves the textarea above the buttons once the text fills the row", async () => {
+      const user = userEvent.setup()
+      render(<ChatInput {...getProps()} />)
+
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      await user.type(chatInput, "short")
+      expect(getTextareaWrapper()).toHaveStyle(INLINE_STYLE)
+
+      await user.type(chatInput, LONG_TEXT)
+      expect(getTextareaWrapper()).toHaveStyle(STACKED_STYLE)
+
+      await user.type(chatInput, "more")
+      expect(getTextareaWrapper()).toHaveStyle(STACKED_STYLE)
+
+      await user.clear(chatInput)
+      expect(getTextareaWrapper()).toHaveStyle(INLINE_STYLE)
+    })
+
+    it("re-measures the available width when the textarea resizes", async () => {
+      const user = userEvent.setup()
+      clientWidthSpy.mockReturnValue(1000)
+      const observers: {
+        observer: ResizeObserver
+        callback: ResizeObserverCallback
+      }[] = []
+      const OriginalResizeObserver = globalThis.ResizeObserver
+      vi.spyOn(globalThis, "ResizeObserver").mockImplementation(function (
+        callback: ResizeObserverCallback
+      ) {
+        const observer = new OriginalResizeObserver(callback)
+        observers.push({ observer, callback })
+        return observer
+      })
+      render(<ChatInput {...getProps()} />)
+
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      await user.type(chatInput, LONG_TEXT)
+      expect(getTextareaWrapper()).toHaveStyle(INLINE_STYLE)
+
+      // jsdom never fires resize events, so invoke the textarea observer's
+      // callback directly. It only refreshes the cached width; stacking is
+      // recomputed on the next value change, hence the extra keystroke.
+      const textareaObserver = observers.findLast(({ observer }) =>
+        vi
+          .mocked(observer.observe)
+          .mock.calls.some(([target]) => target === chatInput)
+      )
+      if (!textareaObserver) {
+        throw new Error("Expected a ResizeObserver on the textarea")
+      }
+      clientWidthSpy.mockReturnValue(200)
+      act(() => {
+        textareaObserver.callback([], textareaObserver.observer)
+      })
+
+      await user.type(chatInput, "b")
+      expect(getTextareaWrapper()).toHaveStyle(STACKED_STYLE)
+    })
   })
 
   describe("submit_mode behavior", () => {

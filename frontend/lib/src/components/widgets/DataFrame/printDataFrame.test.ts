@@ -75,6 +75,16 @@ describe("visibleRowsFromRegion", () => {
       visibleRowsFromRegion({ x: 0, y: 8, width: 2, height: 10 }, 10)
     ).toEqual({ startRow: 8, rowCount: 2 })
   })
+
+  it.each([[{ x: 0, y: 0, width: 4, height: 5 }], [null]])(
+    "returns no rows for an empty frame with region %o",
+    region => {
+      expect(visibleRowsFromRegion(region, 0)).toEqual({
+        startRow: 0,
+        rowCount: 0,
+      })
+    }
+  )
 })
 
 describe("fillDataFramePrintSlot", () => {
@@ -129,6 +139,87 @@ describe("fillDataFramePrintSlot", () => {
     )
 
     expect(slot.querySelector("th")?.textContent).toBe("")
+  })
+
+  it.each([
+    { group: "Contact", title: "Name", expected: "Contact / Name" },
+    { group: "Contact", title: "", expected: "Contact" },
+    { group: "  ", title: "Name", expected: "Name" },
+    { group: undefined, title: "Name", expected: "Name" },
+  ])(
+    "prints header $expected for group $group and title $title",
+    ({ group, title, expected }) => {
+      fillDataFramePrintSlot(
+        slot,
+        [column(title, { group })],
+        () => textCell("Ada"),
+        { startRow: 0, rowCount: 1 }
+      )
+
+      expect(slot.querySelector("th")?.textContent).toBe(expected)
+    }
+  )
+
+  it.each([
+    {
+      description: "chart values",
+      data: { kind: "sparkline-cell", displayValues: ["1", 2, "3"] },
+      expected: "1, 2, 3",
+    },
+    {
+      description: "a JSON display value",
+      data: { kind: "json-cell", displayValue: '{"a": 1}' },
+      expected: '{"a": 1}',
+    },
+    {
+      description: "a progress label",
+      data: { kind: "range-cell", value: 42, label: "42%" },
+      expected: "42%",
+    },
+    {
+      description: "multiselect values without options",
+      data: { kind: "multi-select-cell", values: ["a", "b"] },
+      expected: "a, b",
+    },
+    {
+      description: "a selectbox value without allowed values",
+      data: { kind: "dropdown-cell", value: 3 },
+      expected: "3",
+    },
+  ])("prints a custom cell with $description", ({ data, expected }) => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("Value", { kind: "custom" })],
+      () => ({
+        kind: GridCellKind.Custom,
+        allowOverlay: false,
+        copyData: "raw copy text",
+        data,
+      }),
+      { startRow: 0, rowCount: 1 }
+    )
+
+    expect(slot.querySelector("td")?.textContent).toBe(expected)
+  })
+
+  it.each<{ description: string; cell: GridCell; expected: string }>([
+    {
+      description: "prints a row ID cell from its raw data",
+      cell: { kind: GridCellKind.RowID, data: "row-7", allowOverlay: false },
+      expected: "row-7",
+    },
+    {
+      description: "prints a protected cell without data as blank",
+      cell: { kind: GridCellKind.Protected, allowOverlay: false },
+      expected: "",
+    },
+  ])("$description", ({ cell, expected }) => {
+    fillDataFramePrintSlot(slot, [column("Value")], () => cell, {
+      startRow: 0,
+      rowCount: 1,
+    })
+
+    expect(slot.querySelector("td")?.textContent).toBe(expected)
   })
 
   it("prints the URL for a link cell that shows a Material icon", () => {
@@ -353,6 +444,18 @@ describe("fillDataFramePrintSlot", () => {
     expect(slot.querySelector("table")).toHaveAttribute("aria-label", "People")
   })
 
+  it("leaves the table unnamed when the accessible name is blank", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("Name")],
+      () => textCell("Ada"),
+      { startRow: 0, rowCount: 1 },
+      { accessibleName: "   " }
+    )
+
+    expect(slot.querySelector("table")).not.toHaveAttribute("aria-label")
+  })
+
   it("clears the slot", () => {
     fillDataFramePrintSlot(slot, [column("Name")], () => textCell("Ada"), {
       startRow: 0,
@@ -392,4 +495,45 @@ describe("isHiddenFromPrint", () => {
     expect(isHiddenFromPrint(frame)).toBe(true)
     details.remove()
   })
+
+  it("prints a dataframe inside an open expander", () => {
+    const details = document.createElement("details")
+    details.open = true
+    const frame = document.createElement("div")
+    details.append(frame)
+    document.body.append(details)
+
+    expect(isHiddenFromPrint(frame)).toBe(false)
+    details.remove()
+  })
+
+  it("treats a frame as printed when the browser cannot check visibility", () => {
+    const frame = document.createElement("div")
+    Object.defineProperty(frame, "checkVisibility", { value: undefined })
+    document.body.append(frame)
+
+    expect(isHiddenFromPrint(frame)).toBe(false)
+    frame.remove()
+  })
+
+  it.each([
+    [false, true],
+    [true, false],
+  ])(
+    "uses checkVisibility (visible: %s) to decide if the frame is hidden",
+    (isVisible, expected) => {
+      const frame = document.createElement("div")
+      const checkVisibility = vi.fn(() => isVisible)
+      Object.defineProperty(frame, "checkVisibility", {
+        value: checkVisibility,
+      })
+      document.body.append(frame)
+
+      expect(isHiddenFromPrint(frame)).toBe(expected)
+      expect(checkVisibility).toHaveBeenCalledWith({
+        visibilityProperty: true,
+      })
+      frame.remove()
+    }
+  )
 })

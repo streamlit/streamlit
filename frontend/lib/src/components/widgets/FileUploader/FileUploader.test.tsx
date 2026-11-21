@@ -865,6 +865,52 @@ describe("FileUploader widget tests", () => {
     expect(props.uploadClient.uploadFile).not.toHaveBeenCalled()
   })
 
+  it("shows only the rejection when every file is rejected and fetching URLs fails", async () => {
+    const user = userEvent.setup({ applyAccept: false })
+    const props = getProps({ type: [".png"] })
+    props.uploadClient.fetchFileURLs = vi
+      .fn()
+      .mockRejectedValue("fetch URLs failed")
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
+    await user.upload(fileDropZoneInput, createFile("notes.txt"))
+    await act(async () => {})
+
+    expect(screen.getAllByTestId("stFileChip")).toHaveLength(1)
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "text/plain files are not allowed."
+    )
+    expect(screen.queryByText(/fetch URLs failed/)).not.toBeInTheDocument()
+  })
+
+  it("does not restore a deleted file when its upload completes later", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    const { promise: uploadPromise, resolve: resolveUpload } =
+      Promise.withResolvers<void>()
+    props.uploadClient.uploadFile = vi.fn().mockReturnValue(uploadPromise)
+    const spy = vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
+    await user.upload(fileDropZoneInput, createFile())
+    expect(screen.getByTestId("stFileChipIconSpinner")).toBeVisible()
+
+    const deleteBtn = screen.getByTestId("stFileChipDeleteBtn")
+    await user.click(within(deleteBtn).getByRole("button"))
+    expect(screen.queryByTestId("stFileChip")).not.toBeInTheDocument()
+    spy.mockClear()
+
+    await act(async () => {
+      resolveUpload()
+      await uploadPromise
+    })
+
+    expect(screen.queryByTestId("stFileChip")).not.toBeInTheDocument()
+    expect(spy).not.toHaveBeenCalled()
+  })
+
   it("shows uploading spinner while file is in-flight", async () => {
     const user = userEvent.setup()
     const props = getProps()
