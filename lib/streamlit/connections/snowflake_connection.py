@@ -603,16 +603,19 @@ class SnowflakeConnection(BaseSnowflakeConnection):
         df = conn.query("SELECT * FROM my_table")
 
     If no Streamlit secrets or ``connections.toml`` file exist and your app runs
-    in Snowpark Container Services, ``st.connection("snowflake")`` connects using the container's
-    ``SNOWFLAKE_ACCOUNT`` and ``SNOWFLAKE_HOST`` environment variables and the
-    service token at ``/snowflake/session/token``. It also uses
-    ``SNOWFLAKE_DATABASE``, ``SNOWFLAKE_SCHEMA``, ``SNOWFLAKE_PROTOCOL``, and
-    ``SNOWFLAKE_PORT`` when they are set. Keyword arguments passed to
-    ``st.connection`` override these values. This connection uses the service's
-    identity, not the caller's. The fallback is skipped if a connector
-    ``config.toml`` exists or the ``SNOWFLAKE_CONNECTIONS`` environment variable
-    is set. For the caller's identity, use
-    ``"snowflake-callers-rights"`` as described in the next example.
+    in Snowpark Container Services, ``st.connection("snowflake")`` connects
+    using the container's ``SNOWFLAKE_ACCOUNT`` and ``SNOWFLAKE_HOST``
+    environment variables and the service token at
+    ``/snowflake/session/token``. It also uses ``SNOWFLAKE_DATABASE``,
+    ``SNOWFLAKE_SCHEMA``, ``SNOWFLAKE_PROTOCOL``, and ``SNOWFLAKE_PORT`` when
+    they are set. Keyword arguments passed to ``st.connection`` override these
+    values. The fallback is skipped if a connector ``config.toml`` exists or the
+    ``SNOWFLAKE_CONNECTIONS`` environment variable is set, and it requires
+    ``snowflake-connector-python`` 3.11.0 or later.
+
+    This connection uses the service's identity, not the caller's. For the
+    caller's identity, use ``"snowflake-callers-rights"`` as described in the
+    next example.
 
     **Example 7: Caller's rights connection when running in Snowpark Container Services**
 

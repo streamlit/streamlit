@@ -4407,7 +4407,7 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.10,<1" },
     { name = "requests", specifier = ">=2.27,<3" },
     { name = "rich", marker = "extra == 'all'", specifier = ">=11.0.0" },
-    { name = "snowflake-connector-python", marker = "extra == 'snowflake'", specifier = ">=3.11.0" },
+    { name = "snowflake-connector-python", marker = "extra == 'snowflake'", specifier = ">=3.3.0" },
     { name = "snowflake-snowpark-python", extras = ["modin"], marker = "extra == 'snowflake'", specifier = ">=1.17.0" },
     { name = "sqlalchemy", marker = "extra == 'sql'", specifier = ">=2.0.0" },
     { name = "starlette", specifier = ">=0.46.0,<2" },
