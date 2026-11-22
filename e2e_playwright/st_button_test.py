@@ -446,8 +446,8 @@ def test_wrap_false_keeps_icon_and_shortcut_visible(app: Page):
     expect(container.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
 
 
-def test_button_sizes(app: Page, assert_snapshot: ImageCompareFunction):
+def test_button_sizes(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Every size renders in the size row."""
-    sizes = get_element_by_key(app, "button_sizes")
+    sizes = get_element_by_key(themed_app, "button_sizes")
     expect(sizes.get_by_test_id("stButton")).to_have_count(5)
     assert_snapshot(sizes, name="st_button-sizes")

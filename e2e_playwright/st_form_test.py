@@ -463,8 +463,10 @@ def test_wrap_false_submit_button_truncates_and_sets_native_title(app: Page):
     ).to_be_visible()
 
 
-def test_form_submit_button_sizes(app: Page, assert_snapshot: ImageCompareFunction):
+def test_form_submit_button_sizes(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
     """Every size renders in the size row."""
-    sizes = get_element_by_key(app, "form_submit_button_sizes")
+    sizes = get_element_by_key(themed_app, "form_submit_button_sizes")
     expect(sizes.get_by_test_id("stFormSubmitButton")).to_have_count(5)
     assert_snapshot(sizes, name="st_form-submit_button_sizes")
