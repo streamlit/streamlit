@@ -14,6 +14,7 @@
 
 from pathlib import Path
 from random import random
+from typing import Literal
 
 import streamlit as st
 from streamlit import runtime
@@ -205,3 +206,15 @@ st.download_button(
     wrap=False,
     key="wrap_false_download_button",
 )
+
+# One row with every size, for the size snapshot test.
+SIZES: list[Literal["xxsmall", "xsmall", "small", "medium", "large"]] = [
+    "xxsmall",
+    "xsmall",
+    "small",
+    "medium",
+    "large",
+]
+with st.container(horizontal=True, key="download_button_sizes"):
+    for size in SIZES:
+        st.download_button(size, "data", size=size, key=f"download_button_size_{size}")

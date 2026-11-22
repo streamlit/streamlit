@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Literal
+
 import streamlit as st
 
 st.link_button("Default Link", url="https://streamlit.io")
@@ -141,3 +143,17 @@ st.link_button(
     wrap=False,
     key="wrap_false_link_button",
 )
+
+# One row with every size, for the size snapshot test.
+SIZES: list[Literal["xxsmall", "xsmall", "small", "medium", "large"]] = [
+    "xxsmall",
+    "xsmall",
+    "small",
+    "medium",
+    "large",
+]
+with st.container(horizontal=True, key="link_button_sizes"):
+    for size in SIZES:
+        st.link_button(
+            size, "https://streamlit.io", size=size, key=f"link_button_size_{size}"
+        )

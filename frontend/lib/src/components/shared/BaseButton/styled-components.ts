@@ -20,7 +20,7 @@ import styled, { type CSSObject } from "@emotion/styled"
 import { darken, getContrast, lighten, transparentize } from "color2k"
 import { ToggleButton, ToggleButtonGroup } from "react-aria-components"
 
-import type { ButtonLikeControlSize } from "~lib/components/shared/BaseButton/buttonLikeSize"
+import type { ButtonSize } from "~lib/components/shared/BaseButton/buttonSize"
 import { getHorizontalOverflowFadeStyles } from "~lib/components/shared/horizontalOverflowFade"
 import { VISUALLY_HIDDEN_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
@@ -56,7 +56,7 @@ export interface BaseButtonProps {
   kind: BaseButtonKind
   size?: BaseButtonSize
   // Public API `size`. Independent of the internal `size` padding axis.
-  controlSize?: ButtonLikeControlSize
+  controlSize?: ButtonSize
   onClick?: (event: MouseEvent<HTMLButtonElement>) => void
   disabled?: boolean
   // If true, the button should take up container's full width
@@ -116,7 +116,7 @@ function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
 // Styles for the public button `size`. "medium" is the default look, so it
 // returns no overrides. Kind-specific padding (e.g. tertiary) still wins.
 export function getControlSizeStyle(
-  controlSize: ButtonLikeControlSize,
+  controlSize: ButtonSize,
   theme: EmotionTheme
 ): CSSObject {
   switch (controlSize) {

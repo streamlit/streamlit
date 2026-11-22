@@ -24,7 +24,7 @@ import BaseButton, {
   BaseButtonSize,
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
-import { mapButtonLikeControlSize } from "~lib/components/shared/BaseButton/buttonLikeSize"
+import { mapProtoButtonSize } from "~lib/components/shared/BaseButton/buttonSize"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
 import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
@@ -46,7 +46,7 @@ function Button(props: Props): ReactElement {
   // title, skipped when help is set since help provides the tooltip.
   const wrap = useResolvedWrap(element.wrap)
   const addTitleTooltip = !wrap && !element.help
-  const controlSize = mapButtonLikeControlSize(element.size)
+  const controlSize = mapProtoButtonSize(element.size)
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {

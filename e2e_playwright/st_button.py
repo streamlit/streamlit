@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Literal
+
 import streamlit as st
 from streamlit import runtime
 
@@ -221,3 +223,15 @@ with hidden_label_tab:
         wrap=False,
         key="wrap_false_hidden_tab_button",
     )
+
+# One row with every size, for the size snapshot test.
+SIZES: list[Literal["xxsmall", "xsmall", "small", "medium", "large"]] = [
+    "xxsmall",
+    "xsmall",
+    "small",
+    "medium",
+    "large",
+]
+with st.container(horizontal=True, key="button_sizes"):
+    for size in SIZES:
+        st.button(size, size=size, key=f"button_size_{size}")

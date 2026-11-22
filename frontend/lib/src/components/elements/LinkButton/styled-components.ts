@@ -19,7 +19,7 @@ import type { MouseEvent, ReactNode } from "react"
 import styled, { type CSSObject } from "@emotion/styled"
 import { darken } from "color2k"
 
-import type { ButtonLikeControlSize } from "~lib/components/shared/BaseButton/buttonLikeSize"
+import type { ButtonSize } from "~lib/components/shared/BaseButton/buttonSize"
 import {
   BaseButtonKind,
   BaseButtonSize,
@@ -36,7 +36,7 @@ export interface BaseLinkButtonProps {
     | BaseButtonKind.SECONDARY
     | BaseButtonKind.TERTIARY
   size?: BaseButtonSize
-  controlSize?: ButtonLikeControlSize
+  controlSize?: ButtonSize
   disabled?: boolean
   // If true, the button should take up container's full width
   containerWidth?: boolean

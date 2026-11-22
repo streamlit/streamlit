@@ -16,9 +16,9 @@
 
 import { streamlit } from "@streamlit/protobuf"
 
-import { mapButtonLikeControlSize } from "./buttonLikeSize"
+import { mapProtoButtonSize } from "./buttonSize"
 
-describe("mapButtonLikeControlSize", () => {
+describe("mapProtoButtonSize", () => {
   it.each([
     [streamlit.ButtonLikeSize.BUTTON_LIKE_SIZE_XXSMALL, "xxsmall"],
     [streamlit.ButtonLikeSize.BUTTON_LIKE_SIZE_XSMALL, "xsmall"],
@@ -26,10 +26,10 @@ describe("mapButtonLikeControlSize", () => {
     [streamlit.ButtonLikeSize.BUTTON_LIKE_SIZE_MEDIUM, "medium"],
     [streamlit.ButtonLikeSize.BUTTON_LIKE_SIZE_LARGE, "large"],
   ])("maps proto value %s to %s", (protoSize, expected) => {
-    expect(mapButtonLikeControlSize(protoSize)).toBe(expected)
+    expect(mapProtoButtonSize(protoSize)).toBe(expected)
   })
 
   it.each([undefined, null])("falls back to medium for %s", protoSize => {
-    expect(mapButtonLikeControlSize(protoSize)).toBe("medium")
+    expect(mapProtoButtonSize(protoSize)).toBe("medium")
   })
 })
