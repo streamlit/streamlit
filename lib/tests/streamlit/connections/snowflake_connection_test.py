@@ -344,6 +344,91 @@ class TestSnowflakeConnectionConfiguration:
             with pytest.raises(connector.Error, match="token rejected"):
                 SnowflakeConnection("snowflake")
 
+    def test_secrets_take_precedence_over_container_env(self, tmp_path: Path) -> None:
+        """Streamlit secrets are used even when the container fallback could run."""
+        env, token_file = self._container_env(tmp_path)
+        with (
+            self._patched_snowflake(
+                {"account": "secret-acct", "user": "alice"}
+            ) as connector,
+            patch.dict(os.environ, env),
+            patch(
+                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
+                str(token_file),
+            ),
+        ):
+            SnowflakeConnection("snowflake")
+        connector.connect.assert_called_once_with(account="secret-acct", user="alice")
+
+    def test_named_connection_ignores_container_env(self, tmp_path: Path) -> None:
+        """A connection name other than "snowflake" never uses the container fallback."""
+        env, token_file = self._container_env(tmp_path)
+        with (
+            self._patched_snowflake() as connector,
+            patch.dict(os.environ, env),
+            patch(
+                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
+                str(token_file),
+            ),
+        ):
+            SnowflakeConnection("my_connection")
+        connector.connect.assert_called_once_with(connection_name="my_connection")
+
+    def test_kwargs_still_ignored_when_config_file_exists(self, tmp_path: Path) -> None:
+        """With a connector config file, "snowflake" keeps ignoring keyword arguments."""
+        env, token_file = self._container_env(tmp_path)
+        connections_file = tmp_path / "connections.toml"
+        connections_file.write_text("", encoding="utf-8")
+        with (
+            self._patched_snowflake() as connector,
+            patch.dict(os.environ, env),
+            patch(
+                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
+                str(token_file),
+            ),
+            patch.object(
+                sys.modules["snowflake.connector.constants"],
+                "CONNECTIONS_FILE",
+                connections_file,
+            ),
+        ):
+            SnowflakeConnection("snowflake", warehouse="wh")
+        connector.connect.assert_called_once_with()
+
+    def test_connector_without_config_constants_keeps_default_path(
+        self, tmp_path: Path
+    ) -> None:
+        """If the connector lacks the config-file constants, the fallback is skipped."""
+        env, token_file = self._container_env(tmp_path)
+        with (
+            self._patched_snowflake() as connector,
+            patch.dict(os.environ, env),
+            patch(
+                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
+                str(token_file),
+            ),
+        ):
+            del sys.modules["snowflake.connector.constants"].CONFIG_FILE
+            SnowflakeConnection("snowflake")
+        connector.connect.assert_called_once_with()
+
+    def test_missing_token_file_keeps_friendly_config_error(
+        self, tmp_path: Path
+    ) -> None:
+        """Without the token file, a failed default connection still raises the friendly error."""
+        env, _ = self._container_env(tmp_path)
+        with (
+            self._patched_snowflake() as connector,
+            patch.dict(os.environ, env),
+            patch(
+                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
+                str(tmp_path / "missing"),
+            ),
+        ):
+            connector.connect.side_effect = connector.Error("no default connection")
+            with pytest.raises(StreamlitAPIException, match="Missing Snowflake"):
+                SnowflakeConnection("snowflake")
+
     def test_connect_reraises_connector_error_when_config_is_present(self) -> None:
         """A connector error is re-raised when kwargs provide configuration."""
         with self._patched_snowflake() as connector:

@@ -698,20 +698,7 @@ class SnowflakeConnection(BaseSnowflakeConnection):
 
             # Use the default configuration as defined in https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection
             if self._connection_name == "snowflake":
-                from snowflake.connector.constants import (  # type:ignore[import]
-                    CONFIG_FILE,
-                    CONNECTIONS_FILE,
-                )
-
-                # Any connector config file, or connection configuration supplied
-                # through SNOWFLAKE_CONNECTIONS, takes precedence over the fallback,
-                # so a configured user or role is never silently replaced.
-                if (
-                    not CONNECTIONS_FILE.exists()
-                    and not CONFIG_FILE.exists()
-                    and not os.getenv("SNOWFLAKE_CONNECTIONS")
-                    and _can_connect_from_container_env()
-                ):
+                if _should_use_container_env_fallback():
                     _LOGGER.info(
                         "No connector config file found. Connecting to Snowflake using the "
                         "SNOWFLAKE_* environment variables and the service token file."
@@ -812,10 +799,26 @@ def _get_container_connection_params() -> dict[str, str | bool]:
     return params
 
 
-def _read_service_token() -> str:
-    """Return the contents of the Snowpark service token file, without whitespace."""
-    with open(SNOWPARK_CONNECTION_TOKEN_FILE, encoding="utf-8") as token_file:
-        return token_file.read().strip()
+def _should_use_container_env_fallback() -> bool:
+    """Return whether to build the default connection from the container environment.
+
+    Connector config files and ``SNOWFLAKE_CONNECTIONS`` take precedence over the
+    fallback, so a configured user or role is never silently replaced.
+    """
+    try:
+        from snowflake.connector.constants import (  # type:ignore[import]
+            CONFIG_FILE,
+            CONNECTIONS_FILE,
+        )
+    except ImportError:
+        # A connector without these constants keeps the default connection path.
+        return False
+    return (
+        not CONNECTIONS_FILE.exists()
+        and not CONFIG_FILE.exists()
+        and not os.getenv("SNOWFLAKE_CONNECTIONS")
+        and _can_connect_from_container_env()
+    )
 
 
 def _can_connect_from_container_env() -> bool:
@@ -960,7 +963,8 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
     @classmethod
     def _read_token_file(cls) -> str:
         """Returns the contents of the Snowpark token file on disk."""
-        return _read_service_token()
+        with open(SNOWPARK_CONNECTION_TOKEN_FILE, encoding="utf-8") as token_file:
+            return token_file.read()
 
     @classmethod
     def _get_connection_params(cls) -> dict[str, str | bool]:
