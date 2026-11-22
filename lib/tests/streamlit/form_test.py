@@ -32,6 +32,7 @@ from streamlit.errors import (
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
 )
+from streamlit.proto.ButtonLikeSize_pb2 import ButtonLikeSize as ButtonLikeSizeProto
 from streamlit.runtime.state.session_state import RegisterWidgetResult
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -368,6 +369,40 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
 
         button_proto = self.get_delta_from_queue().new_element.button
         assert button_proto.wrap is wrap_value
+
+    def test_submit_button_size_default(self):
+        """By default size is "medium", which is the existing button height."""
+
+        form = st.form("foo")
+        form.form_submit_button()
+
+        button_proto = self.get_delta_from_queue().new_element.button
+        assert button_proto.size == ButtonLikeSizeProto.BUTTON_LIKE_SIZE_MEDIUM
+
+    @parameterized.expand(
+        [
+            ("xxsmall", ButtonLikeSizeProto.BUTTON_LIKE_SIZE_XXSMALL),
+            ("xsmall", ButtonLikeSizeProto.BUTTON_LIKE_SIZE_XSMALL),
+            ("small", ButtonLikeSizeProto.BUTTON_LIKE_SIZE_SMALL),
+            ("medium", ButtonLikeSizeProto.BUTTON_LIKE_SIZE_MEDIUM),
+            ("large", ButtonLikeSizeProto.BUTTON_LIKE_SIZE_LARGE),
+        ]
+    )
+    def test_submit_button_size(self, size: str, proto_value: int):
+        """Test that the size parameter is forwarded to the submit button proto."""
+
+        form = st.form("foo")
+        form.form_submit_button(size=size)
+
+        button_proto = self.get_delta_from_queue().new_element.button
+        assert button_proto.size == proto_value
+
+    def test_submit_button_invalid_size(self):
+        """An unknown size raises a StreamlitValueError."""
+
+        form = st.form("foo")
+        with pytest.raises(StreamlitValueError):
+            form.form_submit_button(size="huge")
 
     def test_submit_button_with_key(self):
         """Test that a submit button can have a custom key."""

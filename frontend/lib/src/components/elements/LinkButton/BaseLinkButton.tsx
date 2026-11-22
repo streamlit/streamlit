@@ -31,7 +31,18 @@ const BaseLinkButton = forwardRef<
   HTMLAnchorElement,
   Readonly<BaseLinkButtonPropsT>
 >(function BaseLinkButtonWithRef(
-  { kind, size, disabled, children, autoFocus, href, rel, target, onClick },
+  {
+    kind,
+    size,
+    controlSize,
+    disabled,
+    children,
+    autoFocus,
+    href,
+    rel,
+    target,
+    onClick,
+  },
   ref
 ): ReactElement {
   let ComponentType = StyledPrimaryLinkButton
@@ -47,6 +58,7 @@ const BaseLinkButton = forwardRef<
       ref={ref}
       kind={kind}
       size={size ?? BaseButtonSize.MEDIUM}
+      controlSize={controlSize ?? "medium"}
       containerWidth={true}
       disabled={disabled ?? false}
       autoFocus={autoFocus ?? false}

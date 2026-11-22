@@ -25,6 +25,7 @@ from streamlit.errors import (
     StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.Block_pb2 import Block
+from streamlit.proto.ButtonLikeSize_pb2 import ButtonLikeSize as ButtonLikeSizeProto
 from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
 from streamlit.proto.HeightConfig_pb2 import HeightConfig
 from streamlit.proto.TextAlignmentConfig_pb2 import TextAlignmentConfig
@@ -67,6 +68,20 @@ _VALID_SPACE_SIZE_VALUES: Final = [
 
 # Shared by st.expander and st.status, which render through the same proto.
 ExpandableType: TypeAlias = Literal["default", "compact", "step"]
+
+# Control height for the button family: "xxsmall" is 1.5rem, "xsmall" 1.75rem,
+# "small" 2rem, "medium" (default) 2.5rem, and "large" 3rem.
+ButtonLikeSize: TypeAlias = Literal["xxsmall", "xsmall", "small", "medium", "large"]
+
+_BUTTON_LIKE_SIZE_TO_PROTO: Final[
+    dict[ButtonLikeSize, ButtonLikeSizeProto.ValueType]
+] = {
+    "xxsmall": ButtonLikeSizeProto.BUTTON_LIKE_SIZE_XXSMALL,
+    "xsmall": ButtonLikeSizeProto.BUTTON_LIKE_SIZE_XSMALL,
+    "small": ButtonLikeSizeProto.BUTTON_LIKE_SIZE_SMALL,
+    "medium": ButtonLikeSizeProto.BUTTON_LIKE_SIZE_MEDIUM,
+    "large": ButtonLikeSizeProto.BUTTON_LIKE_SIZE_LARGE,
+}
 
 # Protobuf ``uint32`` max. Pixel/span fields that serialize as uint32 must
 # stay in this range so invalid public API values raise Streamlit errors
@@ -288,6 +303,26 @@ def validate_space_size(size: SpaceSize) -> None:
         raise StreamlitValueError(
             "size", _VALID_SPACE_SIZE_VALUES, detail=f"Got {size!r}."
         )
+
+
+def get_button_like_size_proto(
+    size: ButtonLikeSize,
+) -> ButtonLikeSizeProto.ValueType:
+    """Validate a button-like ``size`` and return its proto value.
+
+    Raises
+    ------
+    StreamlitValueError
+        If ``size`` is not ``"xxsmall"``, ``"xsmall"``, ``"small"``,
+        ``"medium"``, or ``"large"``.
+    """
+    if size not in _BUTTON_LIKE_SIZE_TO_PROTO:
+        raise StreamlitValueError(
+            "size",
+            ["'xxsmall'", "'xsmall'", "'small'", "'medium'", "'large'"],
+            detail=f"Got {size!r}.",
+        )
+    return _BUTTON_LIKE_SIZE_TO_PROTO[size]
 
 
 def get_width_config(width: Width | SpaceSize) -> WidthConfig:

@@ -185,6 +185,8 @@ with st.container(horizontal=True, wrap=False):
     st.button("Delete")
 ```
 
+For compact toolbars, buttons accept `size` (`"xxsmall"` to `"large"`, default `"medium"`). It changes the height only, not the font size.
+
 ## Aligning elements
 
 Use `horizontal_alignment` on containers to position elements:

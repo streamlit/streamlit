@@ -19,7 +19,7 @@ import { userEvent } from "@testing-library/user-event"
 import { enableMapSet, enablePatches } from "immer"
 import { vi } from "vitest"
 
-import { Button as ButtonProto } from "@streamlit/protobuf"
+import { Button as ButtonProto, streamlit } from "@streamlit/protobuf"
 
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { renderWithContexts } from "~lib/test_util"
@@ -270,5 +270,26 @@ describe("FormSubmitButton", () => {
     onActivate()
 
     expect(submitSpy).not.toHaveBeenCalled()
+  })
+
+  describe("size", () => {
+    it("keeps the default height when size is unset", () => {
+      renderWithContexts(<FormSubmitButton {...getProps()} />)
+
+      expect(screen.getByRole("button")).toHaveStyle("min-height: 2.5rem")
+    })
+
+    it("applies the height of the size from the proto", () => {
+      renderWithContexts(
+        <FormSubmitButton
+          {...getProps(
+            {},
+            { size: streamlit.ButtonLikeSize.BUTTON_LIKE_SIZE_XSMALL }
+          )}
+        />
+      )
+
+      expect(screen.getByRole("button")).toHaveStyle("min-height: 1.75rem")
+    })
   })
 })

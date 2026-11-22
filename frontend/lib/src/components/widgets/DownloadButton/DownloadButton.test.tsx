@@ -18,7 +18,10 @@ import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
 
-import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
+import {
+  DownloadButton as DownloadButtonProto,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import type { BackendOperationClient } from "~lib/BackendOperationClient"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
@@ -69,6 +72,26 @@ const getProps = (
 })
 
 describe("DownloadButton widget", () => {
+  describe("size", () => {
+    it("keeps the default height when size is unset", () => {
+      render(<DownloadButton {...getProps()} />)
+
+      expect(screen.getByRole("button")).toHaveStyle("min-height: 2.5rem")
+    })
+
+    it("applies the height of the size from the proto", () => {
+      render(
+        <DownloadButton
+          {...getProps({
+            size: streamlit.ButtonLikeSize.BUTTON_LIKE_SIZE_XSMALL,
+          })}
+        />
+      )
+
+      expect(screen.getByRole("button")).toHaveStyle("min-height: 1.75rem")
+    })
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })

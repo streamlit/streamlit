@@ -18,7 +18,7 @@ import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
 
-import { Button as ButtonProto } from "@streamlit/protobuf"
+import { Button as ButtonProto, streamlit } from "@streamlit/protobuf"
 
 import {
   FlexContext,
@@ -60,6 +60,26 @@ const getProps = (
 })
 
 describe("Button widget", () => {
+  describe("size", () => {
+    it("keeps the default height when size is unset", () => {
+      render(<Button {...getProps()} />)
+
+      expect(screen.getByRole("button")).toHaveStyle("min-height: 2.5rem")
+    })
+
+    it("applies the height of the size from the proto", () => {
+      render(
+        <Button
+          {...getProps({
+            size: streamlit.ButtonLikeSize.BUTTON_LIKE_SIZE_XXSMALL,
+          })}
+        />
+      )
+
+      expect(screen.getByRole("button")).toHaveStyle("min-height: 1.5rem")
+    })
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })

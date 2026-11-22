@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Literal, cast
 from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import FormData, current_form_id, is_in_form
 from streamlit.elements.lib.layout_utils import (
+    ButtonLikeSize,
     Height,
     Width,
     get_height_config,
@@ -247,6 +248,7 @@ class FormMixin:
         width: Width = "content",
         shortcut: str | None = None,
         wrap: bool | None = None,
+        size: ButtonLikeSize = "medium",
     ) -> bool:
         r"""Display a form submit button.
 
@@ -430,6 +432,19 @@ class FormMixin:
             ``help`` is set, hovering reveals the full label. Icons and
             keyboard shortcuts remain visible.
 
+        size : "xxsmall", "xsmall", "small", "medium", or "large"
+            The height of the button. This can be one of the following:
+
+            - ``"xxsmall"``: 1.5rem.
+            - ``"xsmall"``: 1.75rem.
+            - ``"small"``: 2rem.
+            - ``"medium"`` (default): 2.5rem, matching text inputs and
+              select boxes.
+            - ``"large"``: 3rem.
+
+            These are minimum heights. The label font size doesn't change,
+            and a label that wraps onto several lines makes the button taller.
+
         Returns
         -------
         bool
@@ -463,6 +478,7 @@ class FormMixin:
             key=key,
             shortcut=shortcut,
             wrap=wrap,
+            size=size,
         )
 
     def _form_submit_button(
@@ -482,6 +498,7 @@ class FormMixin:
         width: Width = "content",
         shortcut: str | None = None,
         wrap: bool | None = None,
+        size: ButtonLikeSize = "medium",
     ) -> bool:
         form_id = current_form_id(self.dg)
         submit_button_key = to_key(key) or f"FormSubmitter:{form_id}-{label}"
@@ -501,6 +518,7 @@ class FormMixin:
             width=width,
             shortcut=shortcut,
             wrap=wrap,
+            size=size,
         )
 
     @property

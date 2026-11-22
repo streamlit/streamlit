@@ -20,6 +20,7 @@ import styled, { type CSSObject } from "@emotion/styled"
 import { darken, getContrast, lighten, transparentize } from "color2k"
 import { ToggleButton, ToggleButtonGroup } from "react-aria-components"
 
+import type { ButtonLikeControlSize } from "~lib/components/shared/BaseButton/buttonLikeSize"
 import { getHorizontalOverflowFadeStyles } from "~lib/components/shared/horizontalOverflowFade"
 import { VISUALLY_HIDDEN_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
@@ -54,6 +55,8 @@ export enum BaseButtonSize {
 export interface BaseButtonProps {
   kind: BaseButtonKind
   size?: BaseButtonSize
+  // Public API `size`. Independent of the internal `size` padding axis.
+  controlSize?: ButtonLikeControlSize
   onClick?: (event: MouseEvent<HTMLButtonElement>) => void
   disabled?: boolean
   // If true, the button should take up container's full width
@@ -72,12 +75,20 @@ export interface BaseButtonProps {
 type RequiredBaseButtonProps = Required<
   Omit<
     BaseButtonProps,
-    "aria-haspopup" | "aria-expanded" | "aria-controls" | "aria-label"
+    | "aria-haspopup"
+    | "aria-expanded"
+    | "aria-controls"
+    | "aria-label"
+    | "controlSize"
   >
 > &
   Pick<
     BaseButtonProps,
-    "aria-haspopup" | "aria-expanded" | "aria-controls" | "aria-label"
+    | "aria-haspopup"
+    | "aria-expanded"
+    | "aria-controls"
+    | "aria-label"
+    | "controlSize"
   >
 
 function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
@@ -102,8 +113,46 @@ function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   }
 }
 
+// Styles for the public button `size`. "medium" is the default look, so it
+// returns no overrides. Kind-specific padding (e.g. tertiary) still wins.
+export function getControlSizeStyle(
+  controlSize: ButtonLikeControlSize,
+  theme: EmotionTheme
+): CSSObject {
+  switch (controlSize) {
+    case "xxsmall":
+      return {
+        minHeight: theme.sizes.buttonHeightXXSmall,
+        paddingBlock: theme.spacing.none,
+        paddingInline: theme.spacing.sm,
+        lineHeight: theme.lineHeights.tight,
+      }
+    case "xsmall":
+      return {
+        minHeight: theme.sizes.buttonHeightXSmall,
+        paddingBlock: theme.spacing.none,
+        paddingInline: theme.spacing.sm,
+        lineHeight: theme.lineHeights.tight,
+      }
+    case "small":
+      return {
+        minHeight: theme.sizes.buttonHeightSmall,
+        paddingBlock: theme.spacing.threeXS,
+        paddingInline: theme.spacing.md,
+      }
+    case "large":
+      return {
+        minHeight: theme.sizes.buttonHeightLarge,
+        paddingBlock: theme.spacing.sm,
+        paddingInline: theme.spacing.lg,
+      }
+    default:
+      return {}
+  }
+}
+
 const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
-  ({ containerWidth, size, theme }) => {
+  ({ containerWidth, size, controlSize, theme }) => {
     return {
       display: "inline-flex",
       alignItems: "center",
@@ -131,6 +180,7 @@ const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
         boxShadow: theme.shadows.focusRing,
       },
       ...getSizeStyle(size, theme),
+      ...getControlSizeStyle(controlSize ?? "medium", theme),
     }
   }
 )

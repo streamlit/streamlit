@@ -84,6 +84,100 @@ describe("Button element", () => {
     })
   })
 
+  describe("controlSize", () => {
+    const expectedMinHeight = {
+      xxsmall: lightTheme.emotion.sizes.buttonHeightXXSmall,
+      xsmall: lightTheme.emotion.sizes.buttonHeightXSmall,
+      small: lightTheme.emotion.sizes.buttonHeightSmall,
+      medium: lightTheme.emotion.sizes.minElementHeight,
+      large: lightTheme.emotion.sizes.buttonHeightLarge,
+    } as const
+
+    it.each(Object.keys(expectedMinHeight))(
+      "applies the %s min-height",
+      controlSize => {
+        render(
+          <BaseButton
+            {...getProps({
+              controlSize: controlSize as keyof typeof expectedMinHeight,
+            })}
+          >
+            Hello
+          </BaseButton>
+        )
+
+        expect(screen.getByRole("button")).toHaveStyle(
+          `min-height: ${expectedMinHeight[controlSize as keyof typeof expectedMinHeight]}`
+        )
+      }
+    )
+
+    it("has the documented heights", () => {
+      expect(expectedMinHeight).toEqual({
+        xxsmall: "1.5rem",
+        xsmall: "1.75rem",
+        small: "2rem",
+        medium: "2.5rem",
+        large: "3rem",
+      })
+    })
+
+    it("leaves the size padding untouched for medium", () => {
+      const { spacing } = lightTheme.emotion
+      render(
+        <BaseButton
+          {...getProps({
+            size: BaseButtonSize.XSMALL,
+            controlSize: "medium",
+          })}
+        >
+          Hello
+        </BaseButton>
+      )
+
+      expect(screen.getByRole("button")).toHaveStyle(
+        `padding: ${spacing.twoXS} ${spacing.sm}`
+      )
+    })
+
+    it("removes vertical padding for xxsmall and xsmall", () => {
+      const { spacing } = lightTheme.emotion
+      render(
+        <BaseButton
+          {...getProps({
+            size: BaseButtonSize.SMALL,
+            controlSize: "xxsmall",
+          })}
+        >
+          Hello
+        </BaseButton>
+      )
+
+      const button = screen.getByRole("button")
+      expect(button).toHaveStyle(`padding-block: ${spacing.none}`)
+      expect(button).toHaveStyle(`padding-inline: ${spacing.sm}`)
+    })
+
+    it("keeps tertiary buttons padding-free while applying the height", () => {
+      render(
+        <BaseButton
+          {...getProps({
+            kind: BaseButtonKind.TERTIARY,
+            controlSize: "small",
+          })}
+        >
+          Hello
+        </BaseButton>
+      )
+
+      const button = screen.getByRole("button")
+      expect(button).toHaveStyle("padding: 0")
+      expect(button).toHaveStyle(
+        `min-height: ${lightTheme.emotion.sizes.buttonHeightSmall}`
+      )
+    })
+  })
+
   it("renders disabled buttons correctly", () => {
     render(<BaseButton {...getProps({ disabled: true })}>Hello</BaseButton>)
 

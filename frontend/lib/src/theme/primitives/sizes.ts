@@ -46,6 +46,11 @@ export const sizes = {
   smallElementHeight: "1.5rem",
   // min height used for most input widgets
   minElementHeight,
+  // Min heights of the public button `size` scale. "medium" is minElementHeight.
+  buttonHeightXXSmall: "1.5rem",
+  buttonHeightXSmall: "1.75rem",
+  buttonHeightSmall: "2rem",
+  buttonHeightLarge: "3rem",
   // Height for hover/focus highlights inside input widgets (e.g., dropdown items)
   // Calculated as: minElementHeight - 2 * spacing.xs (vertical padding)
   elementHighlightHeight: `calc(${minElementHeight} - 2 * ${spacing.xs})`,

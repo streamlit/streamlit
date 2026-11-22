@@ -19,9 +19,11 @@ import type { MouseEvent, ReactNode } from "react"
 import styled, { type CSSObject } from "@emotion/styled"
 import { darken } from "color2k"
 
+import type { ButtonLikeControlSize } from "~lib/components/shared/BaseButton/buttonLikeSize"
 import {
   BaseButtonKind,
   BaseButtonSize,
+  getControlSizeStyle,
   getTertiaryActiveColor,
 } from "~lib/components/shared/BaseButton/styled-components"
 import type { EmotionTheme } from "~lib/theme/types"
@@ -34,6 +36,7 @@ export interface BaseLinkButtonProps {
     | BaseButtonKind.SECONDARY
     | BaseButtonKind.TERTIARY
   size?: BaseButtonSize
+  controlSize?: ButtonLikeControlSize
   disabled?: boolean
   // If true, the button should take up container's full width
   containerWidth?: boolean
@@ -45,7 +48,10 @@ export interface BaseLinkButtonProps {
   onClick: (event: MouseEvent<HTMLAnchorElement>) => void
 }
 
-type RequiredBaseLinkButtonProps = Required<BaseLinkButtonProps>
+type RequiredBaseLinkButtonProps = Required<
+  Omit<BaseLinkButtonProps, "controlSize">
+> &
+  Pick<BaseLinkButtonProps, "controlSize">
 
 function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   switch (size) {
@@ -70,7 +76,7 @@ function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
 }
 
 const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
-  ({ containerWidth, size, theme }) => {
+  ({ containerWidth, size, controlSize, theme }) => {
     return {
       display: "inline-flex",
       alignItems: "center",
@@ -104,6 +110,7 @@ const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
         textDecoration: "none",
       },
       ...getSizeStyle(size, theme),
+      ...getControlSizeStyle(controlSize ?? "medium", theme),
     }
   }
 )

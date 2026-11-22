@@ -18,7 +18,7 @@ import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
 
-import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
+import { LinkButton as LinkButtonProto, streamlit } from "@streamlit/protobuf"
 
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { render } from "~lib/test_util"
@@ -58,6 +58,26 @@ const getProps = (
 }
 
 describe("LinkButton widget", () => {
+  describe("size", () => {
+    it("keeps the default height when size is unset", () => {
+      render(<LinkButton {...getProps()} />)
+
+      expect(screen.getByRole("link")).toHaveStyle("min-height: 2.5rem")
+    })
+
+    it("applies the height of the size from the proto", () => {
+      render(
+        <LinkButton
+          {...getProps({
+            size: streamlit.ButtonLikeSize.BUTTON_LIKE_SIZE_XSMALL,
+          })}
+        />
+      )
+
+      expect(screen.getByRole("link")).toHaveStyle("min-height: 1.75rem")
+    })
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })

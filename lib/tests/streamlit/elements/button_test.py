@@ -39,6 +39,7 @@ from streamlit.navigation.page import Page
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
 )
+from streamlit.proto.ButtonLikeSize_pb2 import ButtonLikeSize as ButtonLikeSizeProto
 from streamlit.proto.DownloadButton_pb2 import (
     DownloadButton as DownloadButtonProto,
 )
@@ -580,6 +581,70 @@ class ButtonTest(DeltaGeneratorTestCase):
         st.button("same label")
         with pytest.raises(StreamlitDuplicateElementId):
             st.button("same label", wrap=False)
+
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name != "page_link"
+        ]
+    )
+    def test_button_size_default(self, name: str, command: Callable[..., Any]):
+        """By default size is "medium", which is the existing button height."""
+        command()
+        el = getattr(self.get_delta_from_queue().new_element, name)
+        assert el.size == ButtonLikeSizeProto.BUTTON_LIKE_SIZE_MEDIUM
+
+    @parameterized.expand(
+        [
+            (name, command, size, proto_value)
+            for name, command in get_button_command_matrix()
+            if name != "page_link"
+            for size, proto_value in [
+                ("xxsmall", ButtonLikeSizeProto.BUTTON_LIKE_SIZE_XXSMALL),
+                ("xsmall", ButtonLikeSizeProto.BUTTON_LIKE_SIZE_XSMALL),
+                ("small", ButtonLikeSizeProto.BUTTON_LIKE_SIZE_SMALL),
+                ("medium", ButtonLikeSizeProto.BUTTON_LIKE_SIZE_MEDIUM),
+                ("large", ButtonLikeSizeProto.BUTTON_LIKE_SIZE_LARGE),
+            ]
+        ]
+    )
+    def test_button_size(
+        self, name: str, command: Callable[..., Any], size: str, proto_value: int
+    ):
+        """The size parameter is forwarded to the button proto."""
+        command(size=size)
+        el = getattr(self.get_delta_from_queue().new_element, name)
+        assert el.size == proto_value
+
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name != "page_link"
+        ]
+    )
+    def test_button_invalid_size(self, name: str, command: Callable[..., Any]):
+        """An unknown size raises a StreamlitValueError listing the options."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            command(size="huge")
+        assert "size" in str(exc_info.value)
+        assert "'xxsmall'" in str(exc_info.value)
+
+    def test_button_size_excluded_from_id(self):
+        """size is presentation-only and must not change the element id.
+
+        Two otherwise-identical buttons that differ only in size collide on the
+        same auto-generated id, so toggling size preserves widget state.
+        """
+        st.button("same label")
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.button("same label", size="small")
+
+    def test_page_link_does_not_support_size(self):
+        """st.page_link is intentionally excluded from the size parameter."""
+        with pytest.raises(TypeError):
+            st.page_link("https://example.com", label="Example", size="small")
 
     def test_page_link_does_not_support_wrap(self):
         """st.page_link is intentionally excluded from the wrap parameter."""
