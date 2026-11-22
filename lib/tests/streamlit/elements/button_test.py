@@ -43,6 +43,7 @@ from streamlit.proto.ButtonLikeSize_pb2 import ButtonLikeSize as ButtonLikeSizeP
 from streamlit.proto.DownloadButton_pb2 import (
     DownloadButton as DownloadButtonProto,
 )
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -994,3 +995,26 @@ class ButtonTest(DeltaGeneratorTestCase):
         """Invalid on_click values report on_click, not on_change."""
         with pytest.raises(StreamlitValueError, match="Invalid `on_click` value"):
             st.link_button("test", url="https://example.com", on_click=123)  # type: ignore[arg-type]
+
+
+def test_size_is_available_on_apptest_elements() -> None:
+    """AppTest exposes the size of every button command on the element proto."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.button("Button", size="xsmall")
+        st.download_button("Download", "data", size="small")
+        st.link_button("Link", "https://example.com", size="large")
+        with st.form("form"):
+            st.form_submit_button("Submit", size="xxsmall")
+
+    at = AppTest.from_function(script).run()
+
+    assert not at.exception
+    sizes = ButtonLikeSizeProto
+    # st.form_submit_button renders as a button element, after st.button.
+    assert at.button[0].proto.size == sizes.BUTTON_LIKE_SIZE_XSMALL
+    assert at.download_button[0].proto.size == sizes.BUTTON_LIKE_SIZE_SMALL
+    assert at.link_button[0].proto.size == sizes.BUTTON_LIKE_SIZE_LARGE
+    assert at.button[1].proto.size == sizes.BUTTON_LIKE_SIZE_XXSMALL

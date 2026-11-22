@@ -72,3 +72,15 @@ with st.container(key="button_wrapped_label"):
         width=140,
         wrap=True,
     )
+
+cols = row("button_disabled")
+for col, size in zip(cols[1:], SIZES, strict=True):
+    col.button(size, size=size, disabled=True, key=f"button_disabled_{size}")
+
+with st.container(key="button_stretch_sizes", width=300):
+    for size in SIZES:
+        st.button(size, size=size, width="stretch", key=f"button_stretch_{size}")
+
+with st.sidebar, st.container(key="sidebar_button_sizes"):
+    for size in SIZES:
+        st.button(size, size=size, key=f"sidebar_button_{size}")

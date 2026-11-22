@@ -38,6 +38,9 @@ COMMANDS: list[tuple[str, Role]] = [
     ("button_tertiary", "button"),
     ("button_icon_only", "button"),
     ("button_icon_label", "button"),
+    ("button_disabled", "button"),
+    ("button_stretch", "button"),
+    ("sidebar_button", "button"),
     ("download_button", "button"),
     ("link_button", "link"),
     ("form_submit_button", "button"),
@@ -79,6 +82,16 @@ def test_default_height_equals_medium(app: Page, command: str, role: Role):
     expect(default).to_be_visible()
     assert _height(default) == pytest.approx(EXPECTED_HEIGHT_PX["medium"], abs=1)
     assert _height(default) == pytest.approx(_height(medium), abs=0.5)
+
+
+@pytest.mark.parametrize("size", list(EXPECTED_HEIGHT_PX))
+def test_stretch_button_fills_container_width(app: Page, size: str):
+    """width="stretch" still fills the container at every size."""
+    container = get_element_by_key(app, "button_stretch_sizes").bounding_box()
+    button = _control(app, f"button_stretch_{size}", "button").bounding_box()
+    assert container is not None
+    assert button is not None
+    assert button["width"] == pytest.approx(container["width"], abs=1)
 
 
 @pytest.mark.parametrize("size", list(EXPECTED_HEIGHT_PX))
