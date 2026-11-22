@@ -64,11 +64,15 @@ def _snowflake_connector_modules() -> dict[str, types.ModuleType]:
     constants_mod.CONNECTIONS_FILE = pathlib.Path("/nonexistent/connections.toml")
     constants_mod.CONFIG_FILE = pathlib.Path("/nonexistent/config.toml")
     connector_mod.constants = constants_mod
+    version_mod = types.ModuleType("snowflake.connector.version")
+    version_mod.VERSION = (3, 11, 0, None)
+    connector_mod.version = version_mod
     snowflake_mod.connector = connector_mod
     return {
         "snowflake": snowflake_mod,
         "snowflake.connector": connector_mod,
         "snowflake.connector.constants": constants_mod,
+        "snowflake.connector.version": version_mod,
     }
 
 
@@ -411,6 +415,35 @@ class TestSnowflakeConnectionConfiguration:
             del sys.modules["snowflake.connector.constants"].CONFIG_FILE
             SnowflakeConnection("snowflake")
         connector.connect.assert_called_once_with()
+
+    @pytest.mark.parametrize(
+        ("version", "uses_fallback"),
+        [((3, 10, 9, None), False), ((3, 11, 0, None), True), ((5, 2, 0, None), True)],
+        ids=["3.10_keeps_default_path", "3.11_uses_fallback", "5.2_uses_fallback"],
+    )
+    def test_fallback_requires_connector_with_token_file_path(
+        self, tmp_path: Path, version: tuple[int, int, int, None], uses_fallback: bool
+    ) -> None:
+        """Connectors older than 3.11, which lack token_file_path, keep the default path."""
+        env, token_file = self._container_env(tmp_path)
+        with (
+            self._patched_snowflake() as connector,
+            patch.dict(os.environ, env),
+            patch(
+                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
+                str(token_file),
+            ),
+            patch.object(
+                sys.modules["snowflake.connector.version"], "VERSION", version
+            ),
+        ):
+            SnowflakeConnection("snowflake")
+        if uses_fallback:
+            assert connector.connect.call_args.kwargs["token_file_path"] == str(
+                token_file
+            )
+        else:
+            connector.connect.assert_called_once_with()
 
     def test_missing_token_file_keeps_friendly_config_error(
         self, tmp_path: Path

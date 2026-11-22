@@ -610,8 +610,9 @@ class SnowflakeConnection(BaseSnowflakeConnection):
     ``SNOWFLAKE_SCHEMA``, ``SNOWFLAKE_PROTOCOL``, and ``SNOWFLAKE_PORT`` when
     they are set. Keyword arguments passed to ``st.connection`` override these
     values. The fallback is skipped if a connector ``config.toml`` exists or the
-    ``SNOWFLAKE_CONNECTIONS`` environment variable is set, and it requires
-    ``snowflake-connector-python`` 3.11.0 or later.
+    ``SNOWFLAKE_CONNECTIONS`` environment variable is set. It also requires
+    ``snowflake-connector-python`` 3.11.0 or later; with an older connector,
+    ``st.connection("snowflake")`` uses the default connection as before.
 
     This connection uses the service's identity, not the caller's. For the
     caller's identity, use ``"snowflake-callers-rights"`` as described in the
@@ -802,6 +803,9 @@ def _get_container_connection_params() -> dict[str, str | bool]:
     return params
 
 
+_MIN_CONNECTOR_VERSION_FOR_FALLBACK: Final = (3, 11)
+
+
 def _should_use_container_env_fallback() -> bool:
     """Return whether to build the default connection from the container environment.
 
@@ -813,8 +817,12 @@ def _should_use_container_env_fallback() -> bool:
             CONFIG_FILE,
             CONNECTIONS_FILE,
         )
+        from snowflake.connector.version import VERSION  # type:ignore[import]
     except ImportError:
-        # A connector without these constants keeps the default connection path.
+        # A connector without these keeps the default connection path.
+        return False
+    # The fallback passes token_file_path, which the connector supports from 3.11.0.
+    if tuple(VERSION[:2]) < _MIN_CONNECTOR_VERSION_FOR_FALLBACK:
         return False
     return (
         not CONNECTIONS_FILE.exists()
