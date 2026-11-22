@@ -357,7 +357,7 @@ class ButtonMixin:
             keyboard shortcuts remain visible.
 
         size : "xxsmall", "xsmall", "small", "medium", or "large"
-            The height of the button. This can be one of the following:
+            The minimum height of the button. This can be one of the following:
 
             - ``"xxsmall"``: 1.5rem.
             - ``"xsmall"``: 1.75rem.
@@ -719,7 +719,7 @@ class ButtonMixin:
             keyboard shortcuts remain visible.
 
         size : "xxsmall", "xsmall", "small", "medium", or "large"
-            The height of the button. This can be one of the following:
+            The minimum height of the button. This can be one of the following:
 
             - ``"xxsmall"``: 1.5rem.
             - ``"xsmall"``: 1.75rem.
@@ -1170,7 +1170,7 @@ class ButtonMixin:
             keyboard shortcuts remain visible.
 
         size : "xxsmall", "xsmall", "small", "medium", or "large"
-            The height of the button. This can be one of the following:
+            The minimum height of the button. This can be one of the following:
 
             - ``"xxsmall"``: 1.5rem.
             - ``"xsmall"``: 1.75rem.
@@ -1476,6 +1476,7 @@ class ButtonMixin:
     ) -> bool:
         key = to_key(key)
         label = "" if label is None else to_str(label)
+        size_proto = get_button_like_size_proto(size)
 
         on_click_callback = validate_on_change_mode(
             on_click,
@@ -1523,7 +1524,7 @@ class ButtonMixin:
         download_button_proto.type = type
         if wrap is not None:
             download_button_proto.wrap = wrap
-        download_button_proto.size = get_button_like_size_proto(size)
+        download_button_proto.size = size_proto
         download_button_proto.disabled = disabled
         marshall_file(
             self.dg._get_delta_path_str(),
@@ -1617,6 +1618,7 @@ class ButtonMixin:
     ) -> bool | DeltaGenerator:
         key = to_key(key)
         label = "" if label is None else to_str(label)
+        size_proto = get_button_like_size_proto(size)
         on_click_callback = validate_on_change_mode(
             on_click,
             supported_modes=("rerun", "ignore"),
@@ -1666,7 +1668,7 @@ class ButtonMixin:
         link_button_proto.ignore_rerun = ignore_rerun
         if wrap is not None:
             link_button_proto.wrap = wrap
-        link_button_proto.size = get_button_like_size_proto(size)
+        link_button_proto.size = size_proto
 
         if help is not None:
             link_button_proto.help = to_help_str(help)
@@ -1873,6 +1875,7 @@ class ButtonMixin:
     ) -> bool:
         key = to_key(key)
         label = "" if label is None else to_str(label)
+        size_proto = get_button_like_size_proto(size)
         on_click = validate_on_change_mode(
             on_click,
             supported_modes=(),
@@ -1936,7 +1939,7 @@ class ButtonMixin:
         button_proto.disabled = disabled
         if wrap is not None:
             button_proto.wrap = wrap
-        button_proto.size = get_button_like_size_proto(size)
+        button_proto.size = size_proto
 
         if help is not None:
             button_proto.help = to_help_str(help)

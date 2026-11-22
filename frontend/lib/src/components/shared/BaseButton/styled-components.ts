@@ -20,7 +20,7 @@ import styled, { type CSSObject } from "@emotion/styled"
 import { darken, getContrast, lighten, transparentize } from "color2k"
 import { ToggleButton, ToggleButtonGroup } from "react-aria-components"
 
-import type { ButtonSize } from "~lib/components/shared/BaseButton/buttonSize"
+import type { ButtonControlSize } from "~lib/components/shared/BaseButton/buttonSize"
 import { getHorizontalOverflowFadeStyles } from "~lib/components/shared/horizontalOverflowFade"
 import { VISUALLY_HIDDEN_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
@@ -55,8 +55,8 @@ export enum BaseButtonSize {
 export interface BaseButtonProps {
   kind: BaseButtonKind
   size?: BaseButtonSize
-  // Public API `size`. Independent of the internal `size` padding axis.
-  controlSize?: ButtonSize
+  /** Height set by the public `size` parameter of button commands. Separate from `size`, which picks the internal padding preset. */
+  controlSize?: ButtonControlSize
   onClick?: (event: MouseEvent<HTMLButtonElement>) => void
   disabled?: boolean
   // If true, the button should take up container's full width
@@ -113,10 +113,13 @@ function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   }
 }
 
-// Styles for the public button `size`. "medium" is the default look, so it
-// returns no overrides. Kind-specific padding (e.g. tertiary) still wins.
+/**
+ * Returns the min-height and padding for a public button size. "medium"
+ * returns no overrides, so the default look is unchanged. Kind-specific
+ * padding, such as tertiary's zero padding, still overrides these values.
+ */
 export function getControlSizeStyle(
-  controlSize: ButtonSize,
+  controlSize: ButtonControlSize | undefined,
   theme: EmotionTheme
 ): CSSObject {
   switch (controlSize) {
@@ -180,7 +183,7 @@ const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
         boxShadow: theme.shadows.focusRing,
       },
       ...getSizeStyle(size, theme),
-      ...getControlSizeStyle(controlSize ?? "medium", theme),
+      ...getControlSizeStyle(controlSize, theme),
     }
   }
 )

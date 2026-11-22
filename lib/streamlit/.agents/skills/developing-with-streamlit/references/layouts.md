@@ -185,7 +185,7 @@ with st.container(horizontal=True, wrap=False):
     st.button("Delete")
 ```
 
-For compact toolbars, buttons accept `size` (`"xxsmall"` to `"large"`, default `"medium"`). It changes the height only, not the font size.
+For compact toolbars, `st.button`, `st.download_button`, `st.form_submit_button`, and `st.link_button` accept `size` (`"xxsmall"` to `"large"`, default `"medium"`). It changes the button's height and padding, not its font size.
 
 ## Aligning elements
 

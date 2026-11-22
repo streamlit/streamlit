@@ -433,7 +433,7 @@ class FormMixin:
             keyboard shortcuts remain visible.
 
         size : "xxsmall", "xsmall", "small", "medium", or "large"
-            The height of the button. This can be one of the following:
+            The minimum height of the button. This can be one of the following:
 
             - ``"xxsmall"``: 1.5rem.
             - ``"xsmall"``: 1.75rem.

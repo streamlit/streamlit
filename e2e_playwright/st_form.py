@@ -314,7 +314,8 @@ with st.form("wrap_submit_form"):
         key="wrap_false_submit_button",
     )
 
-# One row with every size, for the size snapshot test.
+# Keep all sizes in one keyed row so the snapshot compares their relative
+# dimensions.
 SIZES: list[Literal["xxsmall", "xsmall", "small", "medium", "large"]] = [
     "xxsmall",
     "xsmall",

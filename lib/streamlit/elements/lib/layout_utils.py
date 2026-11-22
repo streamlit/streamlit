@@ -69,8 +69,7 @@ _VALID_SPACE_SIZE_VALUES: Final = [
 # Shared by st.expander and st.status, which render through the same proto.
 ExpandableType: TypeAlias = Literal["default", "compact", "step"]
 
-# Control height for the button family: "xxsmall" is 1.5rem, "xsmall" 1.75rem,
-# "small" 2rem, "medium" (default) 2.5rem, and "large" 3rem.
+# Public `size` values for button commands. The frontend maps each value to a height.
 ButtonLikeSize: TypeAlias = Literal["xxsmall", "xsmall", "small", "medium", "large"]
 
 _BUTTON_LIKE_SIZE_TO_PROTO: Final[
@@ -316,7 +315,7 @@ def get_button_like_size_proto(
         If ``size`` is not ``"xxsmall"``, ``"xsmall"``, ``"small"``,
         ``"medium"``, or ``"large"``.
     """
-    if size not in _BUTTON_LIKE_SIZE_TO_PROTO:
+    if not isinstance(size, str) or size not in _BUTTON_LIKE_SIZE_TO_PROTO:
         raise StreamlitValueError(
             "size",
             ["'xxsmall'", "'xsmall'", "'small'", "'medium'", "'large'"],

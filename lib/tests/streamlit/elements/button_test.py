@@ -632,11 +632,16 @@ class ButtonTest(DeltaGeneratorTestCase):
         assert "size" in str(exc_info.value)
         assert "'xxsmall'" in str(exc_info.value)
 
-    def test_button_size_excluded_from_id(self):
-        """size is presentation-only and must not change the element id.
+    def test_button_invalid_size_does_not_register_element_id(self):
+        """A rejected size, even an unhashable one, doesn't reserve the element ID."""
+        with pytest.raises(StreamlitValueError):
+            st.button("retry label", size=[])  # type: ignore[arg-type]
+        st.button("retry label")
 
-        Two otherwise-identical buttons that differ only in size collide on the
-        same auto-generated id, so toggling size preserves widget state.
+    def test_button_size_excluded_from_id(self):
+        """`size` is presentation-only and does not change the element ID.
+
+        Two otherwise identical buttons that differ only in size therefore collide.
         """
         st.button("same label")
         with pytest.raises(StreamlitDuplicateElementId):

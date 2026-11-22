@@ -16,15 +16,20 @@
 
 import { streamlit } from "@streamlit/protobuf"
 
-export type ButtonSize = "xxsmall" | "xsmall" | "small" | "medium" | "large"
+export type ButtonControlSize =
+  | "xxsmall"
+  | "xsmall"
+  | "small"
+  | "medium"
+  | "large"
 
 /**
- * Map the public `size` proto field to a control height.
- * Absent values default to medium (today's button height).
+ * Converts the button proto's `size` field to a `controlSize` value,
+ * defaulting to "medium" (2.5rem) when the field is unset.
  */
 export function mapProtoButtonSize(
   size: streamlit.ButtonLikeSize | null | undefined
-): ButtonSize {
+): ButtonControlSize {
   switch (size) {
     case streamlit.ButtonLikeSize.BUTTON_LIKE_SIZE_XXSMALL:
       return "xxsmall"
