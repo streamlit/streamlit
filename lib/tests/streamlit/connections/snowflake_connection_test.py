@@ -126,6 +126,20 @@ def _patched_snowpark(
 class TestSnowflakeConnectionConfiguration:
     """Tests for Snowflake configuration selection without the Snowflake dependency."""
 
+    @pytest.fixture(autouse=True)
+    def _clear_container_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Keep the developer's own Snowflake environment out of these tests."""
+        for name in (
+            "SNOWFLAKE_CONNECTIONS",
+            "SNOWFLAKE_ACCOUNT",
+            "SNOWFLAKE_HOST",
+            "SNOWFLAKE_DATABASE",
+            "SNOWFLAKE_SCHEMA",
+            "SNOWFLAKE_PROTOCOL",
+            "SNOWFLAKE_PORT",
+        ):
+            monkeypatch.delenv(name, raising=False)
+
     @staticmethod
     @contextmanager
     def _patched_snowflake(
@@ -210,8 +224,6 @@ class TestSnowflakeConnectionConfiguration:
                 str(token_file),
             ),
         ):
-            for name in ("SNOWFLAKE_SCHEMA", "SNOWFLAKE_PROTOCOL", "SNOWFLAKE_PORT"):
-                os.environ.pop(name, None)
             SnowflakeConnection("snowflake")
         connector.connect.assert_called_once_with(
             authenticator="oauth",
@@ -296,7 +308,6 @@ class TestSnowflakeConnectionConfiguration:
                 str(token_file),
             ),
         ):
-            os.environ.pop("SNOWFLAKE_CONNECTIONS", None)
             SnowflakeConnection("snowflake")
         assert connector.connect.call_args.kwargs["token_file_path"] == str(token_file)
 
