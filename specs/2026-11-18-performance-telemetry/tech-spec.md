@@ -117,7 +117,7 @@ class FragmentThreadState:  # ThreadState: one per thread, copied to attached th
     parallel_fragment_run: ParallelFragmentRun | None  # the copy shares the same object
 ```
 
-At the start of each run, `SharedRunState.reset()` replaces `cache_stats`, `query_stats` and `parallel_fragments` with new objects instead of clearing them. Work still running from the previous run, such as a cached call on a thread the script didn't join, keeps its references to the old objects, so its times never leak into the new run.
+At the start of each run, `SharedRunState.reset()` replaces `cache_stats`, `query_stats` and `parallel_fragments` with new objects instead of clearing them. Late work from the previous run, such as a cached call on a thread the script didn't join, then finishes into the old objects, which nothing reads, instead of the new run's totals.
 
 ### Per-thread totals without locks
 
@@ -478,7 +478,7 @@ Top-level `commands` and `cache_usage` could leave out the fragments, so no subt
 
 ### Clear the stats in place at the start of a run
 
-Clearing would keep the same objects across runs, but a cached call or fragment still running from the previous run would then add its times to the new run. Replacing the objects keeps late work in its own run.
+Clearing would keep the same objects across runs, but a cached call or fragment still running from the previous run would then add its times to the new run. It also can't reset each thread's `_local.stats`, because one thread can't clear another thread's `threading.local` value. The script thread would keep recording into last run's record, which the cleared `_threads` list no longer contains.
 
 ### One per-thread record for every addition
 
