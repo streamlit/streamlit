@@ -113,6 +113,7 @@ _OMITTED_EVERYWHERE: dict[str, str] = {
 _OMITTED: dict[str, dict[str, str]] = {
     "altair_chart": {"altair_chart": _CONTENT, "theme": _PRESENTATION},
     "audio": {"sample_rate": _ENCODING},
+    "card": {"background": _PRESENTATION},
     "checkbox": {"value": _STARTING_VALUE},
     "code": {"wrap_lines": _PRESENTATION},
     "color_picker": {"value": _STARTING_VALUE},
@@ -279,6 +280,7 @@ _RESERVED_FIELDS: dict[
     "bar_chart": frozenset({(None, False, None, None)}),
     "button": frozenset({("trigger", True, None, None)}),
     "camera_input": frozenset({(None, True, "action_unsupported", None)}),
+    "card": frozenset({(None, False, None, None)}),
     "caption": frozenset({(None, False, None, None)}),
     "chat_input": frozenset({("trigger", True, None, "string")}),
     "chat_message": frozenset({(None, False, None, None)}),

@@ -76,6 +76,7 @@ _MOCK_PROTO_OVERRIDES: dict[str, frozenset[str]] = {
     "tabs": frozenset({"tab_container", "tab"}),
     "columns": frozenset({"column"}),
     "grid": frozenset({"grid_container"}),
+    "card": frozenset({"card"}),
     "container": frozenset({"flex_container"}),
     "expander": frozenset({"expandable"}),
     "status": frozenset({"expandable"}),

@@ -833,6 +833,111 @@ describe("BlockNodeRenderer step blocks", () => {
   })
 })
 
+describe("BlockNodeRenderer card blocks", () => {
+  const widgetMgr = new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+
+  function makeBlockNodeComponent(node: BlockNode): ReactElement {
+    return (
+      <BlockNodeRenderer
+        node={node}
+        scriptRunId=""
+        scriptRunState={ScriptRunState.NOT_RUNNING}
+        widgetsDisabled={false}
+        widgetMgr={widgetMgr}
+        // @ts-expect-error - uploadClient is required
+        uploadClient={undefined}
+      />
+    )
+  }
+
+  function makeSlot(
+    children: AppNode[],
+    direction: BlockProto.FlexContainer.Direction
+  ): BlockNode {
+    return new BlockNode(
+      FAKE_SCRIPT_HASH,
+      children,
+      new BlockProto({
+        allowEmpty: false,
+        flexContainer: { direction },
+        widthConfig: { useContent: true },
+      })
+    )
+  }
+
+  function makeCard(
+    slots: { extras?: AppNode[]; actions?: AppNode[]; body?: AppNode[] },
+    cardProps: Partial<BlockProto.Card.$Properties> = {},
+    blockProps: Partial<BlockProto.$Properties> = {}
+  ): BlockNode {
+    const { Direction } = BlockProto.FlexContainer
+    return new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [
+        makeSlot(slots.extras ?? [], Direction.HORIZONTAL),
+        makeSlot(slots.actions ?? [], Direction.HORIZONTAL),
+        makeSlot(slots.body ?? [], Direction.VERTICAL),
+      ],
+      new BlockProto({
+        allowEmpty: true,
+        card: { label: "Revenue", border: true, ...cardProps },
+        heightConfig: { useStretch: true },
+        widthConfig: { useStretch: true },
+        ...blockProps,
+      })
+    )
+  }
+
+  it("renders the header with an empty body and no slots", () => {
+    renderWithContexts(makeBlockNodeComponent(makeCard({})))
+
+    expect(screen.getByRole("group", { name: "Revenue" })).toBeVisible()
+    expect(screen.queryByTestId("stCardActions")).not.toBeInTheDocument()
+  })
+
+  it("renders each slot's children in its own place", () => {
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeCard({
+          extras: [text("extras child")],
+          actions: [text("actions child")],
+          body: [text("body child")],
+        })
+      )
+    )
+
+    const card = screen.getByTestId("stCard")
+    const header = screen.getByTestId("stCardHeader")
+    expect(card).toContainElement(screen.getByText("body child"))
+    expect(header).toContainElement(screen.getByText("extras child"))
+    expect(screen.getByTestId("stCardActions")).toContainElement(
+      screen.getByText("actions child")
+    )
+    expect(header).not.toContainElement(screen.getByText("body child"))
+  })
+
+  it("places st-key-* on the layout wrapper", () => {
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeCard(
+          { body: [text("body child")] },
+          {},
+          { id: "$$ID-abc123-my_card" }
+        )
+      )
+    )
+
+    // The card's own wrapper is the outermost one, ahead of its slots'.
+    expect(screen.getAllByTestId("stLayoutWrapper")[0]).toHaveClass(
+      "st-key-my_card"
+    )
+    expect(screen.getByTestId("stCard").className).not.toContain("st-key-")
+  })
+})
+
 describe("BlockNodeRenderer transparent blocks", () => {
   const widgetMgr = new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),

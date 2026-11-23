@@ -3526,14 +3526,22 @@ class Block:
         """``st.container`` blocks, including horizontal/flex containers.
 
         The implicit row wrapper created by ``st.columns`` is excluded.
-        ``grid.cell()`` blocks are excluded.
+        ``grid.cell()`` blocks and the internal blocks of an ``st.card`` are
+        excluded.
         """
+        card_children = {
+            id(child)
+            for e in self
+            if isinstance(e, Card)
+            for child in e.children.values()
+        }
         return BlockList(
             [
                 e
                 for e in self
                 if isinstance(e, Block)
                 and e is not self
+                and id(e) not in card_children
                 and e.type in {"container", "flex_container"}
                 # st.columns currently emits a flex-container whose direct
                 # children are Column blocks; that wrapper is not st.container.
@@ -3598,6 +3606,11 @@ class Block:
     @property
     def file_uploader(self) -> WidgetList[FileUploader]:
         return WidgetList(self.get("file_uploader"))  # type: ignore
+
+    @property
+    def card(self) -> BlockList[Card]:
+        """``st.card`` blocks."""
+        return BlockList([e for e in self if isinstance(e, Card) and e is not self])
 
     @property
     def grid(self) -> BlockList[Grid]:
@@ -3791,6 +3804,8 @@ class Block:
             return list(self.container)
         if element_type == "grid":
             return list(self.grid)
+        if element_type == "card":
+            return list(self.card)
         if element_type == "form":
             return list(self.form)
         if element_type == "form_submit_button":
@@ -4030,6 +4045,50 @@ class Grid(Block):
             self.row_height = proto.row_height_config.pixel_height
         else:
             self.row_height = "content"
+
+
+@dataclass(repr=False)
+class Card(Block):
+    """A representation of ``st.card``.
+
+    The card's children are its header slots and its body. Query the card to
+    find the elements inside it, for example ``at.card[0].markdown``.
+
+    The card's own caption and help text are ``caption_text`` and
+    ``help_text``, because ``caption`` and ``help`` are the collections of
+    ``st.caption`` and ``st.help`` elements inside the card.
+    """
+
+    type: str = field(repr=False)
+    proto: BlockProto.Card = field(repr=False)
+    label: str
+    icon: str
+    caption_text: str
+    help_text: str
+    border: bool
+    background: bool
+    width: GridSizeValue
+    height: GridSizeValue
+
+    def __init__(
+        self,
+        proto: BlockProto.Card,
+        root: ElementTree,
+        *,
+        block: BlockProto | None = None,
+    ) -> None:
+        # Pass the sub-message and the node type into Block so this class
+        # does not assign `proto` or `type` again.
+        super().__init__(cast("BlockProto", proto), root, type="card")
+        self.label = proto.label
+        self.icon = proto.icon
+        self.caption_text = proto.caption
+        self.help_text = proto.help
+        self.border = bool(proto.border)
+        self.background = bool(proto.background)
+        # Width and height live on the parent block, same as the block id.
+        self.width = _public_width(None if block is None else block.width_config)
+        self.height = _public_height(None if block is None else block.height_config)
 
 
 @dataclass(repr=False)
@@ -4559,6 +4618,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = ChatMessage(block.chat_message, root=root)
             elif bty == "grid_container":
                 new_node = Grid(block.grid_container, root=root, block=block)
+            elif bty == "card":
+                new_node = Card(block.card, root=root, block=block)
             elif bty == "column":
                 new_node = Column(block.column, root=root)
             elif bty == "expandable":

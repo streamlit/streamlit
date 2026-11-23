@@ -88,6 +88,9 @@ class DeltaGeneratorSingletonsVariablesAreInitializedTest(unittest.TestCase):
     def test_create_grid_container_is_initialized(self):
         assert get_dg_singleton_instance().grid_container_cls is not None
 
+    def test_create_card_container_is_initialized(self):
+        assert get_dg_singleton_instance().card_container_cls is not None
+
 
 class BottomContainerProxyTest(unittest.TestCase):
     """Tests for the st.bottom container proxy."""
@@ -198,6 +201,7 @@ def test_singleton_init_raises_when_already_initialized() -> None:
             popover_container_cls=DeltaGenerator,
             skeleton_placeholder_cls=SkeletonPlaceholder,
             grid_container_cls=DeltaGenerator,
+            card_container_cls=DeltaGenerator,
         )
 
 

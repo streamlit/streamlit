@@ -49,6 +49,7 @@ from streamlit.testing.v1.element_tree import (
     ButtonGroup,
     CameraInput,
     Caption,
+    Card,
     ChatInput,
     ChatMessage,
     Checkbox,
@@ -1399,6 +1400,23 @@ class AppTest:
             widget with a given key.
         """
         return self._tree.form_submit_button
+
+    @property
+    def card(self) -> BlockList[Card]:
+        """Sequence of all ``st.card`` blocks.
+
+        Returns
+        -------
+        BlockList of Card
+            Individual cards can be accessed by index or key. For example,
+            ``at.card[0]`` or ``at.card(key="revenue")``. ``label``, ``icon``,
+            ``caption_text``, ``help_text``, ``border``, ``background``,
+            ``width``, and ``height`` are available on each card. ``caption``
+            and ``help`` stay the collections of ``st.caption`` and
+            ``st.help`` elements inside the card. Card is an extension of the
+            Block class.
+        """
+        return self._tree.card
 
     @property
     def grid(self) -> BlockList[Grid]:

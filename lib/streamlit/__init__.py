@@ -91,6 +91,7 @@ from streamlit.elements.lib.skeleton_placeholder import (
     SkeletonPlaceholder as _SkeletonPlaceholder,
 )
 from streamlit.elements.lib.grid_container import GridContainer as _GridContainer
+from streamlit.elements.lib.card_container import CardContainer as _CardContainer
 
 # instantiate the DeltaGeneratorSingleton
 _dg_singleton = _DeltaGeneratorSingleton(
@@ -102,6 +103,7 @@ _dg_singleton = _DeltaGeneratorSingleton(
     popover_container_cls=_PopoverContainer,
     skeleton_placeholder_cls=_SkeletonPlaceholder,
     grid_container_cls=_GridContainer,
+    card_container_cls=_CardContainer,
 )
 _main: _DeltaGenerator = _dg_singleton._main_dg
 sidebar: _DeltaGenerator = _dg_singleton._sidebar_dg
@@ -199,6 +201,7 @@ _bidi_component = _main._bidi_component
 button = _main.button
 caption = _main.caption
 camera_input = _main.camera_input
+card = _main.card
 chat_message = _main.chat_message
 chat_input = _main.chat_input
 checkbox = _main.checkbox
