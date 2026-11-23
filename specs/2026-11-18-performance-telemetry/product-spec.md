@@ -7,7 +7,7 @@ created: 2026-11-18
 
 ## Summary
 
-Extend the per-run page profile so that Streamlit can see, across many deployments, how fast apps are for the people using them and where the time goes. This spec sets the strategy for a series of additions (cache usage, CPU time, query time, data size, rerun reason and browser render timing) and how their numbers fit together without counting the same time twice.
+Extend the per-run page profile so that Streamlit can see, across many deployments, how fast apps are for the people using them and where the time goes. This spec sets the strategy for a series of additions (cache usage, CPU time, query time, data size, rerun reason and browser render timing) and how their numbers fit together without counting the same time twice. The [tech spec](tech-spec.md) covers how the server records these times and attributes them across threads and parallel fragments.
 
 ## Problem
 
