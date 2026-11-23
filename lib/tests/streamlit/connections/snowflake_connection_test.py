@@ -207,26 +207,44 @@ class TestSnowflakeConnectionConfiguration:
         )
 
     @staticmethod
-    def _container_env(tmp_path: Path) -> tuple[dict[str, str], Path]:
-        """Return container env vars and a service token file containing a token."""
+    @contextmanager
+    def _patched_container_env(
+        tmp_path: Path,
+        *,
+        extra_env: dict[str, str] | None = None,
+        token_file_exists: bool = True,
+    ) -> Generator[Path, None, None]:
+        """Patch the container env vars and the service token file path.
+
+        Yields the token file path. The file only exists if ``token_file_exists``
+        is true.
+        """
         token_file = tmp_path / "token"
-        token_file.write_text("service-token\n", encoding="utf-8")
-        return {"SNOWFLAKE_ACCOUNT": "acct", "SNOWFLAKE_HOST": "acct.example.com"}, (
-            token_file
-        )
+        if token_file_exists:
+            token_file.write_text("service-token\n", encoding="utf-8")
+        env = {
+            "SNOWFLAKE_ACCOUNT": "acct",
+            "SNOWFLAKE_HOST": "acct.example.com",
+            **(extra_env or {}),
+        }
+        with (
+            patch.dict(os.environ, env),
+            patch(
+                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
+                str(token_file),
+            ),
+        ):
+            yield token_file
 
     def test_connect_falls_back_to_container_env_without_connections_file(
         self, tmp_path: Path
     ) -> None:
         """Without connections.toml, env vars and the service token file build the connection."""
-        env, token_file = self._container_env(tmp_path)
         with (
             self._patched_snowflake() as connector,
-            patch.dict(os.environ, {**env, "SNOWFLAKE_DATABASE": "db"}),
-            patch(
-                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
-                str(token_file),
-            ),
+            self._patched_container_env(
+                tmp_path, extra_env={"SNOWFLAKE_DATABASE": "db"}
+            ) as token_file,
         ):
             SnowflakeConnection("snowflake")
         connector.connect.assert_called_once_with(
@@ -243,14 +261,11 @@ class TestSnowflakeConnectionConfiguration:
         self, tmp_path: Path
     ) -> None:
         """Keyword arguments are forwarded and override the env-derived parameters."""
-        env, token_file = self._container_env(tmp_path)
         with (
             self._patched_snowflake() as connector,
-            patch.dict(os.environ, {**env, "SNOWFLAKE_DATABASE": "db"}),
-            patch(
-                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
-                str(token_file),
-            ),
+            self._patched_container_env(
+                tmp_path, extra_env={"SNOWFLAKE_DATABASE": "db"}
+            ) as token_file,
         ):
             SnowflakeConnection("snowflake", warehouse="wh", database="other")
         kwargs = connector.connect.call_args.kwargs
@@ -264,69 +279,147 @@ class TestSnowflakeConnectionConfiguration:
         self, tmp_path: Path, constant_name: str
     ) -> None:
         """An existing connections.toml or config.toml takes precedence over the fallback."""
-        env, token_file = self._container_env(tmp_path)
-        connections_file = tmp_path / "connector_config.toml"
-        connections_file.write_text("", encoding="utf-8")
+        config_file = tmp_path / "connector_config.toml"
+        config_file.write_text("", encoding="utf-8")
         with (
             self._patched_snowflake() as connector,
-            patch.dict(os.environ, env),
-            patch(
-                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
-                str(token_file),
-            ),
+            self._patched_container_env(tmp_path),
             patch.object(
                 sys.modules["snowflake.connector.constants"],
                 constant_name,
-                connections_file,
+                config_file,
             ),
         ):
             SnowflakeConnection("snowflake")
         connector.connect.assert_called_once_with()
 
-    def test_connect_ignores_container_env_when_snowflake_connections_set(
-        self, tmp_path: Path
+    @pytest.mark.parametrize(
+        ("snowflake_connections", "uses_fallback"),
+        [("{}", False), (None, True)],
+        ids=["set_skips_fallback", "unset_uses_fallback"],
+    )
+    def test_snowflake_connections_env_var_controls_container_fallback(
+        self, tmp_path: Path, snowflake_connections: str | None, uses_fallback: bool
     ) -> None:
         """SNOWFLAKE_CONNECTIONS takes precedence over the container env fallback."""
-        env, token_file = self._container_env(tmp_path)
+        extra_env = (
+            {}
+            if snowflake_connections is None
+            else {"SNOWFLAKE_CONNECTIONS": snowflake_connections}
+        )
         with (
             self._patched_snowflake() as connector,
-            patch.dict(os.environ, {**env, "SNOWFLAKE_CONNECTIONS": "{}"}),
-            patch(
-                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
-                str(token_file),
-            ),
+            self._patched_container_env(tmp_path, extra_env=extra_env) as token_file,
+        ):
+            SnowflakeConnection("snowflake")
+        if uses_fallback:
+            assert connector.connect.call_args.kwargs["token_file_path"] == str(
+                token_file
+            )
+        else:
+            connector.connect.assert_called_once_with()
+
+    @pytest.mark.parametrize("empty_var", ["SNOWFLAKE_ACCOUNT", "SNOWFLAKE_HOST"])
+    def test_connect_ignores_container_env_when_required_var_is_empty(
+        self, tmp_path: Path, empty_var: str
+    ) -> None:
+        """An empty required env var counts as unset and does not trigger the fallback."""
+        with (
+            self._patched_snowflake() as connector,
+            self._patched_container_env(tmp_path, extra_env={empty_var: ""}),
         ):
             SnowflakeConnection("snowflake")
         connector.connect.assert_called_once_with()
 
-    def test_connect_uses_container_env_when_snowflake_connections_unset(
-        self, tmp_path: Path
+    @pytest.mark.parametrize(
+        ("skip_reason", "expected_message"),
+        [
+            ("snowflake_connections", "SNOWFLAKE_CONNECTIONS"),
+            ("config_file", "configuration file exists"),
+            ("old_connector", "3.11.0 or later is required"),
+        ],
+    )
+    def test_skipped_container_fallback_logs_reason(
+        self, tmp_path: Path, skip_reason: str, expected_message: str
     ) -> None:
-        """Without SNOWFLAKE_CONNECTIONS, the container env fallback still runs."""
-        env, token_file = self._container_env(tmp_path)
+        """When the container env is present but the fallback is skipped, the reason is logged."""
+        config_file = tmp_path / "config.toml"
+        config_file.write_text("", encoding="utf-8")
+        extra_env = (
+            {"SNOWFLAKE_CONNECTIONS": "{}"}
+            if skip_reason == "snowflake_connections"
+            else {}
+        )
         with (
-            self._patched_snowflake() as connector,
-            patch.dict(os.environ, env),
-            patch(
-                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
-                str(token_file),
+            self._patched_snowflake(),
+            self._patched_container_env(tmp_path, extra_env=extra_env),
+            patch("streamlit.connections.snowflake_connection._LOGGER") as logger,
+            patch.object(
+                sys.modules["snowflake.connector.constants"],
+                "CONFIG_FILE",
+                config_file if skip_reason == "config_file" else tmp_path / "missing",
+            ),
+            patch.object(
+                sys.modules["snowflake.connector.version"],
+                "VERSION",
+                (3, 10, 9, None) if skip_reason == "old_connector" else (5, 2, 0, None),
             ),
         ):
             SnowflakeConnection("snowflake")
-        assert connector.connect.call_args.kwargs["token_file_path"] == str(token_file)
+        messages = [call.args[0] % call.args[1:] for call in logger.info.call_args_list]
+        assert any(expected_message in message for message in messages)
+
+    def test_container_fallback_not_logged_outside_container(
+        self, tmp_path: Path
+    ) -> None:
+        """Without the container env, no message about skipping the fallback is logged."""
+        with (
+            self._patched_snowflake(),
+            patch(
+                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
+                str(tmp_path / "missing"),
+            ),
+            patch("streamlit.connections.snowflake_connection._LOGGER") as logger,
+        ):
+            SnowflakeConnection("snowflake")
+        messages = [call.args[0] % call.args[1:] for call in logger.info.call_args_list]
+        assert not any("Not using the container environment" in m for m in messages)
+
+    def test_container_fallback_warns_when_token_kwarg_conflicts_with_token_file(
+        self, tmp_path: Path
+    ) -> None:
+        """A `token` kwarg is still forwarded, and a warning says the token file wins."""
+        with (
+            self._patched_snowflake() as connector,
+            self._patched_container_env(tmp_path) as token_file,
+            patch("streamlit.connections.snowflake_connection._LOGGER") as logger,
+        ):
+            SnowflakeConnection("snowflake", token="my-token")
+        kwargs = connector.connect.call_args.kwargs
+        assert kwargs["token"] == "my-token"
+        assert kwargs["token_file_path"] == str(token_file)
+        logger.warning.assert_called_once()
+        assert "ignores `token`" in logger.warning.call_args.args[0]
+
+    def test_container_fallback_does_not_warn_without_token_kwarg(
+        self, tmp_path: Path
+    ) -> None:
+        """No warning is logged when only the token file is used."""
+        with (
+            self._patched_snowflake(),
+            self._patched_container_env(tmp_path),
+            patch("streamlit.connections.snowflake_connection._LOGGER") as logger,
+        ):
+            SnowflakeConnection("snowflake", warehouse="wh")
+        logger.warning.assert_not_called()
 
     def test_connect_ignores_container_env_without_token_file(
         self, tmp_path: Path
     ) -> None:
         """Env vars alone, without the service token file, do not trigger the fallback."""
-        env, _ = self._container_env(tmp_path)
         with (
             self._patched_snowflake() as connector,
-            patch.dict(os.environ, env),
-            patch(
-                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
-                str(tmp_path / "missing"),
-            ),
+            self._patched_container_env(tmp_path, token_file_exists=False),
         ):
             SnowflakeConnection("snowflake")
         connector.connect.assert_called_once_with()
@@ -335,14 +428,9 @@ class TestSnowflakeConnectionConfiguration:
         self, tmp_path: Path
     ) -> None:
         """A connector failure on the container fallback is not reported as missing config."""
-        env, token_file = self._container_env(tmp_path)
         with (
             self._patched_snowflake() as connector,
-            patch.dict(os.environ, env),
-            patch(
-                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
-                str(token_file),
-            ),
+            self._patched_container_env(tmp_path),
         ):
             connector.connect.side_effect = connector.Error("token rejected")
             with pytest.raises(connector.Error, match="token rejected"):
@@ -350,46 +438,31 @@ class TestSnowflakeConnectionConfiguration:
 
     def test_secrets_take_precedence_over_container_env(self, tmp_path: Path) -> None:
         """Streamlit secrets are used even when the container fallback could run."""
-        env, token_file = self._container_env(tmp_path)
         with (
             self._patched_snowflake(
                 {"account": "secret-acct", "user": "alice"}
             ) as connector,
-            patch.dict(os.environ, env),
-            patch(
-                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
-                str(token_file),
-            ),
+            self._patched_container_env(tmp_path),
         ):
             SnowflakeConnection("snowflake")
         connector.connect.assert_called_once_with(account="secret-acct", user="alice")
 
     def test_named_connection_ignores_container_env(self, tmp_path: Path) -> None:
         """A connection name other than "snowflake" never uses the container fallback."""
-        env, token_file = self._container_env(tmp_path)
         with (
             self._patched_snowflake() as connector,
-            patch.dict(os.environ, env),
-            patch(
-                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
-                str(token_file),
-            ),
+            self._patched_container_env(tmp_path),
         ):
             SnowflakeConnection("my_connection")
         connector.connect.assert_called_once_with(connection_name="my_connection")
 
     def test_kwargs_still_ignored_when_config_file_exists(self, tmp_path: Path) -> None:
         """With a connector config file, "snowflake" keeps ignoring keyword arguments."""
-        env, token_file = self._container_env(tmp_path)
         connections_file = tmp_path / "connections.toml"
         connections_file.write_text("", encoding="utf-8")
         with (
             self._patched_snowflake() as connector,
-            patch.dict(os.environ, env),
-            patch(
-                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
-                str(token_file),
-            ),
+            self._patched_container_env(tmp_path),
             patch.object(
                 sys.modules["snowflake.connector.constants"],
                 "CONNECTIONS_FILE",
@@ -403,14 +476,9 @@ class TestSnowflakeConnectionConfiguration:
         self, tmp_path: Path
     ) -> None:
         """If the connector lacks the config-file constants, the fallback is skipped."""
-        env, token_file = self._container_env(tmp_path)
         with (
             self._patched_snowflake() as connector,
-            patch.dict(os.environ, env),
-            patch(
-                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
-                str(token_file),
-            ),
+            self._patched_container_env(tmp_path),
         ):
             del sys.modules["snowflake.connector.constants"].CONFIG_FILE
             SnowflakeConnection("snowflake")
@@ -425,14 +493,9 @@ class TestSnowflakeConnectionConfiguration:
         self, tmp_path: Path, version: tuple[int, int, int, None], uses_fallback: bool
     ) -> None:
         """Connectors older than 3.11, which lack token_file_path, keep the default path."""
-        env, token_file = self._container_env(tmp_path)
         with (
             self._patched_snowflake() as connector,
-            patch.dict(os.environ, env),
-            patch(
-                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
-                str(token_file),
-            ),
+            self._patched_container_env(tmp_path) as token_file,
             patch.object(
                 sys.modules["snowflake.connector.version"], "VERSION", version
             ),
@@ -449,14 +512,9 @@ class TestSnowflakeConnectionConfiguration:
         self, tmp_path: Path
     ) -> None:
         """Without the token file, a failed default connection still raises the friendly error."""
-        env, _ = self._container_env(tmp_path)
         with (
             self._patched_snowflake() as connector,
-            patch.dict(os.environ, env),
-            patch(
-                "streamlit.connections.snowflake_connection.SNOWPARK_CONNECTION_TOKEN_FILE",
-                str(tmp_path / "missing"),
-            ),
+            self._patched_container_env(tmp_path, token_file_exists=False),
         ):
             connector.connect.side_effect = connector.Error("no default connection")
             with pytest.raises(StreamlitAPIException, match="Missing Snowflake"):
