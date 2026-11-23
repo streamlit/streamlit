@@ -92,8 +92,8 @@ Additional rules:
 - Exact dates and weekdays within one parameter use union semantics. For example,
   `enabled_dates=["monday", date(2026, 8, 27)]` enables every Monday plus August 27.
 - Materialize, validate, deduplicate, and sort once before element-ID and protobuf processing.
-  Bounds are applied first. Exact filter dates outside the min/max window and duplicate entries
-  have no effect.
+  Exact filter dates outside the min/max window have no effect on availability, so they are
+  dropped from the protobuf but not from the element ID (see widget identity below).
 - An empty `enabled_dates` collection makes every date unavailable; use it with `value=None` (or an
   empty range value) when an app temporarily has no available dates. An empty `disabled_dates`
   collection disables nothing.
@@ -109,7 +109,9 @@ Additional rules:
   before `"today"` moves to a selectable date. Availability never changes the default window.
 - Widget identity matches `min_value` / `max_value`: include the canonical availability config in
   the unkeyed element ID, and keep it out of identity when a user `key` is set
-  (`key_as_main_identity={"format"}` today). Changing availability remounts a keyless widget.
+  (`key_as_main_identity={"format"}` today). The ID uses the normalized config before bounds
+  filtering, so a moving `"today"` bound never changes it. Changing availability remounts a
+  keyless widget.
   A literal `"today"` entry in `enabled_dates` or `disabled_dates` stays symbolic in the ID, like
   `"today"` in `value`, `min_value`, and `max_value`, so a keyless widget does not reset when the
   day rolls over. The browser receives the date `"today"` resolved to at script run. A session left
