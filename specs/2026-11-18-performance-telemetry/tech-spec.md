@@ -136,7 +136,7 @@ Query time uses the same pattern with its own `RunQueryStats` (see [Query time](
 
 Command and cache times follow one rule: **a span counts toward the innermost listed command or recorded cached call that contains it, and the outer ones leave it out.** A cached call made inside a listed command isn't recorded, because the command's time covers it. A listed command inside a cached function is left out of the cached call's times, because the command reports it. Times that can't leave an overlap out, such as query time, report the overlapping part separately instead (see [Query time](#query-time)).
 
-The code checks five scopes to decide where a span's time goes:
+The code checks five scopes to decide where a span's time goes. Each scope uses the existing mechanism that reaches exactly the code it must cover: `ThreadState` crosses into attached threads, and a ContextVar separates async tasks on one thread.
 
 | Scope | How it's marked | Where it's visible |
 |---|---|---|
