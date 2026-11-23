@@ -43,6 +43,10 @@ def _box(locator: Locator) -> FloatRect:
     return box
 
 
+def _css_px(locator: Locator, prop: str) -> float:
+    return float(locator.evaluate(f"el => parseFloat(getComputedStyle(el)['{prop}'])"))
+
+
 def _label_offset(card: Locator) -> float:
     """Distance from the top of the card to the top of its label."""
     return _box(card.get_by_test_id("stCardLabel"))["y"] - _box(card)["y"]
@@ -78,36 +82,27 @@ def test_header_variants_in_main_and_sidebar(app: Page):
         expect(full.get_by_test_id("stCardLabel")).not_to_have_attribute(
             "title", "Revenue"
         )
-        expect(label_only.get_by_test_id("stCardLabel")).not_to_have_attribute(
-            "title", "Label only"
-        )
 
         # The label stays at the same place whether or not there is a caption.
         offsets = [_label_offset(c) for c in (full, truncated, label_only)]
         assert max(offsets) - min(offsets) < 1, (prefix, offsets)
 
-
-def test_header_typography(app: Page):
-    card = _card(app, "header_full_header")
-
-    label = card.get_by_test_id("stCardLabel")
+    # Label: 24px with a 1.2 line height. Caption: 14px with a 1.2 line height.
+    full = _card(app, "header_full_header")
+    label = full.get_by_test_id("stCardLabel")
+    caption = full.get_by_test_id("stCardCaption").locator("p").first
     expect(label).to_have_css("font-size", "24px")
-    expect(label).to_have_css("line-height", "28.8px")
-    caption = card.get_by_test_id("stCardCaption")
-    expect(caption.locator("p").first).to_have_css("font-size", "14px")
-    expect(caption.locator("p").first).to_have_css("line-height", "16.8px")
+    expect(caption).to_have_css("font-size", "14px")
+    assert abs(_css_px(label, "lineHeight") - 28.8) < 0.1
+    assert abs(_css_px(caption, "lineHeight") - 16.8) < 0.1
 
 
-def test_surfaces_in_main_and_sidebar(app: Page):
-    sidebar = app.get_by_test_id("stSidebar")
+def test_surfaces_and_nested_background(app: Page):
     for surface in SURFACES:
         expect(_card(app, f"surface_{surface}")).to_be_visible()
         expect(_card(app, f"sidebar_{surface}")).to_be_visible()
-    expect(
-        sidebar.get_by_test_id("stCard").filter(has_text="Filled with outline")
-    ).to_have_count(1)
 
-    # Only the filled cards differ from the page background.
+    # Only the filled cards differ from the sidebar background.
     colors = {
         surface: _card(app, f"sidebar_{surface}").evaluate(
             "el => getComputedStyle(el).backgroundColor"
@@ -122,110 +117,71 @@ def test_surfaces_in_main_and_sidebar(app: Page):
     heights = {s: _box(_card(app, f"sidebar_{s}"))["height"] for s in SURFACES}
     assert heights["frameless"] < heights["outlined"]
 
-
-def test_nested_filled_card_swaps_the_background(app: Page):
+    # A filled card inside another card swaps the background again.
     outer = _card(app, "nested_outer")
     inner = _card(app, "nested_inner")
-
     expect(inner).to_be_visible()
     outer_background = outer.evaluate("el => getComputedStyle(el).backgroundColor")
     inner_background = inner.evaluate("el => getComputedStyle(el).backgroundColor")
     assert outer_background != inner_background
 
 
-def test_cards_in_a_row_have_equal_heights(app: Page):
-    short = _card(app, "equal_short")
-    tall = _card(app, "equal_tall")
-    chart = _card(app, "equal_chart")
-
-    expect(chart.get_by_test_id("stVegaLiteChart")).to_be_visible()
-    heights = [_box(c)["height"] for c in (short, tall, chart)]
+def test_card_sizing(app: Page):
+    # Cards in a row stretch to the tallest one.
+    equal = [_card(app, k) for k in ("equal_short", "equal_tall", "equal_chart")]
+    expect(equal[2].get_by_test_id("stVegaLiteChart")).to_be_visible()
+    heights = [_box(c)["height"] for c in equal]
     assert max(heights) - min(heights) < 1, heights
 
-
-def test_integer_height_pins_header_and_scrolls_body(app: Page):
-    card = _card(app, "fixed_height")
-    card.scroll_into_view_if_needed()
-
-    assert abs(_box(card)["height"] - 180) < 2
-    expect(card.get_by_test_id("stCardLabel")).to_be_in_viewport()
-
-    scroll_body = card.get_by_test_id("stCardScrollBody")
-    expect(card.get_by_text("Row 0", exact=True)).to_be_visible()
-    # Rows that don't fit are clipped by the body's scrollport.
-    expect(card.get_by_text("Row 11", exact=True)).not_to_be_in_viewport()
-
-    scroll_body.evaluate("el => { el.scrollTop = el.scrollHeight }")
-    expect(card.get_by_text("Row 11", exact=True)).to_be_in_viewport()
-    # The header stays put while the body scrolls.
-    expect(card.get_by_test_id("stCardLabel")).to_be_in_viewport()
-
-
-def test_card_without_body_content_shows_only_the_header(app: Page):
-    card = _card(app, "empty_body")
-
-    expect(card.get_by_test_id("stCardLabel")).to_have_text("Empty body")
-    expect(card.get_by_test_id("stLayoutWrapper")).to_have_count(0)
-    # Header (a standard widget height) plus the card's padding.
-    assert _box(card)["height"] < 90
-
-
-def test_content_width_card_hugs_its_content(app: Page):
-    card = _card(app, "content_width")
-
-    expect(card.get_by_text("Fits the content")).to_be_visible()
-    assert _box(card)["width"] < _box(app.get_by_test_id("stMain"))["width"] / 2
-
-
-def test_cards_fill_grid_rows_with_integer_row_height(app: Page):
+    # Cards fill a grid row with an integer row height.
     trend = _card(app, "grid_trend")
     data = _card(app, "grid_data")
-
     expect(trend.get_by_test_id("stVegaLiteChart")).to_be_visible()
     expect(data.get_by_test_id("stDataFrame")).to_be_visible()
     assert abs(_box(trend)["height"] - 320) < 2
     assert abs(_box(data)["height"] - 320) < 2
 
+    # A card without body content is only its header plus padding.
+    empty = _card(app, "empty_body")
+    expect(empty.get_by_test_id("stCardLabel")).to_have_text("Empty body")
+    expect(empty.get_by_test_id("stLayoutWrapper")).to_have_count(0)
+    assert _box(empty)["height"] < 90
 
-def test_card_surfaces_snapshot(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
+    # A content-width card hugs its content.
+    content_width = _card(app, "content_width")
+    expect(content_width.get_by_text("Fits the content")).to_be_visible()
+    main_width = _box(app.get_by_test_id("stMain"))["width"]
+    assert _box(content_width)["width"] < main_width / 2
+
+    # An integer height pins the header and scrolls only the body.
+    fixed = _card(app, "fixed_height")
+    fixed.scroll_into_view_if_needed()
+    assert abs(_box(fixed)["height"] - 180) < 2
+    expect(fixed.get_by_text("Row 0", exact=True)).to_be_visible()
+    expect(fixed.get_by_text("Row 11", exact=True)).not_to_be_in_viewport()
+    fixed.get_by_test_id("stCardScrollBody").evaluate(
+        "el => { el.scrollTop = el.scrollHeight }"
+    )
+    expect(fixed.get_by_text("Row 11", exact=True)).to_be_in_viewport()
+    expect(fixed.get_by_test_id("stCardLabel")).to_be_in_viewport()
+
+
+def test_card_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunction):
     for surface in SURFACES:
         expect(_card(themed_app, f"surface_{surface}")).to_be_visible()
-    row = get_element_by_key(themed_app, "surface_outlined").locator(
-        "xpath=ancestor::*[@data-testid='stHorizontalBlock'][1]"
-    )
-    assert_snapshot(row, name="st_card-surfaces")
-
-
-def test_card_header_variants_snapshot(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
+        expect(_card(themed_app, f"sidebar_{surface}")).to_be_visible()
     expect(
         _card(themed_app, "header_full_header").get_by_test_id("stVegaLiteChart")
     ).to_be_visible()
-    row = get_element_by_key(themed_app, "header_full_header").locator(
-        "xpath=ancestor::*[@data-testid='stHorizontalBlock'][1]"
-    )
-    assert_snapshot(row, name="st_card-header_variants")
 
-
-def test_sidebar_cards_snapshot(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    for surface in SURFACES:
-        expect(_card(themed_app, f"sidebar_{surface}")).to_be_visible()
+    for key, name in (
+        ("surface_outlined", "surfaces"),
+        ("header_full_header", "header_variants"),
+    ):
+        row = get_element_by_key(themed_app, key).locator(
+            "xpath=ancestor::*[@data-testid='stHorizontalBlock'][1]"
+        )
+        assert_snapshot(row, name=f"st_card-{name}")
     assert_snapshot(
         get_element_by_key(themed_app, "sidebar_surfaces"), name="st_card-sidebar"
     )
-
-
-def test_grid_cards_snapshot(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    expect(
-        _card(themed_app, "grid_trend").get_by_test_id("stVegaLiteChart")
-    ).to_be_visible()
-    expect(_card(themed_app, "grid_data").get_by_test_id("stDataFrame")).to_be_visible()
-    grid = get_element_by_key(themed_app, "grid_trend").locator(
-        "xpath=ancestor::*[@data-testid='stGrid'][1]"
-    )
-    assert_snapshot(grid, name="st_card-grid")

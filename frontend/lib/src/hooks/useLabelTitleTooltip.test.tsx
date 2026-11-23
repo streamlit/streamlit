@@ -219,6 +219,38 @@ describe("useLabelTitleTooltip", () => {
     expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
   })
 
+  it.each([
+    ["sets a title for a line-clamped", "2", "Clamped"],
+    ["does not set a title for an unclamped", "none", null],
+  ])(
+    "%s box taller than its client height",
+    (_name, webkitLineClamp, expectedTitle) => {
+      layout.setWidths(100, 100)
+      // jsdom does not compute -webkit-line-clamp.
+      const spies = [
+        vi
+          .spyOn(HTMLElement.prototype, "scrollHeight", "get")
+          .mockReturnValue(60),
+        vi
+          .spyOn(HTMLElement.prototype, "clientHeight", "get")
+          .mockReturnValue(40),
+        vi.spyOn(window, "getComputedStyle").mockReturnValue({
+          webkitLineClamp,
+        } as CSSStyleDeclaration),
+      ]
+
+      try {
+        render(<LabelTitleHarness addTitleTooltip={true} label="Clamped" />)
+
+        expect(screen.getByTestId("title-host").getAttribute("title")).toBe(
+          expectedTitle
+        )
+      } finally {
+        spies.forEach(spy => spy.mockRestore())
+      }
+    }
+  )
+
   it("reads ellipsis from a descendant when the text wrapper has no box", () => {
     function ContentsHarness(): ReactElement {
       const { titleRef, labelTextRef } = useLabelTitleTooltip(true, "Clipped")

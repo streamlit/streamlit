@@ -23,7 +23,7 @@ import {
   useMemo,
 } from "react"
 
-import type { Block as BlockProto, streamlit } from "@streamlit/protobuf"
+import type { Block as BlockProto } from "@streamlit/protobuf"
 import { isNullOrEmptyString, notNullOrUndefined } from "@streamlit/utils"
 
 import {
@@ -37,8 +37,10 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/Streamli
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
+import { computeDerivedColors } from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
 
-import { createCardBackgroundTheme } from "./cardBackgroundTheme"
 import {
   StyledCard,
   StyledCardActions,
@@ -51,12 +53,12 @@ import {
   StyledCardScrollBody,
   StyledCardTitleCluster,
 } from "./styled-components"
-import { useClippedTitle } from "./useClippedTitle"
 
 export interface CardProps {
   element: BlockProto.Card
-  /** The card's height config, which decides how the body is sized. */
-  heightConfig: streamlit.HeightConfig.$Properties | null | undefined
+  /** Whether the card has an integer height, which scrolls only the body. */
+  hasFixedHeight: boolean
+  hasStretchHeight: boolean
   isStale: boolean
   /** Rendered `header_extras` slot, or null when it is empty. */
   headerExtras: ReactNode
@@ -66,9 +68,30 @@ export interface CardProps {
   body: ReactNode
 }
 
+/**
+ * Theme for the contents of a filled card.
+ *
+ * The card paints the secondary background of its immediate theme context.
+ * Its children swap the background and secondary background, so elements that
+ * normally sit on the background stay distinguishable on the card. A nested
+ * filled card swaps again.
+ */
+function createCardBackgroundTheme(theme: EmotionTheme): EmotionTheme {
+  const colors = {
+    ...theme.colors,
+    bgColor: theme.colors.secondaryBg,
+    secondaryBg: theme.colors.bgColor,
+  }
+  return {
+    ...theme,
+    colors: { ...colors, ...computeDerivedColors(colors) },
+  }
+}
+
 const Card = ({
   element,
-  heightConfig,
+  hasFixedHeight,
+  hasStretchHeight,
   isStale,
   headerExtras,
   actions,
@@ -82,18 +105,17 @@ const Card = ({
   const captionId = `${baseId}-caption`
   const hasCaption = !isNullOrEmptyString(caption)
 
-  const labelRef = useClippedTitle("horizontal", label)
-  const captionRef = useClippedTitle("vertical", caption)
+  const { titleRef: labelRef, labelTextRef } = useLabelTitleTooltip(
+    true,
+    label
+  )
+  const { titleRef: captionRef, labelTextRef: captionTextRef } =
+    useLabelTitleTooltip(hasCaption, caption)
 
   const contentTheme = useMemo(
     () => (background ? createCardBackgroundTheme(theme) : theme),
     [background, theme]
   )
-
-  // An integer height pins the header and scrolls only the body.
-  const hasFixedHeight =
-    (heightConfig?.pixelHeight ?? 0) > 0 || (heightConfig?.remHeight ?? 0) > 0
-  const hasStretchHeight = heightConfig?.useStretch ?? false
 
   const bodyContent = (
     <FlexContextProvider
@@ -124,14 +146,16 @@ const Card = ({
               ref={labelRef}
               data-testid="stCardLabel"
             >
-              <StreamlitMarkdown
-                source={label}
-                allowHTML={false}
-                isLabel
-                inheritFont
-                inheritLineHeight
-                truncate
-              />
+              <span ref={labelTextRef} style={{ display: "contents" }}>
+                <StreamlitMarkdown
+                  source={label}
+                  allowHTML={false}
+                  isLabel
+                  inheritFont
+                  inheritLineHeight
+                  truncate
+                />
+              </span>
             </StyledCardLabel>
             {!isNullOrEmptyString(help) && (
               <StyledCardHelp>
@@ -150,13 +174,15 @@ const Card = ({
               ref={captionRef}
               data-testid="stCardCaption"
             >
-              <StreamlitMarkdown
-                source={caption}
-                allowHTML={false}
-                isLabel
-                isCaption
-                inheritLineHeight
-              />
+              <span ref={captionTextRef} style={{ display: "contents" }}>
+                <StreamlitMarkdown
+                  source={caption}
+                  allowHTML={false}
+                  isLabel
+                  isCaption
+                  inheritLineHeight
+                />
+              </span>
             </StyledCardCaption>
           )}
         </StyledCardTitleCluster>

@@ -34,7 +34,8 @@ const getProps = (
     background: false,
     ...elementProps,
   }),
-  heightConfig: { useStretch: true },
+  hasFixedHeight: false,
+  hasStretchHeight: true,
   isStale: false,
   headerExtras: null,
   actions: null,
@@ -187,6 +188,27 @@ describe("Card", () => {
       )
     })
 
+    it("swaps the backgrounds back for a nested filled card", () => {
+      const ThemeProbe = (): React.ReactElement => {
+        const theme = useEmotionTheme()
+        return (
+          <div data-testid="probe">
+            {theme.colors.bgColor}|{theme.colors.secondaryBg}
+          </div>
+        )
+      }
+      const { bgColor, secondaryBg } = mockTheme.emotion.colors
+      const inner = (
+        <Card {...getProps({ background: true }, { body: <ThemeProbe /> })} />
+      )
+
+      render(<Card {...getProps({ background: true }, { body: inner })} />)
+
+      expect(screen.getByTestId("probe")).toHaveTextContent(
+        `${bgColor}|${secondaryBg}`
+      )
+    })
+
     it("keeps the theme for the contents without a background", () => {
       const ThemeProbe = (): React.ReactElement => {
         const theme = useEmotionTheme()
@@ -203,9 +225,7 @@ describe("Card", () => {
 
   describe("height", () => {
     it("scrolls only the body for an integer height", () => {
-      render(
-        <Card {...getProps({}, { heightConfig: { pixelHeight: 300 } })} />
-      )
+      render(<Card {...getProps({}, { hasFixedHeight: true })} />)
 
       const scrollBody = screen.getByTestId("stCardScrollBody")
       expect(scrollBody).toContainElement(screen.getByText("body"))
@@ -216,19 +236,10 @@ describe("Card", () => {
     })
 
     it.each([
-      ["stretch", { useStretch: true }],
-      ["content", { useContent: true }],
-    ])("has no scroll wrapper for %s height", (_name, heightConfig) => {
-      render(
-        <Card
-          {...getProps(
-            {},
-            {
-              heightConfig: heightConfig,
-            }
-          )}
-        />
-      )
+      ["stretch", true],
+      ["content", false],
+    ])("has no scroll wrapper for %s height", (_name, hasStretchHeight) => {
+      render(<Card {...getProps({}, { hasStretchHeight })} />)
 
       expect(screen.queryByTestId("stCardScrollBody")).not.toBeInTheDocument()
     })

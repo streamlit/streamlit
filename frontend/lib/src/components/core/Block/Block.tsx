@@ -620,7 +620,7 @@ export const BlockNodeRenderer = (
     containerElement = (
       <Card
         element={node.deltaBlock.card as BlockProto.Card}
-        heightConfig={node.deltaBlock.heightConfig}
+        {...getHeightContextProps(node.deltaBlock.heightConfig)}
         isStale={isStale}
         headerExtras={renderCardSlot(0)}
         actions={renderCardSlot(1)}
