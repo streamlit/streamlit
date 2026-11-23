@@ -205,19 +205,17 @@ Buttons already use `type` for emphasis (`"primary"`, `"secondary"`, `"tertiary"
 density is independent of emphasis, so it needs its own parameter ($46) rather than a new
 `type` value.
 
-This departs from $10 and $45 deliberately: a button `size` is a control preset, like
-`type`, not a spacing length. Named size presets are common in UI libraries, for example
-MUI's `small`, `medium`, and `large`. `st.logo`, `st.space`, and buttons each use `size` for
-their own scale, which is why the docstring lists the button heights explicitly so the values
-are never read as spacing. If reviewers prefer a name that can't be confused with `st.space`, the
-alternative is a different set of names, such as `"compact"`, `"medium"`, and `"large"`,
-which gives up the extra steps (see below).
+This departs from $10 and $45 deliberately. `st.space`, `st.logo`, and buttons are very
+different elements, so `size` means a different scale on each: a spacing length on `st.space`,
+an icon size on `st.logo`, and a control preset on buttons, like `type`. Named size presets are
+common in UI libraries, for example MUI's `small`, `medium`, and `large`. `size` is the only
+name that fits, and the docstring lists the button heights explicitly so the values are never
+read as spacing.
 
 **Number of values.** The issue proposed three (`compact`, `default`, `large`). The scale
 has five, as confirmed with design. Buttons are used heavily in dashboards and other dense
 parts of app layouts, and later in containers such as a card, so several compact steps cover
-a broader range of use cases than a single "compact" value. `"xxsmall"` and `"xsmall"` are
-only 0.25rem apart, so whether both are needed at launch is an open question below.
+a broader range of use cases than a single "compact" value. All five values ship at launch.
 
 ## Alternatives considered
 
@@ -262,13 +260,6 @@ only 0.25rem apart, so whether both are needed at launch is an open question bel
 - A container default for `size`, such as the `st.card` compact density. See
   [Container defaults](#container-defaults).
 - Integer or `"content"`/`"stretch"` values.
-
-## Open questions
-
-1. Are the `size` name and its overlap with `st.space` acceptable, as described in
-   [Why `size`](#why-size-and-why-these-names)?
-2. Are both `"xxsmall"` and `"xsmall"` needed at launch, or should the first release ship
-   four values and add `"xxsmall"` on request? Design confirmed five.
 
 ## Checklist
 
