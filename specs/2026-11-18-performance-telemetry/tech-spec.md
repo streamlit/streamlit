@@ -28,7 +28,7 @@ A script run's work can happen on:
 
 - **The script thread**, which runs callbacks, the script, and fragments without `parallel=True`.
 - **Parallel fragment workers.** Fragments with `parallel=True` run on a `ThreadPoolExecutor` that `ParallelFragmentCoordinator` creates for each full run. One worker thread can run several fragments one after another. A worker runs each fragment inside a copy of the submitting thread's `contextvars`, so it starts with that thread's `FragmentThreadState`.
-- **Attached threads.** Threads started by user code and attached with `add_script_run_ctx` get a deep copy of the attaching thread's `FragmentThreadState`. The `in_cached_function` ContextVar isn't copied.
+- **Attached threads.** Only user code creates these, by starting its own thread and attaching it with `add_script_run_ctx`. The [multithreading guide](https://docs.streamlit.io/develop/concepts/design/multithreading) says this isn't officially supported, so this design keeps their times in the run's totals but doesn't break them down. Streamlit's own background threads, such as cache refresh threads, have no `ScriptRunContext`, so they record nothing. An attached thread gets a deep copy of the attaching thread's `FragmentThreadState`, but not the `in_cached_function` ContextVar.
 - **Async tasks**, which interleave on an event loop on any of these threads. A task's wall-clock time includes whatever other tasks run while it awaits.
 
 ### Reported times overlap
@@ -201,13 +201,13 @@ Entries are per fragment run, not per worker thread, because a worker can run se
 
 #### Which threads count toward a fragment
 
-Only the worker thread counts toward its fragment's entry. Threads the fragment attaches count toward the main script, like threads the main script attaches:
+Only the worker thread counts toward its fragment's entry. If user code in the fragment starts and attaches its own threads, they count toward the main script, like threads the main script attaches:
 
 - They share the worker's `ParallelFragmentRun`, because its `__deepcopy__` returns itself, but `add_command_time` ignores commands from any thread other than the worker.
 - Their cached calls and queries go into their own per-thread records in the run's totals.
 - Per-fragment CPU time reads only the worker's clock.
 
-This keeps each entry single-threaded, so a fragment's user code time, its `exec_time` minus its command and cache times, can't go negative, and its CPU time can't exceed its `exec_time`. The cost is that the main script's user code time can: an attached thread usually runs while the script thread waits for the fragment, so its time overlaps `wait_time`.
+This keeps each entry single-threaded, so a fragment's user code time, its `exec_time` minus its command and cache times, can't go negative, and its CPU time can't exceed its `exec_time`. The cost, only in apps that attach their own threads, is that the main script's user code time can go negative: an attached thread usually runs while the script thread waits for the fragment, so its time overlaps `wait_time`.
 
 #### Waiting for fragments
 
@@ -473,7 +473,7 @@ In `ParallelFragmentRun`, 1–6 hold the foundation's times, 7–9 query time an
 
 ### Known limitations
 
-- **Concurrent threads add up.** Times from different threads are added together, so the totals can exceed wall-clock time. Parallel fragments report their share. Other attached threads have no breakdown, so subtracting their times from `exec_time` can give a negative user code time.
+- **Concurrent threads add up.** Times from different threads are added together, so the totals can exceed wall-clock time. Parallel fragments report their share. Threads that user code attaches have no breakdown, so in apps that use them, subtracting their times from `exec_time` can give a negative user code time.
 - **Threads a fragment attaches** count toward the main script and usually overlap `wait_time`.
 - **Unfinished work.** Cached calls still running when the profile is built are left out, and a thread the script doesn't join can be partly included.
 - **Scaling covers cache times only.** Overlapping async calls are scaled, but other times measured during them, such as query time inside cached calls, aren't.
