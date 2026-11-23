@@ -51,7 +51,7 @@ The per-function server metrics at `/_stcore/metrics` (`FunctionCacheMetrics`) a
 - **Usage stats can be off.** With `browser.gatherUsageStats = false`, per-call work must stop at a cheap check.
 - **The profile is built once, on the script thread**, at the end of the run, while threads the script doesn't join can still be running.
 - **Existing fields keep their meaning.** `commands` and `cache_usage` cover the whole run, including parallel fragments.
-- **Additions land separately.** Each addition is its own change, so each must work without the others, and they share proto field numbers and the per-fragment entry.
+- **Additions land separately.** Each addition is its own change, so each must work without the others, and they share proto field numbers, the per-thread record and the per-fragment entry.
 
 ## Proposal
 
@@ -59,7 +59,7 @@ The first sections, from [Where the state lives](#where-the-state-lives) to [Cos
 
 ### Where the state lives
 
-Per-run state hangs off `ctx.shared`, which every thread in the run shares. Per-thread state lives in `ThreadState`. A simplified outline, leaving out fields unrelated to telemetry, with fields from later additions marked:
+Per-run state lives on `ctx`, the run's `ScriptRunContext`, mostly in `ctx.shared`, which every thread in the run shares. Per-thread state lives in `ThreadState`. A simplified outline, leaving out fields unrelated to telemetry, with fields from later additions marked:
 
 ```python
 # Render timing is measured only in the browser, so it has no server-side state.
@@ -71,35 +71,37 @@ class ScriptRunContext:  # ctx: reset() at the start of each run
 
 
 class SharedRunState:  # ctx.shared: shared by all the run's threads
-    cache_stats: RunCacheStats
+    stats: RunStats
     parallel_fragments: RunParallelFragmentStats
-    query_stats: RunQueryStats  # query time
-    command_cpu_time: float  # CPU time: added under a lock, from any thread
-    # data size: its per-thread registry goes here once designed
+    query_ids: QueryIds  # query time: the first 50, under a lock
 
 
-class RunCacheStats:  # one per run, shared by all its threads
-    _local: threading.local  # _local.stats: each thread sees only its own ThreadCacheStats
-    _threads: list[ThreadCacheStats]  # references to every thread's and fragment run's, for totals()
+class RunStats:  # one per run, shared by all its threads
+    _local: threading.local  # _local.stats: each thread sees only its own ThreadRunStats
+    _threads: list[ThreadRunStats]  # references to every thread's and fragment run's, for totals()
 
 
-class ThreadCacheStats:  # written only by its own thread
+class ThreadRunStats:  # written only by its own thread
+    counts_cpu: bool  # the script thread's record or a fragment run's
+    command_time: float  # listed commands on this thread
+    command_cpu_time: float  # CPU time: listed commands on this thread
+    cache: ThreadCacheStats
+    query: ThreadQueryStats  # query time
+    # data size: its counts go here once designed
+
+
+class ThreadCacheStats:
     cache_data: CacheTotals  # calls, hits, misses, ... and compute, wait, overhead
     cache_resource: CacheTotals
+    async_overlap_time: float  # time that overlapping async calls counted more than once
     tracked_command_time: float  # listed commands during recorded calls
+    _calls_open: int  # recorded calls open on this thread, for is_in_call
     _calls_in_cache_code: int  # open calls hashing or reading a result
-    _overlap: _OverlapGroup | None  # overlapping async calls, scaled on close
+    _overlap: _OverlapGroup | None  # the current group of overlapping async calls
     # per-function cache stats: counters keyed by function go here once designed
 
 
-class RunQueryStats:  # query time: the same pattern as RunCacheStats
-    _local: threading.local  # _local.stats: each thread sees only its own ThreadQueryStats
-    _threads: list[ThreadQueryStats]  # references to every thread's and fragment run's, for totals()
-    _query_ids: list[str]  # with _query_ids_in_cache, the first 50, under a lock
-    _query_ids_in_cache: list[str]
-
-
-class ThreadQueryStats:  # query time: written only by its own thread
+class ThreadQueryStats:  # query time
     snowflake_connector: QueryTotals  # queries, failed, ... and time, time_in_cache, time_in_commands
     sqlalchemy: QueryTotals
     snowpark: QueryTotals
@@ -113,33 +115,28 @@ class RunParallelFragmentStats:
 class ParallelFragmentRun:  # one fragment run on its worker thread
     start: float
     end: float | None
-    command_time: float  # listed commands on the worker thread only
-    cache_stats: ThreadCacheStats
-    query_stats: ThreadQueryStats  # query time
+    stats: ThreadRunStats  # the worker's record while the fragment runs
     cpu_time: float | None  # CPU time: the worker thread, from start to end
 
 
 @dataclass(frozen=True)
-class FragmentThreadState:  # ThreadState: one per thread, copied to attached threads
+class FragmentThreadState:  # ThreadState: a ContextVar, copied to attached threads
     in_listed_command: bool
     cache_compute: CacheComputeScope | None  # the copy shares the same object
-    parallel_fragment_run: ParallelFragmentRun | None  # the copy shares the same object
 ```
 
-At the start of each run, `SharedRunState.reset()` replaces `cache_stats`, `query_stats` and `parallel_fragments` with new objects instead of clearing them. Late work from the previous run, such as a cached call on a thread the script didn't join, then finishes into the old objects, which nothing reads, instead of the new run's totals.
+At the start of each run, `SharedRunState.reset()` replaces `stats`, `query_ids` and `parallel_fragments` with new objects instead of clearing them. Late work from the previous run, such as a cached call on a thread the script didn't join, then finishes into the old objects, which nothing reads, instead of the new run's totals.
 
 ### Per-thread totals without locks
 
-Each thread writes only to its own `ThreadCacheStats`, so cached calls don't take a lock. `RunCacheStats` keeps two references to each record:
+Each thread writes only to its own `ThreadRunStats`, so recording a command, cached call or query takes no lock. Every addition that records per call adds its counters to this one record. `RunStats` keeps two references to each record:
 
-- **`_local.stats`**, a `threading.local`, lets a thread find its own record. `current_thread_stats()` creates it on the thread's first call in the run.
+- **`_local.stats`**, a `threading.local`, lets a thread find its own record. `current_thread_stats()` creates it the first time the thread records something in the run.
 - **`_threads`** lets the profile builder sum every record, including those of threads that have exited. A `threading.local` value is visible only to its own thread and disappears with it.
 
 The lock is taken only to append to `_threads`, once per thread per run. A parallel fragment run appends its own record too (see [Recording a fragment run](#recording-a-fragment-run)).
 
-The profile builder reads the records without locking them. A call adds its counts and times only when it finishes, so one still running is left out, and one finishing during the build may be partly included. Where it reads two related values, the order makes a race miss time rather than count it twice. For example, it reads a thread's totals before its open overlap group (see [Async calls on one event loop](#async-calls-on-one-event-loop)).
-
-Query time uses the same pattern with its own `RunQueryStats` (see [Query time](#query-time)).
+The profile builder reads the records without locking them. A call adds its counts and times only when it finishes, so one still running is left out, and one finishing during the build may be partly included. Where it reads two related values, the order makes a race miss time rather than count it twice. For example, it reads a thread's cache totals before its open overlap group (see [Async calls on one event loop](#async-calls-on-one-event-loop)).
 
 ### Covered spans
 
@@ -148,17 +145,27 @@ Reported times can contain each other: a cached call inside a listed command, a 
 - **Leave it out.** Command and cache times count a span toward the innermost listed command or recorded cached call that contains it, and the outer ones leave it out. A cached call made inside a listed command isn't recorded, because the command's time covers it. A listed command inside a cached function is left out of the cached call's times, because the command reports it. See [Cache usage](#cache-usage).
 - **Report it separately.** Query time and CPU time describe what kind of work happened, not where, so a span can be both, such as a query inside a cached function. Leaving it out of either would understate one of them, so they count the whole span and report the overlapping part in their own fields: `time_in_commands` and `time_in_cache` for queries, and `command_cpu_time` for CPU. See [Query time](#query-time) and [CPU time](#cpu-time).
 
-Either way, the code checks five scopes to decide where a span's time goes. Each scope uses existing state that reaches exactly the code it must cover. `ThreadState` and `in_cached_function` are both ContextVars, so each async task has its own, but `add_script_run_ctx` copies only `ThreadState` into the threads it attaches.
+Either way, the code checks five scopes to decide where a span's time goes. Each scope uses existing state that reaches exactly the code it must cover. `ThreadState` and `in_cached_function` are both ContextVars, so each async task has its own, but `add_script_run_ctx` copies only `ThreadState` into the threads it attaches. `ThreadCacheStats` belongs to one thread, so its flags cover every task on that thread.
 
 | Scope | How it's marked | Where it's visible | Used by |
 |---|---|---|---|
 | Listed command | `in_listed_command` in `ThreadState`, set by `gather_metrics` | The command's thread | Cache, query and CPU time |
-| Cached function, same thread | The `in_cached_function` ContextVar | The calling context, including async tasks it creates | Cache and query time |
-| Cached computation, attached threads | A `CacheComputeScope` in `ThreadState.cache_compute` | Threads attached during the computation | Cache and query time |
+| Recorded cached call | `ThreadCacheStats.is_in_call` | Every task on the calling thread | Command and query time |
+| Cached computation, attached threads | A `CacheComputeScope` in `ThreadState.cache_compute` | Threads attached during the computation | Command, cache and query time |
+| Cached function, same task | The `in_cached_function` ContextVar | The calling task, including async tasks it creates | Cache time |
 | Cache code (hashing, reading the result, replaying elements) | `ThreadCacheStats.is_in_cache_code` | The calling thread | Cache time |
-| Parallel fragment run | A `ParallelFragmentRun` in `ThreadState.parallel_fragment_run` | The worker thread only | Every per-fragment field |
 
-The parallel fragment run never takes time away from another total. It adds a second destination for times the top-level totals also get (see [Parallel fragments](#parallel-fragments)).
+Command time and query time share one test for whether a span is inside a recorded cached call:
+
+```python
+def in_recorded_cached_call(thread_state, thread_stats) -> bool:
+    scope = thread_state.cache_compute
+    return thread_stats.cache.is_in_call or (scope is not None and scope.is_active)
+```
+
+It covers everything the call's times include: the cached function's computation, the cache's own work such as a `hash_funcs` function, threads attached during the computation and, in async code, other tasks that run on the thread while the call awaits. Cached calls use stricter checks before skipping a nested call (see [Cache usage](#cache-usage)).
+
+Parallel fragments need no scope. A fragment's values go to its own record through the swap described in [Recording a fragment run](#recording-a-fragment-run).
 
 #### Attached threads during a computation
 
@@ -183,29 +190,21 @@ run = ParallelFragmentRun(time.perf_counter())
 with self._lock:
     self._runs.append(run)
 try:
-    with (
-        self._cache_stats.recording_into(run.cache_stats),
-        self._query_stats.recording_into(run.query_stats),  # query time
-    ):
+    with self._stats.recording_into(run.stats):
         yield run
 finally:
     run.end = time.perf_counter()
 ```
 
 - **Start.** The entry is appended to the run's list under a lock, so entries are in start order.
-- **Per-call records.** Each per-thread registry's `recording_into()` swaps the fragment's own record into the worker's `_local.stats`, and restores the previous one afterwards. The record is also in `_threads`, so the fragment's cached calls and queries count toward both its entry and the run's totals.
-- **Other values.** `ThreadState.parallel_fragment_run` exposes the entry to values recorded elsewhere on the worker, such as command time. A nested parallel fragment sets its own entry, so its values aren't added to its parent's.
+- **The swap.** `RunStats.recording_into()` puts the fragment's own `ThreadRunStats` in the worker's `_local.stats`, and restores the previous record afterwards. The record is also in `_threads`, so everything the worker records while the fragment runs, its commands, cached calls and queries, counts toward both the fragment's entry and the run's totals.
 - **End.** The entry records its end time, and its CPU time with the CPU time addition, even if the fragment raises.
 
-Entries are per fragment run, not per worker thread, because a worker can run several fragments in turn.
+A nested parallel fragment runs with its own entry, so its values aren't added to its parent's. Entries are per fragment run, not per worker thread, because a worker can run several fragments in turn.
 
 #### Which threads count toward a fragment
 
-Only the worker thread counts toward its fragment's entry. If user code in the fragment starts and attaches its own threads, they count toward the main script, like threads the main script attaches:
-
-- They share the worker's `ParallelFragmentRun`, because its `__deepcopy__` returns itself, but `add_command_time` ignores commands from any thread other than the worker.
-- Their cached calls and queries go into their own per-thread records in the run's totals.
-- Per-fragment CPU time reads only the worker's clock.
+Only the worker thread counts toward its fragment's entry. If user code in the fragment starts and attaches its own threads, they count toward the main script, like threads the main script attaches. Each gets its own record the first time it records something, so nothing it does reaches the fragment's record.
 
 Because an entry counts only its worker's work, its times never overlap each other. So a fragment's user code time, its `exec_time` minus its command and cache times, can't go negative, and its CPU time can't exceed its `exec_time`. The cost, only in apps that attach their own threads, is that the main script's user code time can go negative: an attached thread usually runs while the script thread waits for the fragment, so its time overlaps `wait_time`.
 
@@ -227,7 +226,9 @@ Only full runs have parallel fragments. A fragment rerun runs its fragments inli
 
 #### Reading the numbers
 
-- A fragment's user code time is its `exec_time` minus its `command_time`, `cache_compute_time`, `cache_wait_time` and `cache_overhead_time`.
+Here, cache time means compute, wait and overhead time minus the async overlap time (see [Async calls on one event loop](#async-calls-on-one-event-loop)), for the run and for each fragment.
+
+- A fragment's user code time is its `exec_time` minus its command time and cache time.
 - The main script's user code time is:
 
   ```
@@ -270,7 +271,7 @@ Following `$52 Pay Only for What You Use`:
 
 ### Cache usage
 
-Cache usage leaves overlaps out. `start_call` checks the first four scopes in [Covered spans](#covered-spans) before it records a cached call. If any of them is set, the call's time is already covered, and the call goes only to the server metrics.
+Cache usage leaves overlaps out. Before `start_call` records a cached call, it checks four of the scopes in [Covered spans](#covered-spans): a listed command, `in_cached_function`, an active compute scope and cache code. If any of them is set, the call's time is already covered, and the call goes only to the server metrics. It doesn't skip calls just because another recorded call is open on the thread, so in async code a call that another task makes while one awaits is still recorded, and the overlap is reported instead (see [Async calls on one event loop](#async-calls-on-one-event-loop)).
 
 #### Commands inside cached calls
 
@@ -281,13 +282,12 @@ Cache usage leaves overlaps out. `start_call` checks the first four scopes in [C
 
 Both are clamped at zero.
 
-`_record_command_time` (`metrics_util.py`) sends each listed command's time to its fragment's entry, if it ran on a parallel fragment's worker, and to at most one cached call:
+`_record_command_time` (`metrics_util.py`) adds each listed command's time to the thread's record, which on a parallel fragment's worker is the fragment's, and subtracts it from at most one cached call:
 
 ```python
-run = thread_state.parallel_fragment_run if thread_state is not None else None
-if run is not None:
-    run.add_command_time(seconds)
-if ctx.shared.cache_stats.record_tracked_command_time(seconds):
+stats = ctx.shared.stats.current_thread_stats()
+stats.command_time += seconds
+if stats.cache.record_tracked_command_time(seconds):
     return
 scope = thread_state.cache_compute if thread_state is not None else None
 if scope is not None and scope.is_active:
@@ -304,14 +304,14 @@ This only holds if `CachedFunc` never awaits outside its wait and compute phases
 
 #### Async calls on one event loop
 
-Async cached calls that are awaited at the same time each count the wall-clock time they share, so their sum can exceed the time that passed. `ThreadCacheStats` groups calls that overlap on its thread. A group starts when a call opens while another is open, and ends when no call is open:
+Async cached calls that are awaited at the same time each count the wall-clock time they share, so their sum can exceed the time that passed. Rather than change the calls' times, `ThreadCacheStats` reports the excess as `async_overlap_time`, which analysis subtracts from cache time:
 
-- Calls that finish while the group is open add to the group's totals instead of the thread's.
-- When the group closes, its span is its wall-clock time minus the listed command time on the thread during it, because the calls' own times already leave that out.
-- If the group's recorded time exceeds its span, all of its compute, wait and overhead times, for both cache types, are scaled down by the same factor. Counts aren't scaled.
-- A group still open when the profile is built is scaled to the time it has run so far.
+- A group starts when a call opens on the thread while another is open, and ends when no call is open.
+- The group adds up the compute, wait and overhead time, for both cache types, of the calls that finish while it's open.
+- When the group closes, its span is its wall-clock time minus the listed command time on the thread during it, because the calls' own times already leave that out. Whatever the calls' total exceeds the span by is added to `async_overlap_time`.
+- A group still open when the profile is built is measured up to then.
 
-Calls that don't overlap are added unscaled. Calls on different threads are never scaled against each other.
+Calls that don't overlap add nothing. Calls on different threads are never compared, because times from concurrent threads are added together anyway (see [Known limitations](#known-limitations)). The run reports `CacheUsage.async_overlap_time`, and each fragment entry its `cache_async_overlap_time`.
 
 #### Cost
 
@@ -335,26 +335,24 @@ The SQLAlchemy and Snowpark hooks are process-wide, so each recorded query finds
 
 #### Recording and attribution
 
-Queries are recorded like cached calls, in a per-thread `ThreadQueryStats` under `RunQueryStats` (see [Per-thread totals without locks](#per-thread-totals-without-locks)). Through the same swap, parallel fragment entries get `query_time`, `query_time_in_cache` and `query_time_in_commands`, summed across sources.
+Queries are recorded in the thread's `ThreadRunStats`, under `query` (see [Per-thread totals without locks](#per-thread-totals-without-locks)). A parallel fragment's queries go to its own record through the same swap, so its entry reports `query_time`, `query_time_in_cache` and `query_time_in_commands`, summed across sources.
 
-When a query starts, it's placed in at most one of the overlapping parts:
+When a query starts, it's placed in at most one of the overlapping parts, using the tests in [Covered spans](#covered-spans):
 
 ```python
 if thread_state.in_listed_command:
     return True, False  # inside a command
-# in_cached_function covers the computing thread, and in_cache_compute the
-# threads it attaches with add_script_run_ctx.
-return False, in_cached_function.get() or thread_state.in_cache_compute
+return False, in_recorded_cached_call(thread_state, stats)
 ```
 
 - **Inside a command** wins, because the command's time contains the query, and a cached call made inside a command isn't recorded.
-- **Inside a cached call** means inside a cached function's computation. `in_cached_function` is a ContextVar, so in async code it's set only for the task that's computing. Threads attached during the computation count through the shared `CacheComputeScope` (see [Attached threads during a computation](#attached-threads-during-a-computation)).
+- **Inside a cached call** covers everything a recorded call's times include: its computation, the cache's own work such as a `hash_funcs` function, threads attached during the computation and, in async code, other tasks' queries while it awaits.
 
-So `time − time_in_cache − time_in_commands` is query time that's otherwise part of user code, and subtracting `time_in_cache` from cache compute time leaves the cached functions' other work.
+So `time − time_in_cache − time_in_commands` is query time that's otherwise part of user code, and subtracting `time_in_cache` from cache time leaves the cache's other work.
 
 #### Query IDs
 
-The run keeps the first 50 Snowflake query IDs it receives, under one lock in `RunQueryStats`, in two lists that share the limit: `query_ids` and `query_ids_in_cache`. The second list holds queries inside cached calls, whose results later runs and sessions can reuse.
+The run keeps the first 50 Snowflake query IDs it receives, under one lock in `SharedRunState.query_ids`, in two lists that share the limit: `query_ids` and `query_ids_in_cache`. The second list holds queries inside cached calls, whose results later runs and sessions can reuse.
 
 #### Failures and cost
 
@@ -373,7 +371,7 @@ user code CPU = script_cpu_time + parallel_fragment_cpu_time − command_cpu_tim
 | Field | Measures |
 |---|---|
 | `script_cpu_time` | The script thread |
-| `command_cpu_time` | Listed commands, summed over the threads that ran them |
+| `command_cpu_time` | Listed commands on the script thread and in parallel fragments |
 | `parallel_fragment_cpu_time` | All parallel fragment runs, including the overflow |
 | `process_cpu_time` | The whole process |
 | `ParallelFragmentRun.cpu_time` | One parallel fragment run, on its worker thread |
@@ -382,16 +380,16 @@ All the run fields are `optional`, so a run that only waits reports a real 0. Th
 
 #### Attribution
 
-- **Commands.** `gather_metrics` reads the thread's clock around each listed command and adds the difference to `SharedRunState.command_cpu_time`. It adds it under the lock that `track_command()` already takes for every listed command. Commands without a listed time, because they're past the tracking limits or raise anything other than a rerun request, count as user code, matching wall time. Nested commands count toward the outer command.
+- **Commands.** `gather_metrics` reads the thread's clock around each listed command and adds the difference to the thread's `ThreadRunStats`. `command_cpu_time` sums only the records whose thread's CPU time is also reported, `counts_cpu`: the script thread's record and each fragment run's. So user code CPU time never subtracts CPU time it didn't add. Commands without a listed time, because they're past the tracking limits or raise anything other than a rerun request, count as user code, matching wall time. Nested commands count toward the outer command.
 - **Parallel fragments.** `recording_run()` reads the worker's clock when the fragment starts and when it ends, and stores the difference in the fragment's `ParallelFragmentRun`. `parallel_fragment_cpu_time` is summed from those entries when the profile is built, so no separate total is kept. The time is stored before the coordinator counts the worker as finished, so it's complete once `join()` or `drain()` returns. A parallel fragment nested in another has its own run on its own worker. A fragment without `parallel=True` counts toward the thread that runs it.
 - **Fragment reruns** run on the script thread, so their CPU time is in `script_cpu_time` and `parallel_fragment_cpu_time` is 0.
-- **Attached threads** are only in `process_cpu_time`, except for their listed commands. Process CPU time also includes library thread pools, such as NumPy, Polars and DuckDB, the server itself and, on a shared server, other sessions.
+- **Attached threads** are only in `process_cpu_time`, including their listed commands. Process CPU time also includes library thread pools, such as NumPy, Polars and DuckDB, the server itself and, on a shared server, other sessions.
 
 A fragment's CPU time is compared with its `exec_time` to split its time into computing and waiting. Its commands' CPU time isn't split out per fragment.
 
 #### Platforms and cost
 
-On Windows, CPU clocks advance in steps of about 15.6 ms, so short spans often read 0 and only aggregates are meaningful. A listed command adds about 0.4 µs (two clock reads and a locked add), and a run about 1.5 µs. No clock is read while usage stats are off. Waiting for the GIL counts as waiting, not CPU time.
+On Windows, CPU clocks advance in steps of about 15.6 ms, so short spans often read 0 and only aggregates are meaningful. A listed command adds about 0.4 µs (two clock reads and an add), and a run about 1.5 µs. No clock is read while usage stats are off. Waiting for the GIL counts as waiting, not CPU time.
 
 ### Per-function cache stats
 
@@ -427,7 +425,7 @@ Data size is recorded where messages are already serialized. `ScriptRunContext.e
 
 Each count is measured where it's already known:
 
-- **Message bytes** are counted at enqueue, on the enqueuing thread, so the counts follow the per-thread pattern. They're run totals, not split per fragment.
+- **Message bytes** are counted at enqueue, in the enqueuing thread's `ThreadRunStats`. They're run totals, not split per fragment.
 - **Arrow bytes and rows** are counted where dataframes and charts are marshalled.
 - **Bytes and messages received, and messages served from the browser's cache,** are counted in the browser, because only the browser knows which references it resolved locally.
 
@@ -469,15 +467,14 @@ Each addition lands on its own, so field numbers are assigned here and don't dep
 | Rerun reason | 24, 25 | 58, 59 |
 | Render timing (`run_index`, `render_timing`) | None, browser only | 60, 61 |
 
-In `ParallelFragmentRun`, 1–6 hold the foundation's times, 7–9 query time and 10 CPU time. Per-function cache stats and data size take the next free numbers when they're designed.
+In `CacheUsage`, `async_overlap_time` is 3. In `ParallelFragmentRun`, 1–6 hold the foundation's times, 7–9 query time, 10 CPU time and 11 `cache_async_overlap_time`. Per-function cache stats and data size take the next free numbers when they're designed.
 
 ### Known limitations
 
 - **Concurrent threads add up.** Times from different threads are added together, so the totals can exceed wall-clock time. Parallel fragments report their share. Threads that user code attaches have no breakdown, so in apps that use them, subtracting their times from `exec_time` can give a negative user code time.
 - **Threads a fragment attaches** count toward the main script and usually overlap `wait_time`.
 - **Unfinished work.** Cached calls still running when the profile is built are left out, and a thread the script doesn't join can be partly included.
-- **Scaling covers cache times only.** Overlapping async calls are scaled, but other times measured during them, such as query time inside cached calls, aren't.
-- **Queries the cache's time contains but `time_in_cache` doesn't.** A query from a `hash_funcs` function is in the cache's overhead time, and another async task's query while a cached call awaits is in that call's wall-clock time. Neither runs inside a computation, so both count as query time outside cached calls, and subtracting both can count them twice. Both are rare.
+- **The async overlap is a total.** `async_overlap_time` corrects the sum of the cache times, but doesn't say which calls overlapped, so compute, wait and overhead time still overlap each other in async code.
 - **Unrecorded query paths and Snowpark times.** The paths the product spec lists as not recorded stay in user code, and Snowpark queries are counted but not timed.
 - **Profiles of interrupted runs are usually dropped.** A run cut short by a rerun request enqueues its profile, but the next run clears the forward message queue when it starts, and `AppSession._clear_queue` doesn't keep `page_profile` messages. This affects every field and is fixed separately.
 
@@ -491,13 +488,13 @@ Every cached call would add to a single `CacheUsage` under a lock. It's simpler,
 
 Making `add_script_run_ctx` copy the ContextVar would mark attached threads without a new scope. It would also change element replay and the widget checks inside cached functions for those threads, which breaks the rule that telemetry never changes behavior. It also couldn't carry the attached threads' command time back to the cached call.
 
-### Clip overlapping async calls instead of scaling them
+### Scale overlapping async calls down
 
-Each instant that overlapping calls share could be given to one of them, so the totals match wall-clock time exactly. That needs every call's intervals and a rule for which call owns shared time. Scaling needs only each group's start, end and command time, and keeps the proportions between compute, wait and overhead.
+Each group's compute, wait and overhead times, for both cache types, could be scaled down to fit the group's span, so the cache times add up with no extra field. That needs every group's totals kept per field and rescaled when it closes, an open group rescaled when the profile is built, and other times measured during the calls, such as query time, would still be unscaled. Giving each shared instant to one call instead would need every call's intervals. One field that analysis subtracts is simpler, and works the same way for every cache time.
 
 ### Record per worker thread instead of per fragment run
 
-Giving each worker thread its own `ThreadCacheStats` would need no swap, but one worker can run several fragments, so per-thread entries would merge them and couldn't show which fragment held up the run.
+Giving each worker thread its own `ThreadRunStats` would need no swap, but one worker can run several fragments, so per-thread entries would merge them and couldn't show which fragment held up the run.
 
 ### Count a fragment's attached threads toward the fragment
 
@@ -511,13 +508,13 @@ Top-level `commands` and `cache_usage` could leave out the fragments, so no subt
 
 Clearing would keep the same objects across runs, but a cached call or fragment still running from the previous run would then add its times to the new run. It also can't reset each thread's `_local.stats`, because one thread can't clear another thread's `threading.local` value. The script thread would keep recording into last run's record, which the cleared `_threads` list no longer contains.
 
-### One per-thread record for every addition
+### A per-thread registry for each addition
 
-Cache, query and later per-call counters could share one per-thread object and one registry, so a parallel fragment run swaps a single record. Separate registries cost one more lock per thread per run each, but keep each addition in its own module, so it can land, change or be removed without touching the others.
+Each addition could keep its own registry, with its own `threading.local`, `_threads` list, lock and `recording_into()`, so it lives entirely in its own module. That repeats the same code for cache stats, query time and data size, takes another lock per thread per run for each, and makes every addition edit `recording_run()` and `reset()`. Command time and command CPU time would also need their own routes to the fragment's entry, such as a `ParallelFragmentRun` in `ThreadState` with a check that the command ran on the worker. One record gives every per-thread value the same route.
 
-### Classify queries with the command-time test
+### Count only queries during a computation as inside a cached call
 
-A query could count as inside a cached call whenever a recorded call is open on its thread, which is the test `_record_command_time` uses. That would also cover the two rare cases in [Known limitations](#known-limitations). But the product spec defines `time_in_cache` as queries during a computation, and a recorded call is also open while it hashes, waits and replays elements. The computation flags match that definition.
+Queries could count as inside a cached call only during the cached function's computation, using `in_cached_function` and the compute scope. That leaves out queries the cache's times still include: queries from a `hash_funcs` function, which are in overhead time, and other async tasks' queries while a call awaits, which are in its wall-clock time. Subtracting both `time_in_cache` and the cache time would then count those queries twice. Using the same test as command time removes the gap.
 
 ### Report parallel fragment CPU time only in aggregate
 

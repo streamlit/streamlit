@@ -56,8 +56,8 @@ exec_time
 ├── command time: the sum of commands[].time
 │   └── can include query time (time_in_commands)
 └── user code: exec_time − prep_time − command time
-    ├── cache time: overhead + wait + miss compute
-    │   └── miss compute can include query time (time_in_cache)
+    ├── cache time: overhead + wait + miss compute − async overlap
+    │   └── can include query time (time_in_cache)
     ├── query time outside cached calls and commands:
     │   time − time_in_cache − time_in_commands
     ├── parallel fragment wait: the main script waiting for its fragments
@@ -68,7 +68,7 @@ exec_time
 - **Query time** reports the part that overlaps cache and command time separately, so it can be subtracted without counting any span twice (see [Query time](#query-time)).
 - **CPU time** is a second view of the same spans rather than another slice. User code CPU time is the script thread's CPU time minus CPU time inside commands, and each parallel fragment reports its own. Comparing it with user code wall time splits user code into computing and waiting.
 - **Parallel fragment wait** is the time the main script spent waiting for its parallel fragments to finish after it ended, including when it ended early, for example with `st.stop()`. In a run with parallel fragments, the tree describes the main script: use the command, cache and query times minus the fragment entries (see below). Each fragment's own time breaks down the same way from its wall time.
-- **Concurrency**: parallel fragments report their own spans (see below), so their share can be subtracted from the main script's. Times from other threads that run at the same time, such as threads attached with `add_script_run_ctx`, count toward the main script and are still added together, like command times today, so they can exceed wall-clock time. That includes threads a parallel fragment attaches. Concurrent async cached calls on one event loop are scaled down to the wall-clock time they overlap, minus command time, which the calls' own times already leave out.
+- **Concurrency**: parallel fragments report their own spans (see below), so their share can be subtracted from the main script's. Times from other threads that run at the same time, such as threads attached with `add_script_run_ctx`, count toward the main script and are still added together, like command times today, so they can exceed wall-clock time. That includes threads a parallel fragment attaches. Concurrent async cached calls on one event loop each count the time they share, so the run also reports how much they counted more than once (`async_overlap_time`), which cache time subtracts.
 
 **Parallel fragments.** Fragments with `parallel=True` that run during a full run report into the same page profile, on worker threads that run alongside the main script. A parallel fragment started inside another one gets its own entry, and its parent doesn't wait for it, so its time isn't part of the parent's. A fragment rerun is a run of its own with its own page profile, so it needs no entry.
 
@@ -76,7 +76,7 @@ Each parallel fragment gets an entry with:
 
 - its start time, relative to the start of the run, and its wall time;
 - its listed command time;
-- its cache compute, wait and overhead time;
+- its cache compute, wait and overhead time, and its async overlap;
 - its query time, with the parts inside cached calls and commands;
 - its CPU time.
 
@@ -116,10 +116,10 @@ For each source, the run counts its queries, including how many failed, how many
 
 Query time can overlap time that's already reported, so each source also reports the count and time of queries in two places:
 
-- **Inside cached calls** (`queries_in_cache`, `time_in_cache`): queries during a cached function's computation, which the cache's miss compute time already includes. This covers queries on threads the cached function attaches with `add_script_run_ctx` while it's still computing, the same threads whose cached calls and commands cache time already treats as part of the computation.
+- **Inside cached calls** (`queries_in_cache`, `time_in_cache`): queries while a recorded cached call is open, which cache time already includes. That's mostly queries in the cached function's computation, but also queries from the cache's own work, such as a `hash_funcs` function, and in async code, other tasks' queries while the call awaits. It covers queries on threads the cached function attaches with `add_script_run_ctx` while it's still computing, the same threads whose cached calls and commands cache time already treats as part of the computation.
 - **Inside commands** (`queries_in_commands`, `time_in_commands`): queries inside a listed command, which that command's time already includes. For example, a lazy DataFrame passed to `st.dataframe` runs its query inside the command.
 
-The rest, `time − time_in_cache − time_in_commands`, is query time that's otherwise part of user code. Subtracting `time_in_cache` from the cache's miss compute time leaves the cached functions' other work. The counts include Snowpark queries, which aren't timed (see below). Each parallel fragment's entry reports its query time and the two parts in the same way. Queries on other threads the app attaches are added into the run's totals, like command and cache times.
+The rest, `time − time_in_cache − time_in_commands`, is query time that's otherwise part of user code. Subtracting `time_in_cache` from cache time leaves the cache's other work. The counts include Snowpark queries, which aren't timed (see below). Each parallel fragment's entry reports its query time and the two parts in the same way. Queries on other threads the app attaches are added into the run's totals, like command and cache times.
 
 The run also sends the Snowflake query IDs of its recorded queries, on every platform, up to the first 50 to finish. IDs of queries inside cached calls go in a second list, `query_ids_in_cache`, which shares the 50-ID limit. A query ID contains no SQL, and only someone with access to the Snowflake account that ran the query can look it up, for example to get its compile, queue and execution time from the account's query history. No SQL text, parameters, object names, rows or connection details are sent.
 
@@ -153,11 +153,11 @@ For widget interactions, the run also records the type of the widget that starte
 
 | Addition | What it adds | Measured in |
 |---|---|---|
-| Cache usage | Per cache type: calls, hits, misses, stale hits, waits, and compute, wait and overhead time | Server |
+| Cache usage | Per cache type: calls, hits, misses, stale hits, waits, and compute, wait and overhead time; how much overlapping async calls counted more than once | Server |
 | Server uptime | Seconds since the server process started, at the start of the run | Server |
 | Per-function cache stats | The same counts and times per cached function, plus the count and time of the queries it ran, identified by a random ID per server process and capped per run | Server |
 | CPU time | CPU time of the script thread, inside commands and of the whole process. Each parallel fragment's CPU time is part of the parallel fragment breakdown | Server |
-| Parallel fragment breakdown | Per parallel fragment: start, wall, command, CPU, query, and cache compute, wait and overhead time, capped per run; cache counts across all parallel fragments; how long the main script waited for them | Server |
+| Parallel fragment breakdown | Per parallel fragment: start, wall, command, CPU, query, and cache compute, wait, overhead and async overlap time, capped per run; cache counts across all parallel fragments; how long the main script waited for them | Server |
 | Rerun reason | Why the run started, such as a first load, a page change, a widget interaction or a fragment timer, and for a widget interaction, the type of widget, such as a slider or chart selection (see [Rerun reason](#rerun-reason)) | Server |
 | Render timing | When the user's screen reached each loading milestone, what it waited on after the script finished, the number of visible elements, a viewport size bucket, and flags for hidden, superseded and timed-out runs. No per-element render or paint times | Browser |
 | Data size | Bytes and messages the browser received, Arrow bytes, rows and the largest payload for dataframes and charts, and messages served from the browser's message cache | Server and browser |
