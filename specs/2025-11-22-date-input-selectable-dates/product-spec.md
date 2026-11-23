@@ -11,10 +11,6 @@ Add optional `enabled_dates` and `disabled_dates` parameters to `st.date_input` 
 allow or block individual dates and weekdays. The feature applies to calendar selection, typed and
 pasted values, range endpoints, quick-select presets, Session State, and query-parameter values.
 
-The current React Aria implementation supports this without a new frontend dependency. Its date
-field and calendar primitives expose date-availability validation directly; Streamlit must connect
-that validation to every custom commit path and define range behavior explicitly.
-
 ## Problem
 
 `min_value` and `max_value` only define one continuous window. Apps cannot express common gaps
@@ -61,8 +57,11 @@ def date_input(
 
 A bare `date`, `datetime`, ISO string, `"today"`, or weekday name is a one-element collection.
 `str` is handled as a scalar first so `enabled_dates="monday"` is not iterated as characters.
-Accept lists, tuples, sets, and pandas `Series`. Materialize once before identity, protobuf, and
-validation reads. Reject generators, which can be consumed twice.
+Accept list-likes the way widget `options` does (lists, tuples, sets, pandas `Series` and `Index`,
+and NumPy arrays), so `df["date"].unique()` works as an allowlist. `DateFilter` above is
+simplified; the real annotation also admits these array-likes, following `OptionSequence`.
+Materialize once before identity, protobuf, and validation reads. Reject generators, which can be
+consumed twice, and DataFrames.
 
 Each entry accepts:
 
@@ -74,9 +73,9 @@ Each entry accepts:
   `date.weekday()` (`0`–`6`) or `date.isoweekday()` (`1`–`7`) are rejected.
 
 Strip surrounding whitespace from every string before parsing. Weekday matching is additionally
-case-insensitive. Exact dates and weekdays can be mixed. Invalid values, including NumPy
-`datetime64` (not accepted by `value` today), raise a parameter-specific Streamlit exception that
-lists the accepted forms.
+case-insensitive. Exact dates and weekdays can be mixed. Convert NumPy `datetime64` entries to
+dates during normalization. Other invalid values raise a parameter-specific Streamlit exception
+that lists the accepted forms.
 
 ### Availability rules
 
@@ -97,29 +96,37 @@ Additional rules:
 - An empty `enabled_dates` collection makes every date unavailable; use it with `value=None` (or an
   empty range value) when an app temporarily has no available dates. An empty `disabled_dates`
   collection disables nothing.
-- The literal `"today"` (default or explicit) matches existing min/max handling: resolve it to a
-  selectable date in the min/max window. Keep today if it is selectable; otherwise prefer the next
-  selectable date, then the previous. If no selectable date exists, use `None` for a single-date
-  widget or an empty range so the return type does not become `date | None` depending on the day of
-  week. Any other non-empty explicit value
-  must already be selectable, including both endpoints of a complete range and the start of a
-  partial range. Raise at the `st.date_input` call if it is not.
-- Default bounds do not depend on availability. When `min_value` or `max_value` is `None`, derive
-  it from `value` as the current implementation does. For `value="today"`, use today's date
-  before `"today"` moves to a selectable date. Availability never changes the default window.
-- Widget identity matches `min_value` / `max_value`: include the canonical availability config in
-  the unkeyed element ID, and keep it out of identity when a user `key` is set
-  (`key_as_main_identity={"format"}` today). The ID uses the normalized config before bounds
-  filtering, so a moving `"today"` bound never changes it. Changing availability remounts a
-  keyless widget.
-  A literal `"today"` entry in `enabled_dates` or `disabled_dates` stays symbolic in the ID, like
-  `"today"` in `value`, `min_value`, and `max_value`, so a keyless widget does not reset when the
-  day rolls over. The browser receives the date `"today"` resolved to at script run. A session left
-  open across midnight keeps the previous day's availability until the next rerun, the same as
-  `min_value="today"`.
-  When a keyed widget's availability configuration changes and invalidates its current frontend,
-  Session State, or query-parameter value, reset it to the resolved default above. Remove an
-  invalid bound query parameter when resetting it.
+- The scalar `value="today"` (default or explicit) matches existing min/max handling: it resolves
+  to a selectable date in the min/max window instead of raising. Keep today if it is selectable;
+  otherwise use the next selectable date, then the previous. If none exists, resolve to `None`
+  (single date) or an empty range, so an app whose availability list is empty on some runs does
+  not crash. The default overload stays typed `-> date`, so an app whose list can be empty should
+  pass `value=None`.
+- Every other non-empty explicit value must already be selectable, including both endpoints of a
+  complete range, the start of a partial range, and `"today"` as a range tuple entry. Raise at the
+  `st.date_input` call if it is not. This deliberately departs from Specs Principle 23 (fail
+  fast): `value=date.today()` with weekends disabled raises only on weekends. The error message and
+  docstring tell users to pass `value="today"`, which snaps instead of raising.
+- Default bounds ignore availability. When `min_value` or `max_value` is `None`, derive it from
+  `value` as today; for `value="today"`, use the current date before `"today"` snaps to a
+  selectable date.
+- Widget identity and resets:
+  - Like `min_value` / `max_value`, the normalized availability config is part of the unkeyed
+    element ID, so changing availability remounts a keyless widget. With a user `key`, it stays out
+    of identity (`key_as_main_identity={"format"}` today).
+  - The ID hashes the config before bounds filtering, so a moving `"today"` bound never changes
+    it. Only the protobuf drops exact dates outside the min/max window, because they cannot be
+    selected.
+  - A literal `"today"` entry in `enabled_dates` or `disabled_dates` stays symbolic in the ID, like
+    `"today"` in `value`, `min_value`, and `max_value`, so a keyless widget does not reset when the
+    day rolls over. The browser receives the date `"today"` resolved to at script run. A session
+    left open across midnight keeps the previous day's availability until the next rerun, the same
+    as `min_value="today"`.
+  - When a keyed widget's availability configuration changes and invalidates its current frontend,
+    Session State, or query-parameter value, reset it to the resolved default above. Remove an
+    invalid bound query parameter when resetting it. Run this reset even when `min_value` and
+    `max_value` are omitted: the existing bounds validation is skipped without explicit bounds, so
+    availability needs its own check.
 - Weekday names are fixed ISO days (Monday=1 … Sunday=7), independent of the user's locale and of
   the calendar's week start. `"monday"` blocks or allows every Monday whether the calendar shows
   Sunday or Monday first; the week start only changes the column order. There is no `"weekend"`
@@ -134,8 +141,8 @@ Additional rules:
   themselves, for example by disabling the widget.
 - Other widget behavior follows the same validate-and-reset path as Session State and
   query-parameter values:
-  - `on_change="ignore"` changes only when a rerun is scheduled. An unavailable date is still
-    rejected before it is committed.
+  - With `on_change="ignore"`, availability is enforced the same way: an unavailable date is
+    rejected before it is committed. Only the rerun is skipped.
   - Inside an `st.form`, an unavailable typed or pasted date shows the inline error and is not
     staged, so it cannot reach submit.
   - With `bind="query-params"`, an unavailable URL value is dropped and the default is used,
@@ -173,13 +180,16 @@ commit handler still revalidates a selected preset so quick select cannot bypass
 Unavailable calendar cells must stay visually distinct from fully disabled cells. The current CSS
 groups `data-unavailable` with `data-disabled`; change that so unavailable cells use a strike-
 through (or equivalent) and text contrast of at least 4.5:1 rather than only the low-contrast
-disabled color. Confirm the visual treatment with design at implementation; a mockup is not
-attached here.
+disabled color. Confirm that React Aria does not also set `data-unavailable` on out-of-range
+cells, so the new treatment only affects dates blocked by availability. Confirm the visual
+treatment with design at implementation; a mockup is not attached here.
 
 Unavailable cells remain keyboard-focusable in React Aria. When a keyboard user lands on one,
 announce that the date is unavailable (React Aria typically exposes this via `aria-disabled` on the
 cell). The typed/paste path already uses `role="alert"` and `aria-describedby`; the calendar cell
-must provide an equivalent accessible signal.
+must provide an equivalent accessible signal. Screen readers often announce `aria-disabled` as
+just "disabled", so verify what the focused cell says and add an explicit accessible description
+if it does not convey that the date is unavailable.
 
 The calendar's week start and month names follow the user's locale, and the unavailable
 treatment applies to the same weekdays regardless of which column they fall in. The inline error
@@ -274,8 +284,10 @@ This feature is feasible with moderate, contained changes across the existing da
 5. Apply the Design section's unavailable-cell visual and screen-reader treatment.
 6. Describe the new parameters for the agent API and AppTest:
    - Agent API: `agent_spec.element("date_input", ...)` reports `enabled_dates` and
-     `disabled_dates` as the normalized exact dates (ISO strings) and weekday names, and omits
-     them when `None`, because they change which values a request may send. The agent API's
+     `disabled_dates` as the weekday names plus the exact dates (ISO strings, `"today"` resolved)
+     that the browser receives, and omits them when `None`, because they change which values a
+     request may send. Dates dropped from the protobuf for being outside the min/max window are
+     not reported. The agent API's
      coverage test requires every parameter to be reported or listed as omitted. A request with
      an unavailable date is rejected by the same backend validation as a browser request.
    - AppTest: `DateInput` exposes the availability configuration the way it exposes `min` and
@@ -283,10 +295,13 @@ This feature is feasible with moderate, contained changes across the existing da
      backend rejects it and the widget falls back to its default value.
 
 No new dependency or server round trip is needed. Exact-date lookup is O(1) per rendered calendar
-cell after set construction; weekday lookup is constant-size. The implementation should add Python
+cell after set construction; weekday lookup is constant-size. The payload and the element-ID hash
+grow linearly with the number of exact dates (about 2,500 ISO strings, roughly 30 KB, for ten years
+of trading days); weekday names add a constant amount. The implementation should add Python
 unit tests for parsing/protobuf/state reset, frontend tests for all commit paths and range behavior,
 typing tests for the new parameters, AppTest and agent API coverage, and focused E2E coverage for
-mouse and keyboard selection.
+mouse and keyboard selection. Include these cases: the `"today"` snap, an empty allowlist, both
+parameters set, query-parameter removal, and the Saturday quick-select snap.
 
 The range calendar is the riskiest part. `RangeDateInput.tsx` has custom anchor, drag, and
 commit logic around React Aria's `RangeCalendar` (the first-click anchor, `commitBehavior="reset"`,
@@ -327,6 +342,13 @@ a design mockup at implementation time; the Design section specifies the require
   collection keeps the API to two mutually exclusive parameters. Invalid weekday strings still
   fail immediately at the call, same as other `st.date_input` string inputs.
 
+**Option 5: One parameter plus a mode, such as `dates=[...]` with `mode="allow" | "block"`**
+
+- Pros: One name, and the "both set" error cannot happen.
+- Cons: The call site no longer shows whether the list is an allowlist or a denylist, and the
+  mode argument can silently flip the meaning. Two named parameters keep each call
+  self-describing, and the "both set" error is deterministic and raised at the call.
+
 ## Out of scope
 
 - Marking or annotating dates without restricting selection (#8058)
@@ -334,6 +356,9 @@ a design mockup at implementation time; the Design section specifies the require
 - Date ranges as entries inside `enabled_dates` or `disabled_dates`
 - Recurrence rules beyond weekdays
 - Python availability callbacks or server requests while navigating the calendar
+- Date-specific validators or callables, such as the future date-input validation listed in the
+  [text-input validation spec](../2025-12-03-text-input-validation/product-spec.md). Availability
+  is a declarative constraint, not a validator.
 - Applying the parameters to `st.datetime_input`. The date-only proto mode, ISO dates, and weekday
   numbers can be reused later; a time component would need extra validation (whether availability
   is date-level or datetime-level) and is not designed here.
