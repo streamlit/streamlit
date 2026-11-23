@@ -27,8 +27,9 @@ than the default.
 
 ### Current workarounds
 
-- Injecting CSS against Streamlit's DOM (for example `.st-key-<key> button { min-height: ... }`).
-  This breaks when the DOM changes and doesn't follow theme tokens ($53).
+- Injecting CSS with a key-scoped selector (for example `.st-key-<key> button { min-height: ... }`).
+  Every button needs a `key`, the inner `button` selector depends on Streamlit's DOM, and
+  hard-coded sizes ignore theme tokens ($53).
 - Using `type="tertiary"` or an icon-only button to look lighter. That changes the visual
   weight but not the height, so rows stay tall.
 
@@ -63,9 +64,9 @@ st.menu_button(label, options, *, size=..., ...)
 For `st.popover` and `st.menu_button`, `size` applies to the button that opens the popover or
 menu.
 
-`None` (default) means "not set": the button is `"medium"` unless its container derives a
-different default (see [Container defaults](#container-defaults)). An explicit value, including
-`"medium"`, always wins ($3).
+`None` (default) means "not set" and renders as `"medium"`. A future container may derive a
+different default (see [Container defaults](#container-defaults)). An explicit value,
+including `"medium"`, always wins ($3).
 
 | `size`      | Minimum height | Horizontal padding | Vertical padding | Line height |
 | ----------- | -------------- | ------------------ | ---------------- | ----------- |
@@ -126,14 +127,17 @@ with st.form("search"):
 - **State and identity.** `size` is part of the element ID, like `width`, for `st.button`,
   `st.download_button`, `st.form_submit_button`, `st.link_button`, and `st.menu_button`.
   - Unkeyed buttons with the same label that differ only in `size` are different elements,
-    so a compact toolbar action and a regular one don't collide.
+    so a compact toolbar action and a regular one don't collide. The exception is
+    `st.form_submit_button`: without a `key` it is identified by its form and label, as with
+    `width` today, so same-label submit buttons in one form still need a `key`.
   - With a `key`, the key is the whole identity, so changing `size` keeps the button's state.
-  - `st.popover` leaves `size` out of its ID so its open state survives a size change.
-    Unkeyed popovers with the same label that differ only in `size` therefore still collide
-    and need a `key`.
-- **Other widgets' buttons.** `size` has its own height and padding map. The built-in buttons
-  of the file uploader, camera input, and similar widgets don't change. Omitting `size`, or
-  `"medium"`, reproduces today's rendering, including wrapped labels.
+  - `st.popover` leaves `size` out of its ID so its open state survives a size change. Only
+    stateful popovers (`on_change` other than `"ignore"`) have an ID, so unkeyed stateful
+    popovers with the same label still collide and need a `key`.
+- **Other widgets' buttons.** `size` only changes the six commands above. The built-in
+  buttons of the file uploader, camera input, and similar widgets keep their current look.
+  Omitting `size`, or setting it to `"medium"`, reproduces today's rendering, including
+  wrapped labels.
 - **Reruns.** None of the interaction behavior changes.
 - **Placement.** `size` behaves the same in forms, fragments, dialogs, the sidebar, columns,
   and horizontal containers. It does not change container layout beyond the button's own
@@ -144,10 +148,12 @@ with st.form("search"):
 - **Accessibility.** The elements, accessible names, keyboard behavior, and focus ring are
   unchanged. See [Accessibility floor](#accessibility-floor) for target size.
 - **Data exposure and cost.** The backend adds one optional enum field to the button
-  protos and leaves it unset when `size` is `None`. `"medium"` and unset add no CSS.
+  protos. It is unset when `size` is `None`, and an explicit `"medium"` is sent as a non-zero
+  enum value, with `0` reserved for unset, so the two stay distinguishable. `"medium"` and
+  unset add no CSS.
 - **Compatibility.** Existing apps are unaffected. Older frontends ignore the new field. In
   AppTest, `size` is available through the element's `proto`. The agent API treats `size`
-  as presentation-only and leaves it out of its description.
+  as presentation-only and leaves it out of the element's description.
 
 ### Container defaults
 
@@ -166,12 +172,15 @@ icon-only button is at least 32px wide (16px of padding plus the 1rem icon). The
 tokens can be tuned, but not below what keeps primary and secondary buttons at or above
 24 by 24px, which matches the `st.card` spec's "click targets stay at least 24 by 24 pixels".
 
-Tertiary buttons keep their zero padding, so an icon-only tertiary button can be narrower
-than 24px, as it already can today. The card compact-density follow-up owns the 24 by 24
-hit area for tertiary header actions. A smaller `theme.baseFontSize` would also put
-`"xxsmall"` below 24px. `"xxsmall"` is the smallest size in the scale, and the scale will
-not go smaller. The docstring should recommend `"xxsmall"` and `"xsmall"` for dense desktop
-toolbars, because touch targets should be larger.
+Exceptions and limits:
+
+- Tertiary buttons keep their zero padding, so an icon-only tertiary button can be narrower
+  than 24px, as it already can today. The card compact-density follow-up owns the 24 by 24
+  hit area for tertiary header actions.
+- A smaller `theme.baseFontSize` puts `"xxsmall"` below 24px.
+- `"xxsmall"` is the smallest size in the scale, and the scale will not go smaller.
+- The docstring should recommend `"xxsmall"` and `"xsmall"` for dense desktop toolbars,
+  because touch targets should be larger.
 
 ### Scope across the button family
 
@@ -195,11 +204,14 @@ about what `"medium"` means, and gets its own follow-up.
 | Name     | Verdict         | Rationale                                                                                                                                                                                                             |
 | -------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `size`   | **Recommended** | The parameter changes padding on both axes, not only height. Named presets are common in UI libraries. It leaves room to tune the preset without renaming. |
-| `height` | Not recommended | $7 has elements size themselves with `width` and `height`, which take a number or `"content"`/`"stretch"` ($45). `height` would promise a fixed height, but wrapped labels grow, and it would suggest an integer pixel value, which is not supported. |
+| `height` | Not recommended | Promises a fixed height and suggests integer pixels. |
 
-**Value names.** `st.space(size=...)` and gap parameters use `"xxsmall"` through
-`"xxlarge"` as a spacing scale where `"small"` is 0.75rem and `"large"` is 4.25rem. On
-buttons, `"small"` is 2rem and `"large"` is 3rem. Only `"medium"` is the same.
+$7 reserves `width` and `height` for element sizing, and those take a number, `"content"`, or `"stretch"` ($45). A `height` parameter would promise a fixed height, but wrapped labels make buttons taller, and it would invite integer values that this spec doesn't support.
+
+**Value names.** `st.space(size=...)` uses `"xxsmall"` through `"xxlarge"` as a spacing scale
+where `"small"` is 0.75rem, `"medium"` 2.5rem, and `"large"` 4.25rem. Gap parameters reuse the
+names with a different scale (`"small"` 1rem, `"medium"` 2rem, `"large"` 4rem). On buttons,
+`"small"` is 2rem and `"large"` is 3rem.
 
 Buttons already use `type` for emphasis (`"primary"`, `"secondary"`, `"tertiary"`), and
 density is independent of emphasis, so it needs its own parameter ($46) rather than a new
