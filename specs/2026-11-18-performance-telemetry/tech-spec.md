@@ -207,7 +207,7 @@ Only the worker thread counts toward its fragment's entry. If user code in the f
 - Their cached calls and queries go into their own per-thread records in the run's totals.
 - Per-fragment CPU time reads only the worker's clock.
 
-This keeps each entry single-threaded, so a fragment's user code time, its `exec_time` minus its command and cache times, can't go negative, and its CPU time can't exceed its `exec_time`. The cost, only in apps that attach their own threads, is that the main script's user code time can go negative: an attached thread usually runs while the script thread waits for the fragment, so its time overlaps `wait_time`.
+Because an entry counts only its worker's work, its times never overlap each other. So a fragment's user code time, its `exec_time` minus its command and cache times, can't go negative, and its CPU time can't exceed its `exec_time`. The cost, only in apps that attach their own threads, is that the main script's user code time can go negative: an attached thread usually runs while the script thread waits for the fragment, so its time overlaps `wait_time`.
 
 #### Waiting for fragments
 
