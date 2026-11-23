@@ -104,12 +104,42 @@ Additional rules:
   week. Any other non-empty explicit value
   must already be selectable, including both endpoints of a complete range and the start of a
   partial range. Raise at the `st.date_input` call if it is not.
+- Default bounds do not depend on availability. When `min_value` or `max_value` is `None`, derive
+  it from `value` as the current implementation does. For `value="today"`, use today's date
+  before `"today"` moves to a selectable date. Availability never changes the default window.
 - Widget identity matches `min_value` / `max_value`: include the canonical availability config in
   the unkeyed element ID, and keep it out of identity when a user `key` is set
   (`key_as_main_identity={"format"}` today). Changing availability remounts a keyless widget.
+  A literal `"today"` entry in `enabled_dates` or `disabled_dates` stays symbolic in the ID, like
+  `"today"` in `value`, `min_value`, and `max_value`, so a keyless widget does not reset when the
+  day rolls over. The browser receives the date `"today"` resolved to at script run. A session left
+  open across midnight keeps the previous day's availability until the next rerun, the same as
+  `min_value="today"`.
   When a keyed widget's availability configuration changes and invalidates its current frontend,
   Session State, or query-parameter value, reset it to the resolved default above. Remove an
   invalid bound query parameter when resetting it.
+- Weekday names are fixed ISO days (Monday=1 … Sunday=7), independent of the user's locale and of
+  the calendar's week start. `"monday"` blocks or allows every Monday whether the calendar shows
+  Sunday or Monday first; the week start only changes the column order. There is no `"weekend"`
+  shorthand because the weekend differs by locale; apps list the days they mean, for example
+  `["saturday", "sunday"]`. Weekday names are English only; localized names are rejected.
+- `required=True` follows its existing rules. It does not add a constructor error for
+  availability: a required widget whose window has no selectable date (for example,
+  `enabled_dates=[]`) renders empty and the existing required behavior applies: a blocked empty
+  commit shows the required error, and inside a form the widget blocks submit. A required
+  single-date widget returns `None` and a required range returns `()` in that state, as for any
+  empty required value. Apps that build the list dynamically should handle the empty case
+  themselves, for example by disabling the widget.
+- Other widget behavior follows the same validate-and-reset path as Session State and
+  query-parameter values:
+  - `on_change="ignore"` changes only when a rerun is scheduled. An unavailable date is still
+    rejected before it is committed.
+  - Inside an `st.form`, an unavailable typed or pasted date shows the inline error and is not
+    staged, so it cannot reach submit.
+  - With `bind="query-params"`, an unavailable URL value is dropped and the default is used,
+    as for an out-of-bounds URL value.
+  - With `persist_state`, a restored value is validated against the current availability before
+    it is used. Reset it to the resolved default if it is no longer selectable.
 - A date entered through the segmented field or paste path is validated before commit. An
   unavailable value leaves the last committed widget value unchanged and shows the existing inline
   error treatment with an actionable message such as: `Date is unavailable. Choose an available
@@ -127,10 +157,14 @@ dates keep their unavailable visual treatment while `st.date_input` continues to
 inclusive `(start, end)` tuple; Streamlit does not remove or split interior dates from the value.
 
 The existing range quick-select row matches `maxDate` clamping rather than dropping every preset
-that touches an unavailable day. Snap each preset endpoint to the nearest available date at or
-before it (within `min_value`). Drop a preset only when no available start, no available end, or
-the snapped start is after the snapped end. If no presets remain, hide the row. The commit handler
-still revalidates a selected preset so quick select cannot bypass the rule.
+that touches an unavailable day. Snap inward so a preset never covers more days than its label:
+move an unavailable start forward to the nearest available date at or after it, and an
+unavailable end back to the nearest available date at or before it, both within the min/max
+window. For example, with weekends disabled, "Past Week" on a Saturday spans a Saturday to a
+Saturday, so it snaps to the Monday after the first Saturday through the Friday before the
+second. Drop a preset only when no available start, no available end, or the snapped start is
+after the snapped end. Keep the preset's label unchanged. If no presets remain, hide the row. The
+commit handler still revalidates a selected preset so quick select cannot bypass the rule.
 
 ### Design
 
@@ -144,6 +178,11 @@ Unavailable cells remain keyboard-focusable in React Aria. When a keyboard user 
 announce that the date is unavailable (React Aria typically exposes this via `aria-disabled` on the
 cell). The typed/paste path already uses `role="alert"` and `aria-describedby`; the calendar cell
 must provide an equivalent accessible signal.
+
+The calendar's week start and month names follow the user's locale, and the unavailable
+treatment applies to the same weekdays regardless of which column they fall in. The inline error
+text stays English like the existing date-input messages; an announcement React Aria generates
+for an unavailable cell may use the user's locale.
 
 ### Examples
 
@@ -216,7 +255,14 @@ This feature is feasible with moderate, contained changes across the existing da
    cannot distinguish `None` from an explicitly empty allowlist.
 3. Build frontend sets once and expose a shared `isDateUnavailable(CalendarDate)` predicate. Pass
    it to both `DateField` instances and the single/range calendar. Use
-   `allowsNonContiguousRanges` in range mode.
+   `allowsNonContiguousRanges` in range mode. The predicate must not depend on locale:
+   - Compare exact dates with calendar-aware helpers (`compare` / `isSameDay`) rather than field
+     equality, because React Aria passes dates in the calendar system its locale selects (which
+     may not be Gregorian).
+   - Derive the ISO weekday independently of locale. Locale-relative helpers such as
+     `getDayOfWeek(date, locale)` follow the locale's week start.
+   - Test with a locale whose week starts on a different day (for example `en-US` and `de-DE`) and
+     with a non-Gregorian locale (for example `th-TH` or `ar-SA`).
 4. Extend Streamlit's own validation in `DateInput.tsx` and `updateWidgetMgrState`; React Aria alone
    is insufficient because custom paste, quick-select, form-commit, and widget-state paths can
    bypass calendar selection. Callback deserialization runs before the script, so validation is
@@ -224,11 +270,29 @@ This feature is feasible with moderate, contained changes across the existing da
    before callbacks, then validate or reset against this run's configuration before the call
    returns.
 5. Apply the Design section's unavailable-cell visual and screen-reader treatment.
+6. Describe the new parameters for the agent API and AppTest:
+   - Agent API: `agent_spec.element("date_input", ...)` reports `enabled_dates` and
+     `disabled_dates` as the normalized exact dates (ISO strings) and weekday names, and omits
+     them when `None`, because they change which values a request may send. The agent API's
+     coverage test requires every parameter to be reported or listed as omitted. A request with
+     an unavailable date is rejected by the same backend validation as a browser request.
+   - AppTest: `DateInput` exposes the availability configuration the way it exposes `min` and
+     `max`. `set_value()` with an unavailable date behaves like an out-of-bounds value today: the
+     backend rejects it and the widget falls back to its default value.
 
 No new dependency or server round trip is needed. Exact-date lookup is O(1) per rendered calendar
 cell after set construction; weekday lookup is constant-size. The implementation should add Python
 unit tests for parsing/protobuf/state reset, frontend tests for all commit paths and range behavior,
-typing tests for the new parameters, and focused E2E coverage for mouse and keyboard selection.
+typing tests for the new parameters, AppTest and agent API coverage, and focused E2E coverage for
+mouse and keyboard selection.
+
+The range calendar is the riskiest part. `RangeDateInput.tsx` has custom anchor, drag, and
+commit logic around React Aria's `RangeCalendar` (the first-click anchor, `commitBehavior="reset"`,
+and press-and-drag). Non-contiguous ranges change how those interact, and the same code is
+affected by [#2429](https://github.com/streamlit/streamlit/issues/2429) (rerunning after the
+first range click). Sequence the two changes deliberately and cover single-click, drag, and
+keyboard range selection across unavailable days. The visual treatment of unavailable cells needs
+a design mockup at implementation time; the Design section specifies the requirements.
 
 ### Alternatives considered
 
@@ -285,4 +349,4 @@ Check the boxes or add a comment with the reason it cannot be checked.
 | No new dependencies | ✅ Uses the installed React Aria and `@internationalized/date` packages |
 | Metrics collected | ✅ Track whether `enabled_dates` or `disabled_dates` is configured through existing `st.date_input` parameter metrics; do not collect date values |
 | Any security/legal impact? | No legal impact. Revalidate incoming values on the backend, but document that availability is a UI/business-rule constraint rather than an authorization boundary |
-| Any docs changes needed? | ✅ Document accepted values, empty collections, range endpoint semantics, `"today"` resolution, dynamic updates, and examples for allowlists and weekends/holidays |
+| Any docs changes needed? | ✅ Document accepted values, empty collections, range endpoint semantics, `"today"` resolution, locale-independent weekday names, dynamic updates, and examples for allowlists and weekends/holidays |
