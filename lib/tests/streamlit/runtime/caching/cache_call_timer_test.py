@@ -1091,3 +1091,42 @@ def test_call_running_across_a_reset_finishes_into_the_previous_run(
     previous_data = previous_run.totals(time.perf_counter()).cache_data
     assert (previous_data.calls, previous_data.misses) == (1, 1)
     assert _cache_totals_for(ctx, "cache_data").calls == 0
+
+
+def test_previous_and_new_run_record_into_their_own_totals_at_the_same_time(
+    ctx: ScriptRunContext, clock: FakeClock
+) -> None:
+    """A call left running from the previous run keeps adding to that run's
+    totals while the new run's calls add to the new run's.
+    """
+    computing = threading.Event()
+    release = threading.Event()
+
+    @st.cache_data(show_spinner=False)
+    def load_in_previous_run() -> int:
+        computing.set()
+        release.wait(5)
+        return 1
+
+    @st.cache_data(show_spinner=False)
+    def load_in_new_run() -> int:
+        clock.advance(1.0)
+        return 2
+
+    previous_run = ctx.shared.cache_stats
+    thread = add_script_run_ctx(threading.Thread(target=load_in_previous_run), ctx)
+    thread.start()
+    assert computing.wait(5)
+    ctx.shared.reset()
+    load_in_new_run()
+    clock.advance(2.0)
+    release.set()
+    thread.join(5)
+    assert not thread.is_alive()
+
+    previous_data = previous_run.totals(clock()).cache_data
+    assert (previous_data.calls, previous_data.misses) == (1, 1)
+    assert previous_data.compute_time == pytest.approx(3.0)
+    new_data = _cache_totals_for(ctx, "cache_data")
+    assert (new_data.calls, new_data.misses) == (1, 1)
+    assert new_data.compute_time == pytest.approx(1.0)
