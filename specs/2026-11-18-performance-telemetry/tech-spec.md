@@ -137,7 +137,7 @@ Query time uses the same pattern with its own `RunQueryStats` (see [Query time](
 Reported times can contain each other: a cached call inside a listed command, a listed command inside a cached function, a query inside either, and all of them inside a parallel fragment. Each addition handles an overlap in one of two ways:
 
 - **Leave it out.** Command and cache times count a span toward the innermost listed command or recorded cached call that contains it, and the outer ones leave it out. A cached call made inside a listed command isn't recorded, because the command's time covers it. A listed command inside a cached function is left out of the cached call's times, because the command reports it. See [Cache usage](#cache-usage).
-- **Report it separately.** Query time and CPU time can't leave the overlapping part out, so they report it in their own fields: `time_in_commands` and `time_in_cache` for queries, and `command_cpu_time` for CPU. See [Query time](#query-time) and [CPU time](#cpu-time).
+- **Report it separately.** Query time and CPU time describe what kind of work happened, not where, so a span can be both, such as a query inside a cached function. Leaving it out of either would understate one of them, so they count the whole span and report the overlapping part in their own fields: `time_in_commands` and `time_in_cache` for queries, and `command_cpu_time` for CPU. See [Query time](#query-time) and [CPU time](#cpu-time).
 
 Either way, the code checks five scopes to decide where a span's time goes. Each scope uses the existing mechanism that reaches exactly the code it must cover: `ThreadState` crosses into attached threads, and a ContextVar separates async tasks on one thread.
 
