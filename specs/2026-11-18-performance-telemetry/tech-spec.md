@@ -58,9 +58,9 @@ class SharedRunState:  # ctx.shared: one per script run, shared by all its threa
     parallel_fragments: RunParallelFragmentStats
 
 
-class RunCacheStats:
-    _local: threading.local  # the calling thread's ThreadCacheStats
-    _threads: list[ThreadCacheStats]  # every thread's, and every fragment run's
+class RunCacheStats:  # one per run, shared by all its threads
+    _local: threading.local  # _local.stats: each thread sees only its own ThreadCacheStats
+    _threads: list[ThreadCacheStats]  # references to every thread's and fragment run's, for totals()
 
 
 class ThreadCacheStats:  # written only by its own thread
@@ -94,9 +94,14 @@ class FragmentThreadState:  # ThreadState: one per thread, copied to attached th
 
 ### Per-thread totals without locks
 
-Each thread records into its own `ThreadCacheStats`, which `RunCacheStats.current_thread_stats()` keeps in a `threading.local`. A thread takes the `RunCacheStats` lock only the first time it records in a run, to register its stats. After that, only the owning thread writes them.
+Each thread records into its own `ThreadCacheStats`, so cached calls on different threads never write to the same object. `RunCacheStats` holds two references to each one:
 
-`create_page_profile_message` combines all registered stats without locking them:
+- **`_local.stats`** is how a thread finds its own stats. A `threading.local` gives each thread a separate value for the same attribute, so the script thread, each fragment worker and each attached thread get their own `ThreadCacheStats` when they read `_local.stats`. The first time a thread records in a run, `current_thread_stats()` finds no value there, so it creates one.
+- **`_threads`** is how the run finds all of them. A thread can't read another thread's `threading.local` value, and the value disappears when the thread exits. So when `current_thread_stats()` creates a thread's stats, it also appends the same object to `_threads`, and `totals()` sums that list. A thread that has finished still counts, because the list keeps its stats.
+
+Appending to `_threads` is the only step that takes the `RunCacheStats` lock, once per thread per run. After that, a cached call reads `_local.stats` and adds to it without a lock, because only the owning thread writes it. A parallel fragment run adds one more entry to `_threads`, for its own stats, which `recording_into()` puts in the worker's `_local.stats` while the fragment runs (see [Recording a fragment run](#recording-a-fragment-run)).
+
+`create_page_profile_message` combines the stats in `_threads` without locking them, while their threads may still be writing:
 
 - A recorded cached call adds its counts and times only when it finishes, in `CacheCallTimer.finish()`. A call still running when the profile is built is left out entirely.
 - A call finishing on another thread while the profile is built can be partly included, because its fields are updated one at a time.
@@ -202,7 +207,7 @@ finally:
 ```
 
 1. It creates a `ParallelFragmentRun` with the start time, and appends it to the run's list under a lock, so the list is in the order the fragments started.
-2. `RunCacheStats.recording_into()` points the worker's thread-local stats at the fragment run's own `ThreadCacheStats` and registers it with the run's cache stats. The fragment's cached calls go into the fragment's entry and still count toward the top-level `cache_usage`. The worker's previous stats are restored when the fragment ends.
+2. `RunCacheStats.recording_into()` appends the fragment run's own `ThreadCacheStats` to `_threads` and puts it in the worker's `_local.stats`. The fragment's cached calls go into the fragment's entry and still count toward the top-level `cache_usage`. The worker's previous stats are restored when the fragment ends.
 3. `ThreadState.update(parallel_fragment_run=run)` makes the run visible to `_record_command_time`. A nested parallel fragment starts with a copy of its parent worker's thread state, so this replaces the parent's run, and the nested fragment's commands aren't added to its parent.
 4. When the fragment ends, normally or by raising, the run records its end time.
 
@@ -462,7 +467,7 @@ A single `parallel_fragment_cpu_time` needs no change to the per-fragment entrie
 
 ## Open questions
 
-1. **Guarding `start_call`.** `start_call` runs before every cached call and isn't wrapped in a guard. Its checks are attribute reads and a thread-local lookup, and the lookup registers the thread under a lock once per run. A guard would cost little and would let a failure there fall back to a metrics-only timer.
+1. **Guarding `start_call`.** `start_call` runs before every cached call and isn't wrapped in a guard. Its checks are attribute reads and a thread-local lookup, and the lookup appends the thread's stats to `_threads` under a lock once per run. A guard would cost little and would let a failure there fall back to a metrics-only timer.
 2. **Attached threads in fragment entries.** Whether analysis needs a fragment's attached threads in its entry, which would need the locking described in [Alternatives considered](#count-a-fragments-attached-threads-toward-the-fragment).
 3. **Per-function cache stats.** Where the random ID is stored, the cap per run, and which functions are kept past it: for example, the ones with the most cache time in the run.
 4. **Data size for cached messages.** Whether a message sent as a reference to the browser's cached copy counts its full size, its reference's size or both, and whether compressed sizes are available without extra work.
