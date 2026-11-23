@@ -46,7 +46,7 @@ Before this design, only command tracking answered that question, and only on on
 
 ## Proposal
 
-The first sections, from [Where the state lives](#where-the-state-lives) to [Cost](#cost), describe the shared foundation, using cache usage and the parallel fragment breakdown. Each later addition then has its own section, followed by the [field numbers](#field-numbers) they share.
+The first sections, from [Where the state lives](#where-the-state-lives) to [Cost](#cost), describe the shared foundation, including the parallel fragment breakdown that other additions add per-fragment fields to. Each addition then has its own section, starting with [Cache usage](#cache-usage), followed by the [field numbers](#field-numbers) they share.
 
 ### Where the state lives
 
@@ -134,47 +134,22 @@ Query time uses the same pattern with its own `RunQueryStats` (see [Query time](
 
 ### Covered spans
 
-Command and cache times follow one rule: **a span counts toward the innermost listed command or recorded cached call that contains it, and the outer ones leave it out.** A cached call made inside a listed command isn't recorded, because the command's time covers it. A listed command inside a cached function is left out of the cached call's times, because the command reports it. Times that can't leave an overlap out, such as query time, report the overlapping part separately instead (see [Query time](#query-time)).
+Reported times can contain each other: a cached call inside a listed command, a listed command inside a cached function, a query inside either, and all of them inside a parallel fragment. Each addition handles an overlap in one of two ways:
 
-The code checks five scopes to decide where a span's time goes. Each scope uses the existing mechanism that reaches exactly the code it must cover: `ThreadState` crosses into attached threads, and a ContextVar separates async tasks on one thread.
+- **Leave it out.** Command and cache times count a span toward the innermost listed command or recorded cached call that contains it, and the outer ones leave it out. A cached call made inside a listed command isn't recorded, because the command's time covers it. A listed command inside a cached function is left out of the cached call's times, because the command reports it. See [Cache usage](#cache-usage).
+- **Report it separately.** Query time and CPU time can't leave the overlapping part out, so they report it in their own fields: `time_in_commands` and `time_in_cache` for queries, and `command_cpu_time` for CPU. See [Query time](#query-time) and [CPU time](#cpu-time).
 
-| Scope | How it's marked | Where it's visible |
-|---|---|---|
-| Listed command | `in_listed_command` in `ThreadState`, set by `gather_metrics` | The command's thread |
-| Cached function, same thread | The `in_cached_function` ContextVar | The calling context, including async tasks it creates |
-| Cached computation, attached threads | A `CacheComputeScope` in `ThreadState.cache_compute` | Threads attached during the computation |
-| Cache code (hashing, reading the result, replaying elements) | `ThreadCacheStats.is_in_cache_code` | The calling thread |
-| Parallel fragment run | A `ParallelFragmentRun` in `ThreadState.parallel_fragment_run` | The worker thread only |
+Either way, the code checks five scopes to decide where a span's time goes. Each scope uses the existing mechanism that reaches exactly the code it must cover: `ThreadState` crosses into attached threads, and a ContextVar separates async tasks on one thread.
 
-`start_call` checks the first four before it records a cached call. If any of them is set, the call's time is already covered, and the call goes only to the server metrics. The parallel fragment run isn't a reason to skip anything. It adds a second destination for times the top-level totals also get.
+| Scope | How it's marked | Where it's visible | Used by |
+|---|---|---|---|
+| Listed command | `in_listed_command` in `ThreadState`, set by `gather_metrics` | The command's thread | Cache, query and CPU time |
+| Cached function, same thread | The `in_cached_function` ContextVar | The calling context, including async tasks it creates | Cache and query time |
+| Cached computation, attached threads | A `CacheComputeScope` in `ThreadState.cache_compute` | Threads attached during the computation | Cache and query time |
+| Cache code (hashing, reading the result, replaying elements) | `ThreadCacheStats.is_in_cache_code` | The calling thread | Cache time |
+| Parallel fragment run | A `ParallelFragmentRun` in `ThreadState.parallel_fragment_run` | The worker thread only | Every per-fragment field |
 
-#### Commands inside cached calls
-
-`ThreadCacheStats.tracked_command_time` counts the time of listed commands that ran on the thread while a recorded cached call was open. `CacheCallTimer` snapshots it when the call starts and when its computation starts, so `finish()` can take the commands out of the right times:
-
-- **Compute time** is the computation's wall-clock time, minus commands during the computation on this thread, minus commands on threads it attached.
-- **Overhead time** is the rest of the call's wall-clock time, minus its wait and compute time and the remaining command time.
-
-Both are clamped at zero.
-
-`_record_command_time` in `metrics_util.py` sends each listed command's time to up to two of three destinations:
-
-```python
-run = thread_state.parallel_fragment_run if thread_state is not None else None
-if run is not None:
-    run.add_command_time(seconds)
-if ctx.shared.cache_stats.record_tracked_command_time(seconds):
-    return
-scope = thread_state.cache_compute if thread_state is not None else None
-if scope is not None and scope.is_active:
-    scope.add_command_time(seconds)
-```
-
-1. The thread's `ParallelFragmentRun`, if it's a parallel fragment's worker thread.
-2. The thread's cache stats, if a recorded cached call is open on it. `record_tracked_command_time` returns whether it took the time.
-3. Otherwise, the `CacheComputeScope` that attached this thread, while that computation is still running.
-
-The second and third destinations are mutually exclusive, so a command is never subtracted from two cached calls.
+The parallel fragment run never takes time away from another total. It adds a second destination for times the top-level totals also get (see [Parallel fragments](#parallel-fragments)).
 
 #### Attached threads during a computation
 
@@ -190,27 +165,11 @@ So the computing thread and every thread it attaches share one scope:
 - While the computation runs, `is_active` is True, so the attached threads' cached calls aren't recorded and their listed commands add to the scope's command time.
 - `end()` sets `is_active` to False under the scope's lock and returns that command time, which the cached call subtracts from its compute time.
 - A computation that is already inside another keeps the outer scope, so threads that a nested cached function attaches report to the outermost recorded call.
+- Query time reads the same scope, so the attached threads' queries count as inside the cached call.
 
 The `in_cached_function` ContextVar can't do this, because `add_script_run_ctx` doesn't copy it. Copying it would also change behavior that depends on it, such as element replay and the checks for widgets inside cached functions.
 
 Two cases fall outside the mark. A thread that attaches itself later, rather than being attached during the computation, doesn't inherit it, so its cached calls are recorded. A task that an async cached function starts with `asyncio.create_task()` copies `in_cached_function` and keeps it, so its cached calls aren't recorded even after the computation ends.
-
-#### Cache code never awaits
-
-`ThreadCacheStats` counts the open calls running the cache's own code. A call enters cache code when it opens, leaves it while it waits for another caller or runs the cached function, and returns when that ends. A cached call that starts while the count is above zero must come from inside that code, for example from a `hash_funcs` function, because that code never yields to the event loop. So `start_call` skips it.
-
-The rule only holds if `CachedFunc` never awaits outside its wait and compute phases. Otherwise, another task's cached call on the same event loop would be skipped wrongly. A unit test runs a miss, a caller waiting for it, a hit and a miss that raises, for both decorators, with a concurrent task that watches the count, and fails if the task ever sees a call in cache code. A new `await` in `CachedFunc` must be wrapped in `leave_cache_code` and `enter_cache_code`.
-
-### Async calls on one event loop
-
-Async cached calls that are awaited at the same time each count the wall-clock time they share, so their sum can exceed the time that passed. `ThreadCacheStats` groups calls that overlap on its thread. A group starts when a call opens while another is open, and ends when no call is open:
-
-- Calls that finish while the group is open add to the group's totals instead of the thread's.
-- When the group closes, its span is its wall-clock time minus the listed command time on the thread during it, because the calls' own times already leave that out.
-- If the group's recorded time exceeds its span, all of its compute, wait and overhead times, for both cache types, are scaled down by the same factor. Counts aren't scaled.
-- A group still open when the profile is built is scaled to the time it has run so far.
-
-Calls that don't overlap are added unscaled. Calls on different threads are never scaled against each other.
 
 ### Parallel fragments
 
@@ -293,6 +252,55 @@ Following `$52 Pay Only for What You Use`:
 - **A recorded cache hit** adds one or two microseconds: a few `perf_counter` calls and attribute updates on the thread's own stats.
 - **Locks** are taken once per thread per run to register its stats, once per parallel fragment run, and on a miss once to end its compute scope. An attached thread also takes the scope's lock for each listed command it runs during the computation.
 - **Payload.** `parallel_fragment_usage` is sent only by runs with parallel fragments, and adds at most about 4 KB (see the product spec).
+
+### Cache usage
+
+Cache usage leaves overlaps out. `start_call` checks the first four scopes in [Covered spans](#covered-spans) before it records a cached call. If any of them is set, the call's time is already covered, and the call goes only to the server metrics.
+
+#### Commands inside cached calls
+
+`ThreadCacheStats.tracked_command_time` counts the time of listed commands that ran on the thread while a recorded cached call was open. `CacheCallTimer` snapshots it when the call starts and when its computation starts, so `finish()` can take the commands out of the right times:
+
+- **Compute time** is the computation's wall-clock time, minus commands during the computation on this thread, minus commands on threads it attached.
+- **Overhead time** is the rest of the call's wall-clock time, minus its wait and compute time and the remaining command time.
+
+Both are clamped at zero.
+
+`_record_command_time` in `metrics_util.py` sends each listed command's time to up to two of three destinations:
+
+```python
+run = thread_state.parallel_fragment_run if thread_state is not None else None
+if run is not None:
+    run.add_command_time(seconds)
+if ctx.shared.cache_stats.record_tracked_command_time(seconds):
+    return
+scope = thread_state.cache_compute if thread_state is not None else None
+if scope is not None and scope.is_active:
+    scope.add_command_time(seconds)
+```
+
+1. The thread's `ParallelFragmentRun`, if it's a parallel fragment's worker thread.
+2. The thread's cache stats, if a recorded cached call is open on it. `record_tracked_command_time` returns whether it took the time.
+3. Otherwise, the `CacheComputeScope` that attached this thread, while that computation is still running.
+
+The second and third destinations are mutually exclusive, so a command is never subtracted from two cached calls.
+
+#### Cache code never awaits
+
+`ThreadCacheStats` counts the open calls running the cache's own code. A call enters cache code when it opens, leaves it while it waits for another caller or runs the cached function, and returns when that ends. A cached call that starts while the count is above zero must come from inside that code, for example from a `hash_funcs` function, because that code never yields to the event loop. So `start_call` skips it.
+
+The rule only holds if `CachedFunc` never awaits outside its wait and compute phases. Otherwise, another task's cached call on the same event loop would be skipped wrongly. A unit test runs a miss, a caller waiting for it, a hit and a miss that raises, for both decorators, with a concurrent task that watches the count, and fails if the task ever sees a call in cache code. A new `await` in `CachedFunc` must be wrapped in `leave_cache_code` and `enter_cache_code`.
+
+#### Async calls on one event loop
+
+Async cached calls that are awaited at the same time each count the wall-clock time they share, so their sum can exceed the time that passed. `ThreadCacheStats` groups calls that overlap on its thread. A group starts when a call opens while another is open, and ends when no call is open:
+
+- Calls that finish while the group is open add to the group's totals instead of the thread's.
+- When the group closes, its span is its wall-clock time minus the listed command time on the thread during it, because the calls' own times already leave that out.
+- If the group's recorded time exceeds its span, all of its compute, wait and overhead times, for both cache types, are scaled down by the same factor. Counts aren't scaled.
+- A group still open when the profile is built is scaled to the time it has run so far.
+
+Calls that don't overlap are added unscaled. Calls on different threads are never scaled against each other.
 
 ### Query time
 
