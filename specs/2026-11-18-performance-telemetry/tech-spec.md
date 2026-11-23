@@ -139,7 +139,7 @@ Reported times can contain each other: a cached call inside a listed command, a 
 - **Leave it out.** Command and cache times count a span toward the innermost listed command or recorded cached call that contains it, and the outer ones leave it out. A cached call made inside a listed command isn't recorded, because the command's time covers it. A listed command inside a cached function is left out of the cached call's times, because the command reports it. See [Cache usage](#cache-usage).
 - **Report it separately.** Query time and CPU time describe what kind of work happened, not where, so a span can be both, such as a query inside a cached function. Leaving it out of either would understate one of them, so they count the whole span and report the overlapping part in their own fields: `time_in_commands` and `time_in_cache` for queries, and `command_cpu_time` for CPU. See [Query time](#query-time) and [CPU time](#cpu-time).
 
-Either way, the code checks five scopes to decide where a span's time goes. Each scope uses the existing mechanism that reaches exactly the code it must cover: `ThreadState` crosses into attached threads, and a ContextVar separates async tasks on one thread.
+Either way, the code checks five scopes to decide where a span's time goes. Each scope uses existing state that reaches exactly the code it must cover. `ThreadState` and `in_cached_function` are both ContextVars, so each async task has its own, but `add_script_run_ctx` copies only `ThreadState` into the threads it attaches.
 
 | Scope | How it's marked | Where it's visible | Used by |
 |---|---|---|---|
@@ -153,9 +153,9 @@ The parallel fragment run never takes time away from another total. It adds a se
 
 #### Attached threads during a computation
 
-A cached function can start threads and attach them with `add_script_run_ctx`. Their work is part of the computation, but `in_cached_function` doesn't reach them: `add_script_run_ctx` doesn't copy ContextVars, and copying this one would change element replay and the widget checks for those threads.
+User code in a cached function can start threads and attach them to the run with `add_script_run_ctx`. Their work is part of the computation, but `in_cached_function` doesn't reach them, and copying it there would change element replay and the widget checks for those threads. Threads that aren't attached have no `ScriptRunContext`, so nothing they do is recorded.
 
-So on a miss, `computing_cached_value` puts a `CacheComputeScope` in `ThreadState.cache_compute` for the length of the computation. `add_script_run_ctx` deep-copies `ThreadState`, but the scope's `__deepcopy__` returns itself, so the computing thread and every thread it attaches share one object:
+So on a miss, `computing_cached_value` puts a `CacheComputeScope` in `ThreadState.cache_compute` for the length of the computation. `add_script_run_ctx` copies `ThreadState` into the thread with a deep copy, but the scope's `__deepcopy__` returns itself, so the computing thread and every thread it attaches share one object:
 
 - While the scope is active, the attached threads' cached calls aren't recorded, their queries count as inside the cached call, and their listed commands add to the scope's command time.
 - `end()` deactivates the scope under its lock and returns that command time, which the cached call subtracts from its compute time.
