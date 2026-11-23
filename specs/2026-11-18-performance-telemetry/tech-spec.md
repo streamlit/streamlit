@@ -50,12 +50,14 @@ The first sections, from [Where the state lives](#where-the-state-lives) to [Cos
 
 ### Where the state lives
 
-Per-run state hangs off `ctx.shared`, which every thread in the run shares. Per-thread state lives in `ThreadState`. A simplified outline, leaving out fields unrelated to telemetry:
+Per-run state hangs off `ctx.shared`, which every thread in the run shares. Per-thread state lives in `ThreadState`. A simplified outline, leaving out fields unrelated to telemetry, with fields from query time and CPU time marked:
 
 ```python
 class SharedRunState:  # ctx.shared: one per script run, shared by all its threads
     cache_stats: RunCacheStats
     parallel_fragments: RunParallelFragmentStats
+    query_stats: RunQueryStats  # query time
+    command_cpu_time: float  # CPU time: added under a lock, from any thread
 
 
 class RunCacheStats:  # one per run, shared by all its threads
@@ -71,6 +73,19 @@ class ThreadCacheStats:  # written only by its own thread
     _overlap: _OverlapGroup | None  # overlapping async calls, scaled on close
 
 
+class RunQueryStats:  # query time: the same pattern as RunCacheStats
+    _local: threading.local  # _local.stats: each thread sees only its own ThreadQueryStats
+    _threads: list[ThreadQueryStats]  # references to every thread's and fragment run's, for totals()
+    _query_ids: list[str]  # with _query_ids_in_cache, the first 50, under a lock
+    _query_ids_in_cache: list[str]
+
+
+class ThreadQueryStats:  # query time: written only by its own thread
+    snowflake_connector: QueryTotals  # queries, failed, ... and time, time_in_cache, time_in_commands
+    sqlalchemy: QueryTotals
+    snowpark: QueryTotals
+
+
 class RunParallelFragmentStats:
     _runs: list[ParallelFragmentRun]  # in the order the runs started
     wait_time: float  # the script thread waiting in join() or drain()
@@ -81,6 +96,8 @@ class ParallelFragmentRun:  # one fragment run on its worker thread
     end: float | None
     command_time: float  # listed commands on the worker thread only
     cache_stats: ThreadCacheStats
+    query_stats: ThreadQueryStats  # query time
+    cpu_time: float | None  # CPU time: the worker thread, from start to end
 
 
 @dataclass(frozen=True)
@@ -90,7 +107,9 @@ class FragmentThreadState:  # ThreadState: one per thread, copied to attached th
     parallel_fragment_run: ParallelFragmentRun | None  # the copy shares the same object
 ```
 
-`ScriptRunContext.reset()` calls `SharedRunState.reset()` at the start of each run, before any parallel fragment worker starts. `reset()` replaces `cache_stats` and `parallel_fragments` with new objects rather than clearing them, the same way it replaces the tracked command list. Work still running from the previous run, such as a cached call on a thread the script didn't join, holds direct references to that run's objects and finishes into them. Calls that start after the reset find the new objects through `ctx.shared`.
+The other additions don't add fields here. Rerun reason is a per-run value set once, at the start of the run, so it's stored on `ScriptRunContext` next to the other values `reset()` sets. Render timing exists only in the browser. Per-function cache stats and data size add their fields when they're designed.
+
+`ScriptRunContext.reset()` calls `SharedRunState.reset()` at the start of each run, before any parallel fragment worker starts. `reset()` replaces `cache_stats`, `query_stats` and `parallel_fragments` with new objects rather than clearing them, the same way it replaces the tracked command list. Work still running from the previous run, such as a cached call on a thread the script didn't join, holds direct references to that run's objects and finishes into them. Calls that start after the reset find the new objects through `ctx.shared`.
 
 ### Per-thread totals without locks
 
@@ -334,8 +353,8 @@ All the run fields are `optional`, so a run that only waits reports a real 0. Th
 
 #### Attribution
 
-- **Commands.** `gather_metrics` reads the thread's clock around each command and adds the difference only if `SharedRunState.track_command()` kept the command. Commands past the tracking limits, and commands that raise anything other than a rerun request, have no listed time, so their CPU time counts as user code, matching wall time. Nested commands count toward the outer command.
-- **Parallel fragments.** `recording_run()` reads the worker's clock when the fragment starts and when it ends, and stores the difference in the fragment's `ParallelFragmentRun`. `parallel_fragment_cpu_time` is the sum over all runs. The time is stored before the coordinator counts the worker as finished, so it's complete once `join()` or `drain()` returns. A parallel fragment nested in another has its own run on its own worker. A fragment without `parallel=True` counts toward the thread that runs it.
+- **Commands.** `gather_metrics` reads the thread's clock around each command and adds the difference to `SharedRunState.command_cpu_time` only if `SharedRunState.track_command()` kept the command. It's added under the lock that guards the tracked command list. Each listed command already takes that lock in `track_command()`, so holding it once more costs little and needs no per-thread record. Commands past the tracking limits, and commands that raise anything other than a rerun request, have no listed time, so their CPU time counts as user code, matching wall time. Nested commands count toward the outer command.
+- **Parallel fragments.** `recording_run()` reads the worker's clock when the fragment starts and when it ends, and stores the difference in the fragment's `ParallelFragmentRun`. `parallel_fragment_cpu_time` is summed from those entries when the profile is built, the same way the overflow entry is, so there's no separate total to keep in step. The time is stored before the coordinator counts the worker as finished, so it's complete once `join()` or `drain()` returns. A parallel fragment nested in another has its own run on its own worker. A fragment without `parallel=True` counts toward the thread that runs it.
 - **Fragment reruns** run on the script thread, so their CPU time is in `script_cpu_time` and `parallel_fragment_cpu_time` is 0.
 - **Attached threads** are only in `process_cpu_time`, except for their listed commands. Process CPU time also includes library thread pools, such as NumPy, Polars and DuckDB, the server itself and, on a shared server, other sessions.
 
