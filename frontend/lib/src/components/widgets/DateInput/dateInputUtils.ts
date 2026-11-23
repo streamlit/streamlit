@@ -242,16 +242,12 @@ export function createIsDateUnavailable(
   element: DateInputProto
 ): ((date: DateValue) => boolean) | null {
   const mode = element.availabilityMode
-  if (
-    mode === DateInputProto.AvailabilityMode.NONE ||
-    mode === undefined ||
-    mode === null
-  ) {
+  if (mode === DateInputProto.AvailabilityMode.NONE) {
     return null
   }
 
-  const exactDates = new Set(element.availableDates ?? [])
-  const weekdays = new Set(element.availableWeekdays ?? [])
+  const exactDates = new Set(element.availableDates)
+  const weekdays = new Set(element.availableWeekdays)
 
   // React Aria types the prop as `(DateValue) => boolean`; convert so we can
   // reuse CalendarDate helpers for ISO and weekday checks.
@@ -278,7 +274,7 @@ export function validateDate(
   // Bounds take precedence over availability when both apply.
   if (maxDate && date.compare(maxDate) > 0) return "afterMax"
   if (date.compare(minDate) < 0) return "beforeMin"
-  if (isDateUnavailable?.(date)) return "unavailable"
+  if (isDateUnavailable?.(date) === true) return "unavailable"
   return null
 }
 

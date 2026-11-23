@@ -343,7 +343,7 @@ def _convert_numpy_datetime64_to_date(value: object) -> date | None:
         # Prefer pandas when available: handles datetime64[ns] and DatetimeArray entries.
         import pandas as pd
 
-        return pd.Timestamp(value).date()  # type: ignore[arg-type]
+        return pd.Timestamp(value).date()  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     except Exception:
         try:
             text = str(value)
@@ -398,7 +398,7 @@ def _parse_date_filter_entry(
 class _DateAvailability:
     """Normalized availability configuration for st.date_input."""
 
-    mode: int
+    mode: DateInputProto.AvailabilityMode.ValueType
     # Resolved exact dates after materialization (including resolved "today").
     exact_dates: frozenset[date]
     weekdays: frozenset[int]

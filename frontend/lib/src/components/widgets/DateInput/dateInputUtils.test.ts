@@ -782,9 +782,12 @@ describe("createIsDateUnavailable", () => {
     })
     const isUnavailable = createIsDateUnavailable(element)
     expect(isUnavailable).not.toBeNull()
+    if (isUnavailable === null) {
+      throw new Error("expected BLOCK predicate")
+    }
     // 2024-03-09 is Saturday, 2024-03-11 is Monday
-    expect(isUnavailable!(new CalendarDate(2024, 3, 9))).toBe(true)
-    expect(isUnavailable!(new CalendarDate(2024, 3, 11))).toBe(false)
+    expect(isUnavailable(new CalendarDate(2024, 3, 9))).toBe(true)
+    expect(isUnavailable(new CalendarDate(2024, 3, 11))).toBe(false)
   })
 
   it("allows only matching dates and weekdays in ALLOW mode", () => {
@@ -793,7 +796,11 @@ describe("createIsDateUnavailable", () => {
       availableDates: ["2024-03-11"],
       availableWeekdays: [1],
     })
-    const isUnavailable = createIsDateUnavailable(element)!
+    const isUnavailable = createIsDateUnavailable(element)
+    expect(isUnavailable).not.toBeNull()
+    if (isUnavailable === null) {
+      throw new Error("expected ALLOW predicate")
+    }
     expect(isUnavailable(new CalendarDate(2024, 3, 11))).toBe(false) // listed
     expect(isUnavailable(new CalendarDate(2024, 3, 18))).toBe(false) // Monday
     expect(isUnavailable(new CalendarDate(2024, 3, 12))).toBe(true) // Tuesday
