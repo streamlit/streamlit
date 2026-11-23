@@ -78,11 +78,11 @@ class SharedRunState:  # ctx.shared: shared by all the run's threads
 
 class RunStats:  # one per run, shared by all its threads
     _local: threading.local  # _local.stats: each thread sees only its own ThreadRunStats
-    _threads: list[ThreadRunStats]  # references to every thread's and fragment run's, for totals()
+    _threads: list[ThreadRunStats]  # references to every thread's and fragment run's, for the profile builder
 
 
 class ThreadRunStats:  # written only by its own thread
-    counts_cpu: bool  # the script thread's record or a fragment run's
+    counts_cpu: bool  # CPU time: the script thread's record or a fragment run's
     command_time: float  # listed commands on this thread
     command_cpu_time: float  # CPU time: listed commands on this thread
     cache: ThreadCacheStats
@@ -136,7 +136,7 @@ Each thread writes only to its own `ThreadRunStats`, so recording a command, cac
 
 The lock is taken only to append to `_threads`, once per thread per run. A parallel fragment run appends its own record too (see [Recording a fragment run](#recording-a-fragment-run)).
 
-The profile builder reads the records without locking them. A call adds its counts and times only when it finishes, so one still running is left out, and one finishing during the build may be partly included. Where it reads two related values, the order makes a race miss time rather than count it twice. For example, it reads a thread's cache totals before its open overlap group (see [Async calls on one event loop](#async-calls-on-one-event-loop)).
+The profile builder reads the records without locking them. A call adds its counts and times only when it finishes, so one still running is left out, and one finishing during the build may be partly included. Where it reads two related values, the order makes a race leave a value out rather than count it twice. For example, it reads a thread's `async_overlap_time` before its open overlap group, and closing a group clears it before adding its overlap, so a group that closes in between is left out (see [Async calls on one event loop](#async-calls-on-one-event-loop)).
 
 ### Covered spans
 
