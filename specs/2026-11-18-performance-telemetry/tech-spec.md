@@ -121,20 +121,16 @@ At the start of each run, `SharedRunState.reset()` replaces `cache_stats`, `quer
 
 ### Per-thread totals without locks
 
-Each thread records into its own `ThreadCacheStats`, so cached calls on different threads never write to the same object. `RunCacheStats` holds two references to each one:
+Each thread writes only to its own `ThreadCacheStats`, so cached calls don't take a lock. `RunCacheStats` keeps two references to each record:
 
-- **`_local.stats`** is how a thread finds its own stats. A `threading.local` gives each thread a separate value for the same attribute, so the script thread, each fragment worker and each attached thread get their own `ThreadCacheStats` when they read `_local.stats`. The first time a thread records in a run, `current_thread_stats()` finds no value there, so it creates one.
-- **`_threads`** is how the run finds all of them. A thread can't read another thread's `threading.local` value, and the value disappears when the thread exits. So when `current_thread_stats()` creates a thread's stats, it also appends the same object to `_threads`, and `totals()` sums that list. A thread that has finished still counts, because the list keeps its stats.
+- **`_local.stats`**, a `threading.local`, lets a thread find its own record. `current_thread_stats()` creates it on the thread's first call in the run.
+- **`_threads`** lets the profile builder sum every record, including those of threads that have exited. A `threading.local` value is visible only to its own thread and disappears with it.
 
-Appending to `_threads` is the only step that takes the `RunCacheStats` lock, once per thread per run. After that, a cached call reads `_local.stats` and adds to it without a lock, because only the owning thread writes it. A parallel fragment run adds one more entry to `_threads`, for its own stats, which `recording_into()` puts in the worker's `_local.stats` while the fragment runs (see [Recording a fragment run](#recording-a-fragment-run)).
+The lock is taken only to append to `_threads`, once per thread per run. A parallel fragment run appends its own record too (see [Recording a fragment run](#recording-a-fragment-run)).
 
-`create_page_profile_message` combines the stats in `_threads` without locking them, while their threads may still be writing:
+The profile builder reads the records without locking them. A call adds its counts and times only when it finishes, so one still running is left out, and one finishing during the build may be partly included. Where it reads two related values, the order makes a race miss time rather than count it twice. For example, it reads a thread's totals before its open overlap group (see [Async calls on one event loop](#async-calls-on-one-event-loop)).
 
-- A recorded cached call adds its counts and times only when it finishes, in `CacheCallTimer.finish()`. A call still running when the profile is built is left out entirely.
-- A call finishing on another thread while the profile is built can be partly included, because its fields are updated one at a time.
-- Where the builder reads two related values, it reads them in the order that makes a race miss time rather than count it twice. For example, it reads a thread's totals before its open overlap group (see [Async calls on one event loop](#async-calls-on-one-event-loop)), so a group that closes in between is missed.
-
-Later additions that record per call follow the same pattern with their own per-thread record and registry, such as `RunQueryStats` for query time (see [Query time](#query-time)). Each registry has a `recording_into()` that a parallel fragment run uses to swap in its own record, as described in [Recording a fragment run](#recording-a-fragment-run).
+Query time uses the same pattern with its own `RunQueryStats` (see [Query time](#query-time)).
 
 ### Covered spans
 
