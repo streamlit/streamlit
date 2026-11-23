@@ -57,12 +57,12 @@ export function applyStreamlitThemeTemplateLayout(
   const { genericFonts, colors, fontSizes } = theme
   // Secondary text and lines derive from the theme's text color so charts
   // follow a custom `textColor`, like other secondary text in the app.
-  const textColor = colors.fadedText70
+  const secondaryTextColor = colors.fadedText70
   const lineColor = colors.fadedText05
 
   const streamlitTheme = {
     font: {
-      color: textColor,
+      color: secondaryTextColor,
       family: genericFonts.bodyFont,
       size: convertRemToPx(fontSizes.twoSm),
       weight: theme.fontWeights.normal,
@@ -85,7 +85,7 @@ export function applyStreamlitThemeTemplateLayout(
       title: {
         font: {
           size: convertRemToPx(fontSizes.twoSm),
-          color: textColor,
+          color: secondaryTextColor,
         },
         side: "top",
       },
@@ -104,14 +104,14 @@ export function applyStreamlitThemeTemplateLayout(
       zerolinecolor: lineColor,
       title: {
         font: {
-          color: textColor,
+          color: secondaryTextColor,
           size: convertRemToPx(fontSizes.sm),
         },
         standoff: convertRemToPx(theme.spacing.twoXL),
       },
       tickcolor: lineColor,
       tickfont: {
-        color: textColor,
+        color: secondaryTextColor,
         size: convertRemToPx(fontSizes.twoSm),
       },
       gridcolor: lineColor,
@@ -125,13 +125,13 @@ export function applyStreamlitThemeTemplateLayout(
       gridcolor: lineColor,
       showgrid: false,
       tickfont: {
-        color: textColor,
+        color: secondaryTextColor,
         size: convertRemToPx(fontSizes.twoSm),
       },
       tickcolor: lineColor,
       title: {
         font: {
-          color: textColor,
+          color: secondaryTextColor,
           size: convertRemToPx(fontSizes.sm),
         },
         standoff: convertRemToPx(theme.spacing.xl),
@@ -158,7 +158,7 @@ export function applyStreamlitThemeTemplateLayout(
       bgcolor: colors.bgColor,
       bordercolor: colors.borderColor,
       font: {
-        color: textColor,
+        color: secondaryTextColor,
         family: genericFonts.bodyFont,
         size: convertRemToPx(fontSizes.twoSm),
       },
@@ -174,12 +174,12 @@ export function applyStreamlitThemeTemplateLayout(
         y: 0.5745,
         title: {
           font: {
-            color: textColor,
+            color: secondaryTextColor,
             size: convertRemToPx(fontSizes.sm),
           },
         },
         tickfont: {
-          color: textColor,
+          color: secondaryTextColor,
           size: convertRemToPx(fontSizes.twoSm),
         },
       },
@@ -187,7 +187,7 @@ export function applyStreamlitThemeTemplateLayout(
     // specifically for the ternary graph, whose grid and axis lines are drawn
     // stronger than the faint cartesian gridlines
     ternary: {
-      gridcolor: textColor,
+      gridcolor: secondaryTextColor,
       bgcolor: colors.bgColor,
       title: {
         font: {
@@ -195,26 +195,26 @@ export function applyStreamlitThemeTemplateLayout(
           size: convertRemToPx(fontSizes.sm),
         },
       },
-      color: textColor,
+      color: secondaryTextColor,
       aaxis: {
-        gridcolor: textColor,
-        linecolor: textColor,
+        gridcolor: secondaryTextColor,
+        linecolor: secondaryTextColor,
         tickfont: {
           family: genericFonts.bodyFont,
           size: convertRemToPx(fontSizes.twoSm),
         },
       },
       baxis: {
-        linecolor: textColor,
-        gridcolor: textColor,
+        linecolor: secondaryTextColor,
+        gridcolor: secondaryTextColor,
         tickfont: {
           family: genericFonts.bodyFont,
           size: convertRemToPx(fontSizes.twoSm),
         },
       },
       caxis: {
-        linecolor: textColor,
-        gridcolor: textColor,
+        linecolor: secondaryTextColor,
+        gridcolor: secondaryTextColor,
         tickfont: {
           family: genericFonts.bodyFont,
           size: convertRemToPx(fontSizes.twoSm),

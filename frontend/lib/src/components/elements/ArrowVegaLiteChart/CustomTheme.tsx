@@ -29,7 +29,7 @@ export function applyStreamlitTheme(
 
   // Secondary text and lines derive from the theme's text color so charts
   // follow a custom `textColor`, like other secondary text in the app.
-  const textColor = theme.colors.fadedText70
+  const secondaryTextColor = theme.colors.fadedText70
   const lineColor = theme.colors.fadedText05
 
   const streamlitTheme = {
@@ -50,21 +50,21 @@ export function applyStreamlitTheme(
     header: {
       titleFontWeight: theme.fontWeights.normal,
       titleFontSize: convertRemToPx(theme.fontSizes.md),
-      titleColor: textColor,
+      titleColor: secondaryTextColor,
       titleFontStyle: "normal",
       labelFontSize: convertRemToPx(theme.fontSizes.twoSm),
       labelFontWeight: theme.fontWeights.normal,
-      labelColor: textColor,
+      labelColor: secondaryTextColor,
       labelFontStyle: "normal",
     },
     axis: {
       labelFontSize: convertRemToPx(theme.fontSizes.twoSm),
       labelFontWeight: theme.fontWeights.normal,
-      labelColor: textColor,
+      labelColor: secondaryTextColor,
       labelFontStyle: "normal",
       titleFontWeight: theme.fontWeights.normal,
       titleFontSize: convertRemToPx(theme.fontSizes.sm),
-      titleColor: textColor,
+      titleColor: secondaryTextColor,
       titleFontStyle: "normal",
       ticks: false,
       gridColor: lineColor,
@@ -83,11 +83,11 @@ export function applyStreamlitTheme(
     legend: {
       labelFontSize: convertRemToPx(theme.fontSizes.sm),
       labelFontWeight: theme.fontWeights.normal,
-      labelColor: textColor,
+      labelColor: secondaryTextColor,
       titleFontSize: convertRemToPx(theme.fontSizes.sm),
       titleFontWeight: theme.fontWeights.normal,
       titleFontStyle: "normal",
-      titleColor: textColor,
+      titleColor: secondaryTextColor,
       // More than rowPadding so the title is not stuck to the first entry.
       titlePadding: convertRemToPx(theme.spacing.sm),
       labelPadding: convertRemToPx(theme.spacing.lg),

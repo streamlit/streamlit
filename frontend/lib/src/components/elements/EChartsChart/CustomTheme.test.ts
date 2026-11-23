@@ -184,8 +184,14 @@ describe("buildStreamlitEChartsTheme", () => {
     }
     expect(radar.splitLine.lineStyle.color).toBe(theme.colors.fadedText05)
     expect(radar.axisLine.lineStyle.color).toBe(theme.colors.fadedText05)
-    // Split-area rings are a themed pair (subtle in both light and dark).
-    expect(radar.splitArea.areaStyle.color).toHaveLength(2)
+    // Split-area rings are a faint but visible pair (non-zero alpha).
+    expect(radar.splitArea.areaStyle.color).toEqual([
+      transparentize(theme.colors.bodyText, 0.97),
+      transparentize(theme.colors.bodyText, 0.93),
+    ])
+    expect(
+      radar.splitArea.areaStyle.color.map(c => parseToRgba(c)[3])
+    ).toEqual([0.03, 0.07])
     // Indicator names use the themed body text color.
     expect(radar.axisName.color).toBe(theme.colors.fadedText70)
   })
@@ -241,8 +247,11 @@ describe("buildStreamlitEChartsTheme", () => {
     }
     expect(valueAxis.nameTextStyle.color).toBe(theme.colors.fadedText70)
     // ECharts' default split areas are opaque light gray, which covers the plot
-    // on a dark background, so they are replaced by a faint themed pair.
-    expect(valueAxis.splitArea.areaStyle.color).toHaveLength(2)
+    // on a dark background, so they are replaced by a faint but visible pair.
+    expect(valueAxis.splitArea.areaStyle.color).toEqual([
+      transparentize(theme.colors.bodyText, 0.97),
+      transparentize(theme.colors.bodyText, 0.93),
+    ])
   })
 
   it("hides overlapping labels on time, value, and log axes only", () => {

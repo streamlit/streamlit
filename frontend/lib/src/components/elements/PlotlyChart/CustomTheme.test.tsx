@@ -141,7 +141,7 @@ describe("PlotlyChart CustomTheme", () => {
     it("maps graph-object placeholders to Plotly defaults when theme is empty", () => {
       // A dark app theme must not leak into theme=None placeholders; they should
       // resolve to Plotly defaults that stay readable on white paper:
-      // - #000036 FADED_TEXT_70 (Sankey text) -> #2a3f5f
+      // - #000036 FADED_TEXT_70 (Sankey text, table headers, waterfall connectors) -> #2a3f5f
       // - #000038 BG_COLOR (table cells) -> #EBF0F8
       // - #000034 TOTAL (waterfall totals) -> #4499FF
       const darkAppTheme = {

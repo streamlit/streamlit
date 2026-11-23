@@ -228,9 +228,11 @@ function buildAxisDefaults(
     // light gray, which covers the plot on a dark background.
     splitArea: {
       areaStyle: {
+        // Built from `bodyText` because `labelColor` is already translucent
+        // and `transparentize` would subtract from its alpha.
         color: [
-          transparentize(labelColor, 0.97),
-          transparentize(labelColor, 0.93),
+          transparentize(theme.colors.bodyText, 0.97),
+          transparentize(theme.colors.bodyText, 0.93),
         ],
       },
     },
@@ -544,8 +546,8 @@ export function buildStreamlitEChartsTheme(
           // Very faint, theme-derived alternating rings that stay subtle on
           // both light and dark backgrounds.
           color: [
-            transparentize(labelColor, 0.97),
-            transparentize(labelColor, 0.93),
+            transparentize(colors.bodyText, 0.97),
+            transparentize(colors.bodyText, 0.93),
           ],
         },
       },
