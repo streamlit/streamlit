@@ -22,8 +22,6 @@ import { isNullOrUndefined } from "@streamlit/utils"
 
 import {
   getDecreasingRed,
-  getGray30,
-  getGray70,
   getIncreasingGreen,
   hasLightBackgroundColor,
 } from "~lib/theme/getColors"
@@ -191,8 +189,8 @@ function buildAxisDefaults(
   theme: EmotionTheme,
   fontSize: number
 ): Record<string, Record<string, unknown>> {
-  const axisLineColor = getGray30(theme)
-  const labelColor = getGray70(theme)
+  const axisLineColor = theme.colors.fadedText05
+  const labelColor = theme.colors.fadedText70
 
   return {
     axisLine: {
@@ -373,8 +371,10 @@ export function buildStreamlitEChartsTheme(
   const { colors, genericFonts, fontSizes } = theme
   const bodyFontSize = convertRemToPx(fontSizes.twoSm)
   const treemapInsets = buildTreemapInsets(theme)
-  const labelColor = getGray70(theme)
-  const axisLineColor = getGray30(theme)
+  // Secondary text and lines derive from the theme's text color so charts
+  // follow a custom `textColor`, like other secondary text in the app.
+  const labelColor = theme.colors.fadedText70
+  const axisLineColor = theme.colors.fadedText05
   const axisDefaults = buildAxisDefaults(theme, bodyFontSize)
   // Hide colliding tick labels on time, value, and log axes. ECharts spaces
   // their ticks by the data range, not the chart width, so a narrow chart can

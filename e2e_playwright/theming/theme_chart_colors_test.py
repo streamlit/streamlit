@@ -32,12 +32,20 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
+LIGHT_TEXT_COLOR = "#d6246e"
+# `rgb()` form of LIGHT_TEXT_COLOR as reported by computed styles.
+LIGHT_TEXT_COLOR_RGB = "rgb(214, 36, 110)"
+
 
 @pytest.fixture(scope="module")
 @pytest.mark.early
 def configure_section_chart_colors():
     """Configure distinct chart colors for light, dark, and sidebar sections."""
     os.environ["STREAMLIT_THEME_PRIMARY_COLOR"] = "#1a6ce7"
+    # Distinct text colors per section; chart text and lines derive from them.
+    os.environ["STREAMLIT_THEME_LIGHT_TEXT_COLOR"] = LIGHT_TEXT_COLOR
+    os.environ["STREAMLIT_THEME_DARK_TEXT_COLOR"] = "#7dd3fc"
+    os.environ["STREAMLIT_THEME_SIDEBAR_TEXT_COLOR"] = "#0b7a4b"
 
     os.environ["STREAMLIT_THEME_LIGHT_CHART_CATEGORICAL_COLORS"] = json.dumps(
         [
@@ -169,6 +177,9 @@ def configure_section_chart_colors():
     )
     yield
     del os.environ["STREAMLIT_THEME_PRIMARY_COLOR"]
+    del os.environ["STREAMLIT_THEME_LIGHT_TEXT_COLOR"]
+    del os.environ["STREAMLIT_THEME_DARK_TEXT_COLOR"]
+    del os.environ["STREAMLIT_THEME_SIDEBAR_TEXT_COLOR"]
     del os.environ["STREAMLIT_THEME_LIGHT_CHART_CATEGORICAL_COLORS"]
     del os.environ["STREAMLIT_THEME_LIGHT_CHART_SEQUENTIAL_COLORS"]
     del os.environ["STREAMLIT_THEME_LIGHT_CHART_DIVERGING_COLORS"]
@@ -209,6 +220,11 @@ def test_light_section_chart_colors(app: Page, assert_snapshot: ImageCompareFunc
     """[theme.light] categorical/sequential/diverging colors apply in light mode."""
     _prepare_chart_page(app)
     _select_theme(app, "Light")
+
+    # Chart text derives from the custom textColor instead of a fixed gray.
+    tick_label = app.locator(".js-plotly-plot .xtick text").first
+    expect(tick_label).to_have_css("fill", LIGHT_TEXT_COLOR_RGB)
+
     assert_snapshot(
         app, name="custom_chart_colors-light_section", image_threshold=0.0003
     )

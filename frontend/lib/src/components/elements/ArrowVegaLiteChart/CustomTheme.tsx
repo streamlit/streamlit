@@ -16,7 +16,6 @@
 
 import { merge, mergeWith } from "lodash-es"
 
-import { getGray30, getGray70 } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
 
@@ -27,6 +26,11 @@ export function applyStreamlitTheme(
   // This theming config contains multiple hard coded spacing values.
   // The reason is that we currently only have rem values in our spacing
   // definitions and vega lite requires numerical (pixel) values.
+
+  // Secondary text and lines derive from the theme's text color so charts
+  // follow a custom `textColor`, like other secondary text in the app.
+  const textColor = theme.colors.fadedText70
+  const lineColor = theme.colors.fadedText05
 
   const streamlitTheme = {
     font: theme.genericFonts.bodyFont,
@@ -46,27 +50,27 @@ export function applyStreamlitTheme(
     header: {
       titleFontWeight: theme.fontWeights.normal,
       titleFontSize: convertRemToPx(theme.fontSizes.md),
-      titleColor: getGray70(theme),
+      titleColor: textColor,
       titleFontStyle: "normal",
       labelFontSize: convertRemToPx(theme.fontSizes.twoSm),
       labelFontWeight: theme.fontWeights.normal,
-      labelColor: getGray70(theme),
+      labelColor: textColor,
       labelFontStyle: "normal",
     },
     axis: {
       labelFontSize: convertRemToPx(theme.fontSizes.twoSm),
       labelFontWeight: theme.fontWeights.normal,
-      labelColor: getGray70(theme),
+      labelColor: textColor,
       labelFontStyle: "normal",
       titleFontWeight: theme.fontWeights.normal,
       titleFontSize: convertRemToPx(theme.fontSizes.sm),
-      titleColor: getGray70(theme),
+      titleColor: textColor,
       titleFontStyle: "normal",
       ticks: false,
-      gridColor: getGray30(theme),
+      gridColor: lineColor,
       domain: false,
       domainWidth: 1,
-      domainColor: getGray30(theme),
+      domainColor: lineColor,
       labelFlush: true,
       labelFlushOffset: 1,
       labelBound: false,
@@ -79,11 +83,11 @@ export function applyStreamlitTheme(
     legend: {
       labelFontSize: convertRemToPx(theme.fontSizes.sm),
       labelFontWeight: theme.fontWeights.normal,
-      labelColor: getGray70(theme),
+      labelColor: textColor,
       titleFontSize: convertRemToPx(theme.fontSizes.sm),
       titleFontWeight: theme.fontWeights.normal,
       titleFontStyle: "normal",
-      titleColor: getGray70(theme),
+      titleColor: textColor,
       // More than rowPadding so the title is not stuck to the first entry.
       titlePadding: convertRemToPx(theme.spacing.sm),
       labelPadding: convertRemToPx(theme.spacing.lg),
@@ -148,6 +152,7 @@ export function applyThemeDefaults(
   theme: EmotionTheme
 ): object {
   const { colors, fontSizes, genericFonts } = theme
+  const lineColor = colors.fadedText05
   const themeFonts = {
     labelFont: genericFonts.bodyFont,
     titleFont: genericFonts.bodyFont,
@@ -159,7 +164,7 @@ export function applyThemeDefaults(
     axis: {
       labelColor: colors.bodyText,
       titleColor: colors.bodyText,
-      gridColor: getGray30(theme),
+      gridColor: lineColor,
       ...themeFonts,
     },
     legend: {
@@ -178,7 +183,7 @@ export function applyThemeDefaults(
       ...themeFonts,
     },
     view: {
-      stroke: getGray30(theme),
+      stroke: lineColor,
       continuousHeight: convertRemToPx(theme.sizes.defaultChartHeight),
       continuousWidth: convertRemToPx(theme.sizes.defaultChartWidth),
     },
