@@ -174,24 +174,27 @@ run = ParallelFragmentRun(time.perf_counter())
 with self._lock:
     self._runs.append(run)
 try:
-    with self._cache_stats.recording_into(run.cache_stats):
+    with (
+        self._cache_stats.recording_into(run.cache_stats),
+        self._query_stats.recording_into(run.query_stats),  # query time
+    ):
         yield run
 finally:
     run.end = time.perf_counter()
 ```
 
 1. It creates a `ParallelFragmentRun` with the start time, and appends it to the run's list under a lock, so the list is in the order the fragments started.
-2. `RunCacheStats.recording_into()` appends the fragment run's own `ThreadCacheStats` to `_threads` and puts it in the worker's `_local.stats`. The fragment's cached calls go into the fragment's entry and still count toward the top-level `cache_usage`. The worker's previous stats are restored when the fragment ends.
-3. `ThreadState.update(parallel_fragment_run=run)` makes the run visible to `_record_command_time`. A nested parallel fragment starts with a copy of its parent worker's thread state, so this replaces the parent's run, and the nested fragment's commands aren't added to its parent.
-4. When the fragment ends, normally or by raising, the run records its end time.
+2. Each per-thread registry's `recording_into()` puts the fragment run's own record in the worker's `_local.stats` and appends it to `_threads` (see [Per-thread totals without locks](#per-thread-totals-without-locks)). The fragment's cached calls and queries go into its entry and still count toward the run's totals. The worker's previous records are restored when the fragment ends.
+3. `ThreadState.update(parallel_fragment_run=run)` makes the run visible to values recorded outside a registry, such as command time in `_record_command_time`. A nested parallel fragment starts with a copy of its parent worker's thread state, so this replaces the parent's run, and the nested fragment's values aren't added to its parent.
+4. When the fragment ends, normally or by raising, the run records its end time, and its CPU time with the CPU time addition.
 
-Recording is per fragment run rather than per worker thread, because one worker can run several fragments one after another, and each needs its own entry.
+An addition with per-fragment values hooks in at one of these points: a registry swap if it records per call, a read through `ThreadState` if it's recorded elsewhere on the worker, or a value `recording_run()` measures itself. Recording is per fragment run rather than per worker thread, because one worker can run several fragments one after another, and each needs its own entry.
 
 #### Which threads count toward a fragment
 
-Only the worker thread counts toward its fragment's entry. `ParallelFragmentRun.add_command_time` ignores commands from any other thread, and `ParallelFragmentRun.__deepcopy__` returns the same object, so a thread the fragment attaches gets the run without a copy of its cache stats. The attached thread's cached calls register their own `ThreadCacheStats` in the top-level totals. So threads a fragment attaches count toward the main script, like threads the main script attaches.
+Only the worker thread counts toward its fragment's entry. `ParallelFragmentRun.add_command_time` ignores commands from any other thread, and `ParallelFragmentRun.__deepcopy__` returns the same object, so a thread the fragment attaches sees the run but not its records. The attached thread's cached calls and queries go into its own records in the run's totals, and per-fragment CPU time reads only the worker's clock. So threads a fragment attaches count toward the main script, like threads the main script attaches.
 
-This keeps each entry single-threaded, so a fragment's user code time, its `exec_time` minus its command and cache times, can't go negative. The cost is that the main script's user code time can: an attached thread usually runs while the script thread waits for the fragment, so its time overlaps `wait_time`.
+This keeps each entry single-threaded, so a fragment's user code time, its `exec_time` minus its command and cache times, can't go negative, and its CPU time can't exceed its `exec_time`. The cost is that the main script's user code time can: an attached thread usually runs while the script thread waits for the fragment, so its time overlaps `wait_time`.
 
 #### Waiting for fragments
 
@@ -204,8 +207,8 @@ The script thread waits for its fragments in `ParallelFragmentCoordinator.join()
 `_fill_parallel_fragment_usage` (`metrics_util.py`) fills `parallel_fragment_usage`, and leaves it unset when no parallel fragment ran:
 
 - The first `_MAX_PARALLEL_FRAGMENT_RUNS` (25) runs to start get an entry each. Later runs are added together into `overflow`, which has no start time. `run_count` counts every run.
-- Each entry's cache times are summed across `st.cache_data` and `st.cache_resource`. Cache counts are reported once, in `parallel_fragment_usage.cache_usage`, across all runs, including the overflow.
-- A run still going when the profile is built counts up to then. Its cached calls still in progress aren't included, so its user code time reads high.
+- Each entry's times are summed across sources: cache times across `st.cache_data` and `st.cache_resource`, and query times across query sources. Cache counts are reported once, in `parallel_fragment_usage.cache_usage`, across all runs, including the overflow.
+- A run still going when the profile is built counts up to then. Its cached calls and queries still in progress aren't included, so its user code time reads high.
 
 Only full runs have parallel fragments. A fragment rerun runs its fragments inline (`parallel and not ctx.fragment_ids_this_run` in `fragment.py`) and sends its own page profile.
 
@@ -214,7 +217,7 @@ Only full runs have parallel fragments. A fragment rerun runs its fragments inli
 - A fragment's user code time is its `exec_time` minus its `command_time`, `cache_compute_time`, `cache_wait_time` and `cache_overhead_time`.
 - The main script's user code time is `exec_time − prep_time − wait_time`, minus the top-level command time less the fragments' command time, minus the top-level cache time less the fragments' cache time. The fragments' times include the overflow entry.
 
-Query time and CPU time add per-fragment fields through the same `ParallelFragmentRun` and the same worker-thread rule (see [Query time](#query-time) and [CPU time](#cpu-time)).
+Query time and CPU time don't change these formulas, because they report their overlaps separately. They split user code time further (see [Query time](#query-time) and [CPU time](#cpu-time)).
 
 ### Building the profile
 
