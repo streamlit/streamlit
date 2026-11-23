@@ -1226,6 +1226,8 @@ class DateInput(Widget):
     is_range: bool
     help: str
     form_id: str
+    enabled_dates: list[str] | None
+    disabled_dates: list[str] | None
 
     def __init__(self, proto: DateInputProto, root: ElementTree) -> None:
         super().__init__(proto, root)
@@ -1233,6 +1235,31 @@ class DateInput(Widget):
         self.type = "date_input"
         self.min = datetime.strptime(proto.min, "%Y-%m-%d").date()
         self.max = datetime.strptime(proto.max, "%Y-%m-%d").date()
+        filter_entries = [
+            *(
+                {
+                    1: "monday",
+                    2: "tuesday",
+                    3: "wednesday",
+                    4: "thursday",
+                    5: "friday",
+                    6: "saturday",
+                    7: "sunday",
+                }[day]
+                for day in proto.available_weekdays
+            ),
+            *proto.available_dates,
+        ]
+        # AvailabilityMode: NONE=0, ALLOW=1, BLOCK=2
+        if proto.availability_mode == 1:
+            self.enabled_dates = filter_entries
+            self.disabled_dates = None
+        elif proto.availability_mode == 2:
+            self.enabled_dates = None
+            self.disabled_dates = filter_entries
+        else:
+            self.enabled_dates = None
+            self.disabled_dates = None
 
     def set_value(self, v: DateValue) -> DateInput:
         """Set the value of the widget."""

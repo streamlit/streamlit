@@ -136,6 +136,8 @@ interface SingleDateInputProps {
    * reset its local displayValue to the parent's value prop (which may not
    * have changed if segment edits were never committed). */
   formResetKey: number
+  /** When set, dates matching the predicate cannot be selected. */
+  isDateUnavailable?: ((date: CalendarDate) => boolean) | null
 }
 
 /** True when close/blur should notify the parent, including a full clear
@@ -205,6 +207,7 @@ function SingleDateInput({
   onClose,
   formCommit,
   formResetKey,
+  isDateUnavailable = null,
 }: SingleDateInputProps): ReactElement {
   const theme = useEmotionTheme()
   const id = useId()
@@ -811,6 +814,7 @@ function SingleDateInput({
                 onChange={handleFieldChange}
                 minValue={minDate}
                 maxValue={maxDate}
+                isDateUnavailable={isDateUnavailable ?? undefined}
                 shouldForceLeadingZeros
                 isDisabled={disabled}
               >
@@ -883,7 +887,8 @@ function SingleDateInput({
             {isCalendarActive && (
               <StyledVisuallyHidden id={popoverDescId}>
                 Use arrow keys to navigate dates. Enter to select. Escape to
-                close.
+                close. Unavailable dates are marked disabled and cannot be
+                selected.
               </StyledVisuallyHidden>
             )}
             {/* Calendar locale is the visitor's locale (not the field's
@@ -895,6 +900,7 @@ function SingleDateInput({
                 onChange={handleCalendarChange}
                 minValue={minDate}
                 maxValue={maxDate}
+                isDateUnavailable={isDateUnavailable ?? undefined}
                 focusedValue={focusedValue}
                 onFocusChange={onFocusChange}
               >

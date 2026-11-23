@@ -1228,3 +1228,135 @@ class DateInputOnChangeModeTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue(1).new_element.date_input
         assert c.ignore_rerun is True
+
+
+class DateInputAvailabilityTest(DeltaGeneratorTestCase):
+    """Tests for enabled_dates / disabled_dates."""
+
+    def test_disabled_weekends_proto(self) -> None:
+        st.date_input("day", disabled_dates=["saturday", "sunday"])
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.availability_mode == 2  # BLOCK
+        assert list(c.available_weekdays) == [6, 7]
+        assert list(c.available_dates) == []
+
+    def test_enabled_dates_proto(self) -> None:
+        st.date_input(
+            "day",
+            value=date(2026, 8, 25),
+            enabled_dates=[date(2026, 8, 24), date(2026, 8, 25), "monday"],
+        )
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.availability_mode == 1  # ALLOW
+        assert list(c.available_weekdays) == [1]
+        assert list(c.available_dates) == ["2026-08-24", "2026-08-25"]
+
+    def test_both_parameters_raise(self) -> None:
+        with pytest.raises(StreamlitAPIException, match="cannot be used together"):
+            st.date_input(
+                "day",
+                enabled_dates=["monday"],
+                disabled_dates=["saturday"],
+            )
+
+    def test_empty_enabled_with_none_value(self) -> None:
+        result = st.date_input("day", value=None, enabled_dates=[])
+        c = self.get_delta_from_queue().new_element.date_input
+        assert result is None
+        assert c.availability_mode == 1
+        assert list(c.default) == []
+
+    def test_range_raises(self) -> None:
+        with pytest.raises(StreamlitAPIException, match="not yet supported"):
+            st.date_input(
+                "period",
+                value=(date(2026, 8, 24), date(2026, 8, 28)),
+                disabled_dates=["saturday", "sunday"],
+            )
+
+    def test_explicit_unavailable_value_raises(self) -> None:
+        with pytest.raises(StreamlitAPIException, match="not selectable"):
+            st.date_input(
+                "day",
+                value=date(2024, 3, 9),  # Saturday
+                disabled_dates=["saturday", "sunday"],
+            )
+
+    def test_out_of_window_dates_dropped_from_proto_not_id(self) -> None:
+        st.date_input(
+            "day",
+            value=date(2026, 8, 25),
+            min_value=date(2026, 8, 1),
+            max_value=date(2026, 8, 31),
+            enabled_dates=[date(2026, 8, 25), date(2020, 1, 1)],
+        )
+        c = self.get_delta_from_queue().new_element.date_input
+        assert list(c.available_dates) == ["2026-08-25"]
+
+    def test_series_and_numpy_unique_accepted(self) -> None:
+        import numpy as np
+        import pandas as pd
+
+        series = pd.Series([date(2026, 8, 24), date(2026, 8, 25)])
+        st.date_input("day", value=date(2026, 8, 25), enabled_dates=series)
+        c = self.get_delta_from_queue().new_element.date_input
+        assert list(c.available_dates) == ["2026-08-24", "2026-08-25"]
+
+        unique = pd.Series(
+            [pd.Timestamp("2026-08-24"), pd.Timestamp("2026-08-25")]
+        ).unique()
+        st.date_input("day2", value=date(2026, 8, 25), enabled_dates=unique)
+        c2 = self.get_delta_from_queue().new_element.date_input
+        assert list(c2.available_dates) == ["2026-08-24", "2026-08-25"]
+
+        arr = np.array(["2026-08-24", "2026-08-25"], dtype="datetime64[D]")
+        st.date_input("day3", value=date(2026, 8, 25), enabled_dates=arr)
+        c3 = self.get_delta_from_queue().new_element.date_input
+        assert list(c3.available_dates) == ["2026-08-24", "2026-08-25"]
+
+    def test_availability_in_unkeyed_id(self) -> None:
+        st.date_input("day", disabled_dates=["saturday"])
+        id1 = self.get_delta_from_queue().new_element.date_input.id
+        st.date_input("day", disabled_dates=["sunday"])
+        id2 = self.get_delta_from_queue().new_element.date_input.id
+        assert id1 != id2
+
+    def test_availability_not_in_keyed_id(self) -> None:
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.date_input("day", key="k", disabled_dates=["saturday"])
+            id1 = self.get_delta_from_queue().new_element.date_input.id
+            st.date_input("day", key="k", disabled_dates=["sunday"])
+            id2 = self.get_delta_from_queue().new_element.date_input.id
+            assert id1 == id2
+
+
+def test_availability_resets_session_state_without_explicit_bounds() -> None:
+    """Unavailable stored values reset even when min/max are omitted."""
+    st.session_state.trading = date(2024, 3, 9)  # Saturday
+    result = st.date_input(
+        "day",
+        key="trading",
+        value=date(2024, 3, 8),
+        disabled_dates=["saturday", "sunday"],
+    )
+    assert result == date(2024, 3, 8)
+
+
+def test_apptest_exposes_availability() -> None:
+    def script() -> None:
+        from datetime import date
+
+        import streamlit as st
+
+        st.date_input(
+            "day",
+            value=date(2026, 8, 25),
+            enabled_dates=[date(2026, 8, 25), "monday"],
+        )
+
+    at = AppTest.from_function(script).run()
+    assert at.date_input[0].enabled_dates == ["monday", "2026-08-25"]
+    assert at.date_input[0].disabled_dates is None

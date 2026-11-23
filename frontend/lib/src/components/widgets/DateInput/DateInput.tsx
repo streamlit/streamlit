@@ -47,6 +47,7 @@ import {
   createDateErrorMessage,
   datesEqual,
   type DateValidationErrorType,
+  createIsDateUnavailable,
   formatCalendarDate,
   getFocusedDateFallback,
   getInitialFocusedDate,
@@ -145,6 +146,10 @@ function DateInput({
 
   const minDateCalendar = useMemo(() => getMinDate(element), [element])
   const maxDateCalendar = useMemo(() => getMaxCalendarDate(element), [element])
+  const isDateUnavailable = useMemo(
+    () => createIsDateUnavailable(element),
+    [element]
+  )
 
   // Lifted here so both SingleDateInput and RangeDateInput share the same
   // visible-month. Seeded with a concrete date so it stays controlled for
@@ -233,7 +238,8 @@ function DateInput({
         const err = validateDate(
           calendarDate,
           minDateCalendar,
-          maxDateCalendar
+          maxDateCalendar,
+          isDateUnavailable
         )
         if (err) {
           errorType = err
@@ -289,6 +295,7 @@ function DateInput({
       element,
       fragmentId,
       inForm,
+      isDateUnavailable,
       maxDateCalendar,
       minDateCalendar,
       setValueWithSource,
@@ -315,12 +322,23 @@ function DateInput({
     (date: CalendarDate | null): void => {
       resetError()
       if (!date) return
-      const errorType = validateDate(date, minDateCalendar, maxDateCalendar)
+      const errorType = validateDate(
+        date,
+        minDateCalendar,
+        maxDateCalendar,
+        isDateUnavailable
+      )
       if (errorType) {
         setError(buildErrorMessage(errorType))
       }
     },
-    [buildErrorMessage, maxDateCalendar, minDateCalendar, resetError]
+    [
+      buildErrorMessage,
+      isDateUnavailable,
+      maxDateCalendar,
+      minDateCalendar,
+      resetError,
+    ]
   )
 
   // Range mode's change handler — validates each date independently.
@@ -542,6 +560,7 @@ function DateInput({
           onClose={handleClose}
           formCommit={inForm ? handleSingleChange : undefined}
           formResetKey={formResetKey}
+          isDateUnavailable={isDateUnavailable}
         />
       )}
     </div>
@@ -575,10 +594,11 @@ function updateWidgetMgrState(
   // Guard: invalid values must never reach the backend. This catches
   // out-of-range dates and unparsable ISO strings (e.g. malformed
   // query-param seeds). Empty arrays are valid (cleared input).
+  const isDateUnavailable = createIsDateUnavailable(element)
   const isValid = vws.value.every(iso => {
     const calendarDate = isoToCalendarDate(iso)
     if (!calendarDate) return false
-    return !validateDate(calendarDate, minDate, maxDate)
+    return !validateDate(calendarDate, minDate, maxDate, isDateUnavailable)
   })
 
   if (isValid) {

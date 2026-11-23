@@ -1344,3 +1344,19 @@ def test_date_input_required_marker_and_error_rendering(
     clear_date_segments(field)
     expect(widget.get_by_test_id("stDateInputError")).to_be_visible()
     assert_snapshot(widget, name="st_date_input-required_error")
+
+
+def test_unavailable_weekend_not_selectable(app: Page):
+    """Weekends marked unavailable cannot be selected from the calendar."""
+    date_input = get_element_by_key(app, "weekdays_only")
+    date_input.get_by_test_id("stDateInputCalendarButton").click()
+    calendar = app.get_by_test_id("stDateInputCalendar")
+    saturday = calendar.get_by_role("button", name=re.compile(r"Saturday, March 9"))
+    expect(saturday).to_have_attribute("aria-disabled", "true")
+    saturday.click(force=True)
+    # Value stays Friday March 8
+    expect_markdown(app, "Value weekdays only: 2024-03-08")
+    monday = calendar.get_by_role("button", name=re.compile(r"Monday, March 11"))
+    monday.click()
+    wait_for_app_run(app)
+    expect_markdown(app, "Value weekdays only: 2024-03-11")

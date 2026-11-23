@@ -309,3 +309,14 @@ st.date_input(
     required=True,
     label_visibility="hidden",
 )
+
+
+v_avail = st.date_input(
+    "Weekdays only",
+    date(2024, 3, 8),
+    min_value=date(2024, 1, 1),
+    max_value=date(2024, 12, 31),
+    disabled_dates=["saturday", "sunday"],
+    key="weekdays_only",
+)
+st.write("Value weekdays only:", v_avail)

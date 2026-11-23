@@ -24,9 +24,11 @@ import {
   calendarDateFromSegments,
   calendarDateToIso,
   createDateErrorMessage,
+  createIsDateUnavailable,
   formatCalendarDate,
   getFocusedDateFallback,
   getInitialFocusedDate,
+  getIsoWeekday,
   getMaxDate,
   getMinDate,
   getQuickSelectPresets,
@@ -758,5 +760,83 @@ describe("calendarDateFromSegments", () => {
         makeSegment("day", "10"),
       ])
     ).toBeNull()
+  })
+})
+
+describe("createIsDateUnavailable", () => {
+  it("returns null when availability is NONE", () => {
+    const element = DateInputProto.create({
+      availabilityMode: DateInputProto.AvailabilityMode.NONE,
+    })
+    expect(createIsDateUnavailable(element)).toBeNull()
+  })
+
+  it("blocks matching weekdays in BLOCK mode", () => {
+    const element = DateInputProto.create({
+      availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
+      availableWeekdays: [6, 7],
+    })
+    const isUnavailable = createIsDateUnavailable(element)
+    expect(isUnavailable).not.toBeNull()
+    // 2024-03-09 is Saturday, 2024-03-11 is Monday
+    expect(isUnavailable!(new CalendarDate(2024, 3, 9))).toBe(true)
+    expect(isUnavailable!(new CalendarDate(2024, 3, 11))).toBe(false)
+  })
+
+  it("allows only matching dates and weekdays in ALLOW mode", () => {
+    const element = DateInputProto.create({
+      availabilityMode: DateInputProto.AvailabilityMode.ALLOW,
+      availableDates: ["2024-03-11"],
+      availableWeekdays: [1],
+    })
+    const isUnavailable = createIsDateUnavailable(element)!
+    expect(isUnavailable(new CalendarDate(2024, 3, 11))).toBe(false) // listed
+    expect(isUnavailable(new CalendarDate(2024, 3, 18))).toBe(false) // Monday
+    expect(isUnavailable(new CalendarDate(2024, 3, 12))).toBe(true) // Tuesday
+  })
+
+  it("uses locale-independent ISO weekdays", () => {
+    // Monday 2024-03-11 must be weekday 1 regardless of locale week start.
+    expect(getIsoWeekday(new CalendarDate(2024, 3, 11))).toBe(1)
+    expect(getIsoWeekday(new CalendarDate(2024, 3, 10))).toBe(7)
+  })
+})
+
+describe("validateDate with availability", () => {
+  const minDate = new CalendarDate(2020, 1, 1)
+  const maxDate = new CalendarDate(2030, 12, 31)
+  const weekendsUnavailable = (d: CalendarDate): boolean => {
+    const day = getIsoWeekday(d)
+    return day === 6 || day === 7
+  }
+
+  it("returns unavailable for blocked dates inside bounds", () => {
+    expect(
+      validateDate(
+        new CalendarDate(2024, 3, 9),
+        minDate,
+        maxDate,
+        weekendsUnavailable
+      )
+    ).toBe("unavailable")
+  })
+
+  it("prefers bounds errors over unavailable", () => {
+    expect(
+      validateDate(
+        new CalendarDate(2019, 1, 1),
+        minDate,
+        maxDate,
+        weekendsUnavailable
+      )
+    ).toBe("beforeMin")
+  })
+})
+
+describe("createDateErrorMessage unavailable", () => {
+  it("returns the unavailable message", () => {
+    expect(createDateErrorMessage("unavailable", false, "", "")).toBe(
+      "**Error**: Date is unavailable. Choose an available date."
+    )
   })
 })

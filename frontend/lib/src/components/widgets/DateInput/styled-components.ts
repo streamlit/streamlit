@@ -648,10 +648,22 @@ export const StyledCalendarCell = styled(CalendarCell, {
       boxShadow: `inset 0 0 0 ${borderWidth} ${primary}`,
     },
 
-    "&[data-disabled], &[data-unavailable]": {
+    "&[data-disabled]": {
       color: theme.colors.fadedText40,
       cursor: "not-allowed",
       boxShadow: "none",
+    },
+
+    // Availability-blocked cells stay focusable and use a strike-through so
+    // they stay distinct from fully disabled (out-of-range) cells. Contrast
+    // stays at least 4.5:1 against the calendar background via bodyText.
+    "&[data-unavailable]": {
+      color: theme.colors.bodyText,
+      textDecoration: "line-through",
+      textDecorationThickness: "1px",
+      cursor: "not-allowed",
+      boxShadow: "none",
+      opacity: 0.65,
     },
 
     "&[data-outside-month]": {

@@ -212,3 +212,17 @@ if TYPE_CHECKING:
         ),
         date,
     )
+
+    # Availability parameters
+    assert_type(
+        date_input("foo", date(2024, 1, 1), disabled_dates=["saturday", "sunday"]),
+        date,
+    )
+    assert_type(
+        date_input("foo", date(2024, 1, 1), enabled_dates=[date(2024, 1, 1)]),
+        date,
+    )
+    assert_type(
+        date_input("foo", value=None, enabled_dates=[]),
+        date | None,
+    )

@@ -7244,6 +7244,32 @@ describe("DateInput no-op interactions", () => {
     return { sendRerunBackMsg, setStringArrayValueSpy, props }
   }
 
+  it("does not commit an unavailable calendar date", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, setStringArrayValueSpy } = renderWithRerunSpy({
+      default: ["2024-03-08"],
+      min: "2024-01-01",
+      availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
+      availableWeekdays: [6, 7],
+    })
+
+    const region = screen.getByTestId("stDateInput")
+    await user.click(getSingleDateSegments(region).year)
+    const sat = await screen.findByLabelText(/Saturday, March 9, 2024/)
+    expect(sat).toHaveAttribute("aria-disabled", "true")
+    expect(sat).toHaveAttribute("data-unavailable", "true")
+    await user.click(sat)
+    await flushScheduledRerun()
+
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+    await user.click(await screen.findByLabelText(/Monday, March 11, 2024/))
+    await flushScheduledRerun()
+    expect(setStringArrayValueSpy).toHaveBeenCalled()
+    expect(sendRerunBackMsg).toHaveBeenCalledOnce()
+  })
+
   it("does not commit or rerun when re-picking the selected calendar date", async () => {
     const user = userEvent.setup()
     const { sendRerunBackMsg, setStringArrayValueSpy, props } =
