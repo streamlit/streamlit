@@ -47,18 +47,44 @@ Before this design, only command tracking answered that question, and only on on
 
 ### Where the state lives
 
-```
-SharedRunState (ctx.shared): one per script run, shared by all its threads
-├── cache_stats: RunCacheStats
-│   └── a ThreadCacheStats per thread, and per parallel fragment run
-└── parallel_fragments: RunParallelFragmentStats
-    ├── a ParallelFragmentRun per fragment run, with its own ThreadCacheStats
-    └── wait_time
+Per-run state hangs off `ctx.shared`, which every thread in the run shares. Per-thread state lives in `ThreadState`. A simplified outline, leaving out fields unrelated to telemetry:
 
-FragmentThreadState (ThreadState): one per thread, copied to attached threads
-├── in_listed_command
-├── cache_compute: CacheComputeScope | None        shared with attached threads
-└── parallel_fragment_run: ParallelFragmentRun | None  shared with attached threads
+```python
+class SharedRunState:  # ctx.shared: one per script run, shared by all its threads
+    cache_stats: RunCacheStats
+    parallel_fragments: RunParallelFragmentStats
+
+
+class RunCacheStats:
+    _local: threading.local  # the calling thread's ThreadCacheStats
+    _threads: list[ThreadCacheStats]  # every thread's, and every fragment run's
+
+
+class ThreadCacheStats:  # written only by its own thread
+    cache_data: CacheTotals  # calls, hits, misses, ... and compute, wait, overhead
+    cache_resource: CacheTotals
+    tracked_command_time: float  # listed commands during recorded calls
+    _calls_in_cache_code: int  # open calls hashing or reading a result
+    _overlap: _OverlapGroup | None  # overlapping async calls, scaled on close
+
+
+class RunParallelFragmentStats:
+    _runs: list[ParallelFragmentRun]  # in the order the runs started
+    wait_time: float  # the script thread waiting in join() or drain()
+
+
+class ParallelFragmentRun:  # one fragment run on its worker thread
+    start: float
+    end: float | None
+    command_time: float  # listed commands on the worker thread only
+    cache_stats: ThreadCacheStats
+
+
+@dataclass(frozen=True)
+class FragmentThreadState:  # ThreadState: one per thread, copied to attached threads
+    in_listed_command: bool
+    cache_compute: CacheComputeScope | None  # the copy shares the same object
+    parallel_fragment_run: ParallelFragmentRun | None  # the copy shares the same object
 ```
 
 `ScriptRunContext.reset()` calls `SharedRunState.reset()` at the start of each run, before any parallel fragment worker starts. `reset()` replaces `cache_stats` and `parallel_fragments` with new objects rather than clearing them, the same way it replaces the tracked command list. Work still running from the previous run, such as a cached call on a thread the script didn't join, holds direct references to that run's objects and finishes into them. Calls that start after the reset find the new objects through `ctx.shared`.
