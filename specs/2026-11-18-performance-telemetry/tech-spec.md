@@ -27,9 +27,11 @@ A script run's work can happen on:
 Two terms are used throughout:
 
 - A **listed command** is one that appears in `commands` with its time: a top-level `st.*` call within the tracking limits.
-- A **recorded cached call** is one counted in `cache_usage`. Calls whose time another reported time already covers aren't recorded, but still update the server metrics at `/_stcore/metrics`.
+- A **recorded cached call** is one counted in the page profile's `cache_usage`. A call whose time another reported time already covers, such as a cached call nested inside another, isn't recorded.
 
 Every time in the page profile is a span of wall-clock time, and spans nest: a command inside a cached function, a cached call inside a command, a query inside either, and all of it inside a parallel fragment. For analysis to subtract times from `exec_time` without counting a span twice, each new time has to know whether the span it measures is already inside another reported time.
+
+The per-function server metrics at `/_stcore/metrics` (`FunctionCacheMetrics`) answer a different question, so they don't follow this rule. They describe each cached function over the life of the process: every call counts toward its function's hits and misses, recorded or not, and its compute and wait durations are inclusive. An outer function's compute time there includes its nested calls, which also record their own. Each function's numbers are correct on their own, but summing durations across functions counts nested time twice. These metrics are never added up against a run's time, so this design leaves them unchanged.
 
 Before this design, only command tracking answered that question, and only on one thread: `command_tracking_deactivated` and `in_listed_command` in `ThreadState` mark nested commands. Attached threads and parallel workers start with tracking on, so their top-level commands are listed. Parallel fragment times were mixed into the run totals with no way to separate them from the main script's.
 
