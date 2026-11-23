@@ -3531,6 +3531,39 @@ def test_handle_backmsg_dispatches_bool_requests(field: str, handler_name: str) 
     handler.assert_called_once()
 
 
+def test_handle_backmsg_rerun_script_requests_rerun_with_client_state() -> None:
+    """A rerun_script BackMsg requests a rerun with the browser's client state."""
+    session = _create_test_session()
+    msg = BackMsg()
+    msg.rerun_script.query_string = "foo=bar"
+    msg.rerun_script.page_script_hash = "page_hash"
+
+    with patch.object(session, "request_rerun") as request_rerun:
+        session.handle_backmsg(msg)
+
+    request_rerun.assert_called_once_with(msg.rerun_script)
+
+
+def test_create_exception_message_survives_marshalling_failure() -> None:
+    """A failure marshalling the error is logged and doesn't replace the original."""
+    session = _create_test_session()
+
+    with (
+        patch.object(
+            app_session.exception_utils,
+            "marshall",
+            side_effect=RuntimeError("marshall failed"),
+        ),
+        patch.object(app_session, "_LOGGER") as patched_logger,
+    ):
+        msg = session._create_exception_message(ValueError("original"))
+
+    assert msg.delta.new_element.exception.message == ""
+    patched_logger.exception.assert_called_once_with(
+        "Failed to marshall exception for the frontend"
+    )
+
+
 def test_handle_backmsg_dispatches_file_urls_request() -> None:
     """Test that handle_backmsg routes a file_urls_request to its handler."""
     session = _create_test_session()
@@ -3677,6 +3710,69 @@ def test_close_script_event_loop_propagates_unrelated_runtime_error() -> None:
         pytest.raises(RuntimeError, match="unrelated close failure"),
     ):
         _close_script_event_loop(script_loop)
+
+
+def test_close_script_event_loop_ignores_already_closed_loop() -> None:
+    """An already-closed loop is left alone instead of being drained again."""
+    script_loop = MagicMock(spec=asyncio.AbstractEventLoop)
+    script_loop.is_closed.return_value = True
+
+    _close_script_event_loop(script_loop)
+
+    script_loop.is_running.assert_not_called()
+    script_loop.close.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("is_running_sequence", "close_error", "expected_warning"),
+    [
+        pytest.param(
+            [False, True],
+            None,
+            "Deferring script event loop closure because the loop is still running",
+            id="started_before_close",
+        ),
+        pytest.param(
+            [False, False, True],
+            RuntimeError("Cannot close a running event loop"),
+            "Deferring script event loop closure because the loop started running",
+            id="started_during_close",
+        ),
+    ],
+)
+def test_close_script_event_loop_defers_when_loop_starts_running(
+    is_running_sequence: list[bool],
+    close_error: Exception | None,
+    expected_warning: str,
+) -> None:
+    """A loop another thread starts driving mid-teardown is not force-closed.
+
+    Parameters
+    ----------
+    is_running_sequence : list[bool]
+        Successive ``is_running()`` results observed during teardown.
+    close_error : Exception | None
+        The error raised by ``loop.close()``, if any.
+    expected_warning : str
+        The warning logged when closure is deferred.
+    """
+    script_loop = MagicMock(spec=asyncio.AbstractEventLoop)
+    script_loop.is_closed.return_value = False
+    script_loop.is_running.side_effect = is_running_sequence
+    script_loop.close.side_effect = close_error
+
+    with (
+        patch("streamlit.runtime.app_session.asyncio.all_tasks", return_value=set()),
+        patch(
+            "streamlit.runtime.app_session.asyncio.get_running_loop",
+            return_value=MagicMock(spec=asyncio.AbstractEventLoop),
+        ),
+        patch.object(app_session, "_LOGGER") as patched_logger,
+    ):
+        _close_script_event_loop(script_loop)
+
+    patched_logger.warning.assert_called_once_with(expected_warning)
+    assert script_loop.close.call_count == (1 if close_error else 0)
 
 
 def test_close_script_event_loop_cancels_pending_tasks() -> None:

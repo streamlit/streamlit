@@ -1458,6 +1458,86 @@ class ScriptRunnerTest(unittest.TestCase):
             uptime_seconds.assert_not_called()
             patched_create_page_profile_message.assert_not_called()
 
+    def test_page_profile_failure_does_not_affect_script_run(self) -> None:
+        """A telemetry failure is logged at debug level and the run still succeeds."""
+        profile_error = RuntimeError("profile failed")
+        with (
+            testutil.patch_config_options({"browser.gatherUsageStats": True}),
+            patch.object(
+                script_runner_module,
+                "create_page_profile_message",
+                side_effect=profile_error,
+            ),
+            patch.object(script_runner_module._LOGGER, "debug") as mock_debug,
+        ):
+            scriptrunner = TestScriptRunner("good_script.py")
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        self._assert_control_events(
+            scriptrunner,
+            [
+                ScriptRunnerEvent.SCRIPT_STARTED,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SHUTDOWN,
+            ],
+        )
+        self._assert_text_deltas(scriptrunner, [text_utf])
+        mock_debug.assert_any_call(
+            "Failed to create page profile", exc_info=profile_error
+        )
+
+    def test_unresolved_page_sends_page_not_found_and_runs_main_script(self) -> None:
+        """An unresolvable page notifies the frontend and falls back to the main page."""
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.request_rerun(RerunData(page_name="missing_page"))
+
+        with patch.object(
+            scriptrunner._pages_manager,
+            "get_initial_active_script",
+            return_value=None,
+        ):
+            scriptrunner.start()
+            scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        page_not_found_msgs = [
+            msg for msg in scriptrunner.forward_msgs() if msg.HasField("page_not_found")
+        ]
+        assert len(page_not_found_msgs) == 1
+        assert page_not_found_msgs[0].page_not_found.page_name == "missing_page"
+        self._assert_text_deltas(scriptrunner, [text_utf])
+        shutdown_data = scriptrunner.event_data[-1]
+        assert (
+            shutdown_data["client_state"].page_script_hash
+            == scriptrunner._pages_manager.main_script_hash
+        )
+
+    def test_client_state_build_failure_still_emits_shutdown(self) -> None:
+        """A failure building the final client state is logged; SHUTDOWN still fires."""
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.request_stop()
+
+        with (
+            patch.object(
+                script_runner_module,
+                "ClientState",
+                side_effect=RuntimeError("client state failed"),
+            ),
+            patch.object(script_runner_module._LOGGER, "exception") as mock_exception,
+        ):
+            scriptrunner.start()
+            scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        assert scriptrunner.events == [ScriptRunnerEvent.SHUTDOWN]
+        assert scriptrunner.event_data[0]["client_state"] is None
+        mock_exception.assert_called_once_with(
+            "Failed to build client state during ScriptRunner shutdown"
+        )
+
     @parameterized.expand([(True,), (False,)])
     @patch("streamlit.runtime.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_runtime_error(self, show_error_details: bool):
@@ -2567,6 +2647,44 @@ def test_script_thread_methods_raise_when_called_off_thread(
     runner = TestScriptRunner("not_a_script.py")
     with pytest.raises(RuntimeError, match="must be called from the script thread"):
         invoke(runner)
+
+
+def test_get_script_run_ctx_raises_when_script_thread_has_no_ctx() -> None:
+    """A missing ScriptRunContext on the script thread is reported loudly."""
+    runner = TestScriptRunner("not_a_script.py")
+    with (
+        patch.object(runner, "_is_in_script_thread", return_value=True),
+        patch.object(script_runner_module, "get_script_run_ctx", return_value=None),
+        pytest.raises(RuntimeError, match="null ScriptRunContext"),
+    ):
+        runner._get_script_run_ctx()
+
+
+@pytest.mark.parametrize("should_stop", [True, False])
+def test_worker_thread_control_check_honors_coordinator_stop(
+    should_stop: bool,
+) -> None:
+    """Off the script thread, only a coordinator stop request interrupts a worker.
+
+    Parameters
+    ----------
+    should_stop : bool
+        Whether the parallel fragment coordinator requests a stop.
+    """
+    runner = TestScriptRunner("not_a_script.py")
+    runner._execing = True
+    runner._requests.request_stop()
+    ctx = MagicMock()
+    ctx.parallel_coordinator.should_stop.return_value = should_stop
+
+    with patch.object(script_runner_module, "get_script_run_ctx", return_value=ctx):
+        if should_stop:
+            with pytest.raises(StopException):
+                runner._maybe_handle_execution_control_request()
+        else:
+            # The script-level stop request is left for the script thread.
+            runner._maybe_handle_execution_control_request()
+            assert runner._requests._state == ScriptRequestType.STOP
 
 
 def test_set_execing_flag_disallows_nested_calls() -> None:

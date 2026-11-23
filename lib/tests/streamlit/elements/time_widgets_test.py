@@ -28,6 +28,7 @@ from streamlit.elements.widgets.time_widgets import (
     _DateTimeInputValues,
     _parse_max_date,
     _parse_min_date,
+    _validate_date_value,
 )
 from streamlit.errors import (
     StreamlitAPIException,
@@ -144,3 +145,69 @@ def test_time_input_serde_serialize(
     """Test that a datetime serializes to its time component and ``None`` to ``None``."""
     serde = TimeInputSerde(value=None, step=900)
     assert serde.serialize(value) == expected
+
+
+@pytest.mark.parametrize(
+    ("current_value", "default", "is_range", "expected"),
+    [
+        # Range widget with a single date in state resets to the range default.
+        (
+            date(2025, 3, 5),
+            (date(2025, 3, 1), date(2025, 3, 15)),
+            True,
+            (date(2025, 3, 1), date(2025, 3, 15)),
+        ),
+        # Single-date widget with a tuple in state resets to the single default.
+        (
+            (date(2025, 3, 1), date(2025, 3, 15)),
+            (date(2025, 3, 10),),
+            False,
+            date(2025, 3, 10),
+        ),
+        # Range widget without a default resets to an empty tuple.
+        (date(2025, 3, 5), None, True, ()),
+        # Single-date widget without a default resets to None.
+        ((date(2025, 3, 1),), None, False, None),
+    ],
+    ids=[
+        "range_mode_with_single_date",
+        "single_mode_with_tuple",
+        "range_mode_without_default",
+        "single_mode_without_default",
+    ],
+)
+def test_validate_date_value_resets_on_mode_mismatch(
+    current_value: date | tuple[date, ...],
+    default: tuple[date, ...] | None,
+    is_range: bool,
+    expected: date | tuple[date, ...] | None,
+) -> None:
+    """A value whose shape does not match the widget mode is reset.
+
+    The reset value is the parsed default, or an empty value matching the mode
+    when no default is configured.
+    """
+    parsed_values = _DateInputValues(
+        value=default,
+        is_range=is_range,
+        min=date(2020, 1, 1),
+        max=date(2030, 12, 31),
+    )
+    assert _validate_date_value(current_value, parsed_values, True) == (
+        expected,
+        True,
+    )
+
+
+def test_validate_date_value_skips_mismatch_without_explicit_bounds() -> None:
+    """Values are not validated when no explicit bounds were provided."""
+    parsed_values = _DateInputValues(
+        value=None,
+        is_range=True,
+        min=date(2020, 1, 1),
+        max=date(2030, 12, 31),
+    )
+    assert _validate_date_value(date(2025, 3, 5), parsed_values, False) == (
+        date(2025, 3, 5),
+        False,
+    )

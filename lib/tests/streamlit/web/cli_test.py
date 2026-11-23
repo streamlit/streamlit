@@ -902,6 +902,48 @@ def test_resolve_streamlit_command_returns_none_on_getattr_error() -> None:
         assert cli._resolve_streamlit_command("button") is None
 
 
+class _DynamicNamespace:
+    """A namespace whose public members only exist through ``__getattr__``."""
+
+    def __dir__(self) -> list[str]:
+        return ["broken", "dynamic"]
+
+    def __getattr__(self, name: str) -> object:
+        if name == "dynamic":
+            return _dynamic_member
+        raise RuntimeError(f"cannot load {name}")
+
+
+def _dynamic_member() -> None:
+    """A member resolved through ``__getattr__``."""
+
+
+@pytest.mark.parametrize(
+    ("command_name", "expected"),
+    [
+        (
+            "st.dynamic_namespace.dynamic",
+            ("st.dynamic_namespace.dynamic", _dynamic_member),
+        ),
+        ("st.dynamic_namespace.broken", None),
+    ],
+    ids=["dynamic_member", "dynamic_member_raises"],
+)
+def test_resolve_streamlit_command_falls_back_to_dynamic_getattr(
+    monkeypatch: pytest.MonkeyPatch,
+    command_name: str,
+    expected: tuple[str, object] | None,
+) -> None:
+    """Members listed by ``dir()`` but only available through ``__getattr__``
+    resolve dynamically, and a failing ``__getattr__`` means an unknown command.
+    """
+    monkeypatch.setattr(
+        "streamlit.dynamic_namespace", _DynamicNamespace(), raising=False
+    )
+
+    assert cli._resolve_streamlit_command(command_name) == expected
+
+
 def test_format_command_docs_omits_blank_docstring() -> None:
     """Objects without a docstring render as a header only."""
 

@@ -32,11 +32,15 @@ from starlette.testclient import TestClient
 from streamlit.runtime.media_file_storage import MediaFileKind
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat, GaugeStat
+from streamlit.web.server.starlette import starlette_routes
 from streamlit.web.server.starlette.starlette_routes import (
     _ensure_xsrf_cookie,
+    _ExpensiveStatsCache,
     _set_cors_headers,
     _set_unquoted_cookie,
     _stats_to_proto,
+    _stats_to_text,
     _with_base,
     create_app_static_serving_routes,
     create_bidi_component_routes,
@@ -682,6 +686,96 @@ def test_stats_to_proto_skips_empty_families() -> None:
     metric_set = _stats_to_proto({"empty_family": []})
 
     assert len(metric_set.metric_families) == 0
+
+
+def test_stats_to_text_skips_empty_families() -> None:
+    """Families without any stats emit no OpenMetrics header lines."""
+    gauge = GaugeStat(family_name="active_sessions", value=2, help="Active sessions.")
+
+    text = _stats_to_text({"empty_family": [], "active_sessions": [gauge]})
+
+    assert text == (
+        "# TYPE active_sessions gauge\n"
+        "# HELP active_sessions Active sessions.\n"
+        "active_sessions 2\n"
+        "# EOF\n"
+    )
+
+
+def test_metrics_endpoint_only_expensive_family_skips_cheap_fetch() -> None:
+    """Requesting only the cache memory family reads only that family."""
+    stats_mgr = MagicMock()
+    stats_mgr.registered_families.return_value = [
+        CACHE_MEMORY_FAMILY,
+        "active_sessions",
+    ]
+    stats_mgr.get_stats.return_value = {
+        CACHE_MEMORY_FAMILY: [CacheStat("my_cache", "", 42)]
+    }
+    runtime = MagicMock()
+    runtime.stats_mgr = stats_mgr
+
+    response = _client_for(create_metrics_routes(runtime, "")).get(
+        f"/_stcore/metrics?families={CACHE_MEMORY_FAMILY}"
+    )
+
+    assert response.status_code == 200
+    assert "cache_memory_bytes" in response.text
+    assert "active_sessions" not in response.text
+    stats_mgr.get_stats.assert_called_once_with(family_names=[CACHE_MEMORY_FAMILY])
+
+
+@pytest.mark.anyio
+async def test_expensive_stats_cache_logs_failure_and_retries() -> None:
+    """A failed computation reaches the waiter, is logged, and is not cached."""
+    stats_mgr = MagicMock()
+    stats_mgr.get_stats.side_effect = [
+        RuntimeError("stats failed"),
+        {CACHE_MEMORY_FAMILY: [CacheStat("my_cache", "", 42)]},
+    ]
+    cache = _ExpensiveStatsCache(stats_mgr)
+
+    with (
+        patch.object(starlette_routes._LOGGER, "error") as mock_error,
+        pytest.raises(RuntimeError, match="stats failed"),
+    ):
+        await cache.get()
+
+    mock_error.assert_called_once()
+    assert mock_error.call_args.args == (
+        "Failed to compute %s metrics",
+        CACHE_MEMORY_FAMILY,
+    )
+
+    result = await cache.get()
+
+    assert CACHE_MEMORY_FAMILY in result
+    assert stats_mgr.get_stats.call_count == 2
+
+
+@pytest.mark.anyio
+async def test_expensive_stats_cache_does_not_cache_cancelled_computation() -> None:
+    """Cancelling the shared computation clears it without caching a result."""
+    never_finishes = asyncio.Event()
+
+    async def blocked_run_in_threadpool(*args: Any, **kwargs: Any) -> Any:
+        await never_finishes.wait()
+
+    cache = _ExpensiveStatsCache(MagicMock())
+
+    with patch("starlette.concurrency.run_in_threadpool", blocked_run_in_threadpool):
+        waiter = asyncio.create_task(cache.get())
+        await asyncio.sleep(0)
+        shared = cache._inflight
+        assert shared is not None
+        shared.cancel()
+
+        with pytest.raises(asyncio.CancelledError):
+            await asyncio.wait_for(waiter, timeout=5)
+
+    assert shared.cancelled()
+    assert cache._inflight is None
+    assert cache._result is None
 
 
 def test_health_options_returns_no_content() -> None:

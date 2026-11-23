@@ -388,6 +388,59 @@ def test_missing_bundled_meta_skill_is_a_silent_no_op(
 
 
 @pytest.mark.usefixtures("bundled")
+def test_copy_with_a_folder_where_a_bundled_file_goes_is_left_untouched(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A folder in place of a bundled file blocks the update, so the copy's
+    official files are not partly replaced.
+    """
+    copy = _write_skill_folder(home, ".claude/skills", {"SKILL.md": _OLD_SKILL_MD})
+    (copy / "scripts" / "discover.py").mkdir(parents=True)
+
+    skills.update_global_skills()
+
+    assert _files(copy) == {"SKILL.md": _OLD_SKILL_MD}
+    assert (copy / "scripts" / "discover.py").is_dir()
+    assert capsys.readouterr().out == ""
+
+
+def test_bundled_meta_skill_without_skill_md_is_a_silent_no_op(
+    bundled: Path, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A bundled meta-skill missing its SKILL.md updates no copy."""
+    (bundled / "SKILL.md").unlink()
+    copy = _write_skill_folder(home, ".claude/skills", _OLD_FILES)
+
+    skills.update_global_skills()
+
+    assert _files(copy) == _OLD_FILES
+    assert capsys.readouterr().out == ""
+
+
+@pytest.mark.usefixtures("bundled")
+def test_failure_to_report_an_update_is_logged_not_raised(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """When the update line cannot be built, the copy is still updated and the
+    error is only logged at debug level.
+    """
+    copy = _write_skill_folder(home, ".claude/skills", _OLD_FILES)
+    error = RuntimeError("cannot format path")
+
+    with (
+        patch.object(skills, "_get_display_path", side_effect=error),
+        patch.object(skills._LOGGER, "debug") as mock_debug,
+    ):
+        skills.update_global_skills()
+
+    assert _files(copy) == _NEW_FILES
+    assert capsys.readouterr().out == ""
+    mock_debug.assert_called_once_with(
+        "Could not report the updated Streamlit skills", exc_info=error
+    )
+
+
+@pytest.mark.usefixtures("bundled")
 def test_unresolvable_home_directory_is_a_silent_no_op(
     capsys: pytest.CaptureFixture[str],
 ) -> None:

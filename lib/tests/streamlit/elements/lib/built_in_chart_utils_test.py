@@ -510,3 +510,61 @@ def test_get_color_encoding_invalid_color_raises() -> None:
             alias_to_original={},
         )
     assert exc.value.error_id == "chart-invalid-color"
+
+
+@pytest.mark.parametrize(
+    ("stack", "expected_offset"),
+    [
+        (False, {"field": "group"}),
+        (True, None),
+    ],
+    ids=["unstacked", "stacked"],
+)
+def test_generate_chart_offsets_bars_by_color_only_when_unstacked(
+    stack: bool, expected_offset: dict[str, str] | None
+) -> None:
+    """Unstacked bar charts with a color column group bars via an x offset."""
+    df = pd.DataFrame(
+        {"x": [1, 2, 1, 2], "y": [1, 2, 3, 4], "group": ["a", "a", "b", "b"]}
+    )
+    chart = chart_utils.generate_chart(
+        chart_utils.ChartType.VERTICAL_BAR,
+        df,
+        x_from_user="x",
+        y_from_user="y",
+        color_from_user="group",
+        stack=stack,
+    )
+    encoding = chart.to_dict()["encoding"]
+    assert encoding.get("xOffset") == expected_offset
+
+
+def test_generate_chart_aliased_columns_keep_original_titles() -> None:
+    """Columns renamed to safe aliases still show their original names to users.
+
+    Column names containing characters such as ``.`` are aliased internally, so
+    the color legend and every tooltip must use the original name as title.
+    """
+    df = pd.DataFrame(
+        {
+            "x.val": [1, 2],
+            "y": [3, 4],
+            "group.name": ["alpha", "beta"],
+            "size.val": [5, 6],
+        }
+    )
+    chart = chart_utils.generate_chart(
+        chart_utils.ChartType.SCATTER,
+        df,
+        x_from_user="x.val",
+        y_from_user="y",
+        color_from_user="group.name",
+        size_from_user="size.val",
+    )
+    encoding = chart.to_dict()["encoding"]
+
+    assert encoding["color"]["title"] == "group.name"
+    assert "." not in encoding["color"]["field"]
+    tooltip_titles = [tooltip.get("title") for tooltip in encoding["tooltip"]]
+    # The unaliased "y" column has no title because its field name is unchanged.
+    assert tooltip_titles == ["x.val", None, "group.name", "size.val"]

@@ -33,10 +33,12 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     is_pandas_version_less_than,
 )
+from streamlit.elements import arrow
 from streamlit.elements.arrow import (
     DataframeSelectionSerde,
     DataframeSelectionState,
     DataframeState,
+    _lazy_dataframe_data,
     _validate_selection_state,
     parse_selection_mode,
 )
@@ -50,6 +52,7 @@ from streamlit.errors import (
     StreamlitIncompatibleParametersError,
     StreamlitValueError,
 )
+from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.Dataframe_pb2 import LazyDataframe as LazyDataframeProto
 from streamlit.testing.v1 import AppTest
@@ -1436,6 +1439,22 @@ def test_dataframe_selection_serde_deserialize_survives_deepcopy() -> None:
     assert isinstance(copied.selection, DataframeSelectionState)
 
 
+def test_dataframe_state_non_selection_key_uses_read_only_lookup() -> None:
+    """Keys other than ``selection`` use the read-only base lookup.
+
+    Nested dicts are wrapped read-only, and a missing key raises ``KeyError``.
+    """
+    state = DataframeState({"selection": _EMPTY_SELECTION, "extra": {"a": 1}})
+
+    extra = state["extra"]
+    assert extra == {"a": 1}
+    assert not isinstance(extra, DataframeSelectionState)
+    with pytest.raises(TypeError, match="read-only"):
+        extra["a"] = 2
+    with pytest.raises(KeyError):
+        state["missing"]
+
+
 def test_dataframe_selection_serde_returns_empty_when_no_default() -> None:
     """``DataframeSelectionSerde.deserialize`` returns the empty selection when neither UI value nor default exists."""
     assert DataframeSelectionSerde().deserialize(None)["selection"] == _EMPTY_SELECTION
@@ -1616,6 +1635,18 @@ class ArrowDataFrameLazyTest(DeltaGeneratorTestCase):
         assert not proto.HasField("lazy_data")
         assert proto.arrow_data.data != b""
 
+    def test_lazy_true_without_runtime_falls_back_to_eager(self) -> None:
+        """Without a running server, lazy delivery falls back to eager rendering."""
+        df = pd.DataFrame({"a": np.arange(5_000)})
+        with patch("streamlit.runtime.exists", return_value=False):
+            st.dataframe(df, lazy=True)
+
+        proto = self._last_dataframe_proto()
+        assert not proto.HasField("lazy_data")
+        assert convert_arrow_bytes_to_pandas_df(proto.arrow_data.data)[
+            "a"
+        ].tolist() == list(range(5_000))
+
     def test_lazy_true_small_dataframe_stays_eager(self):
         """lazy=True keeps eager rendering for small inputs (<= 1000 rows)."""
         df = pd.DataFrame({"a": np.arange(500)})
@@ -1721,3 +1752,32 @@ class ArrowDataFrameLazyTest(DeltaGeneratorTestCase):
         assert proto.HasField("lazy_data")
         assert list(proto.column_order) == ["b", "a"]
         assert proto.columns != ""
+
+
+def test_lazy_dataframe_data_without_initial_chunk_is_none() -> None:
+    """A lazy dataframe without initial chunk bytes reports no agent data."""
+    assert _lazy_dataframe_data(LazyDataframeProto()) is None
+
+
+def test_marshall_styler_requires_string_default_uuid() -> None:
+    """Marshalling a Styler without a string default UUID raises."""
+    styler = pd.DataFrame({"a": [1, 2]}).style
+    with pytest.raises(
+        StreamlitAPIException, match="Default UUID must be a string"
+    ) as exc:
+        arrow.marshall(ArrowDataProto(), styler, default_uuid=None)
+    assert exc.value.error_id == "styler-default-uuid-must-be-string"
+
+
+def test_marshall_styler_populates_styler_fields() -> None:
+    """Marshalling a Styler fills both the styler fields and the Arrow data."""
+    df = pd.DataFrame({"a": [1, 2]})
+    styler = df.style.set_uuid("custom_uuid").set_caption("My caption")
+    proto = ArrowDataProto()
+
+    arrow.marshall(proto, styler, default_uuid="fallback_uuid")
+
+    assert proto.styler.uuid == "custom_uuid"
+    assert proto.styler.caption == "My caption"
+    assert len(proto.styler.display_values) > 0
+    pd.testing.assert_frame_equal(convert_arrow_bytes_to_pandas_df(proto.data), df)

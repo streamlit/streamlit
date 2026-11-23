@@ -253,6 +253,13 @@ graph LR
             'flowchart TD\n    A["accTitle: Label"]\n    A --> B',
             [],
         ),
+        # Blank lines between directives are skipped.
+        (
+            "flowchart TD\n\n   \naccTitle: After blanks\nA --> B",
+            ["accTitle: After blanks"],
+        ),
+        # A preamble without a diagram type has no directives.
+        ("%% only a comment\n%%{init: {}}%%\n", []),
     ],
 )
 def test_find_author_accessibility_directives(body: str, expected: list[str]) -> None:
@@ -345,6 +352,14 @@ def test_apply_alt_marker_preserves_frontmatter_and_labels() -> None:
 def test_apply_alt_marker_skips_preamble(body: str, expected: str) -> None:
     """%% stAlt precedes the diagram type after comments, init, and frontmatter."""
     assert _apply_alt_marker(body, "Named") == expected
+
+
+def test_apply_alt_marker_after_preamble_without_trailing_newline() -> None:
+    """The marker starts on its own line when the preamble lacks a newline."""
+    assert (
+        _apply_alt_marker("%% only a comment", "Named")
+        == "%% only a comment\n%% stAlt: Named\n"
+    )
 
 
 def test_apply_alt_marker_one_line_body() -> None:

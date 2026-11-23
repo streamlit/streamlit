@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 
 from streamlit import config
 from streamlit.components.v2.component_manager import BidiComponentManager
+from streamlit.config_option import ConfigOption
 from streamlit.runtime import Runtime
 from streamlit.web.server.server import Server
 from streamlit.web.server.starlette.starlette_server import (
@@ -1510,6 +1511,92 @@ class TestUvicornRunner:
             runner = UvicornRunner("myapp:app")
             with pytest.raises(RuntimeError, match="Unix sockets are not supported"):
                 runner.run()
+
+    def test_run_reads_back_os_assigned_port_for_port_zero(self) -> None:
+        """Port 0 binds an OS-assigned port, which uvicorn and config then use."""
+        mock_socket = mock.MagicMock(spec=socket.socket)
+        mock_socket.getsockname.return_value = ("127.0.0.1", 54321)
+
+        with (
+            patch_config_options({"server.address": "127.0.0.1", "server.port": 0}),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._get_uvicorn_config_kwargs",
+                return_value={},
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ) as bind_socket,
+            patch.object(config, "set_option") as set_option,
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            runner = UvicornRunner("myapp:app")
+            runner.run()
+
+        assert bind_socket.call_args[0][1] == 0
+        set_option.assert_called_once_with(
+            "server.port", 54321, ConfigOption.STREAMLIT_DEFINITION
+        )
+        uvicorn_config = uvicorn_server_cls.call_args[0][0]
+        assert uvicorn_config.port == 54321
+
+    def test_run_exits_after_exhausting_port_retries(self) -> None:
+        """When every port in the search range is taken, run() logs and exits."""
+        with (
+            patch_config_options({"server.address": "127.0.0.1", "server.port": 8501}),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._get_uvicorn_config_kwargs",
+                return_value={},
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._is_port_manually_set",
+                return_value=False,
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server.MAX_PORT_SEARCH_RETRIES",
+                2,
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                side_effect=OSError(errno.EADDRINUSE, "Address already in use"),
+            ) as bind_socket,
+            patch(
+                "streamlit.web.server.starlette.starlette_server._LOGGER"
+            ) as mock_logger,
+            patch.object(config, "set_option"),
+            patch("uvicorn.Server") as uvicorn_server_cls,
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            UvicornRunner("myapp:app").run()
+
+        assert exc_info.value.code == 1
+        assert [call.args[1] for call in bind_socket.call_args_list] == [
+            8501,
+            8502,
+            8503,
+        ]
+        mock_logger.error.assert_called_once()
+        assert mock_logger.error.call_args.args[1:] == (8503, 2)
+        uvicorn_server_cls.assert_not_called()
+
+    def test_run_propagates_non_retryable_os_errors(self) -> None:
+        """OS errors other than port conflicts are raised without trying other ports."""
+        with (
+            patch_config_options({"server.address": "127.0.0.1", "server.port": 8501}),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._get_uvicorn_config_kwargs",
+                return_value={},
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                side_effect=OSError(errno.EADDRNOTAVAIL, "Cannot assign address"),
+            ) as bind_socket,
+            pytest.raises(OSError, match="Cannot assign address") as exc_info,
+        ):
+            UvicornRunner("myapp:app").run()
+
+        assert exc_info.value.errno == errno.EADDRNOTAVAIL
+        bind_socket.assert_called_once()
 
 
 class TestServerProperties:
