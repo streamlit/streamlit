@@ -86,7 +86,7 @@ dependencies = [
   # See https://github.com/streamlit/streamlit/issues/17422.
   # PyArrow 25.0.0 can segfault when first imported from a short-lived worker thread.
   # See https://github.com/apache/arrow/issues/50471.
-  "pyarrow>=12.0.0,!=25.0.0,<27",
+  "pyarrow!=25.0.0,>=26.0.1,<27",
   "requests>=2.27,<3",
   # Starlette requires typing-extensions >= 4.10.
   "typing-extensions>=4.10.0,<5",
