@@ -50,14 +50,23 @@ The first sections, from [Where the state lives](#where-the-state-lives) to [Cos
 
 ### Where the state lives
 
-Per-run state hangs off `ctx.shared`, which every thread in the run shares. Per-thread state lives in `ThreadState`. A simplified outline, leaving out fields unrelated to telemetry, with fields from query time and CPU time marked:
+Per-run state hangs off `ctx.shared`, which every thread in the run shares. Per-thread state lives in `ThreadState`. A simplified outline, leaving out fields unrelated to telemetry, with fields from later additions marked:
 
 ```python
-class SharedRunState:  # ctx.shared: one per script run, shared by all its threads
+# Render timing is measured only in the browser, so it has no server-side state.
+
+class ScriptRunContext:  # ctx: reset() at the start of each run
+    shared: SharedRunState
+    rerun_reason: RerunReason  # rerun reason: set once, when the run starts
+    rerun_element_type: str | None  # rerun reason
+
+
+class SharedRunState:  # ctx.shared: shared by all the run's threads
     cache_stats: RunCacheStats
     parallel_fragments: RunParallelFragmentStats
     query_stats: RunQueryStats  # query time
     command_cpu_time: float  # CPU time: added under a lock, from any thread
+    # data size: its per-thread registry goes here once designed
 
 
 class RunCacheStats:  # one per run, shared by all its threads
@@ -71,6 +80,7 @@ class ThreadCacheStats:  # written only by its own thread
     tracked_command_time: float  # listed commands during recorded calls
     _calls_in_cache_code: int  # open calls hashing or reading a result
     _overlap: _OverlapGroup | None  # overlapping async calls, scaled on close
+    # per-function cache stats: counters keyed by function go here once designed
 
 
 class RunQueryStats:  # query time: the same pattern as RunCacheStats
@@ -106,8 +116,6 @@ class FragmentThreadState:  # ThreadState: one per thread, copied to attached th
     cache_compute: CacheComputeScope | None  # the copy shares the same object
     parallel_fragment_run: ParallelFragmentRun | None  # the copy shares the same object
 ```
-
-The other additions don't add fields here. Rerun reason is a per-run value set once, at the start of the run, so it's stored on `ScriptRunContext` next to the other values `reset()` sets. Render timing exists only in the browser. Per-function cache stats and data size add their fields when they're designed.
 
 `ScriptRunContext.reset()` calls `SharedRunState.reset()` at the start of each run, before any parallel fragment worker starts. `reset()` replaces `cache_stats`, `query_stats` and `parallel_fragments` with new objects rather than clearing them, the same way it replaces the tracked command list. Work still running from the previous run, such as a cached call on a thread the script didn't join, holds direct references to that run's objects and finishes into them. Calls that start after the reset find the new objects through `ctx.shared`.
 
