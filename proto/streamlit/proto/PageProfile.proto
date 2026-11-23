@@ -73,8 +73,8 @@ message PageProfile {
 // times, times from threads that ran at the same time are added together and
 // can exceed wall-clock time; ParallelFragmentUsage reports the share of
 // parallel fragments. On one thread, async cached calls awaited at the same
-// time are scaled down together, so their times add up to at most the
-// wall-clock time they span, minus command times.
+// time each count the time they share, which async_overlap_time reports, so
+// the cache time is compute + wait + overhead time minus async_overlap_time.
 // lib/streamlit/runtime/caching/cache_call_timer.py lists which calls are
 // recorded.
 message CacheUsage {
@@ -82,6 +82,11 @@ message CacheUsage {
   CacheTypeUsage cache_data = 1;
   // Unset when no st.cache_resource call was recorded.
   CacheTypeUsage cache_resource = 2;
+  // How much async cached calls awaited at the same time on one thread counted
+  // more than once, across both cache types: the sum of their compute, wait
+  // and overhead times minus the wall-clock time they spanned, less command
+  // times. 0 when no calls overlapped.
+  int64 async_overlap_time = 3;
 }
 
 // Recorded calls for one cache type, with times in microseconds. stale_hits
@@ -141,7 +146,8 @@ message ParallelFragmentUsage {
 }
 
 // One parallel fragment run on its worker thread, with times in microseconds.
-// Its user code time is exec_time minus the command and cache times.
+// Its user code time is exec_time minus command_time and the cache time:
+// compute, wait and overhead time minus cache_async_overlap_time.
 message ParallelFragmentRun {
   // When the run started, measured from the start of the script run.
   int64 start_time = 1;
@@ -156,6 +162,9 @@ message ParallelFragmentRun {
   int64 cache_compute_time = 4;
   int64 cache_wait_time = 5;
   int64 cache_overhead_time = 6;
+  // 7-10 are held for planned query-time and CPU-time fields.
+  // The run's CacheUsage.async_overlap_time.
+  int64 cache_async_overlap_time = 11;
 }
 
 // Agent API activity in one server process. Cumulative since this process

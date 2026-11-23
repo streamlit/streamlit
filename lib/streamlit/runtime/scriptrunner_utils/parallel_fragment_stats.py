@@ -16,9 +16,9 @@
 
 Fragments with ``parallel=True`` run on worker threads alongside the main
 script, so their times would overlap the main script's if they were added to
-the run totals alone. Each fragment run records its own wall time, listed
-command time and cached calls instead, so the page profile can report them
-apart from the main script's.
+the run totals alone. Each fragment run records its own wall time and
+``ThreadRunStats`` instead, so the page profile can report them apart from the
+main script's.
 """
 
 from __future__ import annotations
@@ -28,51 +28,37 @@ import threading
 import time
 from typing import TYPE_CHECKING
 
-from streamlit.runtime.scriptrunner_utils.cache_run_stats import ThreadCacheStats
+from streamlit.runtime.scriptrunner_utils.run_stats import ThreadRunStats
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from streamlit.runtime.scriptrunner_utils.cache_run_stats import RunCacheStats
+    from streamlit.runtime.scriptrunner_utils.run_stats import RunStats
 
 
 class ParallelFragmentRun:
     """One parallel fragment's run, recorded on its worker thread.
 
     Only the worker thread counts toward the run. Threads the fragment attaches
-    with ``add_script_run_ctx`` count toward the main script, like other
-    threads a user starts.
+    with ``add_script_run_ctx`` record into their own ``ThreadRunStats``, so
+    they count toward the main script, like other threads a user starts.
     """
 
-    __slots__ = ("_worker_id", "cache_stats", "command_time", "end", "start")
+    __slots__ = ("end", "start", "stats")
 
     def __init__(self, start: float) -> None:
         # perf_counter times; end is None until the fragment finishes.
         self.start = start
         self.end: float | None = None
-        # Time of listed commands that ran on the worker thread.
-        self.command_time = 0.0
-        self.cache_stats = ThreadCacheStats()
-        self._worker_id = threading.get_ident()
-
-    def add_command_time(self, seconds: float) -> None:
-        """Add a listed command's time, if it ran on the worker thread."""
-        if threading.get_ident() == self._worker_id:
-            self.command_time += seconds
-
-    def __deepcopy__(self, memo: dict[int, object]) -> ParallelFragmentRun:
-        # add_script_run_ctx deep-copies the worker's FragmentThreadState for
-        # threads it attaches. Returning the same run avoids copying its cache
-        # stats, and add_command_time's worker-thread check then ignores those
-        # threads.
-        return self
+        # What the worker thread records while the fragment runs.
+        self.stats = ThreadRunStats()
 
 
 class RunParallelFragmentStats:
     """The parallel fragment runs of one script run."""
 
-    def __init__(self, cache_stats: RunCacheStats) -> None:
-        self._cache_stats = cache_stats
+    def __init__(self, stats: RunStats) -> None:
+        self._stats = stats
         # Guards the list of runs, which workers append to as they start.
         self._lock = threading.Lock()
         self._runs: list[ParallelFragmentRun] = []
@@ -84,14 +70,14 @@ class RunParallelFragmentStats:
     def recording_run(self) -> Generator[ParallelFragmentRun, None, None]:
         """Record a parallel fragment's run on the calling worker thread.
 
-        The worker's cached calls go to the run's own cache stats while it
-        runs, and still count toward the run's cache totals.
+        Everything the worker records while the fragment runs goes to the run's
+        own stats, which still count toward the run's totals.
         """
         run = ParallelFragmentRun(time.perf_counter())
         with self._lock:
             self._runs.append(run)
         try:
-            with self._cache_stats.recording_into(run.cache_stats):
+            with self._stats.recording_into(run.stats):
                 yield run
         finally:
             run.end = time.perf_counter()

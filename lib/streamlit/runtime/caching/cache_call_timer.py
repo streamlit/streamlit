@@ -52,6 +52,10 @@ the result, and replaying cached elements). Listed commands that run during the
 call, such as ``st.*`` calls inside the cached function or the cache write, are
 left out of all three. That includes commands on threads the cached function
 attaches, until its computation ends.
+
+Async cached calls awaited at the same time on one event loop each count the
+time they share. Their times aren't changed; the run's ``async_overlap_time``
+reports how much they counted more than once.
 """
 
 from __future__ import annotations
@@ -203,7 +207,6 @@ class CacheCallTimer:
     def _add_to_run_totals(
         self, thread_stats: ThreadCacheStats, totals: CacheTotals
     ) -> None:
-        totals = thread_stats.totals_for_finished_call(totals)
         totals.calls += 1
         if self._is_hit:
             totals.hits += 1
@@ -217,25 +220,27 @@ class CacheCallTimer:
         command_time = thread_stats.tracked_command_time - self._command_time_at_start
         # Attached threads' commands ran during the computation, so only compute
         # time contains them. The overhead below never included them.
-        totals.compute_time += max(
+        compute_time = max(
             self._compute_time
             - self._command_time_in_compute
             - self._attached_command_time,
             0,
         )
-        totals.wait_time += self._wait_time
         # Command time during the compute is already excluded from compute_time,
         # so only the rest of command_time comes out of the overhead. Wall-clock
         # overlap between concurrent async calls on one event loop can make the
         # remainder negative.
-        totals.overhead_time += max(
+        overhead_time = max(
             (now - self._start)
             - self._wait_time
             - self._compute_time
             - (command_time - self._command_time_in_compute),
             0,
         )
-        thread_stats.close_call(now)
+        totals.compute_time += compute_time
+        totals.wait_time += self._wait_time
+        totals.overhead_time += overhead_time
+        thread_stats.close_call(now, compute_time + self._wait_time + overhead_time)
 
 
 def start_call(cache_type: CacheType, metrics: FunctionCacheMetrics) -> CacheCallTimer:
@@ -261,7 +266,7 @@ def start_call(cache_type: CacheType, metrics: FunctionCacheMetrics) -> CacheCal
     # nesting on the same thread.
     if thread_state.in_cache_compute:
         return CacheCallTimer(metrics)
-    thread_stats = ctx.shared.cache_stats.current_thread_stats()
+    thread_stats = ctx.shared.stats.current_thread_stats().cache
     # Skip calls made while another call on this thread hashes its arguments or
     # reads its result, such as from hash_funcs; that call's overhead covers them.
     if thread_stats.is_in_cache_code:

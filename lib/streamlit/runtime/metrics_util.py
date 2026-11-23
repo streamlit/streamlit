@@ -40,10 +40,7 @@ from streamlit.proto.PageProfile_pb2 import (
     ParallelFragmentRun as ParallelFragmentRunProto,
 )
 from streamlit.runtime.agent import usage as agent_usage
-from streamlit.runtime.scriptrunner_utils.cache_run_stats import (
-    CacheTotals,
-    RunCacheTotals,
-)
+from streamlit.runtime.scriptrunner_utils.cache_run_stats import RunCacheTotals
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     FragmentThreadState,
@@ -645,11 +642,12 @@ def _record_command_time(
 ) -> None:
     """Set a tracked command's time, and report it if the command is listed.
 
-    A listed command's time is added to:
+    A listed command's time is added to the thread's stats, which on a parallel
+    fragment's worker are the fragment run's. It's also subtracted from at most
+    one cached call:
 
-    - the parallel fragment's run, on a parallel fragment's worker thread;
-    - the run's cache totals, while a recorded cached call runs on this thread,
-      so that call leaves the command out of its times;
+    - a recorded cached call open on this thread, which leaves the command out
+      of its times;
     - otherwise, the cached computation that attached this thread, which
       subtracts it from its compute time.
     """
@@ -657,10 +655,9 @@ def _record_command_time(
         command_telemetry.time = to_microseconds(seconds)
         if ctx is None or not is_command_listed:
             return
-        run = thread_state.parallel_fragment_run if thread_state is not None else None
-        if run is not None:
-            run.add_command_time(seconds)
-        if ctx.shared.cache_stats.record_tracked_command_time(seconds):
+        stats = ctx.shared.stats.current_thread_stats()
+        stats.command_time += seconds
+        if stats.cache.record_tracked_command_time(seconds):
             return
         scope = thread_state.cache_compute if thread_state is not None else None
         # A long-lived attached thread keeps the scope after the computation
@@ -849,26 +846,37 @@ def _copy_cache_totals(run_totals: RunCacheTotals, cache_usage: CacheUsage) -> N
         usage.compute_time = to_microseconds(totals.compute_time)
         usage.wait_time = to_microseconds(totals.wait_time)
         usage.overhead_time = to_microseconds(totals.overhead_time)
+    if run_totals.async_overlap_time > 0:
+        cache_usage.async_overlap_time = to_microseconds(run_totals.async_overlap_time)
 
 
 def _fill_cache_usage(
     page_profile: PageProfile, ctx: ScriptRunContext, now: float
 ) -> None:
     """Copy the run's cached-call totals onto the profile."""
-    _copy_cache_totals(ctx.shared.cache_stats.totals(now), page_profile.cache_usage)
+    totals = RunCacheTotals.combine(
+        (stats.cache for stats in ctx.shared.stats.all_thread_stats()), now
+    )
+    _copy_cache_totals(totals, page_profile.cache_usage)
 
 
 def _set_parallel_fragment_run_times(
     entry: ParallelFragmentRunProto,
     exec_time: float,
     command_time: float,
-    cache: CacheTotals,
+    cache: RunCacheTotals,
 ) -> None:
+    data, resource = cache.cache_data, cache.cache_resource
     entry.exec_time = to_microseconds(exec_time)
     entry.command_time = to_microseconds(command_time)
-    entry.cache_compute_time = to_microseconds(cache.compute_time)
-    entry.cache_wait_time = to_microseconds(cache.wait_time)
-    entry.cache_overhead_time = to_microseconds(cache.overhead_time)
+    entry.cache_compute_time = to_microseconds(
+        data.compute_time + resource.compute_time
+    )
+    entry.cache_wait_time = to_microseconds(data.wait_time + resource.wait_time)
+    entry.cache_overhead_time = to_microseconds(
+        data.overhead_time + resource.overhead_time
+    )
+    entry.cache_async_overlap_time = to_microseconds(cache.async_overlap_time)
 
 
 def _fill_parallel_fragment_usage(
@@ -887,32 +895,28 @@ def _fill_parallel_fragment_usage(
     usage.run_count = len(runs)
     usage.wait_time = to_microseconds(stats.wait_time)
 
-    all_runs_totals = RunCacheTotals()
+    all_runs_cache = RunCacheTotals()
     overflow_exec_time = 0.0
     overflow_command_time = 0.0
-    overflow_cache = CacheTotals()
+    overflow_cache = RunCacheTotals()
     for index, run in enumerate(runs):
-        run_totals = RunCacheTotals()
-        run.cache_stats.add_to(run_totals.cache_data, run_totals.cache_resource, now)
-        all_runs_totals.cache_data.add(run_totals.cache_data)
-        all_runs_totals.cache_resource.add(run_totals.cache_resource)
+        run_cache = RunCacheTotals()
+        run.stats.cache.add_to(run_cache, now)
+        all_runs_cache.add(run_cache)
         exec_time = (run.end if run.end is not None else now) - run.start
+        command_time = run.stats.command_time
         if index < _MAX_PARALLEL_FRAGMENT_RUNS:
-            cache = CacheTotals()
-            cache.add(run_totals.cache_data)
-            cache.add(run_totals.cache_resource)
             entry = usage.runs.add(start_time=to_microseconds(run.start - run_start))
-            _set_parallel_fragment_run_times(entry, exec_time, run.command_time, cache)
+            _set_parallel_fragment_run_times(entry, exec_time, command_time, run_cache)
         else:
             overflow_exec_time += exec_time
-            overflow_command_time += run.command_time
-            overflow_cache.add(run_totals.cache_data)
-            overflow_cache.add(run_totals.cache_resource)
+            overflow_command_time += command_time
+            overflow_cache.add(run_cache)
     if len(runs) > _MAX_PARALLEL_FRAGMENT_RUNS:
         _set_parallel_fragment_run_times(
             usage.overflow, overflow_exec_time, overflow_command_time, overflow_cache
         )
-    _copy_cache_totals(all_runs_totals, usage.cache_usage)
+    _copy_cache_totals(all_runs_cache, usage.cache_usage)
 
 
 def create_page_profile_message(

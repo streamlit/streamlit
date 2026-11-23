@@ -14,151 +14,145 @@
 
 from __future__ import annotations
 
-import threading
-
 import pytest
 
 from streamlit.runtime.scriptrunner_utils.cache_run_stats import (
     CacheTotals,
-    RunCacheStats,
+    RunCacheTotals,
     ThreadCacheStats,
 )
 
 
-def test_each_thread_gets_its_own_stats() -> None:
-    """Threads never share totals, and each is listed once."""
-    run_stats = RunCacheStats()
-    main_stats = run_stats.current_thread_stats()
-    assert run_stats.current_thread_stats() is main_stats
-
-    worker_stats: list[ThreadCacheStats] = []
-    thread = threading.Thread(
-        target=lambda: worker_stats.append(run_stats.current_thread_stats())
-    )
-    thread.start()
-    thread.join()
-
-    assert worker_stats[0] is not main_stats
-    assert run_stats._threads == [main_stats, worker_stats[0]]
+def _record_call(
+    stats: ThreadCacheStats, now: float, *, compute_time: float = 0.0
+) -> None:
+    """Add a finished cache_data call's compute time and close it, as
+    ``CacheCallTimer.finish`` does.
+    """
+    stats.cache_data.calls += 1
+    stats.cache_data.compute_time += compute_time
+    stats.close_call(now, compute_time)
 
 
-def test_totals_combine_threads() -> None:
-    """``totals()`` adds every thread's counts and times per cache type."""
-    run_stats = RunCacheStats()
-    main_stats = run_stats.current_thread_stats()
-    main_stats.open_call(0.0)
-    main_stats.cache_data.calls = 2
-    main_stats.cache_data.waits = 1
-    main_stats.cache_data.compute_time = 1.0
-    main_stats.close_call(3.0)
+def test_combine_adds_every_threads_totals() -> None:
+    """``combine()`` adds every thread's counts, times and overlap per cache
+    type.
+    """
+    first = ThreadCacheStats()
+    first.open_call(0.0)
+    first.cache_data.waits = 1
+    _record_call(first, 3.0, compute_time=1.0)
+    first.async_overlap_time = 0.25
 
-    def worker() -> None:
-        stats = run_stats.current_thread_stats()
-        stats.open_call(0.0)
-        stats.cache_data.calls = 1
-        stats.cache_data.waits = 1
-        stats.cache_resource.calls = 1
-        stats.cache_resource.overhead_time = 0.5
-        stats.close_call(3.0)
+    second = ThreadCacheStats()
+    second.open_call(0.0)
+    second.cache_data.waits = 1
+    second.cache_resource.calls = 1
+    second.cache_resource.overhead_time = 0.5
+    _record_call(second, 3.0)
 
-    thread = threading.Thread(target=worker)
-    thread.start()
-    thread.join()
-
-    totals = run_stats.totals(3.0)
+    totals = RunCacheTotals.combine((first, second), 3.0)
     cache_data, cache_resource = totals.cache_data, totals.cache_resource
-    assert (cache_data.calls, cache_data.waits, cache_data.compute_time) == (3, 2, 1.0)
+    assert (cache_data.calls, cache_data.waits, cache_data.compute_time) == (2, 2, 1.0)
     assert (cache_resource.calls, cache_resource.overhead_time) == (1, 0.5)
+    assert totals.async_overlap_time == 0.25
 
 
 def test_tracked_command_time_counts_only_inside_calls() -> None:
-    """Command time is recorded only while a cached call runs on the thread."""
-    run_stats = RunCacheStats()
-    # Before the thread has any stats.
-    assert not run_stats.record_tracked_command_time(1.0)
-    stats = run_stats.current_thread_stats()
-    # Outside a call.
-    assert not run_stats.record_tracked_command_time(1.0)
+    """Command time is recorded only while a cached call is open on the thread."""
+    stats = ThreadCacheStats()
+    assert not stats.record_tracked_command_time(1.0)
     assert stats.tracked_command_time == 0
 
     stats.open_call(0.0)
-    assert run_stats.record_tracked_command_time(0.25)
-    stats.close_call(1.0)
+    assert stats.record_tracked_command_time(0.25)
+    stats.close_call(1.0, 0.0)
 
     assert stats.tracked_command_time == 0.25
-
-
-def _thread_totals(stats: ThreadCacheStats, now: float) -> tuple[CacheTotals, ...]:
-    cache_data, cache_resource = CacheTotals(), CacheTotals()
-    stats.add_to(cache_data, cache_resource, now)
-    return cache_data, cache_resource
+    assert not stats.record_tracked_command_time(1.0)
 
 
 @pytest.mark.parametrize(
-    ("recorded", "expected"),
+    ("recorded", "expected_overlap"),
     [
-        # The calls span 2s, 0.5s of which is commands. Times up to 1.5s are
-        # kept as recorded.
-        (1.5, 1.5),
-        (1.0, 1.0),
-        # Overlapping calls recorded 3s in a 1.5s span: halve them.
+        # The calls span 2s, 0.5s of which is commands, so up to 1.5s of cache
+        # time fits without overlap.
+        (1.5, 0.0),
+        (1.0, 0.0),
+        # Overlapping calls recorded 3s in a 1.5s span.
         (3.0, 1.5),
     ],
 )
-def test_overlapping_calls_are_scaled_to_their_span(
-    recorded: float, expected: float
+def test_overlap_is_the_time_beyond_the_groups_span(
+    recorded: float, expected_overlap: float
 ) -> None:
-    """Times from overlapping calls are scaled to the span they ran in."""
+    """Overlapping calls keep their times, and the time they exceed their span
+    by is reported as overlap.
+    """
     stats = ThreadCacheStats()
     stats.open_call(10.0)
     stats.open_call(10.5)
     stats.tracked_command_time += 0.5
-    stats.totals_for_finished_call(stats.cache_data).compute_time += recorded
-    stats.close_call(11.0)
-    stats.close_call(12.0)
+    _record_call(stats, 11.0, compute_time=recorded)
+    _record_call(stats, 12.0)
 
-    cache_data, _ = _thread_totals(stats, 12.0)
-    assert cache_data.compute_time == pytest.approx(expected)
+    totals = RunCacheTotals.combine((stats,), 12.0)
+    assert totals.cache_data.compute_time == pytest.approx(recorded)
+    assert totals.async_overlap_time == pytest.approx(expected_overlap)
 
 
-def test_calls_that_dont_overlap_are_not_scaled() -> None:
-    """A call after an overlapping group keeps its time, even if the group was
-    scaled down.
-    """
+def test_calls_that_dont_overlap_add_no_overlap() -> None:
+    """A call after an overlapping group adds nothing to the overlap."""
     stats = ThreadCacheStats()
-    # Two overlapping cache_data calls record 2s in 1s.
+    # Two overlapping calls record 2s in 1s.
     stats.open_call(0.0)
     stats.open_call(0.0)
-    stats.totals_for_finished_call(stats.cache_data).compute_time += 1.0
-    stats.close_call(1.0)
-    stats.totals_for_finished_call(stats.cache_data).compute_time += 1.0
-    stats.close_call(1.0)
-    # Then one cache_resource call records 2s in 2s.
+    _record_call(stats, 1.0, compute_time=1.0)
+    _record_call(stats, 1.0, compute_time=1.0)
+    # Then one call records 2s in 2s.
     stats.open_call(1.0)
-    stats.totals_for_finished_call(stats.cache_resource).compute_time += 2.0
-    stats.close_call(3.0)
+    _record_call(stats, 3.0, compute_time=2.0)
 
-    cache_data, cache_resource = _thread_totals(stats, 3.0)
-    assert cache_data.compute_time == pytest.approx(1.0)
-    assert cache_resource.compute_time == pytest.approx(2.0)
+    totals = RunCacheTotals.combine((stats,), 3.0)
+    assert totals.cache_data.compute_time == pytest.approx(4.0)
+    assert totals.async_overlap_time == pytest.approx(1.0)
+
+
+def test_overlap_adds_up_across_cache_types() -> None:
+    """A group compares the calls' times of both cache types with its span."""
+    stats = ThreadCacheStats()
+    stats.open_call(0.0)
+    stats.open_call(0.0)
+    _record_call(stats, 1.0, compute_time=1.0)
+    stats.cache_resource.calls += 1
+    stats.cache_resource.wait_time += 1.0
+    stats.close_call(1.0, 1.0)
+
+    assert stats.async_overlap_time == pytest.approx(1.0)
 
 
 def test_open_overlapping_group_counts_up_to_now() -> None:
-    """Finished calls of a group that is still open are scaled to the time the
-    group has run so far.
+    """A group that is still open counts the overlap its finished calls have
+    had so far.
     """
     stats = ThreadCacheStats()
-    stats.open_call(0.0)
-    stats.open_call(0.0)
-    stats.totals_for_finished_call(stats.cache_data).overhead_time += 2.0
-    stats.close_call(2.0)
+    for _ in range(3):
+        stats.open_call(0.0)
+    # Two calls record 4s in 2s while the third is still open.
+    _record_call(stats, 2.0, compute_time=2.0)
+    _record_call(stats, 2.0, compute_time=2.0)
 
-    assert _thread_totals(stats, 1.0)[0].overhead_time == pytest.approx(1.0)
-    assert _thread_totals(stats, 4.0)[0].overhead_time == pytest.approx(2.0)
+    assert stats.async_overlap_time == 0
+    assert RunCacheTotals.combine((stats,), 2.0).async_overlap_time == pytest.approx(
+        2.0
+    )
+    assert RunCacheTotals.combine((stats,), 3.0).async_overlap_time == pytest.approx(
+        1.0
+    )
 
 
 def test_closed_group_keeps_its_own_span() -> None:
-    """A page profile that read a group before it closed scales it to that
+    """A page profile that read a group before it closed measures it to that
     group's span, even if the thread has started another call since.
     """
     stats = ThreadCacheStats()
@@ -166,32 +160,27 @@ def test_closed_group_keeps_its_own_span() -> None:
     stats.open_call(0.0)
     group = stats._overlap
     assert group is not None
-    stats.totals_for_finished_call(stats.cache_data).compute_time += 1.0
-    stats.close_call(1.0)
-    stats.totals_for_finished_call(stats.cache_data).compute_time += 1.0
-    stats.close_call(1.0)
+    _record_call(stats, 1.0, compute_time=1.5)
+    _record_call(stats, 1.0, compute_time=1.5)
     # The next call starts later and runs a tracked command.
     stats.open_call(5.0)
     stats.tracked_command_time += 0.5
 
-    cache_data, cache_resource = CacheTotals(), CacheTotals()
-    group.add_scaled_to(
-        cache_data, cache_resource, now=6.0, command_time=stats.tracked_command_time
-    )
-    assert cache_data.compute_time == pytest.approx(1.0)
+    assert group.overlap_time(
+        now=6.0, command_time=stats.tracked_command_time
+    ) == pytest.approx(2.0)
+    assert stats.async_overlap_time == pytest.approx(2.0)
 
 
-def test_group_whose_commands_fill_its_span_does_not_divide_by_zero() -> None:
+def test_group_whose_commands_fill_its_span_counts_all_its_time_as_overlap() -> None:
     stats = ThreadCacheStats()
     stats.open_call(0.0)
     stats.open_call(0.0)
     stats.tracked_command_time += 2.0
-    stats.totals_for_finished_call(stats.cache_data).calls += 1
-    stats.close_call(1.0)
-    stats.close_call(1.0)
+    _record_call(stats, 1.0, compute_time=0.25)
+    _record_call(stats, 1.0)
 
-    cache_data, _ = _thread_totals(stats, 1.0)
-    assert (cache_data.calls, cache_data.total_time) == (1, 0)
+    assert stats.async_overlap_time == pytest.approx(0.25)
 
 
 def test_is_in_cache_code_is_false_while_waiting_or_computing() -> None:
@@ -206,33 +195,27 @@ def test_is_in_cache_code_is_false_while_waiting_or_computing() -> None:
     assert not stats.is_in_cache_code
     stats.enter_cache_code()
     assert stats.is_in_cache_code
-    stats.close_call(1.0)
+    stats.close_call(1.0, 0.0)
     assert not stats.is_in_cache_code
 
 
-def test_cache_totals_add_scales_only_times() -> None:
-    """``add()`` scales the times by ``time_scale`` but never the counts."""
-    totals = CacheTotals()
-    totals.add(
-        CacheTotals(
-            calls=4,
-            hits=3,
-            misses=1,
-            stale_hits=1,
-            compute_time=2.0,
-            wait_time=1.0,
-            overhead_time=0.5,
+def test_totals_add_every_count_and_time() -> None:
+    totals = RunCacheTotals()
+    other = RunCacheTotals(
+        cache_data=CacheTotals(calls=4, hits=3, misses=1, stale_hits=1, waits=2),
+        cache_resource=CacheTotals(
+            calls=1, compute_time=2.0, wait_time=1.0, overhead_time=0.5
         ),
-        time_scale=0.5,
+        async_overlap_time=0.25,
     )
 
-    assert totals == CacheTotals(
-        calls=4,
-        hits=3,
-        misses=1,
-        stale_hits=1,
-        compute_time=1.0,
-        wait_time=0.5,
-        overhead_time=0.25,
+    totals.add(other)
+    totals.add(other)
+
+    assert totals.cache_data == CacheTotals(
+        calls=8, hits=6, misses=2, stale_hits=2, waits=4
     )
-    assert totals.total_time == pytest.approx(1.75)
+    assert totals.cache_resource == CacheTotals(
+        calls=2, compute_time=4.0, wait_time=2.0, overhead_time=1.0
+    )
+    assert totals.async_overlap_time == 0.5

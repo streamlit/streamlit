@@ -34,23 +34,23 @@ def test_reset_clears_all_fields() -> None:
     shared.form_ids_this_run.check_and_add("form")
     shared.new_fragment_ids.check_and_add("fragment")
     shared.track_command(_make_command("markdown"), max_per_command=5, max_total=10)
-    cache_stats = shared.cache_stats
-    cache_stats.current_thread_stats().cache_data.calls = 1
+    run_stats = shared.stats
+    run_stats.current_thread_stats().command_time = 1.0
     parallel_fragments = shared.parallel_fragments
     with parallel_fragments.recording_run():
         pass
 
     shared.reset()
 
-    assert shared.cache_stats is not cache_stats
-    assert shared.cache_stats.totals(0.0).cache_data.calls == 0
+    assert shared.stats is not run_stats
+    assert shared.stats.all_thread_stats() == ()
     assert shared.parallel_fragments is not parallel_fragments
     assert shared.parallel_fragments.runs == ()
-    # The new fragment stats record into the new run's cache totals.
-    with shared.parallel_fragments.recording_run():
-        shared.cache_stats.current_thread_stats().cache_data.calls = 1
-    assert shared.cache_stats.totals(0.0).cache_data.calls == 1
-    assert cache_stats.totals(0.0).cache_data.calls == 1
+    # The new fragment stats record into the new run's stats.
+    with shared.parallel_fragments.recording_run() as run:
+        pass
+    assert shared.stats.all_thread_stats() == (run.stats,)
+    assert len(run_stats.all_thread_stats()) == 2
     assert "widget" not in shared.widget_ids_this_run
     assert "key" not in shared.widget_user_keys_this_run
     assert "form" not in shared.form_ids_this_run
