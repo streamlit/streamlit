@@ -153,23 +153,15 @@ The parallel fragment run never takes time away from another total. It adds a se
 
 #### Attached threads during a computation
 
-On a miss, `CachedFunc` runs the function inside `computing_cached_value`, which puts a new `CacheComputeScope` into `ThreadState.cache_compute` for the length of the computation. `add_script_run_ctx` copies `FragmentThreadState` with `dataclasses.asdict`, which deep-copies its fields. The scope opts out of the copy:
+A cached function can start threads and attach them with `add_script_run_ctx`. Their work is part of the computation, but `in_cached_function` doesn't reach them: `add_script_run_ctx` doesn't copy ContextVars, and copying this one would change element replay and the widget checks for those threads.
 
-```python
-def __deepcopy__(self, memo: dict[int, object]) -> CacheComputeScope:
-    return self
-```
+So on a miss, `computing_cached_value` puts a `CacheComputeScope` in `ThreadState.cache_compute` for the length of the computation. `add_script_run_ctx` deep-copies `ThreadState`, but the scope's `__deepcopy__` returns itself, so the computing thread and every thread it attaches share one object:
 
-So the computing thread and every thread it attaches share one scope:
+- While the scope is active, the attached threads' cached calls aren't recorded, their queries count as inside the cached call, and their listed commands add to the scope's command time.
+- `end()` deactivates the scope under its lock and returns that command time, which the cached call subtracts from its compute time.
+- A nested computation keeps the outer scope, so everything reports to the outermost recorded call.
 
-- While the computation runs, `is_active` is True, so the attached threads' cached calls aren't recorded and their listed commands add to the scope's command time.
-- `end()` sets `is_active` to False under the scope's lock and returns that command time, which the cached call subtracts from its compute time.
-- A computation that is already inside another keeps the outer scope, so threads that a nested cached function attaches report to the outermost recorded call.
-- Query time reads the same scope, so the attached threads' queries count as inside the cached call.
-
-The `in_cached_function` ContextVar can't do this, because `add_script_run_ctx` doesn't copy it. Copying it would also change behavior that depends on it, such as element replay and the checks for widgets inside cached functions.
-
-Two cases fall outside the mark. A thread that attaches itself later, rather than being attached during the computation, doesn't inherit it, so its cached calls are recorded. A task that an async cached function starts with `asyncio.create_task()` copies `in_cached_function` and keeps it, so its cached calls aren't recorded even after the computation ends.
+Two edge cases fall outside it. A thread attached from outside the computation doesn't get the scope, so its cached calls are recorded. A task that an async cached function starts with `asyncio.create_task()` keeps a copy of `in_cached_function`, so its cached calls stay unrecorded even after the computation ends.
 
 ### Parallel fragments
 
