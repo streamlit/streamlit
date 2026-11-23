@@ -339,8 +339,8 @@ def test_form_height_configurations(app: Page, assert_snapshot: ImageCompareFunc
 
 def test_forms_in_columns(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that forms render correctly within columns."""
-    # Get the columns container that holds the forms (the size row's horizontal
-    # container sits inside its own form, so it never contains a form).
+    # Pick the horizontal block that contains forms. The size row's horizontal
+    # container sits inside a form and contains none.
     columns_container = (
         app.get_by_test_id("stHorizontalBlock")
         .filter(has=app.get_by_test_id("stForm"))

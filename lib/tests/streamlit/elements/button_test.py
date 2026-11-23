@@ -591,7 +591,7 @@ class ButtonTest(DeltaGeneratorTestCase):
         ]
     )
     def test_button_size_default(self, name: str, command: Callable[..., Any]):
-        """By default size is "medium", which is the existing button height."""
+        """By default size is "medium", the standard 2.5rem button height."""
         command()
         el = getattr(self.get_delta_from_queue().new_element, name)
         assert el.size == ButtonLikeSizeProto.BUTTON_LIKE_SIZE_MEDIUM

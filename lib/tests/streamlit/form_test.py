@@ -371,7 +371,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         assert button_proto.wrap is wrap_value
 
     def test_submit_button_size_default(self):
-        """By default size is "medium", which is the existing button height."""
+        """By default size is "medium", the standard 2.5rem button height."""
 
         form = st.form("foo")
         form.form_submit_button()

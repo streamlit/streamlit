@@ -36,6 +36,7 @@ export interface BaseLinkButtonProps {
     | BaseButtonKind.SECONDARY
     | BaseButtonKind.TERTIARY
   size?: BaseButtonSize
+  /** Minimum height and padding from the public `size` parameter. Separate from `size`, which picks the internal padding preset. */
   controlSize?: ButtonControlSize
   disabled?: boolean
   // If true, the button should take up container's full width

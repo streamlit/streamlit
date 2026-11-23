@@ -55,7 +55,7 @@ export enum BaseButtonSize {
 export interface BaseButtonProps {
   kind: BaseButtonKind
   size?: BaseButtonSize
-  /** Height set by the public `size` parameter of button commands. Separate from `size`, which picks the internal padding preset. */
+  /** Minimum height and padding from the public `size` parameter. Separate from `size`, which picks the internal padding preset. */
   controlSize?: ButtonControlSize
   onClick?: (event: MouseEvent<HTMLButtonElement>) => void
   disabled?: boolean
@@ -114,9 +114,10 @@ function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
 }
 
 /**
- * Returns the min-height and padding for a public button size. "medium"
- * returns no overrides, so the default look is unchanged. Kind-specific
- * padding, such as tertiary's zero padding, still overrides these values.
+ * Returns the min-height, padding, and (for "xxsmall" and "xsmall")
+ * line-height for a public button size. "medium" and an unset size return no
+ * overrides, so the default look is unchanged. Kind-specific padding, such as
+ * tertiary's zero padding, still overrides these values.
  */
 export function getControlSizeStyle(
   controlSize: ButtonControlSize | undefined,

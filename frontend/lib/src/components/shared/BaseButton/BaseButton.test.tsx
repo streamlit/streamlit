@@ -140,23 +140,26 @@ describe("Button element", () => {
       )
     })
 
-    it("removes vertical padding for xxsmall and xsmall", () => {
-      const { spacing } = lightTheme.emotion
-      render(
-        <BaseButton
-          {...getProps({
-            size: BaseButtonSize.SMALL,
-            controlSize: "xxsmall",
-          })}
-        >
-          Hello
-        </BaseButton>
-      )
+    it.each(["xxsmall", "xsmall"] as const)(
+      "removes vertical padding for %s",
+      controlSize => {
+        const { spacing } = lightTheme.emotion
+        render(
+          <BaseButton
+            {...getProps({
+              size: BaseButtonSize.SMALL,
+              controlSize,
+            })}
+          >
+            Hello
+          </BaseButton>
+        )
 
-      const button = screen.getByRole("button")
-      expect(button).toHaveStyle(`padding-block: ${spacing.none}`)
-      expect(button).toHaveStyle(`padding-inline: ${spacing.sm}`)
-    })
+        const button = screen.getByRole("button")
+        expect(button).toHaveStyle(`padding-block: ${spacing.none}`)
+        expect(button).toHaveStyle(`padding-inline: ${spacing.sm}`)
+      }
+    )
 
     it("keeps tertiary buttons padding-free while applying the height", () => {
       render(

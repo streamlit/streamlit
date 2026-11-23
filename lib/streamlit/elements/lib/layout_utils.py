@@ -69,7 +69,7 @@ _VALID_SPACE_SIZE_VALUES: Final = [
 # Shared by st.expander and st.status, which render through the same proto.
 ExpandableType: TypeAlias = Literal["default", "compact", "step"]
 
-# Public `size` values for button commands. The frontend maps each value to a height.
+# Public `size` values for button commands. The frontend maps each value to a minimum height and padding.
 ButtonLikeSize: TypeAlias = Literal["xxsmall", "xsmall", "small", "medium", "large"]
 
 _BUTTON_LIKE_SIZE_TO_PROTO: Final[

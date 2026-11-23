@@ -442,8 +442,9 @@ class FormMixin:
               select boxes.
             - ``"large"``: 3rem.
 
-            These are minimum heights. The label font size doesn't change,
-            and a label that wraps onto several lines makes the button taller.
+            Each size also sets its own padding. The label font size doesn't
+            change, and a label that wraps onto several lines makes the button
+            taller.
 
         Returns
         -------
