@@ -33,8 +33,8 @@ const useStrictNullEqualityChecks = createRule<[], MessageIds>({
       useStrictEquality:
         "Use isNullOrUndefined or notNullOrUndefined instead of == null or != null",
     },
+    defaultOptions: [],
   },
-  defaultOptions: [],
   create(context) {
     return {
       BinaryExpression(node) {

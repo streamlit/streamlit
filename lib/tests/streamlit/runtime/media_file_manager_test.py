@@ -867,6 +867,168 @@ class MediaFileManagerDeferredTest(TestCase):
         stored = self.storage.get_file(filename)
         assert stored.mimetype == "application/octet-stream"
 
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        MagicMock(return_value="mock_session"),
+    )
+    def test_remove_deferred_drops_callable_and_coordinate(self) -> None:
+        """remove_deferred revokes the callable and its session coordinate."""
+        invoked = 0
+
+        def generate_data() -> bytes:
+            nonlocal invoked
+            invoked += 1
+            return b"secret"
+
+        coord = random_coordinates()
+        file_id = self.media_file_manager.add_deferred(
+            generate_data, "text/plain", coord
+        )
+        other_id = self.media_file_manager.add_deferred(
+            generate_data, "text/plain", random_coordinates()
+        )
+
+        self.media_file_manager.remove_deferred(coord)
+
+        assert file_id not in self.media_file_manager._deferred_callables
+        assert (
+            coord
+            not in self.media_file_manager._files_by_session_and_coord["mock_session"]
+        )
+        assert other_id in self.media_file_manager._deferred_callables
+        with pytest.raises(MediaFileStorageError, match="not found"):
+            self.media_file_manager.execute_deferred(file_id)
+        assert invoked == 0
+
+        # An unrelated enabled button can still be downloaded more than once.
+        self.media_file_manager.execute_deferred(other_id)
+        self.media_file_manager.execute_deferred(other_id)
+        assert invoked == 2
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        MagicMock(return_value="mock_session"),
+    )
+    def test_remove_deferred_after_clear_session_refs(self) -> None:
+        """remove_deferred deletes every prior id at these coordinates after clear_session_refs."""
+        coord = random_coordinates()
+        file_id = self.media_file_manager.add_deferred(
+            lambda: b"secret", "text/plain", coord
+        )
+        # A second registration at the same coordinates leaves the first id
+        # orphaned in the callable table but still executable.
+        replacement_id = self.media_file_manager.add_deferred(
+            lambda: b"secret", "text/plain", coord
+        )
+
+        self.media_file_manager.clear_session_refs("mock_session")
+        assert file_id in self.media_file_manager._deferred_callables
+        assert replacement_id in self.media_file_manager._deferred_callables
+
+        self.media_file_manager.remove_deferred(coord)
+
+        assert file_id not in self.media_file_manager._deferred_callables
+        assert replacement_id not in self.media_file_manager._deferred_callables
+
+    @mock.patch("streamlit.runtime.media_file_manager._get_session_id")
+    def test_remove_deferred_is_session_scoped(
+        self, mock_get_session_id: MagicMock
+    ) -> None:
+        """Disabling one session's button does not revoke another session's callable."""
+        coord = random_coordinates()
+
+        mock_get_session_id.return_value = "session_1"
+        file_id_1 = self.media_file_manager.add_deferred(
+            lambda: b"one", "text/plain", coord
+        )
+        mock_get_session_id.return_value = "session_2"
+        file_id_2 = self.media_file_manager.add_deferred(
+            lambda: b"two", "text/plain", coord
+        )
+
+        mock_get_session_id.return_value = "session_1"
+        self.media_file_manager.remove_deferred(coord)
+
+        assert file_id_1 not in self.media_file_manager._deferred_callables
+        assert file_id_2 in self.media_file_manager._deferred_callables
+        assert (
+            self.media_file_manager._files_by_session_and_coord["session_2"][coord]
+            == file_id_2
+        )
+        url = self.media_file_manager.execute_deferred(file_id_2)
+        assert url.startswith("/mock/endpoint/")
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        MagicMock(return_value="mock_session"),
+    )
+    def test_remove_deferred_leaves_static_file_at_same_coordinates(self) -> None:
+        """A static media file registered at the coordinates is not unmapped."""
+        coord = random_coordinates()
+        self.media_file_manager.add(
+            b"static", "text/plain", coord, is_for_static_download=True
+        )
+        mapped_id = self.media_file_manager._files_by_session_and_coord["mock_session"][
+            coord
+        ]
+
+        self.media_file_manager.remove_deferred(coord)
+
+        assert (
+            self.media_file_manager._files_by_session_and_coord["mock_session"][coord]
+            == mapped_id
+        )
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        MagicMock(return_value="mock_session"),
+    )
+    def test_remove_deferred_by_element_id_after_coordinate_change(self) -> None:
+        """A keyed button disabled at a new path revokes the callable from the old path.
+
+        Fragment reruns keep session media references, so the old coordinate
+        stays mapped unless revocation finds the stable element id.
+        """
+        invoked = False
+
+        def generate_data() -> bytes:
+            nonlocal invoked
+            invoked = True
+            return b"secret"
+
+        old_coord = random_coordinates()
+        new_coord = random_coordinates()
+        file_id = self.media_file_manager.add_deferred(
+            generate_data, "text/plain", old_coord, element_id="download-1"
+        )
+        other_id = self.media_file_manager.add_deferred(
+            lambda: b"other",
+            "text/plain",
+            random_coordinates(),
+            element_id="download-2",
+        )
+
+        self.media_file_manager.remove_deferred(new_coord, element_id="download-1")
+
+        assert file_id not in self.media_file_manager._deferred_callables
+        assert (
+            old_coord
+            not in self.media_file_manager._files_by_session_and_coord["mock_session"]
+        )
+        assert other_id in self.media_file_manager._deferred_callables
+        with pytest.raises(MediaFileStorageError, match="not found"):
+            self.media_file_manager.execute_deferred(file_id)
+        assert not invoked
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        MagicMock(return_value="mock_session"),
+    )
+    def test_remove_deferred_missing_coordinate_is_noop(self) -> None:
+        """Removing a coordinate that was never registered does not raise."""
+        self.media_file_manager.remove_deferred(random_coordinates())
+        assert self.media_file_manager._deferred_callables == {}
+
 
 def test_media_file_metadata_defaults_to_media_kind() -> None:
     """``MediaFileMetadata`` defaults to ``MediaFileKind.MEDIA`` and is not
@@ -929,3 +1091,38 @@ def test_downloadable_file_marked_then_deleted_on_second_sweep() -> None:
 
     assert file_id not in manager._file_metadata
     storage_delete_spy.assert_called_once_with(file_id)
+
+
+@mock.patch(
+    "streamlit.runtime.media_file_manager._get_session_id",
+    MagicMock(return_value="mock_session_id"),
+)
+def test_read_file_returns_a_stored_file_and_never_runs_a_deferred_one() -> None:
+    """The in-memory storage reads a file back by id, with or without its
+    extension; a deferred download's placeholder id reads nothing, and its
+    callable does not run.
+    """
+    manager = MediaFileManager(MemoryMediaFileStorage("/media"))
+    url = manager.add(b"\x89PNG", "image/png", "1.2.3")
+    file_id = url.removeprefix("/media/").removesuffix(".png")
+    deferred = MagicMock(return_value=b"generated")
+    placeholder = manager.add_deferred(deferred, "text/csv", "1.2.4")
+
+    stored = manager.read_file(file_id)
+
+    assert manager.can_read_files is True
+    assert stored is not None
+    assert (stored.content, stored.mimetype) == (b"\x89PNG", "image/png")
+    assert manager.read_file(f"{file_id}.png") == stored
+    assert manager.read_file(placeholder) is None
+    assert manager.read_file("0" * 32) is None
+    deferred.assert_not_called()
+
+
+def test_read_file_needs_a_storage_that_can_return_files() -> None:
+    """A storage a host plugs in has no read, so the manager cannot read back."""
+    manager = MediaFileManager(MagicMock())
+
+    assert manager.can_read_files is False
+    with pytest.raises(MediaFileStorageError):
+        manager.read_file("0" * 32)

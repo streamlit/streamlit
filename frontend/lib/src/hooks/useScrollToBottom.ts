@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { RefObject, useCallback, useEffect, useRef } from "react"
+import { type RefObject, useCallback, useEffect, useRef } from "react"
 
 import useScrollAnimation from "./useScrollAnimation"
 import useScrollSpy from "./useScrollSpy"

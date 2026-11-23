@@ -15,6 +15,7 @@
  */
 
 import { buildHttpUri } from "@streamlit/utils"
+import type * as StreamlitUtils from "@streamlit/utils"
 
 import {
   buildWsUri,
@@ -28,7 +29,7 @@ import {
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async importOriginal => {
-  const actual = await importOriginal<typeof import("@streamlit/utils")>()
+  const actual = await importOriginal<typeof StreamlitUtils>()
   return {
     ...actual,
     get StreamlitConfig() {
@@ -603,7 +604,9 @@ describe("fetchWithTimeout", () => {
     const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout")
     globalThis.fetch = vi.fn().mockRejectedValue(new Error("Network error"))
 
-    await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toThrow()
+    await expect(fetchWithTimeout(mockUrl, 5000)).rejects.toThrow(
+      "Network error"
+    )
     expect(clearTimeoutSpy).toHaveBeenCalled()
   })
 })

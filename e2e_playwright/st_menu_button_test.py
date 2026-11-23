@@ -55,7 +55,7 @@ def select_menu_option(page: Page, label: str, option: str):
     wait_for_app_run(page)
 
 
-TOTAL_MENU_BUTTONS = 20  # Including sidebar, fragment, and menu-style icons
+TOTAL_MENU_BUTTONS = 21  # Including sidebar, fragment, and menu-style icons
 
 
 def test_menu_button_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -221,10 +221,10 @@ def test_menu_button_in_columns(app: Page, assert_snapshot: ImageCompareFunction
     expect(columns_container.get_by_test_id("stMenuButton")).to_have_count(2)
 
     # Auto no-wrap must not ellipsize a content-width trigger whose label fits.
-    content_width_label = (
-        get_element_by_key(app, "col2_menu")
-        .get_by_test_id("stMarkdownContainer")
-        .locator("p")
+    # Measure the markdown container: wrap=False inlines leftover <p> boxes,
+    # so the paragraph itself is not the overflow box.
+    content_width_label = get_element_by_key(app, "col2_menu").get_by_test_id(
+        "stMarkdownContainer"
     )
     wait_until(
         app,
@@ -304,6 +304,11 @@ def test_menu_button_menu_style_icons_hide_chevron(
     expect(menu_icon_button.get_by_text("expand_more")).not_to_be_visible()
     expect(more_vert_button.get_by_text("expand_more")).not_to_be_visible()
     expect(more_horiz_button.get_by_text("expand_more")).not_to_be_visible()
+
+    # A menu-style `icon` with an empty label also hides the chevron
+    icon_param_button = get_element_by_key(app, "more_vert_icon_param_button")
+    expect(icon_param_button.get_by_text("more_vert", exact=True)).to_be_visible()
+    expect(icon_param_button.get_by_text("expand_more")).not_to_be_visible()
 
     # Verify that regular buttons DO have the chevron (for contrast)
     regular_button = get_menu_button(app, "Actions")

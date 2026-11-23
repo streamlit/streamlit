@@ -27,6 +27,7 @@ from e2e_playwright.shared.dataframe_utils import (
     expect_canvas_to_be_stable,
     expect_canvas_to_be_visible,
     get_open_cell_overlay,
+    select_row,
     unfocus_dataframe,
 )
 from e2e_playwright.shared.react18_utils import (
@@ -57,6 +58,19 @@ def _click_button(app: Page, name: str) -> None:
     unfocus_dataframe(app)
     app.get_by_role("button", name=name).click(force=True)
     wait_for_app_run(app)
+
+
+def _click_editor_toolbar_button(editor: Locator, label: str) -> None:
+    """Click a dataframe toolbar action once the overlay sits above the grid.
+
+    The toolbar starts over the grid and moves above it when shown. A click
+    before that move finishes is intercepted by the grid scroller.
+    """
+    editor.evaluate("el => el.scrollIntoView({block: 'center', inline: 'nearest'})")
+    toolbar = editor.get_by_test_id("stElementToolbar")
+    editor.hover()
+    expect(toolbar).to_have_css("opacity", "1")
+    toolbar.get_by_test_id("stElementToolbarButton").get_by_label(label).click()
 
 
 def test_keyed_fixed_editor_preserves_edits_across_source_value_changes(
@@ -395,6 +409,31 @@ def test_number_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunc
     _test_number_cell_editing(themed_app, assert_snapshot)
 
 
+def test_number_cell_editing_preserves_leading_decimal(app: Page) -> None:
+    """Test that a leading decimal point survives sequential input.
+
+    Regression test for streamlit/streamlit#16909: the number overlay editor
+    reset its text from the parsed cell value on every keystroke, so typing
+    ".07" lost the leading "." and committed 7.
+    """
+    cell_editor = _get_editor(app, "cell_editor")
+    expect_canvas_to_be_visible(cell_editor)
+
+    click_on_cell(cell_editor, 1, 0, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(app)
+    cell_overlay.click()
+    cell_overlay.press("ControlOrMeta+A")
+    input_field = cell_overlay.locator(".gdg-input")
+    # Sequential input reproduces the per-keystroke reset; fill() does not.
+    input_field.press_sequentially(".07", delay=50)
+
+    expect(input_field).to_have_value(".07")
+    input_field.press("Enter")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Edited DF:", "0.07", exact_match=False)
+
+
 @pytest.mark.performance
 def test_number_cell_editing_performance(
     app: Page, assert_snapshot: ImageCompareFunction
@@ -503,3 +542,48 @@ def test_list_cell_editing(app: Page, assert_snapshot: ImageCompareFunction):
 def test_custom_css_class_via_key(app: Page):
     """Test that the element can have a custom css class via the key argument."""
     expect(get_element_by_key(app, "data_editor")).to_be_visible()
+
+
+def test_data_editor_on_change_ignore(app: Page) -> None:
+    """Test that on_change='ignore' buffers edits until another widget reruns."""
+    runs = app.locator("[data-testid='ignore-runs']")
+    expect(runs).to_be_visible()
+    initial_runs = runs.inner_text()
+    _expect_marker(app, "ignore-fixed-a0", "1")
+    _expect_marker(app, "ignore-fixed-b0", "10")
+    _expect_marker(app, "ignore-dynamic-result", "2|1,10|2,20")
+
+    _edit_first_cell(app, "ignore_fixed_editor", "5")
+    _expect_marker(app, "ignore-runs", initial_runs)
+    _expect_marker(app, "ignore-fixed-a0", "1")
+
+    fixed_editor = _get_editor(app, "ignore_fixed_editor")
+    click_on_cell(fixed_editor, 1, 1, column_width="small")
+    fixed_editor.press("Delete")
+    # Wait past the edit debounce so an unwanted rerun would bump the run counter.
+    wait_for_app_run(app)
+    _expect_marker(app, "ignore-runs", initial_runs)
+    _expect_marker(app, "ignore-fixed-b0", "10")
+
+    dynamic_editor = _get_editor(app, "ignore_dynamic_editor")
+    expect_canvas_to_be_stable(dynamic_editor)
+    _click_editor_toolbar_button(dynamic_editor, "Add row")
+    # Wait past the edit debounce so an unwanted rerun would bump the run counter.
+    wait_for_app_run(app)
+    _expect_marker(app, "ignore-runs", initial_runs)
+    _expect_marker(app, "ignore-dynamic-result", "2|1,10|2,20")
+
+    select_row(dynamic_editor, 1, column_width="small")
+    _click_editor_toolbar_button(dynamic_editor, "Delete row(s)")
+    # Wait past the edit debounce so an unwanted rerun would bump the run counter.
+    wait_for_app_run(app)
+    _expect_marker(app, "ignore-runs", initial_runs)
+    _expect_marker(app, "ignore-dynamic-result", "2|1,10|2,20")
+
+    _click_button(app, "Apply")
+    _expect_marker(app, "ignore-runs", str(int(initial_runs) + 1))
+    _expect_marker(app, "ignore-fixed-a0", "5")
+    _expect_marker(app, "ignore-fixed-b0", "")
+    # Apply delivers the ignored dynamic edits: row (1, 10) is gone, and
+    # (2, 20) remains followed by the added blank row.
+    _expect_marker(app, "ignore-dynamic-result", "2|2,20|,")

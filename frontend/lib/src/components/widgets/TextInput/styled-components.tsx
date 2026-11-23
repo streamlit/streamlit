@@ -17,7 +17,10 @@
 import styled from "@emotion/styled"
 import { Input as RAInput } from "react-aria-components"
 
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getSecondaryIconButtonColorStyles,
+} from "~lib/components/shared/Base/styled-components"
 
 export const StyledTextInput = styled.div`
   position: relative;
@@ -88,7 +91,7 @@ export const StyledInputElement = styled(RAInput)(({ theme }) => ({
   paddingBottom: theme.spacing.sm,
   paddingLeft: theme.spacing.md,
   paddingRight: theme.spacing.sm,
-  "::placeholder": { color: theme.colors.fadedText60 },
+  "::placeholder": { color: theme.colors.fadedText70 },
   // `type="search"` inputs otherwise render a browser-native clear (×) control
   // that clashes with Streamlit's styling. Hide it so we can show our own
   // consistent clear button (see StyledClearButton) instead.
@@ -101,6 +104,7 @@ export const StyledInputElement = styled(RAInput)(({ theme }) => ({
     WebkitTextFillColor: theme.colors.fadedText40,
     // Prevent browsers from applying a gray background to disabled inputs
     backgroundColor: "transparent",
+    "::placeholder": { color: theme.colors.fadedText40 },
   },
 }))
 
@@ -147,14 +151,8 @@ export const StyledClearButton = styled.button(({ theme }) => ({
   // Match the password toggle's horizontal padding so trailing controls sit a
   // consistent distance from the input's right edge.
   padding: `0 ${theme.spacing.sm}`,
-  color: theme.colors.grayTextColor,
   flexShrink: 0,
-  "&:hover:not(:disabled)": {
-    color: theme.colors.bodyText,
-  },
-  "&:disabled": {
-    cursor: "not-allowed",
-  },
+  ...getSecondaryIconButtonColorStyles(theme),
 }))
 
 interface StyledInputInstructionsContainerProps {

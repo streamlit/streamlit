@@ -16,7 +16,7 @@
 
 import { createContext } from "react"
 
-import { LibConfig } from "@streamlit/connection"
+import type { LibConfig } from "@streamlit/connection"
 import { Config } from "@streamlit/protobuf"
 
 /**

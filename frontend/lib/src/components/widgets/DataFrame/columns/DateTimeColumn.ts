@@ -14,17 +14,19 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
-import { DatePickerType } from "@glideapps/glide-data-grid-cells"
-import moment, { Moment } from "moment-timezone"
+import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import type { DatePickerType } from "@glideapps/glide-data-grid-cells"
+import moment, { type Moment } from "moment-timezone"
+
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { getTimezone } from "~lib/dataframes/arrowTypeUtils"
 import { formatMoment } from "~lib/util/formatMoment"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   getErrorCell,
   mergeColumnParameters,
   toSafeDate,
@@ -118,8 +120,10 @@ function BaseDateTimeColumn(
     // TODO(lukasmasuch): But this might not be correct for dates in the past or future
     // since the timezone offset might have changed based on a timezone name.
     try {
-      defaultTimezoneOffset =
-        applyTimezone(moment(), parameters.timezone)?.utcOffset() || undefined
+      defaultTimezoneOffset = applyTimezone(
+        moment(),
+        parameters.timezone
+      ).utcOffset()
     } catch {
       // Do nothing
     }
@@ -127,12 +131,12 @@ function BaseDateTimeColumn(
 
   let minDate: Date | undefined = undefined
   if (notNullOrUndefined(parameters.min_value)) {
-    minDate = toSafeDate(parameters.min_value) || undefined
+    minDate = toSafeDate(parameters.min_value) ?? undefined
   }
 
   let maxDate: Date | undefined = undefined
   if (notNullOrUndefined(parameters.max_value)) {
-    maxDate = toSafeDate(parameters.max_value) || undefined
+    maxDate = toSafeDate(parameters.max_value) ?? undefined
   }
 
   const cellTemplate: DatePickerType = {
@@ -147,7 +151,7 @@ function BaseDateTimeColumn(
       kind: "date-picker-cell",
       date: undefined,
       displayDate: "",
-      step: parameters.step?.toString() || "1",
+      step: parameters.step?.toString() ?? "1",
       format: inputType,
       min: minDate,
       max: maxDate,
@@ -157,7 +161,7 @@ function BaseDateTimeColumn(
   const validateInput = (data?: unknown): boolean | Date => {
     const cellData: Date | null | undefined = toSafeDate(data)
     if (cellData === null) {
-      if (props.isRequired) {
+      if (props.isRequired === true) {
         return false
       }
       return true
@@ -241,7 +245,7 @@ function BaseDateTimeColumn(
           )
         }
 
-        if (parameters.timezone) {
+        if (!isNullOrEmptyString(parameters.timezone)) {
           try {
             momentDate = applyTimezone(momentDate, parameters.timezone)
           } catch (error) {
@@ -258,7 +262,9 @@ function BaseDateTimeColumn(
         try {
           displayDate = formatMoment(
             momentDate,
-            parameters.format || defaultFormat,
+            isNullOrEmptyString(parameters.format)
+              ? defaultFormat
+              : parameters.format,
             kind
           )
         } catch (error) {
@@ -285,7 +291,7 @@ function BaseDateTimeColumn(
       } as DatePickerType
     },
     getCellValue(cell: DatePickerType): string | null {
-      return isNullOrUndefined(cell?.data?.date)
+      return isNullOrUndefined(cell.data.date)
         ? null
         : toISOString(cell.data.date)
     },
@@ -325,7 +331,7 @@ export default function DateTimeColumn(props: BaseColumnProps): BaseColumn {
   const hasTimezone: boolean =
     notNullOrUndefined(timezone) ||
     // Timezone can also be configure by the user:
-    notNullOrUndefined(props?.columnTypeOptions?.timezone)
+    notNullOrUndefined(props.columnTypeOptions?.timezone)
 
   return BaseDateTimeColumn(
     "datetime",

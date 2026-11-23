@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import functools
 from typing import Final
 
 from streamlit.logger import get_logger
@@ -27,24 +28,25 @@ _AWS_CHECK_IP_HTTPS: Final = "https://checkip.amazonaws.com"
 # URL of Streamlit's help page.
 _HELP_DOC: Final = "https://docs.streamlit.io/"
 
-_external_ip: str | None = None
 _internal_ip: str | None = None
 
 
+# Cache failed lookups too: the WebSocket origin check calls this
+# synchronously on the event loop, so retrying on hosts without outbound
+# internet access would stall the server on every cross-origin handshake.
+@functools.cache
 def get_external_ip() -> str | None:
     """Get the *external* IP address of the current machine.
 
+    The first result, including a failed lookup, is cached for the lifetime
+    of the process.
+
     Returns
     -------
-    string
-        The external IPv4 address of the current machine.
+    str or None
+        The external IPv4 or IPv6 address, or ``None`` if the lookup failed.
 
     """
-    global _external_ip  # noqa: PLW0603
-
-    if _external_ip is not None:
-        return _external_ip
-
     # The external IP is best-effort: used for the headless External URL banner
     # and as a fallback in the CORS / WebSocket-origin allowlist. We use a 1s
     # timeout to avoid startup delays; misses fail closed and admins should
@@ -55,15 +57,13 @@ def get_external_ip() -> str | None:
         response = _make_blocking_http_get(_AWS_CHECK_IP_HTTPS, timeout=1)
 
     if _looks_like_an_ip_address(response):
-        _external_ip = response
-    else:
-        _LOGGER.warning(
-            "Did not auto detect external IP.\nPlease go to %s for debugging hints.",
-            _HELP_DOC,
-        )
-        _external_ip = None
+        return response
 
-    return _external_ip
+    _LOGGER.warning(
+        "Did not auto detect external IP.\nPlease go to %s for debugging hints.",
+        _HELP_DOC,
+    )
+    return None
 
 
 def get_internal_ip() -> str | None:

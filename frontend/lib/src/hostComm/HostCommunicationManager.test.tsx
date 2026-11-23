@@ -17,7 +17,7 @@
 import "../../../utils/src/polyfills/index"
 
 import { getLogger } from "loglevel"
-import { MockInstance } from "vitest"
+import type { MockInstance } from "vitest"
 
 import HostCommunicationManager, {
   HOST_COMM_VERSION,
@@ -32,12 +32,11 @@ interface MockEventListenersResult {
 // Mocking "message" event listeners on the window;
 // returns helpers to dispatch events and inspect listener counts
 function mockEventListeners(): MockEventListenersResult {
-  const listeners: { [name: string]: ((event: Event) => void)[] } = {}
+  const listeners: Partial<Record<string, ((event: Event) => void)[]>> = {}
 
   window.addEventListener = vi.fn(
     (event: string, cb: EventListenerOrEventListenerObject) => {
-      listeners[event] = listeners[event] || []
-      listeners[event].push(cb as EventListener)
+      ;(listeners[event] ??= []).push(cb as EventListener)
     }
   )
 
@@ -164,7 +163,7 @@ describe("HostCommunicationManager messaging", () => {
       allowedOrigins: ["https://devel.streamlit.test"],
       useExternalAuthToken: false,
     })
-    // @ts-expect-error
+    // @ts-expect-error - allowedOrigins is private
     expect(hostCommunicationMgr.allowedOrigins).toEqual([
       "https://devel.streamlit.test",
     ])
@@ -968,7 +967,11 @@ describe("HostCommunicationManager messaging", () => {
       "foo=bar"
     )
     // @ts-expect-error - props are private
-    expect(hostCommunicationMgr.props.sendRerunBackMsg).toHaveBeenCalled()
+    expect(hostCommunicationMgr.props.sendRerunBackMsg).toHaveBeenCalledWith(
+      undefined,
+      undefined,
+      "foo=bar"
+    )
   })
 
   it("can process a received SET_CUSTOM_THEME_CONFIG message", () => {

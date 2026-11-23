@@ -60,20 +60,6 @@ alwaysApply: true
 {agents_md_content}
 """
 
-GITHUB_COPILOT_RULE_TEMPLATE_GLOBS: Final[str] = """---
-applyTo: "{globs}"
----
-
-{notice}
-
-{agents_md_content}
-"""
-
-GITHUB_COPILOT_RULE_TEMPLATE_GLOBAL: Final[str] = """{notice}
-
-{agents_md_content}
-"""
-
 CLAUDE_MD_CONTENT: Final[str] = "@./AGENTS.md\n"
 
 
@@ -81,99 +67,84 @@ class AgentRuleFile(TypedDict):
     cursor_mdc: str
     agents_md: str
     globs: str
-    github_copilot: str
     always_apply: bool
 
 
 AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
     {
         "cursor_mdc": ".cursor/rules/e2e_playwright.mdc",
-        "github_copilot": ".github/instructions/e2e_playwright.instructions.md",
         "agents_md": "e2e_playwright/AGENTS.md",
         "globs": "e2e_playwright/**/*.py",
         "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/python.mdc",
-        "github_copilot": ".github/instructions/python.instructions.md",
         "agents_md": "lib/AGENTS.md",
         "globs": "**/*.py",
         "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/python_lib.mdc",
-        "github_copilot": ".github/instructions/python_lib.instructions.md",
         "agents_md": "lib/streamlit/AGENTS.md",
         "globs": "lib/streamlit/**/*.py",
         "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/embedded_skills.mdc",
-        "github_copilot": ".github/instructions/embedded_skills.instructions.md",
         "agents_md": "lib/streamlit/.agents/skills/AGENTS.md",
         "globs": "lib/streamlit/.agents/skills/**/*",
         "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/python_tests.mdc",
-        "github_copilot": ".github/instructions/python_tests.instructions.md",
         "agents_md": "lib/tests/AGENTS.md",
         "globs": "lib/tests/**/*.py",
         "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/protobuf.mdc",
-        "github_copilot": ".github/instructions/protobuf.instructions.md",
         "agents_md": "proto/streamlit/proto/AGENTS.md",
         "globs": "**/*.proto",
         "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/typescript.mdc",
-        "github_copilot": ".github/instructions/typescript.instructions.md",
         "agents_md": "frontend/AGENTS.md",
         "globs": "**/*.ts, **/*.tsx",
         "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/skills.mdc",
-        "github_copilot": ".github/instructions/skills.instructions.md",
         "agents_md": ".claude/skills/AGENTS.md",
         "globs": ".claude/skills/**/*",
         "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/agents.mdc",
-        "github_copilot": ".github/instructions/agents.instructions.md",
         "agents_md": ".claude/agents/AGENTS.md",
         "globs": ".claude/agents/**/*",
         "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/workflows.mdc",
-        "github_copilot": ".github/instructions/workflows.instructions.md",
         "agents_md": ".github/workflows/AGENTS.md",
         "globs": ".github/workflows/**/*.yml",
         "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/scripts.mdc",
-        "github_copilot": ".github/instructions/scripts.instructions.md",
         "agents_md": "scripts/AGENTS.md",
         "globs": "scripts/**/*",
         "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/specs.mdc",
-        "github_copilot": ".github/instructions/specs.instructions.md",
         "agents_md": "specs/AGENTS.md",
         "globs": "specs/**/*",
         "always_apply": False,
     },
     {
         "cursor_mdc": ".cursor/rules/overview.mdc",
-        # Use repository-wide instructions file:
-        "github_copilot": ".github/copilot-instructions.md",
         "agents_md": "AGENTS.md",
         "globs": "**",
         "always_apply": True,
@@ -280,11 +251,10 @@ def resolve_rule_path(rule_path: str) -> str:
 
 
 def generate_agent_rules() -> None:
-    """Generate Cursor and Github Copilot agent rule files based on AGENT_RULE_FILES."""
+    """Generate Cursor agent rule files based on AGENT_RULE_FILES."""
 
     for rule in AGENT_RULE_FILES:
         cursor_mdc_path = resolve_rule_path(rule["cursor_mdc"])
-        github_copilot_path = resolve_rule_path(rule["github_copilot"])
         agents_md_path = resolve_rule_path(rule["agents_md"])
         globs = rule["globs"]
         always_apply = rule["always_apply"]
@@ -315,24 +285,6 @@ def generate_agent_rules() -> None:
         with open(cursor_mdc_path, "w", encoding="utf-8") as f:
             f.write(content)
         print(f"Generated Cursor rule file: {cursor_mdc_path}")
-
-        # Write github copilot rule file:
-
-        if always_apply:
-            content = GITHUB_COPILOT_RULE_TEMPLATE_GLOBAL.format(
-                notice=notice,
-                agents_md_content=agents_md_content.strip(),
-            )
-        else:
-            content = GITHUB_COPILOT_RULE_TEMPLATE_GLOBS.format(
-                globs=globs,
-                notice=notice,
-                agents_md_content=agents_md_content.strip(),
-            )
-
-        with open(github_copilot_path, "w", encoding="utf-8") as f:
-            f.write(content)
-        print(f"Generated GitHub Copilot rule file: {github_copilot_path}")
 
 
 def generate_claude_md_files() -> None:

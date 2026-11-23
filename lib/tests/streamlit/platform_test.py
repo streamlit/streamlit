@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from parameterized import parameterized
 
 from streamlit.platform import post_parent_message
@@ -28,3 +30,13 @@ class PlatformTest(DeltaGeneratorTestCase):
         post_parent_message(message)
         c = self.get_message_from_queue().parent_message
         assert c.message == message
+
+
+def test_post_parent_message_is_noop_without_script_run_ctx() -> None:
+    """Without a script run context, parent messages are dropped."""
+    with (
+        patch("streamlit.platform.get_script_run_ctx", return_value=None),
+        patch("streamlit.platform.ForwardMsg") as mock_forward_msg,
+    ):
+        post_parent_message("hello")
+        mock_forward_msg.assert_not_called()

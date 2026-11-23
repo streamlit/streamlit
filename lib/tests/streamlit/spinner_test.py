@@ -15,11 +15,13 @@
 from __future__ import annotations
 
 import time
+from unittest.mock import patch
 
 import pytest
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.delta_generator import DeltaGenerator
+from streamlit.errors import NoSessionContext, StreamlitAPIException
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -128,3 +130,13 @@ class SpinnerTest(DeltaGeneratorTestCase):
                 == WidthConfigFields.USE_CONTENT.value
             )
             assert el.width_config.use_content is True
+
+
+def test_spinner_without_session_context_is_a_noop() -> None:
+    """Outside a script run, the spinner yields without enqueueing UI."""
+    with patch.object(
+        DeltaGenerator, "_transient", side_effect=NoSessionContext("no session")
+    ) as mock_transient:
+        with st.spinner("text"):
+            pass
+    mock_transient.assert_called_once()

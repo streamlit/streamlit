@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo, useState } from "react"
+import { type FC, memo, useState } from "react"
 
 import useTimeout from "~lib/hooks/useTimeout"
 
@@ -35,7 +35,7 @@ const RawAppSkeleton: FC<React.PropsWithChildren<unknown>> = () => {
     setVisible(true)
   }, SHOW_DELAY_MS)
 
-  if (!visible) return <></>
+  if (!visible) return null
 
   return (
     <StyledSkeleton

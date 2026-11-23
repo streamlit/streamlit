@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ICustomThemeConfig } from "@streamlit/protobuf"
+import type { CustomThemeConfig } from "@streamlit/protobuf"
 
 /**
  * The lib config contains various configurations that the host platform can
@@ -85,10 +85,11 @@ export type AppConfig = {
  */
 export type MetricsConfig = {
   /**
-   * URL to send metrics data to via POST request.
+   * URL to send metrics data to via POST request. Override URLs must use
+   * `https://`; other schemes turn HTTP metrics off.
    * Setting to "postMessage" sends metrics events via postMessage to host.
    * Setting to "off" disables metrics collection.
-   * If undefined, metricsUrl requested from centralized config file.
+   * If undefined or "", metricsUrl is requested from the centralized config file.
    */
   // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   metricsUrl?: string | "postMessage" | "off"
@@ -151,8 +152,8 @@ interface StreamlitWindowConfig {
   // Service Worker clientId for custom components in embedded contexts.
   CUSTOM_COMPONENT_CLIENT_ID?: string
   // Theme related settings.
-  LIGHT_THEME?: ICustomThemeConfig
-  DARK_THEME?: ICustomThemeConfig
+  LIGHT_THEME?: CustomThemeConfig.$Properties
+  DARK_THEME?: CustomThemeConfig.$Properties
   // Other options.
   ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION?: boolean
   // Host configuration (including enabling bypass mode for fast-path websocket connection).
@@ -274,10 +275,10 @@ export const StreamlitConfig = {
   get CUSTOM_COMPONENT_CLIENT_ID(): string | undefined {
     return capturedConfig?.CUSTOM_COMPONENT_CLIENT_ID
   },
-  get LIGHT_THEME(): ICustomThemeConfig | undefined {
+  get LIGHT_THEME(): CustomThemeConfig.$Properties | undefined {
     return capturedConfig?.LIGHT_THEME
   },
-  get DARK_THEME(): ICustomThemeConfig | undefined {
+  get DARK_THEME(): CustomThemeConfig.$Properties | undefined {
     return capturedConfig?.DARK_THEME
   },
   get ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION():

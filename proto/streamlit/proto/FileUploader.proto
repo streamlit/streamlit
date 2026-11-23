@@ -46,5 +46,11 @@ message FileUploader {
   // If true, the widget accepts directory uploads (includes all files in subdirectories).
   bool accept_directory = 11;
 
+  // Set by on_change="ignore": do not schedule a rerun; buffer the value until
+  // the next rerun. Inside a form, this flag has no effect because the form
+  // batches values until submit.
+  bool ignore_rerun = 12;
+  // Next: 13
+
   reserved 5;
 }

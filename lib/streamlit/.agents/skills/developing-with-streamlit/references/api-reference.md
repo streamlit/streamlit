@@ -35,13 +35,13 @@ Run this command with the Streamlit installation relevant to the code being edit
 | **Top-level commands** | |
 | `st.App` | ASGI-compatible Streamlit application. Use it for advanced server configuration, including custom routes, startup and shutdown lifecycle hooks, custom middleware, custom exception handlers, FastAPI integration, and programmatic secrets. |
 | `st.Page` | Configure a page for `st.navigation` in a multipage app. It creates a page object from a Python file or callable with optional title, icon, URL path, default status, and visibility. |
-| `st.altair_chart` | Display a chart using the Vega-Altair library. Use it when native charts are not expressive enough and you need Altair's encodings, layers, tooltips, or interactions. |
-| `st.area_chart` | Display an area chart. Use it for common area-chart cases with Streamlit-managed rendering. |
+| `st.altair_chart` | Display a chart using the Vega-Altair library. Use it for Vega-Lite features that ECharts lacks, such as faceting, or for an existing Altair chart. |
+| `st.area_chart` | Display an area chart. Use it for a quick area chart from a dataframe without customization. |
 | `st.audio` | Display an audio player. Accepts common audio data sources such as files, URLs, bytes, and arrays. |
 | `st.audio_input` | Display a widget that returns an audio recording from the user's microphone. Use it when an app needs recorded audio as input. |
 | `st.badge` | Display a colored badge with an icon and label. Useful for compact status, category, or metadata indicators. |
 | `st.balloons` | Draw celebratory balloons. Use sparingly for success moments or lightweight feedback. |
-| `st.bar_chart` | Display a bar chart. Use it for straightforward categorical or binned comparisons. |
+| `st.bar_chart` | Display a bar chart. Use it for a quick bar chart from a dataframe without customization. |
 | `st.button` | Display a button widget. It returns `True` on the script rerun triggered by a click. |
 | `st.cache_data` | Cache the return value of a function. Use it for expensive computations or data-loading steps that return serializable data; each caller receives a copy of the cached value. |
 | `st.cache_resource` | Cache a shared resource returned by a function. Use it for global objects such as database connections, ML models, or clients that should be reused across reruns and sessions. |
@@ -59,9 +59,10 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.dataframe` | Display a dataframe as an interactive table. Supports column configuration, selection, sizing, sorting, and efficient data exploration. |
 | `st.date_input` | Display a date input widget. It can return a single date or a date range depending on the initial value. |
 | `st.datetime_input` | Display a date and time input widget. Use it when users need to choose precise timestamps rather than dates alone. |
-| `st.dialog` | Function decorator to create a modal dialog. Use it to isolate short workflows while preserving Streamlit's rerun model. |
+| `st.dialog` | Function decorator to create a modal dialog or a modal side drawer. Use it to isolate short workflows while preserving Streamlit's rerun model. |
 | `st.divider` | Display a horizontal rule. Use it to separate sections without adding a heavy layout container. |
 | `st.download_button` | Display a download button widget. Use it for generated files, reports, transformed data, or other app outputs. |
+| `st.echarts_chart` | Display an interactive Apache ECharts chart. Use it for new charts by default, including dashboards, network and flow charts, and existing ECharts options. |
 | `st.echo` | Use in a `with` block to draw some code on the app, then execute it. Useful for tutorials, examples, and educational apps. |
 | `st.empty` | Insert a single-element container. Use it as a placeholder when you need to replace, update, or clear one element later. |
 | `st.error` | Display error message. Use it for failures or blocking conditions that require user attention. |
@@ -73,46 +74,47 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.form_submit_button` | Display a form submit button. It must be used inside `st.form` and triggers the form's batched submission. A form needs at least one submit button to be functional. |
 | `st.fragment` | Decorator to turn a function into a fragment which can rerun independently of the full app. Use it to reduce rerun cost for isolated interactive sections or run independent, slow sections in parallel during full app reruns. |
 | `st.get_option` | Return the current value of a given Streamlit configuration option. Use it for runtime-aware behavior that depends on configured settings. |
-| `st.graphviz_chart` | Display a graph using the dagre-d3 library. Use it for directed graphs, diagrams, and node-edge visualizations. |
+| `st.graphviz_chart` | Display a graph using the d3-graphviz library and Graphviz WASM. Use it for diagrams that need Graphviz layout engines or clusters; prefer `st.mermaid_chart` for other diagrams. |
+| `st.grid` | Insert a responsive grid container. Use it for wrapping card layouts and spanning items with `grid.cell()`. |
 | `st.header` | Display text in header formatting. Use it for major sections below the page title. |
 | `st.help` | Display help and other information for a given object. It renders docstrings, signatures, and related information inside the app. |
-| `st.html` | Insert HTML into your app. JavaScript is ignored by default (opt in with `unsafe_allow_javascript=True`); for interactive components that exchange data with Python, use `st.components.v2.component()` instead. |
+| `st.html` | Insert HTML into your app. JavaScript is ignored by default; for interactive components that exchange data with Python, use `st.components.v2.component()` instead. |
 | `st.iframe` | Embed content in an iframe. Use it to show an external page or embedded resource in a bounded frame. |
 | `st.image` | Display an image or list of images. Accepts paths, URLs, bytes, arrays, and image-like objects. |
 | `st.info` | Display an informational message. Use it for neutral guidance, context, or non-blocking status. |
 | `st.json` | Display an object or string as a pretty-printed, interactive JSON string. Use it for structured debug output or data inspection. |
 | `st.latex` | Display mathematical expressions formatted as LaTeX. Use it for equations and scientific notation. |
-| `st.line_chart` | Display a line chart. Use it for trends, time series, and ordered numeric values. |
+| `st.line_chart` | Display a line chart. Use it for a quick line chart from a dataframe without customization. |
 | `st.link_button` | Display a link button element. Use it when the action is navigation to another URL. |
 | `st.login` | Initiate the login flow for the given provider. Use it with configured auth settings and inspect the local docs for provider-specific behavior. |
 | `st.logo` | Renders a logo in the upper-left corner of your app and its sidebar. Use it for app branding and optional navigation link behavior. |
 | `st.logout` | Logout the current user. Use it with Streamlit's authentication support. |
 | `st.map` | Display a map with a scatterplot overlaid onto it. Use it for latitude/longitude data when a simple geographic visualization is enough. |
 | `st.markdown` | Display string formatted as Markdown. It supports Streamlit-specific extensions such as colored text, badges, icons, and limited HTML when enabled. |
-| `st.menu_button` | Display a dropdown menu button widget. Use it when a compact button should expose a small set of actions or options. |
+| `st.menu_button` | Display a button that opens a short menu of one-shot actions. Like `st.button`, it returns the chosen option only on the rerun the click triggers. |
 | `st.mermaid_chart` | Display a Mermaid diagram. Use it for text-based diagram definitions such as flowcharts, sequence diagrams, class diagrams, and state diagrams. |
-| `st.metric` | Display a metric in big bold font, with an optional indicator of how the metric changed. Use it for KPIs, headline numbers, optional inline sparklines (`chart_data`), and dashboard summaries. |
+| `st.metric` | Display a metric in big bold font, with an optional indicator of how the metric changed. Use it for KPIs, headline numbers, optional inline sparklines, and dashboard summaries. |
 | `st.multiselect` | Display a multiselect widget. Use it when users can choose multiple items from a list, optionally including new options they enter. |
-| `st.navigation` | Configure the available pages in a multipage app and where the navigation menu appears (`sidebar`, `top`, or `hidden`). It returns the currently selected page object, which the app should run. |
+| `st.navigation` | Configure the available pages in a multipage app and where the navigation menu appears. It returns the currently selected page object, which the app should run. |
 | `st.number_input` | Display a numeric input widget. It supports integer and floating-point values, bounds, steps, and formatting. |
 | `st.page_link` | Display a link to another page in a multipage app or to an external page. Use it for explicit navigation elements. |
 | `st.pagination` | Display a pagination widget for navigating through pages of content. Use it when a dataset or workflow is split across numbered pages. |
 | `st.pdf` | Display a PDF viewer. Use it to render PDF files or bytes directly in the app. |
 | `st.pills` | Display a pills widget. Use it for compact single- or multi-select choices with pill-shaped options. |
-| `st.plotly_chart` | Display an interactive Plotly chart. Use it when Plotly is already available or chart interactions/customization require Plotly. |
+| `st.plotly_chart` | Display an interactive Plotly chart. Use it for 3D and scientific charts that ECharts and Vega-Lite cannot draw, or for an existing Plotly figure. |
 | `st.popover` | Insert a popover container. Use it for compact controls or details that should appear on demand without occupying page space. |
 | `st.progress` | Display a progress bar. Use it to communicate completion state for running tasks or staged workflows. |
 | `st.pydeck_chart` | Draw a chart using the PyDeck library. Use it for deck.gl-powered maps and geospatial visualizations. |
 | `st.pyplot` | Display a matplotlib.pyplot figure. Use it for existing Matplotlib visualizations or libraries that produce Matplotlib figures. |
 | `st.radio` | Display a radio button widget. Use it when users should choose exactly one option from a small visible set. |
 | `st.rerun` | Rerun the app or current fragment immediately. Use it to force a rerun after state changes or navigation-like actions. |
-| `st.scatter_chart` | Display a scatterplot chart. Use it for relationships between numeric variables, optionally with size and color encodings. |
+| `st.scatter_chart` | Display a scatterplot chart. Use it for a quick scatter chart from a dataframe without customization. |
 | `st.segmented_control` | Display a segmented control widget. Use it for compact mutually exclusive choices, especially mode or view switching. |
 | `st.select_slider` | Display a slider widget to select items from a list. Use it when options are ordered but not necessarily numeric. |
 | `st.selectbox` | Display a select widget. Use it for selecting one item from a medium or large set. |
 | `st.set_option` | Set a configuration option. Use sparingly because not all options are safe or meaningful to change after startup. |
 | `st.set_page_config` | Configure the default settings of the page. Prefer calling it near the top of the script; repeated calls are additive and override only the parameters you specify. |
-| `st.skeleton` | Display a skeleton loading placeholder. Use it standalone (like `st.empty`) to reserve space and replace it with content later, or as a context manager (like `st.spinner`) to show a temporary placeholder while a block runs. |
+| `st.skeleton` | Display a skeleton loading placeholder. Use it standalone (like `st.empty`) to reserve space and replace it with content later, or as a context manager whose content fills the skeleton's slot. |
 | `st.slider` | Display a slider widget. Use it for numeric ranges, dates, times, or other ordered values. |
 | `st.snow` | Draw celebratory snowfall. Use sparingly for lightweight success or celebration effects. |
 | `st.space` | Add vertical or horizontal space. Use it for small layout adjustments instead of empty Markdown strings. |
@@ -138,8 +140,8 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.write_stream` | Stream a generator, iterable, or stream-like sequence to the app. Use it for token streams, incremental text, or progressively produced output. |
 | **Top-level objects** | |
 | `st.bottom` | Bottom-pinned container for the main app area. Use it as a container object, not as a function. |
-| `st.context` | Read-only access to user session context. Exposes `headers`, `cookies`, `theme` (`theme.type`), `timezone`, `timezone_offset`, `locale`, `url`, `ip_address`, and `is_embedded`. |
-| `st.query_params` | Mutable mapping for the browser URL query parameters. Use it to read or update URL state. |
+| `st.context` | Read-only access to user session context. Exposes `headers`, `cookies`, `theme` (`theme.type`), `timezone`, `timezone_offset`, `locale`, `url`, `ip_address`, and `is_embedded`. Attribute and bracket access are equivalent (`st.context.timezone` and `st.context["timezone"]`), but it is not a dict: no `.get()`, `.keys()`, or iteration. |
+| `st.query_params` | Mutable mapping for the browser URL query parameters. Use it to read or update URL state; to sync a widget's value to the URL, bind the widget to query params instead. |
 | `st.secrets` | Dict-like access to secrets loaded from `secrets.toml`. Use it for credentials and configuration that should not be hard-coded. |
 | `st.session_state` | Per-session mutable mapping for app state. Use it to persist values across reruns and share state between widgets and app logic. |
 | `st.sidebar` | Sidebar container that exposes most element methods as `st.sidebar.<command>()` and supports `with st.sidebar:` blocks. |
@@ -160,7 +162,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.column_config.ListColumn` | Configure a list column in `st.dataframe` or `st.data_editor`. Use it for arrays or repeated values that should render as structured list content. |
 | `st.column_config.MarkdownColumn` | Configure a markdown column in `st.dataframe` or `st.data_editor`. Cells show plain text, and clicking a cell opens an overlay that renders the Markdown. |
 | `st.column_config.MultiselectColumn` | Configure a multiselect column in `st.dataframe` or `st.data_editor`. Use it when each row can contain multiple choices from a known set. |
-| `st.column_config.NumberColumn` | Configure a number column in `st.dataframe` or `st.data_editor`. Use it for integers, floats, currencies, percentages, min/max bounds, step sizes, and numeric formatting. |
+| `st.column_config.NumberColumn` | Configure a number column in `st.dataframe` or `st.data_editor`. Use it for integers, floats, currencies, percentages, timedelta/duration values, min/max bounds, step sizes, and numeric formatting. |
 | `st.column_config.ProgressColumn` | Configure a progress column in `st.dataframe` or `st.data_editor`. Use it for percentages, completion values, scores, or bounded progress-like quantities. |
 | `st.column_config.SelectboxColumn` | Configure a selectbox column in `st.dataframe` or `st.data_editor`. Use it when each row should choose exactly one option from a known set. |
 | `st.column_config.TextColumn` | Configure a text column in `st.dataframe` or `st.data_editor`. Use it for strings with optional validation, length bounds, and text-specific display or editing behavior. |
@@ -187,6 +189,7 @@ from streamlit.typing import DataframeState, UploadedFile
 | `PlotlyState` | `st.plotly_chart` when selection events are enabled |
 | `VegaLiteState` | `st.altair_chart` and `st.vega_lite_chart` when selection events are enabled |
 | `PydeckState` | `st.pydeck_chart` when selection events are enabled |
+| `EChartsState` | `st.echarts_chart` when selection events are enabled |
 | `DataEditorState` | Session State for a keyed `st.data_editor` |
 | `ButtonColumnClickState` | Session State for a keyed `st.column_config.ButtonColumn` click |
 

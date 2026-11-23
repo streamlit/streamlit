@@ -16,12 +16,17 @@
 
 import styled from "@emotion/styled"
 
-import { Metric as MetricProto } from "@streamlit/protobuf"
+import type { Metric as MetricProto } from "@streamlit/protobuf"
 
 import {
+  printGraphicFitStyles,
+  printWidthCapStyles,
+} from "~lib/components/shared/printWidthCap"
+import {
   StyledWidgetLabel,
-  StyledWidgetProps,
+  type StyledWidgetProps,
 } from "~lib/components/widgets/BaseWidget/styled-components"
+import { MARKDOWN_ELLIPSIS_CLASS } from "~lib/hooks/useLabelTitleTooltip"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import { getMetricBackgroundColor, getMetricTextColor } from "./metricColors"
@@ -29,6 +34,14 @@ import { getMetricBackgroundColor, getMetricTextColor } from "./metricColors"
 interface StyledMetricContainerProps {
   showBorder: boolean
 }
+
+const ELLIPSIS_SELECTOR = `.${MARKDOWN_ELLIPSIS_CLASS}`
+
+/**
+ * Estimated average width of a value character, in `em`. Digits and
+ * separators are narrower in most fonts, so most figures fit on one line.
+ */
+const PRINT_VALUE_CHAR_WIDTH_EM = 0.6
 
 export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
   ({ theme, showBorder }) => ({
@@ -38,6 +51,20 @@ export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
       borderRadius: theme.radii.default,
       overflow: "hidden",
     }),
+    // Print often gives the card less width than on screen, so text that
+    // ellipsizes on screen wraps instead of being cut off.
+    "@media print": {
+      overflow: "visible",
+      [`& ${ELLIPSIS_SELECTOR}, & ${ELLIPSIS_SELECTOR} p`]: {
+        overflow: "visible",
+        textOverflow: "clip",
+        whiteSpace: "normal",
+        overflowWrap: "anywhere",
+        maxWidth: "100%",
+        width: "auto",
+        minWidth: 0,
+      },
+    },
   })
 )
 
@@ -49,10 +76,25 @@ export const StyledMetricContent = styled.div<{ showBorder: boolean }>(
   })
 )
 
+/**
+ * Height of the metric sparkline, shared by its Vega spec and the container
+ * that reserves its space.
+ */
+export const METRIC_CHART_HEIGHT = "3.5rem"
+
 export const StyledMetricChart = styled.div<{ showBorder: boolean }>(
   ({ theme, showBorder }) => ({
     marginTop: showBorder ? undefined : theme.spacing.lg,
     marginBottom: showBorder ? theme.spacing.twoXL : undefined,
+    // Reserve the sparkline's height while Vega loads, so the card doesn't
+    // grow when the chart draws.
+    minHeight: METRIC_CHART_HEIGHT,
+    // The sparkline keeps the pixel width measured on screen. The printed
+    // card is often narrower and no longer clips, so cap the chart and its
+    // SVG or canvas to the card.
+    ...printWidthCapStyles,
+    "& .vega-embed": printWidthCapStyles,
+    "& svg, & canvas": printGraphicFitStyles,
   })
 )
 
@@ -71,13 +113,36 @@ export const StyledMetricLabelText = styled(
     visibility === LabelVisibilityOptions.Hidden ? "hidden" : "visible",
 }))
 
-export const StyledMetricValueText = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.metricValueFontSize,
-  lineHeight: "normal",
-  fontWeight: theme.fontWeights.metricValueFontWeight,
-  color: theme.colors.bodyText,
-  paddingBottom: theme.spacing.twoXS,
-}))
+interface StyledMetricValueTextProps {
+  /**
+   * Character count of the value, which print CSS uses to shrink the figure
+   * to fit the card. Leave unset for a content-width card: the value's width
+   * sizes the card, so making the value a size container would collapse it.
+   * Figures wider than the printed column wrap instead.
+   */
+  printFitLength?: number
+}
+
+export const StyledMetricValueText = styled.div<StyledMetricValueTextProps>(
+  ({ theme, printFitLength }) => ({
+    fontSize: theme.fontSizes.metricValueFontSize,
+    lineHeight: "normal",
+    fontWeight: theme.fontWeights.metricValueFontWeight,
+    color: theme.colors.bodyText,
+    paddingBottom: theme.spacing.twoXS,
+    ...(printFitLength !== undefined &&
+      printFitLength > 0 && {
+        "@media print": {
+          containerType: "inline-size",
+          // Size the wrapper only. The paragraph inherits the size, and `em`
+          // on it would shrink the figure a second time.
+          [`& ${ELLIPSIS_SELECTOR}`]: {
+            fontSize: `min(1em, calc(100cqi / (${printFitLength} * ${PRINT_VALUE_CHAR_WIDTH_EM})))`,
+          },
+        },
+      }),
+  })
+)
 
 interface StyledMetricDeltaTextProps {
   metricColor: MetricProto.MetricColor
@@ -117,6 +182,9 @@ export const StyledDeltaContainer = styled.div(({ theme }) => ({
   maxWidth: "100%",
   overflow: "hidden",
   paddingBottom: theme.spacing.twoXS,
+  "@media print": {
+    overflow: "visible",
+  },
 }))
 
 export const StyledDeltaDescription = styled.div({
@@ -124,6 +192,9 @@ export const StyledDeltaDescription = styled.div({
   overflow: "hidden",
   flexShrink: 1,
   minWidth: 0,
+  "@media print": {
+    overflow: "visible",
+  },
 })
 
 export const StyledMetricLabelRow = styled.div(({ theme }) => ({

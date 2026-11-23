@@ -15,11 +15,11 @@
  */
 
 import {
-  GridCell,
+  type GridCell,
   GridCellKind,
-  LoadingCell,
+  type LoadingCell,
 } from "@glideapps/glide-data-grid"
-import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
+import type { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
 import { resolveNamedColor } from "~lib/theme/getColors"
 import type { ChartColor, EmotionTheme } from "~lib/theme/types"
@@ -27,8 +27,8 @@ import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   getEmptyCell,
   getErrorCell,
   mergeColumnParameters,
@@ -84,6 +84,7 @@ function BaseChartColumn(
   if (parameters.color === "auto" || parameters.color === "auto-inverse") {
     defaultColor = theme.colors.greenColor
   } else {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `ChartColor` includes a branded `string & {…}`, which the rule reads as an object
     defaultColor = parameters.color
       ? resolveNamedColor(parameters.color, theme)
       : undefined
@@ -210,18 +211,19 @@ function BaseChartColumn(
 
       // Check if the first value is larger than the second value
       let chartColor = defaultColor
+      const lastValue = normalizedChartData.at(-1)
       if (
         parameters.color === "auto" &&
+        lastValue !== undefined &&
         // Chart is pointing down
-        normalizedChartData[0] >
-          normalizedChartData[normalizedChartData.length - 1]
+        normalizedChartData[0] > lastValue
       ) {
         chartColor = theme.colors.redColor
       } else if (
         parameters.color === "auto-inverse" &&
+        lastValue !== undefined &&
         // Chart is pointing up:
-        normalizedChartData[0] <
-          normalizedChartData[normalizedChartData.length - 1]
+        normalizedChartData[0] < lastValue
       ) {
         chartColor = theme.colors.redColor
       }
@@ -242,11 +244,16 @@ function BaseChartColumn(
     getCellValue(
       cell: SparklineCellType | LoadingCell
     ): readonly number[] | null {
-      if (cell.kind === GridCellKind.Loading) {
+      // Empty cells are loading cells. Invalid arrays are error text cells.
+      // Neither stores sparkline values.
+      if (
+        cell.kind !== GridCellKind.Custom ||
+        (cell.data as { kind?: string } | null | undefined)?.kind !==
+          "sparkline-cell"
+      ) {
         return null
       }
-
-      return cell.data?.values === undefined ? null : cell.data?.values
+      return cell.data.values
     },
   }
 }

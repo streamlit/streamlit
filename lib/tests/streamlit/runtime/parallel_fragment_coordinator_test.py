@@ -29,7 +29,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
+from streamlit.runtime.caching import cache_utils
+from streamlit.runtime.parallel_coordinator import (
+    ParallelFragmentCoordinator,
+    _scoped_ctx_attach,
+)
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
@@ -331,6 +335,63 @@ def test_drain_sets_stop_event():
     assert c.should_stop()
 
 
+def test_drain_stops_worker_waiting_for_compute_lock():
+    """drain() stops a worker waiting for a compute lock owned elsewhere."""
+    compute_lock = threading.Lock()
+    compute_lock.acquire()
+    worker_started = threading.Event()
+    worker_finished = threading.Event()
+    yield_checked = threading.Event()
+    worker_acquired = threading.Event()
+    drain_finished = threading.Event()
+    drain_errors: list[BaseException] = []
+    coordinator = ParallelFragmentCoordinator(yield_check=lambda: None)
+
+    def worker_yield_check() -> None:
+        yield_checked.set()
+        if coordinator.should_stop():
+            raise StopException()
+
+    worker_ctx = MagicMock()
+    worker_ctx.yield_check = worker_yield_check
+
+    def worker() -> None:
+        worker_started.set()
+        try:
+            with cache_utils._hold_compute_lock(compute_lock):
+                worker_acquired.set()
+        except StopException:
+            pass
+        finally:
+            worker_finished.set()
+
+    def drain_coordinator() -> None:
+        try:
+            coordinator.drain()
+        except BaseException as ex:
+            drain_errors.append(ex)
+        finally:
+            drain_finished.set()
+
+    coordinator.submit(worker, worker_ctx)
+    assert worker_started.wait(timeout=1)
+    drain_thread = threading.Thread(target=drain_coordinator)
+    drain_thread.start()
+    try:
+        assert drain_finished.wait(timeout=1)
+        assert yield_checked.is_set()
+        assert worker_finished.is_set()
+        assert not worker_acquired.is_set()
+        assert compute_lock.locked()
+    finally:
+        if compute_lock.locked():
+            compute_lock.release()
+        drain_thread.join(timeout=1)
+
+    assert not drain_thread.is_alive()
+    assert drain_errors == []
+
+
 # --- submit() propagation ---
 
 
@@ -509,3 +570,38 @@ def test_submit_with_none_ctx(coordinator):
     assert done.wait(timeout=1.0)
     _wait_for_outstanding_zero(coordinator)
     assert holder[0] is None
+
+
+def test_scoped_ctx_attach_restores_previous_context() -> None:
+    """A worker that already had a ScriptRunContext gets it back after the block."""
+    thread = threading.current_thread()
+    original = getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
+    had_original = hasattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
+    previous = object()
+    inner = MagicMock()
+    setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, previous)
+    try:
+        with _scoped_ctx_attach(inner):  # type: ignore[arg-type]
+            assert getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME) is inner
+        assert getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME) is previous
+    finally:
+        if had_original:
+            setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, original)
+        elif hasattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME):
+            delattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
+
+
+def test_scoped_ctx_attach_ignores_missing_attr_on_cleanup() -> None:
+    """Cleanup must not fail if another thread already cleared the attribute."""
+    thread = threading.current_thread()
+    previous = getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
+    had_previous = hasattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
+    if had_previous:
+        delattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
+    try:
+        with _scoped_ctx_attach(MagicMock()):
+            delattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
+        assert not hasattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
+    finally:
+        if had_previous:
+            setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, previous)

@@ -36,7 +36,7 @@ The reader is a **reviewer or teammate skimming the PR to understand what change
    - Could it be shorter — are there obvious or duplicated points to cut?
    - Is it in passive or vague voice where naming the actor would read more directly?
    - Is there meta-commentary that adds no information?
-3. **Also confirm the format** briefly (secondary): title matches `[type] Description` within ~63 chars, and the required template sections from `.github/pull_request_template.md` are present. For the full standards, see `creating-pull-requests` and `wiki/pull-requests.md`.
+3. **Also confirm the format** briefly (secondary): title matches `[type] Description` within ~63 chars, and the required template sections from `.github/pull_request_template.md` are present. For the full standards, see `wiki/pull-requests.md`.
 4. **Report** the findings per the Output Format below.
 
 ## Common Patterns to Flag

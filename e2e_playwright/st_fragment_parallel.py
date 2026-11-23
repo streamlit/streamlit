@@ -15,6 +15,8 @@
 """Test app for parallel fragments feature."""
 
 import time
+from pathlib import Path
+from tempfile import gettempdir
 
 import streamlit as st
 
@@ -275,3 +277,51 @@ elif test_mode == "error_container":
 
     fragment_with_error()
     fragment_success()
+
+
+# Test 11: Live fragments finish after rerunning during a shared cold cache miss
+elif test_mode == "cache_wait_rerun":
+    st.button("Rerun while cache is cold")
+    cache_wait_token = st.query_params["token"]
+    cache_wait_run = st.session_state.get("cache_wait_run", 0) + 1
+    st.session_state.cache_wait_run = cache_wait_run
+    st.write(f"Cache wait run: {cache_wait_run}")
+
+    @st.cache_data(show_spinner=False)
+    def get_shared_value(token: str) -> str:
+        st.write("Cold cache compute started")
+        release_file = Path(gettempdir()) / f"streamlit-cache-wait-{token}.gate"
+        deadline = time.monotonic() + 30
+        while not release_file.exists():
+            if time.monotonic() >= deadline:
+                raise TimeoutError("Cache wait test was not released")
+            time.sleep(0.01)
+        return "shared cached value"
+
+    @st.fragment(parallel=True)
+    def cache_fragment_a() -> None:
+        st.write("Cache fragment A started")
+        st.write(
+            f"Cache fragment A run {cache_wait_run}: "
+            f"{get_shared_value(cache_wait_token)}"
+        )
+
+    @st.fragment(parallel=True)
+    def cache_fragment_b() -> None:
+        st.write("Cache fragment B started")
+        st.write(
+            f"Cache fragment B run {cache_wait_run}: "
+            f"{get_shared_value(cache_wait_token)}"
+        )
+
+    @st.fragment(parallel=True)
+    def cache_fragment_c() -> None:
+        st.write("Cache fragment C started")
+        st.write(
+            f"Cache fragment C run {cache_wait_run}: "
+            f"{get_shared_value(cache_wait_token)}"
+        )
+
+    cache_fragment_a()
+    cache_fragment_b()
+    cache_fragment_c()

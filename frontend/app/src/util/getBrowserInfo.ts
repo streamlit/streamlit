@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import UAParser from "ua-parser-js"
+import { parseUserAgent } from "@streamlit/utils"
 
 function getBrowserInfo(): {
   browserName: string
@@ -22,20 +22,17 @@ function getBrowserInfo(): {
   deviceType: string
   os: string
 } {
-  const parser = new UAParser()
-  const result = parser.getResult()
+  const result = parseUserAgent(navigator.userAgent)
 
   return {
-    browserName: result.browser.name || "Unknown",
-    browserVersion: result.browser.version || "Unknown",
-    /**
-     * 'desktop' is not a valid value for device.type in ua-parser-js.
-     * We default to 'desktop' if the value is not present.
-     * Possible options from ua-parser-js are:
-     * 'mobile', 'tablet', 'smarttv', 'wearable', 'embedded', 'console'
-     */
-    deviceType: result.device.type || "desktop",
-    os: result.os.name || "Unknown",
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank browser name is unknown
+    browserName: result.browserName || "Unknown",
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank browser version is unknown
+    browserVersion: result.browserVersion || "Unknown",
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank device type falls back to desktop
+    deviceType: result.deviceType || "desktop",
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank os is unknown
+    os: result.os || "Unknown",
   }
 }
 

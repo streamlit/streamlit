@@ -30,20 +30,35 @@ interface StyledTabContainerProps {
   width: React.CSSProperties["width"]
   height?: React.CSSProperties["height"]
   flex: React.CSSProperties["flex"]
+  alignSelf?: React.CSSProperties["alignSelf"]
+  minHeight?: React.CSSProperties["minHeight"]
+  maxHeight?: React.CSSProperties["maxHeight"]
 }
 
 export const StyledTabContainer = styled.div<StyledTabContainerProps>(
-  ({ isOverflowing, width, height, flex }) => ({
+  ({
+    isOverflowing,
+    width,
+    height,
+    flex,
+    alignSelf,
+    minHeight,
+    maxHeight,
+  }) => ({
     position: isOverflowing ? "relative" : undefined,
-    width: width || undefined,
-    height: height || undefined,
+    width: width ?? undefined,
+    height: height ?? undefined,
     // When the container has a constrained height, lay out the tab list and
     // panel as a column so the active panel can grow and scroll internally,
     // and clip the outer container so only the active panel scrolls.
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `height` is `string | number`; a 0 or empty height keeps this wrapper in its default block layout
     ...(height
       ? { display: "flex", flexDirection: "column", overflow: "hidden" }
       : {}),
-    flex: flex || undefined,
+    flex: flex ?? undefined,
+    alignSelf,
+    minHeight,
+    maxHeight,
   })
 )
 
@@ -98,7 +113,7 @@ export const StyledScrollArrow = styled.button<StyledScrollArrowProps>(
  * tab panel can scroll internally rather than the whole page. */
 export const StyledTabsRoot = styled(RATabs, {
   shouldForwardProp: prop => prop !== "$constrainedHeight",
-})<{ $constrainedHeight?: boolean }>(({ $constrainedHeight }) => ({
+})<{ $constrainedHeight?: boolean }>(({ $constrainedHeight = false }) => ({
   display: "flex",
   flexDirection: "column",
   width: "100%",
@@ -204,7 +219,7 @@ export const StyledTabPanel = styled(RATabPanel, {
   shouldForwardProp: prop =>
     prop !== "$isActive" && prop !== "$constrainedHeight",
 })<{ $isActive: boolean; $constrainedHeight?: boolean }>(
-  ({ theme, $isActive, $constrainedHeight }) => ({
+  ({ theme, $isActive, $constrainedHeight = false }) => ({
     display: $isActive ? undefined : "none",
     paddingTop: theme.spacing.lg,
     outline: "none",

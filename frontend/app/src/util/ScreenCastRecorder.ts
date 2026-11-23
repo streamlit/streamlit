@@ -40,10 +40,11 @@ class ScreenCastRecorder {
   /** True if the current browser likely supports screencasts. */
   public static isSupportedBrowser(): boolean {
     try {
+      const mediaDevices = navigator.mediaDevices
       return (
-        notNullOrUndefined(navigator.mediaDevices) &&
-        notNullOrUndefined(navigator.mediaDevices.getUserMedia) &&
-        notNullOrUndefined(navigator.mediaDevices.getDisplayMedia) &&
+        notNullOrUndefined(mediaDevices) &&
+        typeof mediaDevices.getUserMedia === "function" &&
+        typeof mediaDevices.getDisplayMedia === "function" &&
         MediaRecorder.isTypeSupported(BLOB_TYPE)
       )
     } catch {
@@ -116,11 +117,20 @@ class ScreenCastRecorder {
       LOG.warn(`mediaRecorder.start threw an error: ${String(e)}`)
     }
 
-    this.mediaRecorder.onerror = (e: Event): void => {
-      logRecorderError(e)
-      this.onErrorOrStopCallback()
-    }
+    // `{ once: true }` matches start()-once-per-instance: the callback stops
+    // recording, so later errors are irrelevant and a retry would otherwise
+    // stack listeners (unlike the old onerror assignment).
+    this.mediaRecorder.addEventListener(
+      "error",
+      (e: Event): void => {
+        logRecorderError(e)
+        this.onErrorOrStopCallback()
+      },
+      { once: true }
+    )
 
+    // Keep onstop as a property assignment so stop() can overwrite it and a
+    // user-initiated stop does not call onErrorOrStop.
     this.mediaRecorder.onstop = (): void => this.onErrorOrStopCallback()
 
     try {

@@ -17,8 +17,10 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react"
 
 import { FloatingFocusManager, FloatingPortal } from "@floating-ui/react"
-import { ChromePicker, ColorResult } from "react-color"
+import { ChromePicker, type ColorResult } from "react-color"
 import SaturationComponent from "react-color/es/components/common/Saturation"
+
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
@@ -28,7 +30,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import { convertRemToPx } from "~lib/theme/utils"
-import { LabelVisibilityOptions } from "~lib/util/utils"
+import type { LabelVisibilityOptions } from "~lib/util/utils"
 
 import {
   StyledChromePicker,
@@ -81,7 +83,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
   const {
     disabled,
     value: propValue,
-    showValue,
+    showValue = false,
     label,
     labelVisibility,
     onChange,
@@ -107,7 +109,8 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
   useExecuteWhenChanged(() => setValue(propValue), [propValue])
 
   const {
-    refs: { setFloating, setReference },
+    setFloating,
+    setReference,
     floatingStyles,
     context: floatingContext,
   } = useFloatingOverlay({
@@ -157,8 +160,8 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
       if (Date.now() - openedAtRef.current < 50) return
       const target = e.target as Node
       if (
-        !triggerRef.current?.contains(target) &&
-        !popoverRef.current?.contains(target)
+        triggerRef.current?.contains(target) !== true &&
+        popoverRef.current?.contains(target) !== true
       ) {
         setIsOpen(false)
         onColorClose()
@@ -186,7 +189,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
     const handleFocusIn = (e: FocusEvent): void => {
       if (!tabbingRef.current) return
       tabbingRef.current = false
-      if (!popoverRef.current?.contains(e.target as Node)) {
+      if (popoverRef.current?.contains(e.target as Node) !== true) {
         setIsOpen(false)
         onColorClose()
       }
@@ -256,7 +259,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
         disabled={disabled}
         labelVisibility={labelVisibility}
       >
-        {help && (
+        {!isNullOrEmptyString(help) && (
           <WidgetLabelHelpIconInline
             content={help}
             placement={Placement.TOP_RIGHT}

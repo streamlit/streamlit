@@ -14,16 +14,20 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, Literal, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are incorrect.
 if TYPE_CHECKING:
     from pathlib import Path
 
+    import streamlit as st
     from streamlit.commands.navigation import navigation
     from streamlit.navigation.page import Page, StreamlitPage
+
+    # Public `st.navigation` must resolve to the command, not the
+    # `streamlit.navigation` package.
+    assert_type(st.navigation(["page1.py"]), Page)
+    assert_type(st.navigation(["page1.py"], position="sidebar", expanded=True), Page)
 
     # Test basic list input
     assert_type(navigation(["page1.py"]), Page)
@@ -85,3 +89,16 @@ if TYPE_CHECKING:
 
     # Test visibility property returns correct Literal type
     assert_type(visible_page.visibility, Literal["visible", "hidden"])
+
+    # Test Page with help parameter and the help property
+    help_page = Page("page.py", help="Net revenue by **region**.")
+    assert_type(help_page, Page)
+    assert_type(Page("page.py", help=None), Page)
+    assert_type(Page(page_func, title="Callable", help="From a callable."), Page)
+    assert_type(Page("https://example.com", title="Ext", help="External."), Page)
+    assert_type(help_page.help, str)
+    assert_type(st.Page("page.py", help="Via st.").help, str)
+
+    # help is keyword-only and must be a string
+    Page("page.py", None, None, None, False, "visible", "Help")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+    Page("page.py", help=1)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

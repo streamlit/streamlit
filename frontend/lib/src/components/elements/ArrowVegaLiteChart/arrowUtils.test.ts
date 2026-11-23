@@ -24,11 +24,13 @@ import { UINT64 } from "~lib/mocks/arrow/types/uint64"
 import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
 import {
+  aliasDatasetReferences,
+  getAliasedDataSets,
   getDataArray,
   getDataArrays,
   getDataSets,
   getInlineData,
-  WrappedNamedDataset,
+  type WrappedNamedDataset,
 } from "./arrowUtils"
 
 describe("Types of dataframe indexes as x axis", () => {
@@ -218,6 +220,108 @@ describe("getDataSets", () => {
     const result = getDataSets(datasets)
     expect(result).not.toBeNull()
     expect(result?.null).toBe(q)
+  })
+})
+
+describe("getAliasedDataSets", () => {
+  it("keys the datasets by their position", () => {
+    const q1 = new Quiver({ data: UNICODE })
+    const q2 = new Quiver({ data: INT64 })
+
+    const aliased = getAliasedDataSets([
+      { name: "3f2a", hasName: true, data: q1 },
+      { name: "9c1b", hasName: true, data: q2 },
+    ])
+
+    expect([...aliased]).toEqual([
+      ["__st_dataset_0", { name: "3f2a", data: q1 }],
+      ["__st_dataset_1", { name: "9c1b", data: q2 }],
+    ])
+  })
+
+  it("returns no aliases for a chart without datasets", () => {
+    expect(getAliasedDataSets([]).size).toBe(0)
+  })
+})
+
+describe("aliasDatasetReferences", () => {
+  const aliases = new Map([
+    ["3f2a", "__st_dataset_0"],
+    ["9c1b", "__st_dataset_1"],
+  ])
+  /** Serializes `spec` with the replacer and parses the result back. */
+  const roundTripWithAliases = (spec: unknown): unknown =>
+    JSON.parse(JSON.stringify(spec, aliasDatasetReferences(aliases)))
+
+  it("renames dataset references in views, layers, and lookups", () => {
+    const spec = {
+      data: { name: "3f2a" },
+      layer: [
+        { mark: "line" },
+        {
+          data: { name: "9c1b" },
+          mark: "point",
+          transform: [
+            {
+              lookup: "id",
+              from: { data: { name: "3f2a" }, key: "id", fields: ["y"] },
+            },
+          ],
+        },
+      ],
+    }
+
+    expect(roundTripWithAliases(spec)).toEqual({
+      data: { name: "__st_dataset_0" },
+      layer: [
+        { mark: "line" },
+        {
+          data: { name: "__st_dataset_1" },
+          mark: "point",
+          transform: [
+            {
+              lookup: "id",
+              from: {
+                data: { name: "__st_dataset_0" },
+                key: "id",
+                fields: ["y"],
+              },
+            },
+          ],
+        },
+      ],
+    })
+    // The input spec is not changed.
+    expect(spec.data.name).toBe("3f2a")
+  })
+
+  it("gives a dataset shared by several views one alias", () => {
+    const spec = {
+      hconcat: [
+        { data: { name: "3f2a" }, mark: "bar" },
+        { data: { name: "3f2a" }, mark: "tick" },
+      ],
+    }
+
+    expect(roundTripWithAliases(spec)).toEqual({
+      hconcat: [
+        { data: { name: "__st_dataset_0" }, mark: "bar" },
+        { data: { name: "__st_dataset_0" }, mark: "tick" },
+      ],
+    })
+  })
+
+  it("leaves non-dataset names and strings unchanged", () => {
+    const spec = {
+      // A GeoJSON dataset that stays inside the spec.
+      datasets: { geo: { type: "FeatureCollection", features: [] } },
+      data: { name: "geo", format: { type: "json" } },
+      title: "3f2a",
+      encoding: { x: { field: "3f2a" } },
+      layer: [{ data: null }, { data: { values: [{ name: "3f2a" }] } }],
+    }
+
+    expect(roundTripWithAliases(spec)).toEqual(spec)
   })
 })
 

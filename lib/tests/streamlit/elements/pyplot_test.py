@@ -26,7 +26,10 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+)
 from streamlit.web.server.server import MEDIA_ENDPOINT
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -99,11 +102,11 @@ class PyplotTest(DeltaGeneratorTestCase):
             st.pyplot()  # type: ignore[call-arg]
 
     def test_st_pyplot_rejects_none_fig(self):
-        """Passing fig=None raises a migration-oriented API exception."""
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        """Passing fig=None raises StreamlitMissingRequiredParameterError."""
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc_info:
             st.pyplot(None)  # type: ignore[arg-type]
 
-        assert "requires a Matplotlib figure" in str(exc_info.value)
+        assert "The `fig` parameter is required." in str(exc_info.value)
         assert "st.pyplot(fig)" in str(exc_info.value)
 
     @parameterized.expand([(True, "use_stretch"), (False, "use_content")])
@@ -245,6 +248,30 @@ class PyplotTest(DeltaGeneratorTestCase):
         assert savefig_kwargs["bbox_inches"] == "tight"
         assert savefig_kwargs["dpi"] == 200
         assert savefig_kwargs["format"] == "png"
+
+    def test_st_pyplot_marshals_alt(self) -> None:
+        """Non-empty alt is stored on the image proto; blank values follow image rules."""
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot([1, 2, 3], [1, 2, 3])
+        st.pyplot(fig, alt="Histogram of sample values")
+        el = self.get_delta_from_queue().new_element.imgs.imgs[0]
+        assert el.HasField("alt")
+        assert el.alt == "Histogram of sample values"
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot([1, 2, 3], [1, 2, 3])
+        st.pyplot(fig, alt="")
+        el = self.get_delta_from_queue().new_element.imgs.imgs[0]
+        assert el.HasField("alt")
+        assert el.alt == ""
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot([1, 2, 3], [1, 2, 3])
+        st.pyplot(fig)
+        assert not self.get_delta_from_queue().new_element.imgs.imgs[0].HasField("alt")
 
     @patch("streamlit.elements.pyplot.show_deprecation_warning")
     def test_st_pyplot_kwargs_override_defaults(self, _show_warning_mock: Mock):

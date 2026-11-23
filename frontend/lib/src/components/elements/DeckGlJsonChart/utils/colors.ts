@@ -17,13 +17,49 @@
 import * as geoLayers from "@deck.gl/geo-layers"
 import * as layers from "@deck.gl/layers"
 import * as meshLayers from "@deck.gl/mesh-layers"
+import { parseToRgba } from "color2k"
 
 import { jsonConverter } from "./jsonConverter"
 
 /**
- * @file Utilities for determining fill colors for layers based on their
- *      selection state and the layer's selection color mode.
+ * @file Utilities for layer colors: theme-primary defaults for omitted
+ *      colors and selection-state fill colors.
  */
+
+/**
+ * st.map sends this when it wants the theme primary color. The frontend
+ * replaces it with theme.colors.primary at MAP_DEFAULT_MARKER_ALPHA.
+ */
+export const MAP_PRIMARY_FILL_PLACEHOLDER = "primary"
+
+/**
+ * Alpha for theme-primary default colors (st.map markers and uncolored
+ * pydeck layers) so overlapping marks stay visible.
+ */
+export const MAP_DEFAULT_MARKER_ALPHA = 160
+
+/** Returns the theme primary color as RGBA with `MAP_DEFAULT_MARKER_ALPHA`. */
+export function themePrimaryRgba(
+  primaryCssColor: string
+): [number, number, number, number] {
+  const [r, g, b] = parseToRgba(primaryCssColor)
+  return [r, g, b, MAP_DEFAULT_MARKER_ALPHA]
+}
+
+/**
+ * Resolve st.map's primary fill placeholder to an RGBA array, or return the
+ * original value unchanged.
+ */
+export function resolveMapPrimaryFillColor(
+  fillColor: unknown,
+  primaryCssColor: string
+): unknown {
+  if (fillColor !== MAP_PRIMARY_FILL_PLACEHOLDER) {
+    return fillColor
+  }
+
+  return themePrimaryRgba(primaryCssColor)
+}
 
 /**
  * Maps the "@@type" of a layer to the corresponding fill functions.
@@ -31,7 +67,9 @@ import { jsonConverter } from "./jsonConverter"
  * Note that this mapping is not exhaustive and only includes the layers that we
  * can actually change the color of.
  */
-export const LAYER_TYPE_TO_FILL_FUNCTION: Record<string, readonly string[]> = {
+export const LAYER_TYPE_TO_FILL_FUNCTION: Partial<
+  Record<string, readonly string[]>
+> = {
   [geoLayers.GeohashLayer.layerName]: ["getFillColor"],
   [geoLayers.H3ClusterLayer.layerName]: ["getFillColor"],
   [geoLayers.H3HexagonLayer.layerName]: ["getFillColor"],
@@ -56,6 +94,84 @@ export const LAYER_TYPE_TO_FILL_FUNCTION: Record<string, readonly string[]> = {
   [layers.TextLayer.layerName]: ["getColor"],
   [meshLayers.ScenegraphLayer.layerName]: ["getColor"],
   [meshLayers.SimpleMeshLayer.layerName]: ["getColor"],
+}
+
+/**
+ * Color accessors that get a theme-primary default when omitted. Lists only
+ * solid geometry layers; text, icon, and mesh colors act as tints and keep
+ * deck.gl's defaults.
+ */
+const PYDECK_SOLID_LAYER_COLOR_ACCESSORS: Partial<
+  Record<string, readonly string[]>
+> = {
+  [geoLayers.GeohashLayer.layerName]: ["getFillColor"],
+  [geoLayers.H3ClusterLayer.layerName]: ["getFillColor"],
+  [geoLayers.H3HexagonLayer.layerName]: ["getFillColor"],
+  [geoLayers.MVTLayer.layerName]: ["getFillColor"],
+  [geoLayers.QuadkeyLayer.layerName]: ["getFillColor"],
+  [geoLayers.S2Layer.layerName]: ["getFillColor"],
+  [geoLayers.TripsLayer.layerName]: ["getColor"],
+  [layers.ArcLayer.layerName]: ["getTargetColor", "getSourceColor"],
+  [layers.ColumnLayer.layerName]: ["getFillColor"],
+  // Fills only; LineStrings and polygon outlines keep deck.gl's default black.
+  [layers.GeoJsonLayer.layerName]: ["getFillColor"],
+  [layers.LineLayer.layerName]: ["getColor"],
+  [layers.PathLayer.layerName]: ["getColor"],
+  [layers.PointCloudLayer.layerName]: ["getColor"],
+  [layers.PolygonLayer.layerName]: ["getFillColor"],
+  // Only the fill is themed; outlines keep deck.gl's default.
+  [layers.ScatterplotLayer.layerName]: ["getFillColor"],
+  [layers.SolidPolygonLayer.layerName]: ["getFillColor"],
+}
+
+/**
+ * deck.gl forwards the deprecated `getColor` alias to `getFillColor` only when
+ * `getFillColor` is unset, so an injected fill would override it. Among
+ * allowlisted layers, only Column and Scatterplot declare this alias.
+ */
+const LAYERS_WITH_GET_COLOR_ALIAS = new Set([
+  layers.ColumnLayer.layerName,
+  layers.ScatterplotLayer.layerName,
+])
+
+/**
+ * Sets omitted color accessors on solid pydeck layers to the theme primary
+ * (alpha `MAP_DEFAULT_MARKER_ALPHA`) so they match st.map. It never overwrites
+ * explicit values (arrays or `@@=` expressions) and returns the layer
+ * unchanged when:
+ * - its type isn't in `PYDECK_SOLID_LAYER_COLOR_ACCESSORS`, or
+ * - it sets the deprecated `getColor` alias (Column and Scatterplot).
+ */
+export function applyMissingPydeckPrimaryColors<
+  T extends Record<string, unknown>,
+>(layer: T, primaryCssColor: string): T {
+  const layerType = layer["@@type"]
+  if (typeof layerType !== "string") {
+    return layer
+  }
+
+  const accessors = PYDECK_SOLID_LAYER_COLOR_ACCESSORS[layerType]
+  if (!accessors) {
+    return layer
+  }
+
+  if (
+    LAYERS_WITH_GET_COLOR_ALIAS.has(layerType) &&
+    layer.getColor !== undefined
+  ) {
+    return layer
+  }
+
+  const primary = themePrimaryRgba(primaryCssColor)
+  let changed = false
+  const next: Record<string, unknown> = { ...layer }
+  for (const key of accessors) {
+    if (next[key] === undefined) {
+      next[key] = primary
+      changed = true
+    }
+  }
+  return (changed ? next : layer) as T
 }
 
 type SerializedColorValue = string | number
@@ -95,11 +211,13 @@ const getOriginalColor = ({
       : originalFillFunction
 
   if (Array.isArray(originalColor)) {
+    // Missing channels default to 0. A missing alpha defaults to opaque.
+    // `??` keeps an explicit 0, including a fully transparent alpha.
     return [
-      originalColor[0] || 0,
-      originalColor[1] || 0,
-      originalColor[2] || 0,
-      originalColor[3] || 255,
+      originalColor[0] ?? 0,
+      originalColor[1] ?? 0,
+      originalColor[2] ?? 0,
+      originalColor[3] ?? 255,
     ]
   }
 
@@ -112,10 +230,10 @@ const getOriginalColor = ({
     const evaluated = converted.originalColor(object)
 
     return [
-      evaluated[0] || 0,
-      evaluated[1] || 0,
-      evaluated[2] || 0,
-      evaluated[3] || 255,
+      evaluated[0] ?? 0,
+      evaluated[1] ?? 0,
+      evaluated[2] ?? 0,
+      evaluated[3] ?? 255,
     ]
   }
 
@@ -173,9 +291,9 @@ const getOriginalColorWithAppliedOpacity = ({
       )
 
   return [
-    originalColor[0] || 0,
-    originalColor[1] || 0,
-    originalColor[2] || 0,
+    originalColor[0] ?? 0,
+    originalColor[1] ?? 0,
+    originalColor[2] ?? 0,
     calculatedOpacity,
   ]
 }
@@ -212,7 +330,7 @@ export const getContextualFillColor = ({
         object,
         objectInfo,
         originalFillFunction,
-      }) || selectedColor
+      }) ?? selectedColor
     )
   }
 
@@ -223,6 +341,6 @@ export const getContextualFillColor = ({
       object,
       objectInfo,
       originalFillFunction,
-    }) || unselectedColor
+    }) ?? unselectedColor
   )
 }

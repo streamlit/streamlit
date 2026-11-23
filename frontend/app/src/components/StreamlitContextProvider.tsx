@@ -16,38 +16,43 @@
 
 import {
   memo,
-  PropsWithChildren,
-  RefObject,
+  type PropsWithChildren,
+  type RefObject,
   useCallback,
   useMemo,
   useRef,
 } from "react"
 
 import {
-  BackendOperationClient,
+  type BackendOperationClient,
   BackendOperationContext,
-  BackendOperationContextProps,
+  type BackendOperationContextProps,
   FormsContext,
-  FormsContextProps,
-  FormsData,
+  type FormsContextProps,
+  type FormsData,
   LibConfigContext,
-  LibConfigContextProps,
+  type LibConfigContextProps,
   NavigationContext,
-  NavigationContextProps,
+  type NavigationContextProps,
   ScriptRunContext,
-  ScriptRunContextProps,
-  ScriptRunState,
+  type ScriptRunContextProps,
+  type ScriptRunState,
   SidebarConfigContext,
-  SidebarConfigContextProps,
+  type SidebarConfigContextProps,
   SkillsInstallContext,
-  SkillsInstallContextProps,
-  ThemeConfig,
+  type SkillsInstallContextProps,
+  type ThemeConfig,
   ThemeContext,
-  ThemeContextProps,
+  type ThemeContextProps,
   ViewStateContext,
-  ViewStateContextProps,
+  type ViewStateContextProps,
 } from "@streamlit/lib"
-import { Config, IAppPage, Logo, PageConfig } from "@streamlit/protobuf"
+import {
+  type AppPage,
+  type Config,
+  type Logo,
+  PageConfig,
+} from "@streamlit/protobuf"
 
 type ViewStateContextValues = {
   isFullScreen: boolean
@@ -69,7 +74,7 @@ type NavigationContextValues = {
   currentPageScriptHash: string
   onPageChange: (pageScriptHash: string) => void
   navSections: string[]
-  appPages: IAppPage[]
+  appPages: AppPage.$Properties[]
 }
 
 type SidebarConfigContextValues = {

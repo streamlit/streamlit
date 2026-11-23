@@ -19,6 +19,7 @@ import { describe, expect, it } from "vitest"
 import {
   ElementContainerConfig,
   MinStretchWidth,
+  PrintLayout,
 } from "./ElementContainerConfig"
 
 describe("ElementContainerConfig", () => {
@@ -27,6 +28,7 @@ describe("ElementContainerConfig", () => {
       const config = new ElementContainerConfig()
       expect(config.minStretchWidth).toBe(MinStretchWidth.NONE)
       expect(config.styleOverrides).toBeUndefined()
+      expect(config.printLayout).toBeUndefined()
     })
 
     it("accepts all configuration options", () => {
@@ -142,6 +144,18 @@ describe("ElementContainerConfig", () => {
 
       expect(extended.minStretchWidth).toBe(MinStretchWidth.FIT_CONTENT)
       expect(base.minStretchWidth).toBe(MinStretchWidth.LARGE)
+    })
+
+    it("adds a print layout and keeps it when it is not overridden", () => {
+      const base = ElementContainerConfig.LARGE_OVERFLOW_VISIBLE
+      const chart = base.with({ printLayout: PrintLayout.GRAPHIC })
+
+      expect(chart.printLayout).toBe(PrintLayout.GRAPHIC)
+      expect(chart.styleOverrides).toEqual({ overflow: "visible" })
+      expect(base.printLayout).toBeUndefined()
+      expect(
+        chart.with({ minStretchWidth: MinStretchWidth.NONE }).printLayout
+      ).toBe(PrintLayout.GRAPHIC)
     })
 
     it("allows overriding all properties", () => {

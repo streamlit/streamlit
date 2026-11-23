@@ -45,7 +45,11 @@ from streamlit.elements.lib.column_config_utils import (
     ButtonClickSerde,
     ButtonColumnClickState,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.Dataframe_pb2 import LazyDataframe as LazyDataframeProto
 from streamlit.testing.v1 import AppTest
@@ -176,6 +180,79 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.placeholder == "-"
+
+    def test_dataframe_marshals_nonempty_alt_and_omits_blank_values(self) -> None:
+        """A non-empty alt is stored on the proto; omitted/None/blank leave it unset."""
+        df = pd.DataFrame({"A": [1, 2]})
+
+        st.dataframe(df, alt="Top 20 customers by revenue")
+        el = self.get_delta_from_queue().new_element.dataframe
+        assert el.HasField("alt")
+        assert el.alt == "Top 20 customers by revenue"
+
+        st.dataframe(df)
+        assert not self.get_delta_from_queue().new_element.dataframe.HasField("alt")
+
+        st.dataframe(df, alt=None)
+        assert not self.get_delta_from_queue().new_element.dataframe.HasField("alt")
+
+        st.dataframe(df, alt="")
+        assert not self.get_delta_from_queue().new_element.dataframe.HasField("alt")
+
+        st.dataframe(df, alt="  ")
+        assert not self.get_delta_from_queue().new_element.dataframe.HasField("alt")
+
+    def test_dataframe_alt_strips_whitespace(self) -> None:
+        """Leading and trailing whitespace is stripped from alt."""
+        st.dataframe(pd.DataFrame({"A": [1]}), alt="  Top customers  ")
+        el = self.get_delta_from_queue().new_element.dataframe
+        assert el.HasField("alt")
+        assert el.alt == "Top customers"
+
+    def test_dataframe_alt_preserves_adversarial_plain_text(self) -> None:
+        """Quotes and angle brackets stay literal on the proto (no HTML path)."""
+        adversarial = 'Grid of "A < B" & values <script>alert(1)</script>'
+        st.dataframe(pd.DataFrame({"A": [1]}), alt=adversarial)
+        el = self.get_delta_from_queue().new_element.dataframe
+        assert el.HasField("alt")
+        assert el.alt == adversarial
+
+    def test_selectable_dataframe_alt_is_included_in_element_id(self) -> None:
+        """Changing only alt remounts a selection-activated dataframe."""
+        df = pd.DataFrame({"A": [1, 2]})
+
+        def dataframe_id(**kwargs: object) -> str:
+            # Each call below produces the same element ID, so clear the registry
+            # to avoid a duplicate-ID error.
+            self.script_run_ctx.shared.widget_ids_this_run.clear()
+            st.dataframe(df, on_select="rerun", **kwargs)
+            return self.get_delta_from_queue().new_element.dataframe.id
+
+        with_alt = dataframe_id(alt="First description")
+        with_other_alt = dataframe_id(alt="A totally different description")
+
+        assert with_alt != ""
+        assert with_alt != with_other_alt
+        assert dataframe_id(alt="First description") == with_alt
+
+    def test_keyed_selectable_dataframe_id_stable_when_alt_changes(self) -> None:
+        """Keyed selection dataframes ignore alt for identity (key_as_main_identity)."""
+        df = pd.DataFrame({"A": [1, 2]})
+
+        st.dataframe(df, on_select="rerun", key="stable_alt", alt="First description")
+        id_a = self.get_delta_from_queue().new_element.dataframe.id
+
+        self.script_run_ctx.shared.reset()
+        self.clear_queue()
+
+        st.dataframe(
+            df,
+            on_select="rerun",
+            key="stable_alt",
+            alt="A totally different description",
+        )
+        id_b = self.get_delta_from_queue().new_element.dataframe.id
+        assert id_a == id_b
 
     def test_uuid(self):
         df = mock_data_frame()
@@ -390,19 +467,25 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (["invalid", "single-row"],),
-            (["single-row", "multi-row"],),
-            (["single-row-required", "single-row"],),
-            (["single-row-required", "multi-row"],),
-            (["single-column", "multi-column"],),
-            (["single-cell", "multi-cell"],),
+            (["invalid", "single-row"], StreamlitValueError),
+            (["single-row", "multi-row"], StreamlitIncompatibleParametersError),
+            (
+                ["single-row-required", "single-row"],
+                StreamlitIncompatibleParametersError,
+            ),
+            (
+                ["single-row-required", "multi-row"],
+                StreamlitIncompatibleParametersError,
+            ),
+            (["single-column", "multi-column"], StreamlitIncompatibleParametersError),
+            (["single-cell", "multi-cell"], StreamlitIncompatibleParametersError),
         ]
     )
-    def test_selection_mode_parsing_invalid(self, invalid_modes):
+    def test_selection_mode_parsing_invalid(self, invalid_modes, expected_error):
         """Test that an exception is thrown if the selection_mode parameter is invalid."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(expected_error):
             st.dataframe(df, on_select="rerun", selection_mode=invalid_modes)
 
     def test_selection_mode_deactivated(self):
@@ -469,7 +552,10 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         """Test that selection_default requires on_select to be activated."""
         df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitIncompatibleParametersError,
+            match=r"Set `on_select` to `'rerun'` or a callback",
+        ):
             st.dataframe(df, selection_default={"selection": {"rows": [0]}})
 
     def test_row_selection_auto_hides_range_index(self):
@@ -523,7 +609,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
     def test_use_right_display_values(self):
         """Test that _use_display_values gets correct value for "display_value" instead of the original one."""
 
-        class Status(str, enum.Enum):
+        class Status(str, enum.Enum):  # noqa: UP042
             success = "Success status"
 
         df = pd.DataFrame({"pipeline": ["Success"], "status": [Status.success]})

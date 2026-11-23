@@ -1,9 +1,35 @@
 # Streamlit theme templates
 
-Ready-to-use theme configs. Each file in `configs/` is a complete `[theme]`
-block — paste into your app's `.streamlit/config.toml`.
+Ready-to-use theme configs. Each file in `configs/` is a complete theme
+block — paste into your app's `.streamlit/config.toml`, or adapt into a
+shared brand file and point each app’s `theme.base` at it.
 
-## Available themes
+When several apps share a brand, put cross-app brand keys (colors, fonts,
+radii, borders, chart/dataframe palettes) in one `theme.base` file and
+override per app. Keep app-specific layout tweaks (padding, denser
+sidebar, one-off primary) in each app’s `config.toml`. Streamlit resolves
+a relative `theme.base` path from the `streamlit run` working directory,
+not from `config.toml`. For a single app, copy a template straight into
+`.streamlit/config.toml`. Choose single or dual mode from the goal below;
+use dual mode only when users should control appearance. Other single-mode
+themes are aesthetic variants.
+
+| Goal | Approach |
+|------|----------|
+| Same brand across many apps | Shared TOML/URL via `theme.base`; tweak in each app’s `config.toml` |
+| Locked single look | `shadcn` (light) or `vscode` (dark) |
+| User can toggle light/dark | `shadcn-dual` (general), `dense-dashboard` (compact KPI padding), `bi-dashboard` (BI cards and KPIs), or `warm-editorial` (editorial, paper tones) |
+
+## Dual-mode (settings toggle stays available)
+
+| Theme | Modes | Primary | Notes |
+|-------|-------|---------|-------|
+| **shadcn-dual** | Light + dark | `#18181B` / `#71717A` | Neutral brand look with per-mode sidebars |
+| **dense-dashboard** | Light + dark | `#1D4ED8` / `#2563EB` | Compact `paddingTop`/`paddingBottom` for KPI dashboards |
+| **bi-dashboard** | Light + dark | `#5B5BD6` / `#5E5CE6` | Geist fonts, compact bold metric values, and color-blind-checked chart palettes for BI cards |
+| **warm-editorial** | Light + dark | `#C2410C` / `#C8501E` | Fraunces serif headings, paper tones, pill buttons, and color-blind-checked chart palettes |
+
+## Single-mode (locked appearance)
 
 | Theme | Base | Primary color | Fonts |
 |-------|------|---------------|-------|
@@ -23,4 +49,5 @@ block — paste into your app's `.streamlit/config.toml`.
 All themes load [Google Fonts](https://fonts.google.com/) via the
 `font = "<family>:<stylesheet_url>"` syntax — no local font files required.
 
-See `references/theme.md` for the full theming guide.
+See `references/theme.md` for shared `theme.base` inheritance, light/dark
+sections, padding, and the full theming guide.

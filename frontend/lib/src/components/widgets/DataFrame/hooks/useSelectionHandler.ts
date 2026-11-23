@@ -16,12 +16,15 @@
 
 import { useCallback, useState } from "react"
 
-import { CompactSelection, GridSelection } from "@glideapps/glide-data-grid"
+import {
+  CompactSelection,
+  type GridSelection,
+} from "@glideapps/glide-data-grid"
 import { isEqual } from "lodash-es"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
-import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 
 type SelectionHandlerReturn = {
   // The current selection state

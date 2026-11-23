@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import {
+import type {
   Config,
   EnvironmentInfo,
   Initialize,

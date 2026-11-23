@@ -15,9 +15,9 @@
  */
 
 import {
-  MouseEvent,
-  RefCallback,
-  RefObject,
+  type MouseEvent,
+  type RefCallback,
+  type RefObject,
   useCallback,
   useEffect,
   useRef,
@@ -27,7 +27,7 @@ import {
 import useTimeout from "~lib/hooks/useTimeout"
 import { isNullOrUndefined } from "~lib/util/utils"
 
-import { animateHeight, AnimationHandle } from "./animateHeight"
+import { animateHeight, type AnimationHandle } from "./animateHeight"
 import { BORDER_SIZE } from "./styled-components"
 
 /**

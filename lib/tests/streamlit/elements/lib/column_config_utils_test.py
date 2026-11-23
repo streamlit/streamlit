@@ -13,8 +13,8 @@
 # limitations under the License.
 from __future__ import annotations
 
-import datetime
 import unittest
+from datetime import date, datetime, time
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -24,6 +24,7 @@ import pyarrow as pa
 import pytest
 from parameterized import parameterized
 
+import streamlit as st
 from streamlit.dataframe_util import DataFormat
 from streamlit.elements.lib.column_config_utils import (
     _EDITING_COMPATIBILITY_MAPPING,
@@ -37,14 +38,18 @@ from streamlit.elements.lib.column_config_utils import (
     _determine_data_kind_via_inferred_type,
     _determine_data_kind_via_pandas_dtype,
     apply_data_specific_configs,
+    described_column_config,
     determine_dataframe_schema,
     extract_button_column_configs,
     is_type_compatible,
     process_config_mapping,
+    register_button_column_widgets,
     update_column_config,
 )
 from streamlit.elements.lib.column_types import ButtonColumn
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 if TYPE_CHECKING:
     from streamlit.elements.lib.column_types import ColumnConfig
@@ -75,14 +80,14 @@ SHARED_DATA_KIND_TEST_CASES = [
         ColumnDataKind.DATETIME,
     ),
     (
-        pd.Series([datetime.datetime(2000, 1, 1), datetime.datetime(2000, 1, 2)]),
+        pd.Series([datetime(2000, 1, 1), datetime(2000, 1, 2)]),
         ColumnDataKind.DATETIME,
     ),
     (
         pd.Series(
             [
-                pd.Timestamp("2000-01-01", tz="US/Central"),
-                pd.Timestamp("2000-01-02", tz="US/Central"),
+                pd.Timestamp("2000-01-01", tz="America/Chicago"),
+                pd.Timestamp("2000-01-02", tz="America/Chicago"),
             ]
         ),
         ColumnDataKind.DATETIME,
@@ -130,6 +135,9 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             (pd.Series([TestObject(), TestObject()]), ColumnDataKind.UNKNOWN),
         ]
     )
+    # Pandas 3.1 warns when appending None upcasts the bool and
+    # interval[int64] columns.
+    @pytest.mark.filterwarnings("ignore:Setting an item of incompatible dtype")
     def test_determine_data_kind(
         self, column: pd.Series, expected_data_kind: ColumnDataKind
     ):
@@ -158,19 +166,17 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             (pd.Index([1.1, 2.2, 3.3]), ColumnDataKind.FLOAT),
             (pd.Index([1, 2.2, 3]), ColumnDataKind.FLOAT),  # mixed-integer-float
             (
-                pd.Index([datetime.date(2000, 1, 1), datetime.date(2000, 1, 2)]),
+                pd.Index([date(2000, 1, 1), date(2000, 1, 2)]),
                 ColumnDataKind.DATE,
             ),
             (
-                pd.Index([datetime.time(0, 0, 0), datetime.time(0, 0, 1)]),
+                pd.Index([time(0, 0, 0), time(0, 0, 1)]),
                 ColumnDataKind.TIME,
             ),
             (pd.RangeIndex(0, 3), ColumnDataKind.INTEGER),
             (pd.TimedeltaIndex(["1 day", "2 days"]), ColumnDataKind.TIMEDELTA),
             (
-                pd.DatetimeIndex(
-                    [datetime.datetime(2000, 1, 1), datetime.datetime(2000, 1, 2)]
-                ),
+                pd.DatetimeIndex([datetime(2000, 1, 1), datetime(2000, 1, 2)]),
                 ColumnDataKind.DATETIME,
             ),
             (
@@ -202,12 +208,13 @@ class ColumnConfigUtilsTest(unittest.TestCase):
                 ColumnDataKind.PERIOD,
             ),
             (pd.Series(["a", "b", "c"]), ColumnDataKind.STRING),
+            (pd.Series([Decimal("1.1"), Decimal("2.2")]), ColumnDataKind.DECIMAL),
             (
-                pd.Series([datetime.date(2000, 1, 1), datetime.date(2000, 1, 2)]),
+                pd.Series([date(2000, 1, 1), date(2000, 1, 2)]),
                 ColumnDataKind.DATE,
             ),
             (
-                pd.Series([datetime.time(12, 0), datetime.time(13, 0)]),
+                pd.Series([time(12, 0), time(13, 0)]),
                 ColumnDataKind.TIME,
             ),
             (
@@ -273,11 +280,11 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             (pd.Series([b"a", b"b", b"c"]), ColumnDataKind.BYTES),
             (pd.Series(["a", "b", "c"]), ColumnDataKind.STRING),
             (
-                pd.Series([datetime.date(2000, 1, 1), datetime.date(2000, 1, 2)]),
+                pd.Series([date(2000, 1, 1), date(2000, 1, 2)]),
                 ColumnDataKind.DATE,
             ),
             (
-                pd.Series([datetime.time(12, 0), datetime.time(13, 0)]),
+                pd.Series([time(12, 0), time(13, 0)]),
                 ColumnDataKind.TIME,
             ),
             (pd.Series([Decimal("1.1"), Decimal("2.2")]), ColumnDataKind.DECIMAL),
@@ -416,6 +423,14 @@ class ColumnConfigUtilsTest(unittest.TestCase):
 
         with pytest.raises(StreamlitAPIException):
             process_config_mapping({"col1": ["a", "b"]})  # type: ignore
+
+    def test_process_config_mapping_copies_button_column_result(self) -> None:
+        """ButtonColumnResult configs are copied so later mutation is isolated."""
+        button_result = ButtonColumn("Actions", key="action_click")
+        processed_button = process_config_mapping({"actions": button_result})
+        assert processed_button["actions"] == button_result.config
+        processed_button["actions"]["label"] = "Changed"
+        assert button_result.config["label"] != "Changed"
 
     def test_extract_button_column_configs(self):
         """Test extraction of interactive ButtonColumn wrapper configs."""
@@ -581,3 +596,57 @@ class ColumnConfigUtilsTest(unittest.TestCase):
                     },
                 },
             )
+
+
+class RegisterButtonColumnWidgetsTest(DeltaGeneratorTestCase):
+    """Tests for registering interactive button-column widgets."""
+
+    def test_register_button_column_widgets_attaches_widget_ids(self) -> None:
+        """Each ButtonColumn is registered and mapped onto the dataframe proto."""
+        button_col = ButtonColumn("Actions", key="action_click")
+        proto = DataframeProto()
+        register_button_column_widgets(
+            dg=st._main,
+            proto=proto,
+            button_columns={"actions": button_col},
+            ctx=self.script_run_ctx,
+        )
+
+        widget_id = proto.button_click_widgets["actions"]
+        assert widget_id
+        assert widget_id in self.script_run_ctx.shared.widget_ids_this_run
+
+
+def test_described_column_config_drops_presentation_and_keeps_index_meaning() -> None:
+    """The agent view keeps column meaning, including the index, and drops layout."""
+    described = described_column_config(
+        {
+            "notes": {
+                "label": "Notes",
+                "width": 100,
+                "alignment": "left",
+                "pinned": True,
+                "hidden": False,
+            },
+            INDEX_IDENTIFIER: {
+                "label": "Month",
+                "type": "date",
+                "format": "MMM YYYY",
+                "width": 20,
+                "hidden": False,
+            },
+            "secret": {"hidden": True},
+            "width_only": {"width": 40},
+        }
+    )
+
+    assert described == {
+        "notes": {"label": "Notes", "hidden": False},
+        INDEX_IDENTIFIER: {"label": "Month", "type": "date", "format": "MMM YYYY"},
+        "secret": {"hidden": True},
+    }
+    assert (
+        described_column_config({INDEX_IDENTIFIER: {"width": 1, "hidden": True}})
+        is None
+    )
+    assert described_column_config("unchanged") == "unchanged"

@@ -14,13 +14,17 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind, TextCell } from "@glideapps/glide-data-grid"
+import {
+  type GridCell,
+  GridCellKind,
+  type TextCell,
+} from "@glideapps/glide-data-grid"
 
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   getErrorCell,
   removeLineBreaks,
   toSafeString,
@@ -69,7 +73,9 @@ function ObjectColumn(props: BaseColumnProps): BaseColumn {
       }
     },
     getCellValue(cell: TextCell): string | null {
-      return cell.data === undefined ? null : cell.data
+      // TextCell.data is typed as string, but a missing value is stored as null.
+      const data = cell.data as string | null | undefined
+      return data ?? null
     },
   }
 }

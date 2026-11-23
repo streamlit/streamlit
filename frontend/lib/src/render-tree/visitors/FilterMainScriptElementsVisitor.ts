@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { AppNode } from "~lib/render-tree/AppNode.interface"
+import type { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
-import { ElementNode } from "~lib/render-tree/ElementNode"
+import type { ElementNode } from "~lib/render-tree/ElementNode"
 import { TransientNode } from "~lib/render-tree/TransientNode"
 
-import { AppNodeVisitor } from "./AppNodeVisitor.interface"
+import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
 /**
  * A visitor that filters out nodes whose activeScriptHash does not match
@@ -67,10 +67,12 @@ export class FilterMainScriptElementsVisitor implements AppNodeVisitor<
     }
 
     // Shortcut to avoid re-creating the same block node
-    if (!childrenChanged) {
+    if (!childrenChanged && node.retained.length === 0) {
       return node
     }
 
+    // Drop retained elements on a page change: elements don't stay mounted
+    // across pages, and the page change already clears their widget state.
     return new BlockNode(
       node.activeScriptHash,
       newChildren,

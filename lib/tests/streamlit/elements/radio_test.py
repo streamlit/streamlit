@@ -25,7 +25,12 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.radio import RadioSerde
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
@@ -153,13 +158,16 @@ class RadioTest(DeltaGeneratorTestCase):
 
     def test_invalid_value(self):
         """Test that value must be an int."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.radio("the label", ("m", "f"), "1")
 
-    def test_invalid_value_range(self):
-        """Test that value must be within the length of the options."""
-        with pytest.raises(StreamlitAPIException):
+    def test_index_out_of_range(self):
+        """Out-of-range index names the closed interval in StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as ex:
             st.radio("the label", ("m", "f"), 2)
+        assert str(ex.value) == (
+            "The `index` parameter, set to 2, is outside the required range [0, 1]."
+        )
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
@@ -783,6 +791,53 @@ class RadioBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.radio
         assert c.query_param_key == "my_key"
         assert not c.HasField("default")
+
+
+class RadioOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes set the ignore_rerun proto field."""
+        st.radio("the label", ("a", "b"), on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.radio("the label", ("a", "b"), on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.radio("the label", ("a", "b"), on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.radio("the label", ("a", "b"), on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.radio
+        assert c.ignore_rerun is True
 
 
 def _radio_format_func_raises(_: Any) -> str:

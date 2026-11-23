@@ -47,3 +47,12 @@ st.audio(url2, autoplay=autoplay)
 
 st.audio(url2, width=300)
 st.audio(url2, width="stretch")
+
+st.header("Audio with alt")
+# Wrapped in keyed containers so the tests can target these without relying on
+# the position of the elements in the app. The two differ only in `alt`, so the
+# test can attribute any difference in accessible name to that parameter alone.
+with st.container(key="audio_alt"):
+    st.audio(CAT_AUDIO, alt="A cat purring contentedly")
+with st.container(key="audio_no_alt"):
+    st.audio(CAT_AUDIO)

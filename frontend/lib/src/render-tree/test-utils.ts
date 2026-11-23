@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Writer } from "protobufjs"
+import { Writer } from "protobufjs/minimal"
 
 import {
   Block as BlockProto,
@@ -28,7 +28,7 @@ import {
   isNullOrUndefined,
 } from "~lib/util/utils"
 
-import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
+import { type AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
 
@@ -90,6 +90,43 @@ export function block(
   )
 }
 
+/** Create a loading block (`Block.loading`) with a 200px skeleton. */
+export function loadingBlock(
+  children: AppNode[] = [],
+  scriptRunId = NO_SCRIPT_RUN_ID,
+  fragmentId?: string
+): BlockNode {
+  return new BlockNode(
+    FAKE_SCRIPT_HASH,
+    children,
+    makeProto(BlockProto, {
+      allowEmpty: true,
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.VERTICAL,
+      },
+      loading: { skeletonHeight: { pixelHeight: 200 } },
+    }),
+    scriptRunId,
+    fragmentId
+  )
+}
+
+/** Create a spinner element node that was created in a skeleton slot. */
+export function skeletonSpinner(
+  label: string,
+  scriptRunId = NO_SCRIPT_RUN_ID,
+  showTime = false
+): ElementNode {
+  return new ElementNode(
+    makeProto(Element, {
+      spinner: { text: label, inSkeletonSlot: true, showTime },
+    }),
+    ForwardMsgMetadata.create(),
+    scriptRunId,
+    FAKE_SCRIPT_HASH
+  )
+}
+
 /** Create a BlockNode with a specific block-level id. */
 export function blockWithId(
   id: string,
@@ -132,25 +169,18 @@ export function makeProto<Type, Props>(
   return MessageType.decode(bytes)
 }
 
-// Custom Jest matchers for dealing with AppNodes
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace vi {
-    interface Matchers<R> {
-      toBeTextNode(text: string): R
-    }
-  }
-}
-
-interface CustomMatchers<R = unknown> {
-  toBeTextNode(text: string): R
-}
-
 declare module "vitest" {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-object-type -- Must match vitest's Assertion<T> signature which has no default type parameter.
-  interface Assertion<T = any> extends CustomMatchers<T> {}
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  interface AsymmetricMatchersContaining extends CustomMatchers {}
+  // Type parameters must match Vitest's Matchers exactly so the interfaces merge.
+  interface Matchers<
+    R extends void | Promise<void> = void | Promise<void>,
+    T = unknown,
+  > {
+    // `T` is declared only to match Vitest's `Matchers` parameter list, so it is
+    // unused here. `T extends T` always resolves to `string` (except `never`);
+    // it exists to satisfy unused-vars. Renaming `T` cannot fix that because
+    // merging requires the exact parameter names.
+    toBeTextNode(text: T extends T ? string : string): R
+  }
 }
 
 expect.extend({

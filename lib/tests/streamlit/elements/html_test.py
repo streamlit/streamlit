@@ -38,6 +38,18 @@ def test_is_file_with_html_tag_substring() -> None:
     assert _is_file("not<a>file") is False
 
 
+@pytest.mark.parametrize(
+    "error",
+    [OSError("broken"), ValueError("null byte"), TypeError("bad")],
+    ids=["oserror", "valueerror", "typeerror"],
+)
+def test_is_file_returns_false_on_filesystem_error(error: Exception) -> None:
+    """Path.is_file errors are treated as 'not a file'."""
+    with patch("streamlit.elements.html.Path") as mock_path:
+        mock_path.return_value.is_file.side_effect = error
+        assert _is_file("shortpath") is False
+
+
 class StHtmlAPITest(DeltaGeneratorTestCase):
     """Test st.html API."""
 
@@ -75,10 +87,8 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
 
     def test_st_html_empty_body_throws_error(self):
         """Test st.html with empty body throws error."""
-        with pytest.raises(StreamlitMissingRequiredParameterError) as ctx:
+        with pytest.raises(StreamlitMissingRequiredParameterError):
             st.html("")
-
-        assert "The `body` parameter is required for `st.html`" in str(ctx.value)
 
     def test_st_html_with_style_tag_only(self):
         """Test st.html with only a style tag."""

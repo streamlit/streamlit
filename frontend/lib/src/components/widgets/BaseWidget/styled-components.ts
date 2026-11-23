@@ -26,7 +26,8 @@ export interface StyledWidgetProps {
 export const StyledWidgetLabel = styled.label<StyledWidgetProps>(
   ({ disabled, labelVisibility, theme }) => ({
     fontSize: theme.fontSizes.sm,
-    color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
+    color:
+      disabled === true ? theme.colors.fadedText40 : theme.colors.bodyText,
     display:
       labelVisibility === LabelVisibilityOptions.Collapsed ? "none" : "flex",
     visibility:
@@ -52,9 +53,20 @@ export const StyledWidgetLabelHelp = styled.div({
   flex: 1,
 })
 
+export const StyledRequiredMarker = styled.span<{
+  $disabled?: boolean | null
+}>(({ theme, $disabled }) => ({
+  fontSize: theme.fontSizes.twoSm,
+  color:
+    $disabled === true ? theme.colors.fadedText40 : theme.colors.fadedText70,
+  marginLeft: theme.spacing.xs,
+  flexShrink: 0,
+  whiteSpace: "nowrap",
+}))
+
 export const StyledWidgetInstructions = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.twoSm,
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   margin: theme.spacing.none,
   textAlign: "right",
   position: "absolute",

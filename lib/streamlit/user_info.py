@@ -21,8 +21,10 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Final,
+    Literal,
     NoReturn,
     cast,
+    overload,
 )
 
 from streamlit import config, logger, runtime
@@ -292,7 +294,7 @@ def login(provider: str | None = None) -> None:
         if st.user.is_logged_in:
             if st.button("Log out"):
                 st.logout()
-            st.write(f"Hello, {st.user.name}!)
+            st.write(f"Hello, {st.user.name}!")
 
     """
     if provider is None:
@@ -353,12 +355,17 @@ def logout() -> None:
     """
     context = _get_script_run_ctx()
     if context is not None:
-        context.user_info.clear()
         session_id = context.session_id
 
+        # Mark the session non-resumable before emptying the shared user dict,
+        # so a concurrent disconnect cannot store a session that an anonymous
+        # reconnect would resume.
         if runtime.exists():
-            instance = runtime.get_instance()
-            instance.clear_user_info_for_session(session_id)
+            runtime.get_instance().clear_user_info_for_session(session_id)
+
+        # Clear the script context directly too, for runs without a runtime
+        # or a matching session.
+        context.user_info.clear()
 
         base_path = config.get_option("server.baseUrlPath")
 
@@ -488,6 +495,11 @@ class TokensProxy(Mapping[str, str]):
             # Use the tokens for API verification
     """
 
+    # Declare the documented token names so IDEs autocomplete ``.id`` and
+    # ``.access``; any other name still resolves through ``__getattr__``.
+    id: str
+    access: str
+
     def __init__(self, tokens: dict[str, str]) -> None:
         self._tokens = tokens
 
@@ -504,10 +516,16 @@ class TokensProxy(Mapping[str, str]):
         if name.startswith("_"):
             super().__setattr__(name, value)
         else:
-            raise StreamlitAPIException("st.user.tokens cannot be modified")
+            raise StreamlitAPIException(
+                "st.user.tokens cannot be modified",
+                error_id="user-tokens-cannot-be-modified",
+            )
 
     def __setitem__(self, name: str, value: Any) -> None:
-        raise StreamlitAPIException("st.user.tokens cannot be modified")
+        raise StreamlitAPIException(
+            "st.user.tokens cannot be modified",
+            error_id="user-tokens-cannot-be-modified",
+        )
 
     def __iter__(self) -> Iterator[str]:
         return iter(self._tokens)
@@ -648,6 +666,19 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
 
     """
 
+    # Narrow the documented is_logged_in field; provider-specific claims retain
+    # the mapping's general value type.
+    is_logged_in: bool
+
+    @overload
+    def __getitem__(self, key: Literal["is_logged_in"]) -> bool: ...
+
+    @overload
+    def __getitem__(self, key: Literal["tokens"]) -> TokensProxy: ...
+
+    @overload
+    def __getitem__(self, key: str) -> str | bool | TokensProxy | None: ...
+
     def __getitem__(self, key: str) -> str | bool | TokensProxy | None:
         if key == "tokens":
             return self.tokens
@@ -665,10 +696,16 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
             raise AttributeError(f'st.user has no attribute "{key}".')
 
     def __setattr__(self, name: str, value: str | None) -> NoReturn:
-        raise StreamlitAPIException("st.user cannot be modified")
+        raise StreamlitAPIException(
+            "st.user cannot be modified",
+            error_id="user-cannot-be-modified",
+        )
 
     def __setitem__(self, name: str, value: str | None) -> NoReturn:
-        raise StreamlitAPIException("st.user cannot be modified")
+        raise StreamlitAPIException(
+            "st.user cannot be modified",
+            error_id="user-cannot-be-modified",
+        )
 
     def __iter__(self) -> Iterator[str]:
         return iter(_get_user_info())

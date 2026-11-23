@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useMemo } from "react"
+import { memo, type ReactElement, useCallback, useMemo } from "react"
 
-import { Radio as RadioProto } from "@streamlit/protobuf"
+import type { Radio as RadioProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import UIRadio from "~lib/components/shared/Radio/Radio"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean
@@ -49,7 +50,7 @@ function Radio({
   widgetMgr,
   fragmentId,
 }: Readonly<Props>): ReactElement {
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_value" as const,
@@ -137,6 +138,10 @@ function updateWidgetMgrState(
     formId: element.formId,
     fragmentId,
     fromUser: vws.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
   })
 }
 

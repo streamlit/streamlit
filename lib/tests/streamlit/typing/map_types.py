@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
@@ -92,27 +90,30 @@ if TYPE_CHECKING:
             width="stretch",
             height=400,
             use_container_width=True,
+            alt="Delivery hubs across the Pacific Northwest",
         ),
         DeltaGenerator,
     )
+    assert_type(st_map(df, alt=None), DeltaGenerator)
 
     # =====================================================================
     # Invalid usages - should NOT type check
     # =====================================================================
 
     # Invalid latitude / longitude values (only str | None, not int)
-    st_map(df, latitude=1)  # type: ignore[arg-type]
-    st_map(df, longitude=1)  # type: ignore[arg-type]
+    st_map(df, latitude=1)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    st_map(df, longitude=1)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid zoom value (only int | None, not str)
-    st_map(df, zoom="10")  # type: ignore[arg-type]
+    st_map(df, zoom="10")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid width / height values ("content" is not a valid value here, and
     # None is not allowed)
-    st_map(df, width="content")  # type: ignore[arg-type]
-    st_map(df, width=None)  # type: ignore[arg-type]
-    st_map(df, height="content")  # type: ignore[arg-type]
-    st_map(df, height=None)  # type: ignore[arg-type]
+    st_map(df, width="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    st_map(df, width=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    st_map(df, height="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    st_map(df, height=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    st_map(df, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # All parameters except data are keyword-only.
-    st_map(df, "lat")  # type: ignore[call-arg]
+    st_map(df, "lat")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

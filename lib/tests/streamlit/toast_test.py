@@ -42,10 +42,10 @@ class ToastTest(DeltaGeneratorTestCase):
 
     def test_no_text(self):
         """Test that an error is raised if no text is provided."""
-        with pytest.raises(StreamlitMissingRequiredParameterError) as e:
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError, match=r"Please provide a message"
+        ):
             st.toast("")
-        assert "The `body` parameter is required for `st.toast`" in str(e.value)
-        assert "Please provide a message." in str(e.value)
 
     def test_valid_icon(self):
         """Test that it can be called passing a valid emoji as icon."""
@@ -61,8 +61,8 @@ class ToastTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as e:
             st.toast("toast text", icon="invalid")
         assert str(e.value) == (
-            'The value "invalid" is not a valid emoji. Shortcodes '
-            "are not allowed, please use a single character instead."
+            'The value "invalid" is not a valid icon. Please use a single emoji '
+            "or a Material icon shortcode like `:material\u200b/thumb_up:`."
         )
 
     @parameterized.expand([("short", 4), ("long", 10), ("infinite", 0), (10, 10)])

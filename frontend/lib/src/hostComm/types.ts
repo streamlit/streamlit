@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import {
-  IAppPage,
-  ICustomThemeConfig,
+import type {
+  AppPage,
+  CustomThemeConfig,
   MetricsEvent,
 } from "@streamlit/protobuf"
 
-import { ScriptRunState } from "~lib/ScriptRunState"
+import type { ScriptRunState } from "~lib/ScriptRunState"
 import type { PresetThemeName } from "~lib/theme/types"
 import type { ExportedTheme } from "~lib/theme/utils"
 
@@ -154,7 +154,7 @@ export type IHostToGuestMessage = {
       type: "SET_CUSTOM_THEME_CONFIG"
       themeName?: PresetThemeName
       // TODO: Consider removing themeInfo once stakeholders no longer use it
-      themeInfo?: ICustomThemeConfig
+      themeInfo?: CustomThemeConfig.$Properties
     }
   | {
       type: "SEND_APP_HEARTBEAT"
@@ -197,7 +197,7 @@ export type IGuestToHostMessage =
     }
   | {
       type: "SET_APP_PAGES"
-      appPages: IAppPage[]
+      appPages: AppPage.$Properties[]
     }
   | {
       type: "SET_CURRENT_PAGE_NAME"

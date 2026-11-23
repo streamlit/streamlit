@@ -15,13 +15,14 @@
  */
 
 import {
-  ClipboardEvent,
-  FocusEvent,
-  KeyboardEvent,
+  type ClipboardEvent,
+  type FocusEvent,
+  type KeyboardEvent,
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
+  useEffect,
   useId,
   useMemo,
   useRef,
@@ -33,18 +34,24 @@ import { Cancel } from "@emotion-icons/material-rounded"
 import { Time } from "@internationalized/date"
 import { I18nProvider, type TimeValue } from "react-aria-components"
 
-import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
+import type { TimeInput as TimeInputProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { requiredFieldError } from "~lib/components/widgets/BaseWidget/requiredField"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
+  snapTimeParts,
+  stepIncludesSeconds,
+} from "~lib/components/widgets/timeStepSnap"
+import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -54,7 +61,7 @@ import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledClearButton,
@@ -85,7 +92,7 @@ export interface Props {
  * Note: `step` also controls arrow-key behaviour via `handleKeyCapture`.
  */
 function stepToGranularity(stepSeconds: number): "minute" | "second" {
-  return stepSeconds % 60 !== 0 ? "second" : "minute"
+  return stepIncludesSeconds(stepSeconds) ? "second" : "minute"
 }
 
 /** Converts an HH:MM or HH:MM:SS wire-format string to a React Aria Time object. */
@@ -113,11 +120,11 @@ function TimeInput({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_value" as const,
-        clearable: !element.default,
+        clearable: isNullOrUndefined(element.default),
       }
     : undefined
 
@@ -142,21 +149,21 @@ function TimeInput({
     onFormCleared: stableOnFormCleared,
   })
 
-  // Local display state drives the TimeField directly, avoiding the
-  // useEffect-delay in useBasicWidgetState that would cause React Aria
-  // to see a stale value mid-render and reset its segment edit buffer.
+  // Local display state drives the TimeField so typed digits can stay
+  // uncommitted until blur, without React Aria resetting its segment buffer.
   const [displayValue, setDisplayValue] = useState<string | null>(value)
 
   // Tracks whether the user has a pending (uncommitted) edit. Drives the
   // "Press Enter to apply/submit form" hint via InputInstructions.
-  // Explicit state — NOT derived from (displayValue !== value) — to avoid a
-  // one-render flicker after arrow-key/immediate commits where value still
-  // reflects the previous async update cycle.
+  // Explicit state — not derived from (displayValue !== value) — because
+  // typed digits update displayValue before the commit on blur.
   const [dirty, setDirty] = useState(false)
 
   const [isFocused, setIsFocused] = useState(false)
 
   const [validationError, setValidationError] = useState<string | null>(null)
+
+  const [hasRequiredError, setHasRequiredError] = useState(false)
 
   // If a user pastes an out-of-range value (e.g. "08:99"), the Time object
   // can't represent it. Store the raw digits here to override segment rendering
@@ -172,20 +179,62 @@ function TimeInput({
     setDirty(false)
     setValidationError(null)
     setPasteOverride(null)
+    setHasRequiredError(false)
   }
 
-  // Sync from backend when value changes externally (form clear, session
-  // state update, setValue call). Uses render-time adjustment pattern:
-  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
-  // Gated: only update display when user has no uncommitted local edits
-  // (displayValue still matches the last committed value we synced from).
+  // Separate this component's own commit from a later session-state update.
+  // commitDisplayValue records the value it wrote; a blocked required commit
+  // leaves the ref unset. The effect clears it after paint.
+  const pendingUserCommitRef = useRef<string | null | undefined>(undefined)
+  useEffect(() => {
+    pendingUserCommitRef.current = undefined
+  }, [value])
+
+  // Apply a new committed value to the display. Skip that when the user
+  // has a non-empty uncommitted edit, so a session-state or fragment update
+  // does not drop those keystrokes. Still apply it over a dirty empty
+  // display (a programmatic refill) and over this component's own commit.
+  // An ordinary rerun leaves a blocked required clear empty. A session-state
+  // assignment sends setValue even when the time is unchanged, and that
+  // assignment replaces the empty display.
+  // On this render the hook still holds the previous commit. The proto value
+  // is what session state just wrote, so a different time or None must not
+  // be painted as the old time before the hook catches up.
   const [prevValue, setPrevValue] = useState(value)
-  if (prevValue !== value) {
+  const incomingValue = getCurrStateFromProto(element)
+  if (
+    element.setValue &&
+    prevValue === incomingValue &&
+    dirty &&
+    isNullOrUndefined(displayValue)
+  ) {
+    setDisplayValue(incomingValue)
+    setDirty(false)
+    setHasRequiredError(false)
+    setValidationError(null)
+    setPasteOverride(null)
+  } else if (prevValue !== value) {
     setPrevValue(value)
     setValidationError(null)
     setPasteOverride(null)
-    if (displayValue === prevValue) {
+
+    const userCommittedThisValue = pendingUserCommitRef.current === value
+    const keepUncommittedEdit =
+      displayValue !== prevValue &&
+      !isNullOrUndefined(displayValue) &&
+      !userCommittedThisValue
+
+    if (!keepUncommittedEdit) {
       setDisplayValue(value)
+      // On Enter in a form, this widget stages null and the submit validator
+      // paints the required error in the same event. Keep that error. Any
+      // other value change, including a programmatic None, clears it.
+      const keepInFormRequiredError =
+        userCommittedThisValue && hasRequiredError && isNullOrUndefined(value)
+      if (!keepInFormRequiredError) {
+        setDirty(false)
+        setHasRequiredError(false)
+      }
     }
   }
 
@@ -195,6 +244,9 @@ function TimeInput({
   displayValueRef.current = displayValue
   const valueRef = useRef(value)
   valueRef.current = value
+  const dirtyRef = useRef(dirty)
+  dirtyRef.current = dirty
+  const formSubmitValidatorRef = useRef<() => boolean>(() => true)
 
   /**
    * Arrow-key presses commit immediately (like the +/- buttons on
@@ -208,12 +260,17 @@ function TimeInput({
   const validationErrorId = `${id}-validation-error`
   const theme = useEmotionTheme()
   const { locale } = useContext(LibConfigContext)
+  // `step` is `number | Long`, which the rule always reports. A missing or
+  // numeric 0 step falls back to 900 seconds. An unset int64 decodes as a
+  // Long zero, which is truthy and skips the fallback; Python always sends a
+  // positive step.
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- see comment above
   const step = element.step ? Number(element.step) : 900
-  const clearable = isNullOrUndefined(element.default) && !disabled
+  // The field can be emptied only when its default is empty. Required fields
+  // hide the clear button; users can still clear eligible fields with the keyboard.
+  const allowEmptyDisplay = isNullOrUndefined(element.default) && !disabled
+  const showClearButton = allowEmptyDisplay && !element.required
   const inForm = isInForm({ formId: element.formId })
-
-  const stepMins = step / 60
-  const stepHours = step / 3600
 
   const { width, elementRef } = useCalculatedDimensions()
 
@@ -251,6 +308,67 @@ function TimeInput({
   }, [element.format, locale])
 
   /**
+   * Writes a display value after the required check. Returns false without
+   * writing when required blocks an empty commit. `skipRequired` stages an
+   * empty in-form value so the submit validator can still paint the error.
+   */
+  const commitDisplayValue = useCallback(
+    (
+      next: string | null,
+      { skipRequired = false }: { skipRequired?: boolean } = {}
+    ): boolean => {
+      if (element.required && next === null && !skipRequired) {
+        setHasRequiredError(true)
+        setDirty(true)
+        setValidationError(null)
+        return false
+      }
+
+      setHasRequiredError(false)
+      setDirty(false)
+      pendingUserCommitRef.current = next
+      setValueWithSource({ value: next, fromUser: true })
+      // Inside a form, write synchronously so blur/Enter/submit in the same
+      // event sees the value. setValueWithSource defers its WidgetStateManager
+      // write to an effect.
+      if (inForm) {
+        updateWidgetMgrState(
+          element,
+          widgetMgr,
+          { value: next, fromUser: true },
+          fragmentId
+        )
+      }
+      return true
+    },
+    [element, setValueWithSource, inForm, widgetMgr, fragmentId]
+  )
+
+  /**
+   * Commits the display value on blur or Enter. Returns false when required
+   * blocks an empty commit, so Enter does not submit the form.
+   *
+   * - Clean, unchanged display: no write, so an unedited blur does not rerun.
+   * - Outside a form, a dirty empty required display still runs the check.
+   *   The check paints the error and keeps the last committed value.
+   * - Inside a form, an empty display is staged. The submit validator paints
+   *   the error.
+   */
+  const commitChangedDisplay = useCallback((): boolean => {
+    const next = displayValueRef.current
+    const current = valueRef.current
+    const isDirty = dirtyRef.current
+    // A non-required field that is already empty must not write null again.
+    if (next === current && !(isDirty && next === null && element.required)) {
+      if (isDirty) {
+        setDirty(false)
+      }
+      return true
+    }
+    return commitDisplayValue(next, { skipRequired: inForm })
+  }, [commitDisplayValue, element.required, inForm])
+
+  /**
    * Called by TimeField on every committed segment change.
    *
    * Typing: only update local display — commit is deferred to blur, matching
@@ -262,7 +380,7 @@ function TimeInput({
    */
   const handleChange = useCallback(
     (newTime: TimeValue | null): void => {
-      if (newTime === null && !clearable) {
+      if (newTime === null && !allowEmptyDisplay) {
         commitImmediatelyRef.current = false
         setValidationError(null)
         setPasteOverride(null)
@@ -271,17 +389,17 @@ function TimeInput({
       const granularity = stepToGranularity(step)
       const newValue = newTime ? timeToString(newTime, granularity) : null
       setDisplayValue(newValue)
+      // Hide a required error while the user is still editing, including
+      // Backspace. It is painted again on blur, Enter, or form submit.
+      setHasRequiredError(false)
       if (commitImmediatelyRef.current) {
         commitImmediatelyRef.current = false
-        setDirty(false)
-        setValueWithSource({ value: newValue, fromUser: true })
-        if (inForm) {
-          updateWidgetMgrState(
-            element,
-            widgetMgr,
-            { value: newValue, fromUser: true },
-            fragmentId
-          )
+        // A paste or arrow step that lands on the committed time is not a
+        // change, so skip the commit (and its rerun).
+        if (newValue === valueRef.current) {
+          setDirty(false)
+        } else {
+          commitDisplayValue(newValue)
         }
       } else {
         // Typed / deferred path — mark as dirty so InputInstructions can show.
@@ -290,23 +408,12 @@ function TimeInput({
       setValidationError(null)
       setPasteOverride(null)
     },
-    [
-      clearable,
-      setValueWithSource,
-      step,
-      inForm,
-      element,
-      widgetMgr,
-      fragmentId,
-    ]
+    [allowEmptyDisplay, commitDisplayValue, step]
   )
 
   /**
-   * Commit the current display value when the user leaves the entire field.
-   * relatedTarget check ensures we don't commit when focus simply moves
-   * between the hour and minute segments within the same wrapper.
-   * Skip the commit entirely when the displayed value hasn't changed so we
-   * don't trigger a spurious rerun on an unedited blur.
+   * Commit when focus leaves the field. Moving between hour and minute
+   * segments stays inside the wrapper, so that blur does not commit.
    */
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
@@ -314,22 +421,9 @@ function TimeInput({
       setIsFocused(false)
       setPasteOverride(null)
       setValidationError(null)
-      setDirty(false)
-      if (displayValueRef.current === valueRef.current) return
-      setValueWithSource({ value: displayValueRef.current, fromUser: true })
-      // Inside a form, write synchronously so that a Submit click in the same
-      // event loop gets the just-committed value. setValueWithSource defers its
-      // WidgetStateManager write to a useEffect which hasn't run yet.
-      if (inForm) {
-        updateWidgetMgrState(
-          element,
-          widgetMgr,
-          { value: displayValueRef.current, fromUser: true },
-          fragmentId
-        )
-      }
+      commitChangedDisplay()
     },
-    [setValueWithSource, inForm, element, widgetMgr, fragmentId]
+    [commitChangedDisplay]
   )
 
   const handleFocus = useCallback((): void => {
@@ -338,20 +432,16 @@ function TimeInput({
 
   const handleClear = useCallback((): void => {
     setDisplayValue(null)
-    setDirty(false)
-    setValidationError(null)
     setPasteOverride(null)
-    if (valueRef.current === null) return
-    setValueWithSource({ value: null, fromUser: true })
-    if (inForm) {
-      updateWidgetMgrState(
-        element,
-        widgetMgr,
-        { value: null, fromUser: true },
-        fragmentId
-      )
+    setValidationError(null)
+    // Already empty: dismiss a paste error without writing null again.
+    if (valueRef.current === null) {
+      setDirty(false)
+      setHasRequiredError(false)
+      return
     }
-  }, [setValueWithSource, inForm, element, widgetMgr, fragmentId])
+    commitDisplayValue(null)
+  }, [commitDisplayValue])
 
   const handlePaste = useCallback(
     (e: ClipboardEvent<HTMLDivElement>): void => {
@@ -370,7 +460,11 @@ function TimeInput({
       if (match) {
         const hours = Number(match[1])
         const minutes = Number(match[2])
-        const seconds = match[3] !== undefined ? Number(match[3]) : 0
+        // HH:MM and digit-only matches have no seconds group. TypeScript still
+        // types every capture as string, so at(3) is what makes a missing
+        // group undefined.
+        const secondsGroup = match.at(3)
+        const seconds = secondsGroup !== undefined ? Number(secondsGroup) : 0
         e.preventDefault()
         if (hours > 23 || minutes > 59 || seconds > 59) {
           setPasteOverride({
@@ -402,7 +496,9 @@ function TimeInput({
         if (target.getAttribute("role") !== "spinbutton") return
         const segmentType = target.getAttribute("data-type")
         const numValue = Number(text)
-        const current = displayValue ? stringToTime(displayValue) : null
+        const current = isNullOrUndefined(displayValue)
+          ? null
+          : stringToTime(displayValue)
         const currentHour = current
           ? String(current.hour).padStart(2, "0")
           : "00"
@@ -507,30 +603,17 @@ function TimeInput({
       // Enter commits the current display value, matching st.number_input.
       if (e.key === "Enter") {
         setPasteOverride(null)
+        // `validationError` is the value from before setValidationError(null)
+        // takes effect, so a paste error still blocks form submission.
+        const hadValidationError = validationError !== null
         setValidationError(null)
-        setDirty(false)
-        if (displayValueRef.current !== valueRef.current) {
-          setValueWithSource({
-            value: displayValueRef.current,
-            fromUser: true,
-          })
-          if (inForm) {
-            updateWidgetMgrState(
-              element,
-              widgetMgr,
-              { value: displayValueRef.current, fromUser: true },
-              fragmentId
-            )
-          }
-        }
-        // NOTE: `validationError` reads the value from BEFORE the
-        // `setValidationError(null)` call above takes effect (React state
-        // updates aren't synchronous within the same handler), so this
-        // correctly reflects whatever error was visible when Enter was pressed
-        // — e.g. a paste-triggered out-of-range error — and blocks form
-        // submission while it's showing, matching NumberInput's pattern.
+
+        // False means required blocked the commit, so Enter must not submit.
+        const committed = commitChangedDisplay()
+
         if (
-          !validationError &&
+          committed &&
+          !hadValidationError &&
           widgetMgr.allowFormEnterToSubmit(element.formId)
         ) {
           widgetMgr.submitForm(element.formId, fragmentId)
@@ -551,7 +634,7 @@ function TimeInput({
         return
       }
 
-      if (!displayValue) return
+      if (isNullOrUndefined(displayValue)) return
 
       // Arrow key on an existing value always commits immediately (like the
       // +/- buttons on st.number_input). Set the flag after the paste-override
@@ -561,87 +644,25 @@ function TimeInput({
       const segmentType = target.getAttribute("data-type")
       const up = e.key === "ArrowUp"
       const current = stringToTime(displayValue)
+      const snapped = snapTimeParts(
+        {
+          hour: current.hour,
+          minute: current.minute,
+          second: current.second,
+        },
+        segmentType,
+        step,
+        up
+      )
+      if (!snapped) return
 
-      if (segmentType === "minute" && step % 60 === 0) {
-        // Minute-granular step. For step=60 (stepMins=1) react-aria's ±1 is correct.
-        if (!Number.isInteger(stepMins) || stepMins <= 1) return
+      e.preventDefault()
+      // Stop both React synthetic propagation and the underlying native event
+      // so react-aria's onKeyDown on the spinbutton cannot also fire.
+      e.stopPropagation()
+      e.nativeEvent.stopImmediatePropagation()
 
-        e.preventDefault()
-        // Stop both React synthetic propagation and the underlying native event
-        // so react-aria's onKeyDown on the spinbutton cannot also fire.
-        e.stopPropagation()
-        e.nativeEvent.stopImmediatePropagation()
-
-        const totalMins = current.hour * 60 + current.minute
-        const next = up
-          ? Math.floor(totalMins / stepMins) * stepMins + stepMins
-          : Math.ceil(totalMins / stepMins) * stepMins - stepMins
-        const wrapped =
-          next >= 1440
-            ? 0
-            : next < 0
-              ? Math.floor(1439 / stepMins) * stepMins
-              : next
-        handleChange(new Time(Math.floor(wrapped / 60), wrapped % 60))
-      } else if (segmentType === "hour" && step % 3600 === 0) {
-        // Hour-only mode. React-aria defaults to ±1 h; only intercept when the
-        // step is a multiple of hours greater than 1.
-        if (!Number.isInteger(stepHours) || stepHours <= 1) return
-
-        e.preventDefault()
-        e.stopPropagation()
-        e.nativeEvent.stopImmediatePropagation()
-
-        const next = up
-          ? Math.floor(current.hour / stepHours) * stepHours + stepHours
-          : Math.ceil(current.hour / stepHours) * stepHours - stepHours
-        const wrapped =
-          next >= 24
-            ? 0
-            : next < 0
-              ? Math.floor(23 / stepHours) * stepHours
-              : next
-        handleChange(new Time(wrapped, 0))
-      } else if (step % 60 !== 0 && step > 1) {
-        // Non-minute-divisible step (e.g. 30s, 90s): all time segments snap
-        // using total-seconds math so the result is always a valid step boundary.
-        if (
-          segmentType !== "hour" &&
-          segmentType !== "minute" &&
-          segmentType !== "second"
-        )
-          return
-
-        e.preventDefault()
-        e.stopPropagation()
-        e.nativeEvent.stopImmediatePropagation()
-
-        const totalSecs =
-          current.hour * 3600 + current.minute * 60 + current.second
-
-        let next: number
-        if (segmentType === "second") {
-          next = up
-            ? Math.floor(totalSecs / step) * step + step
-            : Math.ceil(totalSecs / step) * step - step
-        } else {
-          // For hour/minute segments, find the next step boundary at least one
-          // segment-unit away so the displayed segment visibly changes.
-          const jumpSize = segmentType === "hour" ? 3600 : 60
-          next = up
-            ? Math.ceil((totalSecs + jumpSize) / step) * step
-            : Math.floor((totalSecs - jumpSize) / step) * step
-        }
-
-        const wrapped = ((next % 86400) + 86400) % 86400
-        handleChange(
-          new Time(
-            Math.floor(wrapped / 3600),
-            Math.floor((wrapped % 3600) / 60),
-            wrapped % 60
-          )
-        )
-      }
+      handleChange(new Time(snapped.hour, snapped.minute, snapped.second))
     },
     [
       disabled,
@@ -649,22 +670,88 @@ function TimeInput({
       pasteOverride,
       validationError,
       step,
-      stepMins,
-      stepHours,
       handleChange,
-      setValueWithSource,
-      inForm,
+      commitChangedDisplay,
       element,
       widgetMgr,
       fragmentId,
     ]
   )
 
+  /**
+   * Returns false to abort the form submit.
+   *
+   * A visible paste error blocks submit before a dirty commit. A
+   * submit-button click blurs first, which clears that error, so the click
+   * still submits the last committed value. Enter checks the error before
+   * calling submit.
+   * A dirty field then commits, and that commit does not skip required.
+   * A clean empty required field paints the error without writing.
+   */
+  formSubmitValidatorRef.current = () => {
+    if (validationError !== null) {
+      return false
+    }
+    if (dirtyRef.current) {
+      return commitDisplayValue(displayValueRef.current)
+    }
+    if (element.required && isNullOrUndefined(valueRef.current)) {
+      setHasRequiredError(true)
+      return false
+    }
+    return true
+  }
+
+  useEffect(() => {
+    if (!inForm) {
+      return undefined
+    }
+
+    const validator = (): boolean => formSubmitValidatorRef.current()
+    widgetMgr.addFormSubmitValidator(element.formId, element.id, validator)
+
+    return () => {
+      widgetMgr.removeFormSubmitValidator(element.formId, element.id)
+    }
+  }, [element.id, element.formId, inForm, widgetMgr])
+
+  const isEmpty = isNullOrUndefined(displayValue)
+  const requiredError = requiredFieldError(
+    element.required,
+    hasRequiredError,
+    isEmpty
+  )
+  // Clear the stored flag once the message would be hidden, so turning
+  // required back on cannot resurrect a stale error.
+  if (hasRequiredError && requiredError === null) {
+    setHasRequiredError(false)
+  }
+  // A paste or format error describes the text on screen. Prefer it over
+  // a required message, which only sees the empty display value and would
+  // hide the out-of-range error. The required flag stays set, so that
+  // message returns when the paste error is dismissed and the field is
+  // still empty.
+  const displayedError = validationError ?? requiredError
+  let pasteErrorAlert: string | null = null
+  if (validationError !== null) {
+    if (pasteOverride) {
+      const seconds =
+        pasteOverride.second !== undefined ? `:${pasteOverride.second}` : ""
+      pasteErrorAlert = `Error: time ${pasteOverride.hour}:${pasteOverride.minute}${seconds} is invalid. ${validationError}`
+    } else {
+      pasteErrorAlert = `Error: ${validationError}`
+    }
+  }
+  const errorAlertText = pasteErrorAlert ?? requiredError
+  const errorTooltipSource =
+    validationError !== null ? `**Error**: ${validationError}` : requiredError
+
   return (
     <div className="stTimeInput" data-testid="stTimeInput" ref={elementRef}>
       <WidgetLabel
         label={element.label}
         disabled={disabled}
+        required={element.required}
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
@@ -679,17 +766,25 @@ function TimeInput({
           data-disabled={disabled || undefined}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          data-has-error={validationError ? "" : undefined}
+          data-has-error={displayedError !== null ? "" : undefined}
           onKeyDownCapture={handleKeyCapture}
           onPaste={handlePaste}
         >
           <I18nProvider locale={locale}>
+            {/*
+             * isInvalid and isRequired are forwarded to each spinbutton.
+             * The group role does not allow aria-required or aria-invalid.
+             * validationBehavior="aria" keeps the hidden input from using
+             * the native required attribute.
+             */}
             <StyledTimeField
               aria-label={element.label}
               aria-describedby={
-                validationError ? validationErrorId : undefined
+                displayedError !== null ? validationErrorId : undefined
               }
-              isInvalid={!!validationError}
+              isInvalid={displayedError !== null}
+              isRequired={element.required}
+              validationBehavior="aria"
               value={
                 isNullOrUndefined(displayValue)
                   ? null
@@ -705,14 +800,18 @@ function TimeInput({
                 {segment => (
                   <StyledTimeSegment segment={segment}>
                     {({ text, isPlaceholder, type }) => {
-                      // Override visible text only — React Aria still controls
+                      // Override visible text only. React Aria still controls
                       // aria-valuenow/aria-valuetext from the last valid Time, so
                       // screen readers may announce stale values during the brief
-                      // error window. Mitigated by role="alert" + aria-invalid.
+                      // error window. The focused segment is aria-invalid and
+                      // described by the alert while the error is shown.
                       if (pasteOverride) {
                         if (type === "hour") return pasteOverride.hour
                         if (type === "minute") return pasteOverride.minute
-                        if (type === "second" && pasteOverride.second)
+                        if (
+                          type === "second" &&
+                          pasteOverride.second !== undefined
+                        )
                           return pasteOverride.second
                       }
                       if (!isPlaceholder) return text
@@ -728,12 +827,12 @@ function TimeInput({
               </StyledTimeFieldInput>
             </StyledTimeField>
           </I18nProvider>
-          {validationError && (
+          {errorTooltipSource !== null && (
             <StyledErrorIconContainer data-testid="stTimeInputError">
               <Tooltip
                 content={
                   <StreamlitMarkdown
-                    source={`**Error**: ${validationError}`}
+                    source={errorTooltipSource}
                     allowHTML={false}
                   />
                 }
@@ -744,7 +843,7 @@ function TimeInput({
               </Tooltip>
             </StyledErrorIconContainer>
           )}
-          {clearable &&
+          {showClearButton &&
             (!isNullOrUndefined(displayValue) || pasteOverride) && (
               <StyledClearButton
                 type="button"
@@ -759,11 +858,9 @@ function TimeInput({
                 <Cancel size={theme.iconSizes.base} aria-hidden="true" />
               </StyledClearButton>
             )}
-          {validationError && (
+          {errorAlertText !== null && (
             <StyledVisuallyHidden id={validationErrorId} role="alert">
-              {pasteOverride
-                ? `Error: time ${pasteOverride.hour}:${pasteOverride.minute}${pasteOverride.second ? `:${pasteOverride.second}` : ""} is invalid. ${validationError}`
-                : `Error: ${validationError}`}
+              {errorAlertText}
             </StyledVisuallyHidden>
           )}
         </StyledTimeInputWrapper>
@@ -784,11 +881,7 @@ function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: TimeInputProto
 ): string | null | undefined {
-  const storedValue = widgetMgr.getStringValue(element)
-  if (storedValue === undefined) {
-    return undefined
-  }
-  return storedValue ?? null
+  return widgetMgr.getStringValue(element)
 }
 
 function getDefaultStateFromProto(element: TimeInputProto): string | null {
@@ -809,6 +902,10 @@ function updateWidgetMgrState(
     formId: element.formId,
     fragmentId,
     fromUser: vws.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
   })
 }
 

@@ -1,4 +1,7 @@
 version: 2
+# Every Dependabot PR gets `update-snapshots`. The first finished Playwright
+# run consumes it: snapshot mismatches open a snapshot PR, and a pass or a
+# failure without snapshot updates removes the label.
 updates:
   # Keep package.json (& lockfiles) up to date as soon as
   # new versions are published to the npm registry
@@ -19,7 +22,7 @@ updates:
       - "change:chore"
       - "impact:internal"
       - "autofix"
-      - "never-stale"
+      - "update-snapshots"
 
     ignore:
       - dependency-name: "iframe-resizer"
@@ -32,9 +35,6 @@ updates:
       - dependency-name: "react-map-gl"
         # The license was changed with the mapbox-gl update.
         versions: [">=5.4.0"]
-      - dependency-name: "ua-parser-js"
-        # The license was changed to AGPLv3 with the 2.0 major version update.
-        versions: [">=2.0.0"]
       - dependency-name: "react"
         # Updating react will need some extra work.
         versions: [">=19.0.0"]
@@ -51,12 +51,16 @@ updates:
         # Our Yarn patch only applies to color2k 2.0.3.
         versions: [">=2.0.4"]
       - dependency-name: "katex"
-        # KaTeX 0.18 prefixed its internal CSS class names, which no longer
-        # match the markup produced by rehype-katex (it bundles katex 0.16.x).
-        # We only use the direct katex dependency for its stylesheet, so it must
-        # stay compatible with rehype-katex. Keep it below 0.18 until
-        # rehype-katex ships a katex 0.18-compatible release.
-        versions: [">=0.18.0"]
+        # We depend on katex only for its stylesheet; rehype-katex and mermaid
+        # bring the JS that renders math, and both resolve 0.16.x. Matching that
+        # version keeps a single copy of katex in the bundle. It also keeps the CSS
+        # in step with the markup the renderer emits, which matters across some
+        # minors: KaTeX 0.18 prefixed its internal class names.
+        # Raise this only together with rehype-katex and mermaid -- and note this
+        # only stops a lone katex bump. If a mermaid or rehype-katex release (see
+        # the markdown-processing group below) widens its own katex range, two
+        # copies come back; check `yarn why katex` when reviewing those.
+        versions: [">=0.17.0"]
 
     groups:
       deck-gl:
@@ -149,7 +153,7 @@ updates:
       - "change:chore"
       - "impact:internal"
       - "autofix"
-      - "never-stale"
+      - "update-snapshots"
 
     # Skip versions we intentionally cap out via upper bounds (`<`) in pyproject.toml,
     # so Dependabot doesn't open PRs that only fight that cap. The manifest constraint
@@ -160,15 +164,15 @@ updates:
     ignore:
       - dependency-name: "numpy"
         # NumPy 2.5 stubs use Python 3.12 syntax that mypy cannot parse while
-        # Streamlit still type-checks as Python 3.10.
+        # Streamlit type-checks as Python 3.11, the oldest supported version.
+        # Python 3.15 requires NumPy >=2.5 in pyproject.toml because earlier
+        # releases have no 3.15 wheels. This ignore stops Dependabot from
+        # lifting the <2.5 cap used below Python 3.15, and it also skips NumPy
+        # 2.5 patch bumps on 3.15 until mypy can parse those stubs.
         versions: [">=2.5.0"]
       - dependency-name: "pytest"
         # pytest >= 9.1.0 is causing issues and is not yet supported.
         versions: [">=9.1.0"]
-      - dependency-name: "pandas-stubs"
-        # pandas-stubs 3.x diverges from 2.x (type: ignore mismatches across the
-        # type-check matrix) and requires Python >= 3.11, but we still support 3.10.
-        versions: [">=3.0.0"]
 
     # Batch non-breaking direct updates while keeping major updates separate.
     # More specific category groups are matched first; the catch-all
@@ -229,7 +233,7 @@ updates:
       - "change:chore"
       - "impact:users"
       - "autofix"
-      - "never-stale"
+      - "update-snapshots"
 
   # Maintain dependencies in GitHub Actions workflows
   - package-ecosystem: "github-actions"
@@ -241,7 +245,7 @@ updates:
       - "change:chore"
       - "impact:internal"
       - "autofix"
-      - "never-stale"
+      - "update-snapshots"
 
     groups:
       github-actions-minor-patch:
@@ -266,7 +270,7 @@ updates:
       - "change:chore"
       - "impact:internal"
       - "autofix"
-      - "never-stale"
+      - "update-snapshots"
 
     ignore:
       - dependency-name: "https://github.com/astral-sh/ruff-pre-commit"

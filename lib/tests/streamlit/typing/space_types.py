@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
@@ -58,9 +56,9 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid size literal
-    space("tiny")  # type: ignore[arg-type]
-    space(size="full")  # type: ignore[arg-type]
+    space("tiny")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    space(size="full")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid size type
-    space(1.5)  # type: ignore[arg-type]
-    space(size=None)  # type: ignore[arg-type]
+    space(1.5)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    space(size=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

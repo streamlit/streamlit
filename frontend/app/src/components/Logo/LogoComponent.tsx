@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, useCallback, useContext, useMemo } from "react"
+import { type ReactElement, useCallback, useContext, useMemo } from "react"
 
 import { getLogger } from "loglevel"
 
@@ -22,13 +22,14 @@ import {
   StyledIconLogo,
   StyledLogo,
   StyledLogoButton,
+  StyledLogoInnerWrap,
   StyledLogoLink,
 } from "@streamlit/app/src/components/Sidebar/styled-components"
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import {
   DynamicIcon,
   getCrossOriginAttribute,
-  IconSize,
+  type IconSize,
   LibConfigContext,
   NavigationContext,
 } from "@streamlit/lib"
@@ -36,11 +37,48 @@ import { Logo } from "@streamlit/protobuf"
 
 const LOG = getLogger("LogoComponent")
 
-// Map logo size to DynamicIcon size for consistent scaling
-const LOGO_SIZE_TO_ICON_SIZE: Record<string, IconSize> = {
+// Map logo size to DynamicIcon size for consistent scaling. The map is
+// `Partial` because unknown sizes have no entry and fall back to "xl".
+const LOGO_SIZE_TO_ICON_SIZE: Partial<Record<string, IconSize>> = {
   small: "lg", // 1.25rem
   medium: "xl", // 1.5rem
   large: "twoXL", // 1.8rem
+}
+
+interface LogoDisplaySize {
+  /** Preset name, or a "medium" placeholder that the styles ignore when sizePx is set. */
+  size: string
+  sizePx?: number
+}
+
+/**
+ * Returns the logo size for the slot being rendered:
+ * - Open sidebar: `sizePx`, else `size`.
+ * - Header (sidebar closed or absent): `iconSizePx`, else `iconSize`, else
+ *   the open-sidebar size.
+ * When a pixel size is set, `size` is a "medium" placeholder that the styles
+ * ignore.
+ */
+function resolveLogoDisplaySize(
+  appLogo: Logo,
+  collapsed: boolean
+): LogoDisplaySize {
+  const sidebarSize: LogoDisplaySize =
+    appLogo.sizePx > 0
+      ? { size: "medium", sizePx: appLogo.sizePx }
+      : { size: appLogo.size || "medium" }
+
+  if (!collapsed) {
+    return sidebarSize
+  }
+
+  if (appLogo.iconSizePx > 0) {
+    return { size: "medium", sizePx: appLogo.iconSizePx }
+  }
+  if (appLogo.iconSize) {
+    return { size: appLogo.iconSize }
+  }
+  return sidebarSize
 }
 
 interface LogoComponentProps {
@@ -67,7 +105,7 @@ const LogoComponent = ({
 
   // Find the home page (the default page) and check if this is a multi-page app
   const homePage = useMemo(
-    () => appPages.find(page => page.isDefault),
+    () => appPages.find(page => page.isDefault === true),
     [appPages]
   )
   const isMultiPageApp = appPages.length > 1
@@ -113,20 +151,33 @@ const LogoComponent = ({
     displayImageType === Logo.ImageType.ICON ||
     displayImageType === Logo.ImageType.EMOJI
 
-  const iconSize = LOGO_SIZE_TO_ICON_SIZE[appLogo.size] || "xl"
+  const { size, sizePx } = resolveLogoDisplaySize(appLogo, collapsed)
+  const iconSize = sizePx ? "inherit" : (LOGO_SIZE_TO_ICON_SIZE[size] ?? "xl")
+
+  // Linked / home-nav wrappers name the control. Unlinked icon/emoji logos are
+  // otherwise nameless once Material/emoji glyphs are aria-hidden (#12873).
+  const hasExternalLink = Boolean(appLogo.link)
+  const isHomeNavButton =
+    !hasExternalLink && isMultiPageApp && Boolean(homePage) && !isOnHomePage
+  const nameUnlinkedIconLogo =
+    isIconOrEmoji && !hasExternalLink && !isHomeNavButton
 
   const logo = isIconOrEmoji ? (
     <StyledIconLogo
-      size={appLogo.size}
+      size={size}
+      sizePx={sizePx}
       className="stLogo"
       data-testid={dataTestId}
+      role={nameUnlinkedIconLogo ? "img" : undefined}
+      aria-label={nameUnlinkedIconLogo ? "App Logo" : undefined}
     >
       <DynamicIcon iconValue={displayImage} size={iconSize} />
     </StyledIconLogo>
   ) : (
     <StyledLogo
       src={source}
-      size={appLogo.size}
+      size={size}
+      sizePx={sizePx}
       alt="Logo"
       className="stLogo"
       data-testid={dataTestId}
@@ -137,7 +188,7 @@ const LogoComponent = ({
   )
 
   // If an explicit link is provided, use it (opens in new tab)
-  if (appLogo.link) {
+  if (hasExternalLink) {
     return (
       <StyledLogoLink
         href={appLogo.link}
@@ -154,7 +205,7 @@ const LogoComponent = ({
 
   // In multi-page apps without an explicit link, clicking the logo navigates to home page
   // Only use the clickable button when not already on the home page
-  if (isMultiPageApp && homePage && !isOnHomePage) {
+  if (isHomeNavButton) {
     return (
       <StyledLogoButton
         onClick={handleLogoClick}
@@ -170,7 +221,7 @@ const LogoComponent = ({
   // handle the width in all cases. It already gets wrapped via a
   // link element (<a>) above when link is provided.
   // https://github.com/streamlit/streamlit/issues/12326
-  return <div>{logo}</div>
+  return <StyledLogoInnerWrap>{logo}</StyledLogoInnerWrap>
 }
 
 export default LogoComponent

@@ -18,16 +18,16 @@ import { zip } from "lodash-es"
 
 import {
   FileUploaderState as FileUploaderStateProto,
-  IFileURLs,
+  type FileURLs,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 import { ensureError } from "~lib/util/ErrorHandling"
-import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
 type SuccessfulUpload = {
-  fileUrl: IFileURLs
+  fileUrl: FileURLs.$Properties
   file: File
 }
 
@@ -43,6 +43,7 @@ export const uploadFiles = async ({
   widgetInfo,
   fragmentId,
   signal,
+  triggerRerun,
 }: {
   files: File[]
   uploadClient: FileUploadClient
@@ -50,11 +51,12 @@ export const uploadFiles = async ({
   widgetInfo: WidgetInfo
   fragmentId?: string
   signal?: AbortSignal
+  triggerRerun?: boolean
 }): Promise<{
   successfulUploads: SuccessfulUpload[]
   failedUploads: FailedUpload[]
 }> => {
-  let fileUrls: IFileURLs[]
+  let fileUrls: FileURLs.$Properties[]
 
   try {
     fileUrls = await uploadClient.fetchFileURLs(files)
@@ -81,7 +83,7 @@ export const uploadFiles = async ({
 
       try {
         await uploadClient.uploadFile(
-          { id: fileUrl.fileId, formId: widgetInfo.formId || "" }, // TODO SEE IF DOWNSTREAM LOGIC CAN BE SIMPLIFIED
+          { id: fileUrl.fileId, formId: widgetInfo.formId ?? "" }, // TODO SEE IF DOWNSTREAM LOGIC CAN BE SIMPLIFIED
           fileUrl.uploadUrl,
           file,
           undefined, // onUploadProgress
@@ -113,6 +115,9 @@ export const uploadFiles = async ({
       formId: widgetInfo.formId,
       fragmentId,
       fromUser: true,
+      // WidgetStateManager reruns a user upload unless triggerRerun is false.
+      // Pass false to store this upload without a rerun; omit it otherwise.
+      ...(triggerRerun === false ? { triggerRerun: false } : {}),
     }
   )
 

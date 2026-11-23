@@ -20,10 +20,11 @@ import json
 import os
 import sys
 import textwrap
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Final, NamedTuple, NoReturn, cast
 from uuid import uuid4
 
-from streamlit import cli_util, config, env_util, file_util, util
+from streamlit import cli_util, config, env_util, file_util, toml_writer, util
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
@@ -65,6 +66,39 @@ _TELEMETRY_HEADLESS_TEXT = """
 Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
 """
 
+_METRICS_CONFIG_URL: Final = "https://data.streamlit.io/metrics.json"
+
+
+def _parse_metrics_destinations(response_json: object) -> list[str]:
+    """Return HTTPS metrics destinations from metrics.json payload.
+
+    Uses ``urls`` when it contains at least one HTTPS URL; otherwise uses the
+    legacy ``url`` string. Keep in sync with ``parseMetricsDestinations`` in
+    ``frontend/app/src/MetricsManager.ts``.
+    """
+    if not isinstance(response_json, dict):
+        return []
+
+    destinations: list[str] = []
+    urls = response_json.get("urls")
+    if isinstance(urls, list):
+        for entry in urls:
+            if (
+                isinstance(entry, str)
+                and entry.startswith("https://")
+                and entry not in destinations
+            ):
+                destinations.append(entry)
+
+    if destinations:
+        return destinations
+
+    url = response_json.get("url", "")
+    if isinstance(url, str) and url.startswith("https://"):
+        return [url]
+
+    return []
+
 
 def _send_email(email: str | None) -> None:
     """Send the user's email for metrics, if submitted."""
@@ -73,14 +107,17 @@ def _send_email(email: str | None) -> None:
     if email is None or "@" not in email:
         return
 
-    metrics_url = ""
     try:
-        response_json = requests.get(
-            "https://data.streamlit.io/metrics.json", timeout=2
-        ).json()
-        metrics_url = response_json.get("url", "")
+        response_json = requests.get(_METRICS_CONFIG_URL, timeout=2).json()
+        destinations = _parse_metrics_destinations(response_json)
     except Exception:
-        _LOGGER.exception("Failed to fetch metrics URL")
+        _LOGGER.exception("Failed to fetch metrics config")
+        return
+
+    if not destinations:
+        _LOGGER.debug(
+            "metrics.json lists no HTTPS destinations; skipping email metrics"
+        )
         return
 
     headers = {
@@ -100,15 +137,36 @@ def _send_email(email: str | None) -> None:
         "type": "track",
         "userId": email,
     }
+    payload = json.dumps(data).encode()
 
-    response = requests.post(
-        metrics_url,
-        headers=headers,
-        data=json.dumps(data).encode(),
-        timeout=10,
-    )
+    # Post concurrently so streamlit activate waits for at most one timeout
+    # instead of one per destination. Re-raise one of the failures so
+    # Credentials.save logs it.
+    def _post(metrics_url: str) -> None:
+        response = requests.post(
+            metrics_url,
+            headers=headers,
+            data=payload,
+            timeout=10,
+        )
+        response.raise_for_status()
 
-    response.raise_for_status()
+    errors: list[Exception] = []
+    with ThreadPoolExecutor(max_workers=len(destinations)) as executor:
+        future_to_url = {
+            executor.submit(_post, metrics_url): metrics_url
+            for metrics_url in destinations
+        }
+        for future in as_completed(future_to_url):
+            metrics_url = future_to_url[future]
+            try:
+                future.result()
+            except Exception as exc:
+                errors.append(exc)
+                _LOGGER.warning("Failed to post email metrics to %s", metrics_url)
+
+    if errors:
+        raise errors[-1]
 
 
 class Credentials:
@@ -145,11 +203,11 @@ class Credentials:
             _LOGGER.error("Credentials already loaded. Not rereading file.")
             return
 
-        import toml
+        import tomllib
 
         try:
-            with open(self._conf_file, encoding="utf-8") as f:
-                data = toml.load(f).get("general")
+            with open(self._conf_file, "rb") as f:
+                data = tomllib.load(f).get("general")
             if data is None:
                 raise RuntimeError  # noqa: TRY301
             self.activation = _verify_email(data.get("email"))
@@ -207,19 +265,17 @@ class Credentials:
         """Save to toml file and send email."""
         from requests.exceptions import RequestException
 
-        if self.activation is None:
+        if self.activation is None or not self.activation.is_valid:
             return
 
         # Create intermediate directories if necessary
         os.makedirs(os.path.dirname(self._conf_file), exist_ok=True)
 
-        # Write the file
-        data = {"email": self.activation.email}
-
-        import toml
+        # TOML has no null, so a missing email is stored as an empty string.
+        email = self.activation.email or ""
 
         with open(self._conf_file, "w", encoding="utf-8") as f:
-            toml.dump({"general": data}, f)
+            f.write(toml_writer.dumps({"general": {"email": email}}))
 
         try:
             _send_email(self.activation.email)

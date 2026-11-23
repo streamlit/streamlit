@@ -98,6 +98,8 @@ All PRs require two labels:
 
 **Note:** PRs labeled `change:spec` (for spec/design documents only) are exempt from the `impact:*` requirement. Do not use `change:spec` for PRs with code changes.
 
+Don't set `feature:*` or `area:*` labels on PRs. They are for issues.
+
 ## Testing plan
 
 **Where tests live:**
@@ -108,7 +110,7 @@ All PRs require two labels:
 | Frontend unit tests | `frontend/**/*.test.ts` or `*.test.tsx` |
 | E2E tests | `e2e_playwright/**/*_test.py` |
 
-**Fill the PR template checklist** based on which test files changed. If no tests were added, explain why (e.g., "Documentation-only changes, no behavior modifications").
+**Fill the PR template's Testing Plan bullets** based on which test files changed. If no tests were added, explain why (e.g., "Documentation-only changes, no behavior modifications").
 
 **Describe testing** by listing the test files and what they cover:
 

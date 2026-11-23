@@ -25,7 +25,7 @@ import {
 
 import {
   FlexContext,
-  IFlexContext,
+  type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
@@ -34,7 +34,7 @@ import * as Utils from "~lib/theme/utils"
 import * as MobileUtil from "~lib/util/isMobile"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Multiselect, { Props } from "./Multiselect"
+import Multiselect, { type Props } from "./Multiselect"
 
 const getProps = (
   elementProps: Partial<MultiSelectProto> = {},
@@ -55,6 +55,23 @@ const getProps = (
   }),
   ...widgetProps,
 })
+
+/** Wait until aria-activedescendant points at an option with the given text. */
+async function expectActiveOption(
+  input: HTMLElement,
+  text: string | RegExp
+): Promise<void> {
+  await waitFor(
+    () => {
+      const activeId = input.getAttribute("aria-activedescendant")
+      expect(activeId).toBeTruthy()
+      expect(document.getElementById(activeId as string)).toHaveTextContent(
+        text
+      )
+    },
+    { timeout: 3000 }
+  )
+}
 
 describe("Multiselect widget", () => {
   afterEach(() => {
@@ -227,6 +244,238 @@ describe("Multiselect widget", () => {
     })
   })
 
+  it("commits the first visible row on Enter without ArrowDown", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: [] })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    await user.click(screen.getByRole("button", { name: "Open" }))
+    await user.keyboard("{Enter}")
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["a", "b", "c"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+  })
+
+  it("commits the hovered option on Enter, not the first row", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: [] })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    await user.click(screen.getByRole("button", { name: "Open" }))
+    const options = screen.getAllByRole("option")
+    expect(options[0]).toHaveTextContent("Select all")
+    await user.hover(options[1])
+    await user.keyboard("{Enter}")
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["a"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+      props.element.id,
+      ["a", "b", "c"],
+      expect.anything()
+    )
+  })
+
+  it("clears hover when filtering removes a row", async () => {
+    // onHoverEnd does not fire on filter unmount: fall back while filtered,
+    // and do not restore that hover after clearing the query.
+    const user = userEvent.setup()
+    const fruit = ["apple", "apricot", "banana"]
+    let props = getProps({ default: [], options: fruit })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { unmount } = render(<Multiselect {...props} />)
+
+    await user.click(screen.getByRole("button", { name: "Open" }))
+    await user.hover(screen.getByRole("option", { name: "banana" }))
+    await user.type(screen.getByRole("combobox"), "ap")
+    expect(screen.queryByRole("option", { name: "banana" })).toBeNull()
+    await user.keyboard("{Enter}")
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["apple", "apricot"],
+      expect.objectContaining({ fromUser: true })
+    )
+    unmount()
+
+    props = getProps({ default: [], options: fruit, selectAll: 0 })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+    const input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.hover(screen.getByRole("option", { name: "banana" }))
+    await user.type(input, "ap")
+    expect(screen.queryByRole("option", { name: "banana" })).toBeNull()
+    await user.clear(input)
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "banana" })).toBeVisible()
+    })
+    await user.keyboard("{Enter}")
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["apple"],
+      expect.objectContaining({ fromUser: true })
+    )
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+      props.element.id,
+      ["banana"],
+      expect.anything()
+    )
+  })
+
+  it("does not commit on Tab while the menu is open", async () => {
+    const user = userEvent.setup()
+    let props = getProps({ default: [] })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { unmount } = render(<Multiselect {...props} />)
+    await user.click(screen.getByRole("button", { name: "Open" }))
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "Select all" })).toBeVisible()
+    })
+    let callsBeforeTab = vi.mocked(props.widgetMgr.setStringArrayValue).mock
+      .calls.length
+    await user.keyboard("{Tab}")
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(
+      callsBeforeTab
+    )
+    unmount()
+
+    props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+      selectAll: 0,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const arrowed = render(<Multiselect {...props} />)
+    let input = screen.getByRole("combobox")
+    await user.click(input)
+    await expectActiveOption(input, "apple")
+    await user.keyboard("{ArrowDown}")
+    await expectActiveOption(input, "apricot")
+    callsBeforeTab = vi.mocked(props.widgetMgr.setStringArrayValue).mock.calls
+      .length
+    await user.keyboard("{Tab}")
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(
+      callsBeforeTab
+    )
+    arrowed.unmount()
+
+    props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+      selectAll: 0,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+    input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.type(input, "ap")
+    await expectActiveOption(input, "apple")
+    callsBeforeTab = vi.mocked(props.widgetMgr.setStringArrayValue).mock.calls
+      .length
+    await user.keyboard("{Tab}")
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(
+      callsBeforeTab
+    )
+  })
+
+  it("resets activedescendant after keyboard-select and preserves arrow over hover-end", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+      selectAll: 0,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    const input = screen.getByRole("combobox")
+    await user.click(input)
+    await expectActiveOption(input, "apple")
+    await user.keyboard("{ArrowDown}")
+    await expectActiveOption(input, "apricot")
+    await user.keyboard("{Enter}")
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["apricot"],
+      expect.anything()
+    )
+    await waitFor(() => {
+      expect(screen.queryByRole("option", { name: "apricot" })).toBeNull()
+    })
+    await expectActiveOption(input, "apple")
+
+    await user.keyboard("{ArrowDown}")
+    await expectActiveOption(input, "banana")
+    const banana = screen.getByRole("option", { name: "banana" })
+    await user.hover(banana)
+    await user.unhover(banana)
+    // Arrow away and back onto lastSynced must stay user-owned (not first row).
+    await user.keyboard("{ArrowUp}{ArrowDown}")
+    await expectActiveOption(input, "banana")
+    await user.keyboard("{Enter}")
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["apricot", "banana"],
+      expect.objectContaining({ fromUser: true })
+    )
+  })
+
+  it("lets hover replace the synced Enter target, including after leave", async () => {
+    // type → hover → leave → hover another → Enter. Also covers sticky skip
+    // after hovering the first row then typing.
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+      selectAll: 0,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    await user.click(screen.getByRole("button", { name: "Open" }))
+    const input = screen.getByRole("combobox")
+    await expectActiveOption(input, "apple")
+    const apple = screen.getByRole("option", { name: "apple" })
+    await user.hover(apple)
+    await user.unhover(apple)
+    await user.type(input, "ap")
+    await expectActiveOption(input, "apple")
+
+    const apricot = screen.getByRole("option", { name: "apricot" })
+    await user.hover(apricot)
+    await expectActiveOption(input, "apricot")
+    await user.unhover(apricot)
+    await user.hover(screen.getByRole("option", { name: "apple" }))
+    await expectActiveOption(input, "apple")
+    await user.keyboard("{Enter}")
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["apple"],
+      expect.objectContaining({ fromUser: true })
+    )
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+      props.element.id,
+      ["apricot"],
+      expect.anything()
+    )
+  })
+
   it("filters based on label, not value", async () => {
     const user = userEvent.setup()
     const props = getProps({ default: [] })
@@ -241,6 +490,27 @@ describe("Multiselect widget", () => {
     await user.type(multiSelect, "a")
     const match = screen.getByRole("option")
     expect(match).toHaveTextContent("a")
+  })
+
+  it("selects typed filter text with Ctrl+A so Backspace can delete it", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+    })
+    render(<Multiselect {...props} />)
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const input = screen.getByRole<HTMLInputElement>("combobox")
+
+    await user.type(input, "ap")
+    await user.keyboard("{Control>}a{/Control}")
+
+    expect(input.selectionStart).toBe(0)
+    expect(input.selectionEnd).toBe(2)
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+
+    await user.keyboard("{Backspace}")
+    expect(input).toHaveValue("")
   })
 
   it("can be disabled", () => {
@@ -574,8 +844,8 @@ describe("Multiselect widget", () => {
     const bulkAction = screen.getByText(/Select \d+ matches/)
     expect(bulkAction).toBeVisible()
 
-    // Press ArrowDown to focus the bulk action, then Enter to activate it
-    await user.keyboard("{ArrowDown}{Enter}")
+    // "Select X matches" is the first visible row, so unfocused Enter activates it.
+    await user.keyboard("{Enter}")
 
     // All matching options should now be selected as tags
     expect(screen.getByText("apple")).toBeVisible()
@@ -583,6 +853,36 @@ describe("Multiselect widget", () => {
 
     // The input should NOT have created "a" as a custom value
     expect(screen.queryByText("a", { exact: true })).not.toBeInTheDocument()
+  })
+
+  it("selects the first match on Enter instead of creating a matching query", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["python", "pytorch"],
+      acceptNewOptions: true,
+      selectAll: 0,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.type(input, "py")
+    expect(screen.getByText("Add: py")).toBeInTheDocument()
+    expect(screen.getByText("python")).toBeVisible()
+
+    await user.keyboard("{Enter}")
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["python"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+    expect(screen.queryByText("py", { exact: true })).not.toBeInTheDocument()
   })
 
   it("predictably produces case sensitive matches", async () => {
@@ -1053,7 +1353,7 @@ describe("Multiselect widget", () => {
       expect(screen.queryByText(/Select.*matches/)).not.toBeInTheDocument()
     })
 
-    it("does not show Select all when there are >= 1000 options", async () => {
+    it("does not show Select all when there are more than 1000 selectable options", async () => {
       vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
         320
       )
@@ -1061,7 +1361,7 @@ describe("Multiselect widget", () => {
         300
       )
       const user = userEvent.setup()
-      const options = Array.from({ length: 1000 }, (_, i) => `option_${i}`)
+      const options = Array.from({ length: 1001 }, (_, i) => `option_${i}`)
       const props = getProps({ default: [], options })
       render(<Multiselect {...props} />)
 
@@ -1072,7 +1372,35 @@ describe("Multiselect widget", () => {
       expect(screen.getByText("option_0")).toBeVisible()
     })
 
-    it("does not show Select X matches when there are >= 1000 options", async () => {
+    it("shows Select X matches when search narrows a 1000+ list to the threshold", async () => {
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
+        320
+      )
+      vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(
+        300
+      )
+      const user = userEvent.setup()
+      const options = [
+        "needle_a",
+        "needle_b",
+        ...Array.from({ length: 1001 }, (_, i) => `item_${i}`),
+      ]
+      const props = getProps({
+        default: [],
+        options,
+        filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS,
+      })
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.click(multiSelect)
+      await user.type(multiSelect, "needle")
+
+      expect(screen.getByText("Select 2 matches")).toBeVisible()
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+    })
+
+    it("shows Select all when there are exactly 1000 selectable options", async () => {
       vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
         320
       )
@@ -1084,18 +1412,49 @@ describe("Multiselect widget", () => {
       const props = getProps({ default: [], options })
       render(<Multiselect {...props} />)
 
-      const multiSelect = screen.getByRole("combobox")
-      await user.click(multiSelect)
-      // Search for options matching "option_1"
-      await user.type(multiSelect, "option_1")
+      await user.click(screen.getByRole("button", { name: "Open" }))
 
-      // "Select X matches" should NOT be shown for >= 1000 total options
-      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
-      // But matching options should still be visible
-      expect(screen.queryAllByText(/option_1/).length).toBeGreaterThan(0)
+      expect(screen.getByText("Select all")).toBeVisible()
     })
 
-    it("shows Select all when there are less than 1000 options", async () => {
+    it("never shows Select all when selectAll is 0, so Enter selects the first match", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["apple", "apricot", "banana"],
+        selectAll: 0,
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<Multiselect {...props} />)
+
+      await user.click(screen.getByRole("button", { name: "Open" }))
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+
+      const input = screen.getByRole("combobox")
+      await user.type(input, "ap")
+      expect(screen.queryByText(/Select \d+ matches/)).not.toBeInTheDocument()
+      expect(screen.getByText("apple")).toBeVisible()
+      expect(screen.getByText("apricot")).toBeVisible()
+
+      await user.keyboard("{Enter}")
+
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element.id,
+        ["apple"],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        }
+      )
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["apple", "apricot"],
+        expect.anything()
+      )
+    })
+
+    it("shows Select all on large lists when selectAll is -1", async () => {
       vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
         320
       )
@@ -1103,14 +1462,139 @@ describe("Multiselect widget", () => {
         300
       )
       const user = userEvent.setup()
-      const options = Array.from({ length: 999 }, (_, i) => `option_${i}`)
-      const props = getProps({ default: [], options })
+      const options = Array.from({ length: 1001 }, (_, i) => `option_${i}`)
+      const props = getProps({ default: [], options, selectAll: -1 })
       render(<Multiselect {...props} />)
 
       await user.click(screen.getByRole("button", { name: "Open" }))
 
       expect(screen.getByText("Select all")).toBeVisible()
     })
+
+    it("hides Select all when selectable options exceed a custom threshold", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["a", "b", "c", "d"],
+        selectAll: 3,
+      })
+      render(<Multiselect {...props} />)
+
+      await user.click(screen.getByRole("button", { name: "Open" }))
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+    })
+
+    it("shows Select all when selectable options fall to a custom threshold", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [0],
+        options: ["a", "b", "c", "d"],
+        selectAll: 3,
+      })
+      render(<Multiselect {...props} />)
+
+      await user.click(screen.getByRole("button", { name: "Open" }))
+      expect(screen.getByText("Select all")).toBeVisible()
+    })
+
+    it("shows Select X matches when search drops to a custom threshold", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: [
+          "apple",
+          "apricot",
+          "avocado",
+          "banana",
+          "blueberry",
+          "cherry",
+        ],
+        selectAll: 3,
+        filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS,
+      })
+      render(<Multiselect {...props} />)
+
+      const multiSelect = screen.getByRole("combobox")
+      await user.type(multiSelect, "ap")
+
+      expect(screen.getByText("Select 2 matches")).toBeVisible()
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+    })
+
+    it("does not count custom chips toward the selectAll threshold", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        options: ["red", "green", "blue"],
+        selectAll: 2,
+        acceptNewOptions: true,
+        rawValues: ["purple"],
+        setValue: true,
+      })
+      render(<Multiselect {...props} />)
+
+      await user.click(screen.getByRole("button", { name: "Open" }))
+
+      // Count unselected option entries, not selected chips: a custom value
+      // must not drop 3 remaining options to 2.
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+      expect(screen.getByText("red")).toBeVisible()
+    })
+  })
+
+  describe("no-op interactions", () => {
+    it.each([
+      ["Escape", "escape"],
+      ["a click outside", "outside"],
+    ])(
+      "does not commit or rerun when the dropdown closes via %s without a change",
+      async (_name, closeVia) => {
+        const user = userEvent.setup()
+        const sendRerunBackMsg = vi.fn()
+        const widgetMgr = new WidgetStateManager({
+          sendRerunBackMsg,
+          formsDataChanged: vi.fn(),
+        })
+        const props = getProps({}, { widgetMgr })
+        const setStringArrayValueSpy = vi.spyOn(
+          widgetMgr,
+          "setStringArrayValue"
+        )
+        render(
+          <>
+            <span>Outside</span>
+            <Multiselect {...props} />
+          </>
+        )
+        setStringArrayValueSpy.mockClear()
+
+        await user.click(screen.getByRole("button", { name: "Open" }))
+        expect(screen.getByRole("listbox")).toBeVisible()
+        if (closeVia === "escape") {
+          await user.keyboard("{Escape}")
+        } else {
+          await user.click(screen.getByText("Outside"))
+        }
+        await act(async () => {
+          await new Promise(resolve => {
+            setTimeout(resolve, 0)
+          })
+        })
+
+        expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+        expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+        expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+        // A real selection still commits.
+        await user.click(screen.getByRole("button", { name: "Open" }))
+        await user.click(screen.getByRole("option", { name: "b" }))
+        expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+          props.element.id,
+          ["a", "b"],
+          expect.objectContaining({ fromUser: true })
+        )
+      }
+    )
   })
 })
 
@@ -1232,6 +1716,10 @@ describe("Multiselect tag accessibility", () => {
 
     const tags = getTags()
     act(() => tags[0].focus())
+    expect(tags[0]).toHaveFocus()
+
+    // ArrowLeft on the first tag does not wrap to the last tag.
+    await user.keyboard("{ArrowLeft}")
     expect(tags[0]).toHaveFocus()
 
     // ArrowRight moves to next
@@ -1557,5 +2045,298 @@ describe("Multiselect tag accessibility", () => {
         expect(container.scrollLeft).toBe(800)
       })
     })
+  })
+})
+
+describe("on_change='ignore' mode", () => {
+  beforeEach(() => {
+    vi.spyOn(Utils, "convertRemToPx").mockImplementation(mockConvertRemToPx)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Let a scheduled rerun flush before asserting whether one was sent.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  const pickOption = async (value: string): Promise<void> => {
+    const user = userEvent.setup()
+    await user.click(screen.getByRole("button", { name: "Open" }))
+    await user.click(screen.getByRole("option", { name: value }))
+  }
+
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true, default: [] }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<Multiselect {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await pickOption("b")
+
+    expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      ["b"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: false, default: [] }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<Multiselect {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await pickOption("b")
+
+    expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      ["b"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+  })
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    const sendRerunBackMsg = vi.fn()
+    let pendingFormIds = new Set<string>()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(newData => {
+        pendingFormIds = newData.formsWithPendingChanges
+      }),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        formId: "testForm",
+        default: [],
+      },
+      { widgetMgr }
+    )
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<Multiselect {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await pickOption("b")
+
+    expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      ["b"],
+      {
+        formId: "testForm",
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
+  })
+
+  it("does not commit on keystroke outside a form when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ ignoreRerun: true, default: [] })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<Multiselect {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const combobox = screen.getByRole("combobox")
+    await user.click(combobox)
+    await user.type(combobox, "b")
+
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when clear is clicked", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true, default: [0] }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<Multiselect {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("button", { name: "Clear all" }))
+
+    expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      [],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when a chip is removed", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true, default: [0] }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<Multiselect {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("button", { name: "Remove a" }))
+
+    expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      [],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when select-all is committed with Enter", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true, default: [] }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<Multiselect {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("button", { name: "Open" }))
+    await user.keyboard("{Enter}")
+
+    expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      ["a", "b", "c"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when a new option is committed with Enter", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        acceptNewOptions: true,
+        // Hide Select all so Enter commits the typed option, not bulk-select.
+        selectAll: 0,
+        default: [],
+      },
+      { widgetMgr }
+    )
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<Multiselect {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const combobox = screen.getByRole("combobox")
+    await user.type(combobox, "hello world!")
+    await user.keyboard("{Enter}")
+
+    expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      ["hello world!"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 })

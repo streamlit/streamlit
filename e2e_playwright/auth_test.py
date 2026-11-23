@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import time
 from tempfile import NamedTemporaryFile
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 import requests
@@ -134,7 +134,16 @@ def app_server_extra_args(prepare_secrets_file: str) -> list[str]:
     return [
         "--secrets.files",
         prepare_secrets_file,
+        "--server.enableAgentApi=true",
     ]
+
+
+def _markdown_bodies(node: dict[str, Any]) -> list[str]:
+    """Return the body of every markdown element in an agent API snapshot tree."""
+    bodies = [node["props"]["body"]] if node["type"] == "markdown" else []
+    for child in node.get("children") or []:
+        bodies.extend(_markdown_bodies(child))
+    return bodies
 
 
 def _click_and_wait_for_oauth_redirect(
@@ -199,3 +208,27 @@ def test_logout_with_end_session_endpoint(app: Page, app_base_url: str):
         has_text="YOU ARE LOGGED IN"
     )
     expect(logged_in_text).not_to_be_attached()
+
+
+@pytest.mark.parametrize("fake_oidc_server", ["success"], indirect=True)
+@pytest.mark.usefixtures("fake_oidc_server", "prepare_secrets_file")
+def test_login_cookie_does_not_authenticate_agent_api(app: Page, app_base_url: str):
+    """The agent API ignores the browser login cookie even when it is sent.
+
+    The browser context's request client shares the login cookie, as a
+    cross-site request riding a visitor's session would.
+    """
+    _click_and_wait_for_oauth_redirect(app, "TEST LOGIN", app_base_url)
+    expect_markdown(app, "YOU ARE LOGGED IN")
+    assert any(
+        cookie["name"].startswith("_streamlit_user") for cookie in app.context.cookies()
+    )
+
+    response = app.request.post(
+        build_app_url(app_base_url, path="/_stcore/agent/interact"), data={}
+    )
+
+    assert response.status == 200, response.text()
+    markdown_bodies = _markdown_bodies(response.json()["tree"])
+    assert "NOT LOGGED IN" in markdown_bodies
+    assert not any("YOU ARE LOGGED IN" in body for body in markdown_bodies)

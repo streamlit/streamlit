@@ -16,7 +16,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -37,6 +37,21 @@ class StTextAPITest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.text.body == "some text"
         assert el.text.help == "help text"
+
+    def test_st_text_wrap(self):
+        """Test that wrap is True by default and can be set to False."""
+        st.text("some text")
+        el = self.get_delta_from_queue().new_element
+        assert el.text.wrap is True
+
+        st.text("some text", wrap=False)
+        el = self.get_delta_from_queue().new_element
+        assert el.text.wrap is False
+
+    def test_st_text_invalid_wrap(self):
+        """Test that a non-bool wrap value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            st.text("some text", wrap="yes")  # type: ignore[arg-type]
 
     def test_st_text_with_width(self):
         """Test st.text with different width types."""

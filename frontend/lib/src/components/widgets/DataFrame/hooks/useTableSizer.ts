@@ -19,9 +19,12 @@
 
 import { useLayoutEffect, useState } from "react"
 
-import { Size as ResizableSize } from "re-resizable"
+import type { Size as ResizableSize } from "re-resizable"
 
-import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
+import {
+  Dataframe as DataframeProto,
+  type streamlit,
+} from "@streamlit/protobuf"
 
 import {
   calculateTableHeight,
@@ -34,7 +37,7 @@ import {
 } from "~lib/components/widgets/DataFrame/dimensionUtils"
 import { notNullOrUndefined } from "~lib/util/utils"
 
-import { CustomGridTheme } from "./useCustomTheme"
+import type { CustomGridTheme } from "./useCustomTheme"
 
 type AutoSizerReturn = {
   // The minimum height that the data grid can be resized to
@@ -65,7 +68,7 @@ type AutoSizerReturn = {
  * @param widthConfig - The width configuration of the table
  * @param heightConfig - The height configuration of the table
  * @param measuredContainerHeight - The measured height of the container for height="stretch"
- * @param isInRoot - Whether the table is in the root container
+ * @param hasFallbackHeight - Whether a height="stretch" table falls back to its default height because its parent has no definite height to fill
  *
  * @returns The row height, min/max height & width, and the current size of the resizable container.
  */
@@ -76,11 +79,11 @@ function useTableSizer(
   usesGroupRow: boolean,
   containerWidth: number,
   fullscreenContainerHeight?: number,
-  isFullScreen?: boolean,
-  widthConfig?: streamlit.IWidthConfig | null,
-  heightConfig?: streamlit.IHeightConfig | null,
+  isFullScreen = false,
+  widthConfig?: streamlit.WidthConfig.$Properties | null,
+  heightConfig?: streamlit.HeightConfig.$Properties | null,
   measuredContainerHeight?: number,
-  isInRoot?: boolean
+  hasFallbackHeight = false
 ): AutoSizerReturn {
   const rowHeight = element.rowHeight ?? gridTheme.defaultRowHeight
 
@@ -110,12 +113,13 @@ function useTableSizer(
    *   - 0 rows → 1-row minimum
    *   - 1-3 rows → match actual number of rows
    *   - 4+ rows → 3-row minimum
+   *
+   * With no definite parent height, and outside fullscreen, the minimum is
+   * the auto height instead: at most defaultTableHeight, and at least one row.
    */
 
   const configuredHeight = getConfiguredHeight(heightConfig)
-  // Stretch height styling does not work in the root container without an
-  // enclosing fixed-height container.
-  const useStretchHeight = shouldUseStretchHeight(heightConfig, isInRoot)
+  const useStretchHeight = shouldUseStretchHeight(heightConfig)
   const useContentHeight = shouldUseContentHeight(heightConfig)
 
   // Determine the minimum number of rows to display
@@ -123,7 +127,7 @@ function useTableSizer(
     ? Math.max(1, Math.min(numRows, 3)) // Stretch: match rows (1-3 range)
     : 1 // All other modes: 1-row minimum
 
-  const minHeight = calculateTableHeight({
+  let minHeight = calculateTableHeight({
     numRows: minRows,
     rowHeight,
     theme: gridTheme,
@@ -142,17 +146,36 @@ function useTableSizer(
   // resized between min and max height.
   let initialHeight = Math.min(maxHeight, gridTheme.defaultTableHeight)
 
+  if (useStretchHeight && hasFallbackHeight && !isFullScreen) {
+    // "100%" collapses when the parent has no definite height, so the minimum
+    // is the auto height, and the table still grows with taller siblings. The
+    // grid applies that minimum inside the resizable border, so subtract the
+    // border and the outer height matches auto.
+    const oneRowHeight = calculateTableHeight({
+      numRows: 1,
+      rowHeight,
+      theme: gridTheme,
+    })
+    minHeight =
+      Math.max(oneRowHeight, initialHeight) - 2 * gridTheme.tableBorderWidth
+  }
+
   if (
     useStretchHeight &&
     measuredContainerHeight &&
     measuredContainerHeight > 0
   ) {
-    // height="stretch" - for stretch mode, we want the dataframe to participate
-    // in flexbox layout, so we don't set a fixed height. Instead, we let the
-    // container handle the height through CSS.
-    // We still need to set a reasonable maxHeight for the resizable container.
-    maxHeight = Math.max(measuredContainerHeight, maxHeight)
-    // Don't override initialHeight - let it use the default behavior
+    // height="stretch": the table fills its parent through CSS.
+    // - Definite parent height: the parent height caps the drag.
+    // - No definite parent height: dragging grows the parent, as with
+    //   height="auto", so the cap is the content height.
+    // - Fullscreen: the measured height is still the pre-expand height, so use
+    //   the content height and let the fullscreen cap below apply.
+    const capsAtParentHeight = !hasFallbackHeight && !isFullScreen
+    maxHeight = Math.max(
+      measuredContainerHeight,
+      capsAtParentHeight ? minHeight : maxHeight
+    )
   } else if (useContentHeight) {
     // height="content" - show all rows, but cap at MAX_CONTENT_HEIGHT (10,000px)
     // Calculate the approximate number of rows that would result in a 10,000px table
@@ -180,15 +203,10 @@ function useTableSizer(
   // else: height="auto" (default) - use the default behavior (show at most 10 rows)
 
   if (fullscreenContainerHeight) {
-    // If we are in fullscreen mode, the height and maxHeight should not exceed
-    // the fullscreen container height.
-    initialHeight = Math.min(initialHeight, fullscreenContainerHeight)
+    // In fullscreen, every height mode uses the table's max height,
+    // capped by the fullscreen container.
     maxHeight = Math.min(maxHeight, fullscreenContainerHeight)
-
-    if (!configuredHeight) {
-      // If no explicit height is set, set height to max height (fullscreen mode)
-      initialHeight = maxHeight
-    }
+    initialHeight = maxHeight
   }
 
   // Min width for the resizable table container:
@@ -235,12 +253,16 @@ function useTableSizer(
     initialWidth = undefined
   }
 
+  // The height before the user drags the table. Stretch tables fill their
+  // parent through CSS instead of a pixel height.
+  const unresizedHeight = useStretchHeight ? "100%" : initialHeight
+
   const [resizableSize, setResizableSize] = useState<ResizableSize>({
     // If user hasn't specified a width via `width` or `use_container_width`,
     // we configure the table to 100%. Which will cause the data grid to
     // calculate the best size on the content and use that.
-    width: initialWidth || "100%",
-    height: useStretchHeight ? "100%" : initialHeight,
+    width: initialWidth ?? "100%",
+    height: unresizedHeight,
   })
 
   useLayoutEffect(() => {
@@ -258,24 +280,24 @@ function useTableSizer(
   useLayoutEffect(() => {
     setResizableSize(prev => ({
       ...prev,
-      width: initialWidth || "100%",
+      width: initialWidth ?? "100%",
     }))
   }, [initialWidth])
 
-  // Reset the height if the element height parameter was changed or
-  // if the number of rows changes:
+  // Reset when the height setting, row count, or definite parent height
+  // changes. With no definite parent height, the measured height follows the
+  // table, so resetting on it would undo the height the user dragged to.
+  const parentHeightToFill =
+    useStretchHeight && !hasFallbackHeight
+      ? measuredContainerHeight
+      : undefined
+
   useLayoutEffect(() => {
     setResizableSize(prev => ({
       ...prev,
-      height: useStretchHeight ? "100%" : initialHeight,
+      height: unresizedHeight,
     }))
-  }, [
-    initialHeight,
-    numRows,
-    measuredContainerHeight,
-    useStretchHeight,
-    isInRoot,
-  ])
+  }, [initialHeight, numRows, parentHeightToFill, useStretchHeight])
 
   // Change sizing if the fullscreen mode is activated or deactivated:
   useLayoutEffect(() => {
@@ -289,8 +311,8 @@ function useTableSizer(
       })
     } else {
       setResizableSize({
-        width: initialWidth || "100%",
-        height: initialHeight,
+        width: initialWidth ?? "100%",
+        height: unresizedHeight,
       })
     }
   }, [isFullScreen])

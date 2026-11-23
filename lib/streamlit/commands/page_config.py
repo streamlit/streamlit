@@ -23,8 +23,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import LayoutConfig
 from streamlit.errors import (
-    StreamlitInvalidMenuItemKeyError,
-    StreamlitInvalidSidebarStateError,
+    StreamlitAPIException,
     StreamlitInvalidURLError,
     StreamlitValueError,
 )
@@ -41,6 +40,14 @@ if TYPE_CHECKING:
 GET_HELP_KEY: Final = "get help"
 REPORT_A_BUG_KEY: Final = "report a bug"
 ABOUT_KEY: Final = "about"
+_VALID_SIDEBAR_STATE_VALUES: Final = [
+    "'auto'",
+    "'expanded'",
+    "'collapsed'",
+    "'locked'",
+    "a positive integer (width in pixels)",
+]
+_MENU_ITEM_URL_PROTOCOLS: Final = ("http", "https", "mailto")
 
 PageIcon: TypeAlias = AtomicImage | str
 Layout: TypeAlias = Literal["centered", "wide"]
@@ -69,8 +76,9 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
     If page_icon is a string that looks like an emoji (or an emoji shortcode),
     we return it as-is. Otherwise we use `image_to_url` to return a URL.
 
-    (If `image_to_url` raises an error and page_icon is a string, return
-    the unmodified page_icon string instead of re-raising the error.)
+    (If `image_to_url` raises a `StreamlitAPIException`, re-raise it. If it
+    raises any other error and page_icon is a string, return the unmodified
+    page_icon string instead, which keeps emoji shortcodes working.)
     """
 
     # Choose a random emoji.
@@ -100,6 +108,10 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
             output_format="auto",
             image_id="favicon",
         )
+    except StreamlitAPIException:
+        # Streamlit rejected this image, so show why instead of falling back
+        # to the string.
+        raise
     except Exception:
         if isinstance(page_icon, str):
             # This fall-thru handles emoji shortcode strings (e.g. ":shark:"),
@@ -272,8 +284,10 @@ def set_page_config(
     elif isinstance(initial_sidebar_state, int):
         # Integer values set the sidebar width and use AUTO state
         if initial_sidebar_state <= 0:
-            raise StreamlitInvalidSidebarStateError(
-                initial_sidebar_state=f"width must be positive (got {initial_sidebar_state})"
+            raise StreamlitValueError(
+                "initial_sidebar_state",
+                _VALID_SIDEBAR_STATE_VALUES,
+                detail=f"Got {initial_sidebar_state}.",
             )
         pb_sidebar_state = PageConfigProto.AUTO
         msg.page_config_changed.initial_sidebar_width.pixel_width = (
@@ -281,8 +295,10 @@ def set_page_config(
         )
     else:
         # Note: Pylance incorrectly notes this error as unreachable
-        raise StreamlitInvalidSidebarStateError(
-            initial_sidebar_state=initial_sidebar_state
+        raise StreamlitValueError(
+            "initial_sidebar_state",
+            _VALID_SIDEBAR_STATE_VALUES,
+            detail=f"Got {initial_sidebar_state!r}.",
         )
 
     msg.page_config_changed.initial_sidebar_state = pb_sidebar_state
@@ -334,11 +350,13 @@ def set_menu_items_proto(
 def validate_menu_items(menu_items: MenuItems) -> None:
     for k, v in menu_items.items():
         if not valid_menu_item_key(k):
-            raise StreamlitInvalidMenuItemKeyError(key=k)
-        if v is not None and (
-            not is_url(v, ("http", "https", "mailto")) and k != ABOUT_KEY
-        ):
-            raise StreamlitInvalidURLError(url=v)
+            raise StreamlitValueError(
+                "menu_items",
+                ["'Get help'", "'Report a bug'", "'About'"],
+                detail=f"`{k}` is not a supported menu item key.",
+            )
+        if v is not None and k != ABOUT_KEY and not is_url(v, _MENU_ITEM_URL_PROTOCOLS):
+            raise StreamlitInvalidURLError(v, _MENU_ITEM_URL_PROTOCOLS)
 
 
 def valid_menu_item_key(key: str) -> TypeGuard[MenuKey]:

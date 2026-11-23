@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -27,8 +27,8 @@ import {
 
 import { FloatingPortal, type Middleware, size } from "@floating-ui/react"
 
-import { Block as BlockProto } from "@streamlit/protobuf"
-import { notNullOrUndefined } from "@streamlit/utils"
+import type { Block as BlockProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString, notNullOrUndefined } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
@@ -42,7 +42,7 @@ import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicBut
 import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import {
   DynamicIcon,
-  isMenuStyleIconLabel,
+  getMenuTriggerAccessibleName,
 } from "~lib/components/shared/Icon/DynamicIcon"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -53,7 +53,7 @@ import {
 } from "~lib/hooks/useFloatingOverlay"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledPopoverBody,
@@ -139,7 +139,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // Sync backend state changes (for programmatic control via session_state).
   // Uses render-time comparison instead of useEffect — no DOM side effects needed.
   useExecuteWhenChanged(() => {
-    if (!widgetId || !notNullOrUndefined(element.open)) {
+    if (isNullOrEmptyString(widgetId) || !notNullOrUndefined(element.open)) {
       return
     }
     setOpen(element.open)
@@ -147,7 +147,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     // on subsequent reruns. Without this, a programmatic close (e.g.
     // st.session_state.key = False) would leave a stale "true" in the widget
     // state, causing the popover to reopen when another widget triggers a rerun.
-    widgetMgr?.setBoolValue(widgetId, element.open, {
+    widgetMgr.setBoolValue(widgetId, element.open, {
       formId: undefined,
       fragmentId,
       fromUser: false,
@@ -180,8 +180,8 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
     setOpen(newOpen)
 
-    if (widgetId) {
-      widgetMgr?.setBoolValue(widgetId, newOpen, {
+    if (!isNullOrEmptyString(widgetId)) {
+      widgetMgr.setBoolValue(widgetId, newOpen, {
         formId: undefined,
         fragmentId,
         fromUser: true,
@@ -194,8 +194,8 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const handleClose = useCallback((): void => {
     setOpen(false)
 
-    if (widgetId) {
-      widgetMgr?.setBoolValue(widgetId, false, {
+    if (!isNullOrEmptyString(widgetId)) {
+      widgetMgr.setBoolValue(widgetId, false, {
         formId: undefined,
         fragmentId,
         fromUser: true,
@@ -212,8 +212,14 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     kind = BaseButtonKind.TERTIARY
   }
 
-  // Hide the chevron if the label is a menu-style icon (e.g., :material/menu:)
-  const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
+  // An icon-only menu-style trigger (e.g. :material/more_vert:) hides the chevron,
+  // and both it and the dialog it opens are named by purpose ("More options"),
+  // not by glyph.
+  const menuTriggerName = getMenuTriggerAccessibleName(
+    element.icon,
+    element.label
+  )
+  const hideChevron = menuTriggerName !== undefined
 
   // Attach to a wrapper div rather than BaseButton directly. BaseButtonTooltip
   // renders children twice when `help` is set (normal + mobile), which causes
@@ -267,7 +273,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     // every position update. `contentMaxWidth` is a px token; `spacing.lg` is
     // rem — hence parseFloat vs convertRemToPx.
     const designMaxWidthPx =
-      parseFloat(theme.sizes.contentMaxWidth) -
+      Number.parseFloat(theme.sizes.contentMaxWidth) -
       2 * convertRemToPx(theme.spacing.lg)
     const cssMinWidthPx = stretchWidth
       ? Math.max(calculatedWidth, convertRemToPx("10rem"))
@@ -342,8 +348,8 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       const targetElement =
         target instanceof Element ? target : target.parentElement
       return Boolean(
-        triggerRef.current?.contains(target) ||
-        popoverBodyRef.current?.contains(target) ||
+        triggerRef.current?.contains(target) === true ||
+        popoverBodyRef.current?.contains(target) === true ||
         targetElement?.closest('[data-st-overlay-root="true"]')
       )
     }
@@ -376,7 +382,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         const active = document.activeElement
         if (
           active &&
-          popoverBodyRef.current?.contains(active) &&
+          popoverBodyRef.current?.contains(active) === true &&
           active.getAttribute("aria-expanded") === "true"
         ) {
           return
@@ -441,9 +447,12 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
             data-testid="stPopoverButton"
             kind={kind}
             size={BaseButtonSize.SMALL}
-            disabled={(empty && !widgetId) || element.disabled}
+            disabled={
+              (empty && isNullOrEmptyString(widgetId)) || element.disabled
+            }
             containerWidth={true}
             onClick={handleToggle}
+            aria-label={menuTriggerName}
             aria-expanded={open}
             aria-haspopup="dialog"
           >
@@ -483,7 +492,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
             // whose dismissal logic checks this attribute.
             data-st-overlay-root="true"
             role="dialog"
-            aria-label={element.label}
+            aria-label={menuTriggerName ?? element.label}
             style={floatingStyles}
             $stretchWidth={stretchWidth}
             $calculatedWidth={calculatedWidth}

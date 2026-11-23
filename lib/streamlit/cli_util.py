@@ -105,4 +105,4 @@ def open_browser(url: str) -> None:
     # Unsupported platform - should never happen in standard environments
     import platform  # pragma: no cover - unsupported platform
 
-    raise errors.Error(f'Cannot open browser in platform "{platform.system()}"')  # ty: ignore[unresolved-attribute]  # pragma: no cover - unsupported platform
+    raise errors.Error(f'Cannot open browser in platform "{platform.system()}"')  # ty: ignore[missing-attribute]  # pragma: no cover - unsupported platform

@@ -4,11 +4,27 @@ Use `st.App` when a normal Streamlit script needs ASGI-level composition: custom
 
 Do not create an ASGI wrapper for a simple app that only needs Streamlit UI and ordinary Streamlit configuration. When the app does need advanced server features, keep the UI in a normal Streamlit script and launch the `st.App` wrapper with `streamlit run asgi_app.py` when possible.
 
+## Contents
+
+- [When to use it](#when-to-use-it)
+- [Basic ASGI wrapper](#basic-asgi-wrapper)
+- [Direct Python launchers with App.run()](#direct-python-launchers-with-apprun)
+- [Script paths](#script-paths)
+- [Custom routes](#custom-routes)
+- [Middleware](#middleware)
+- [Lifespan hooks](#lifespan-hooks)
+- [Mount another ASGI app inside Streamlit](#mount-another-asgi-app-inside-streamlit)
+- [Mount Streamlit inside FastAPI](#mount-streamlit-inside-fastapi)
+- [Programmatic secrets](#programmatic-secrets)
+- [Error handling](#error-handling)
+- [Limitations and cautions](#limitations-and-cautions)
+- [References](#references)
+
 ## When to use it
 
 Use `st.App` for:
 - Custom REST or webhook endpoints alongside a Streamlit app
-- HTTP middleware for security headers, request logging, authentication, or CORS
+- HTTP middleware for security headers, request logging, authentication, CORS, or setting cookies on the HTTP response
 - Startup/shutdown work through ASGI lifespan hooks
 - Mounting FastAPI, Starlette, or another ASGI app beside Streamlit
 - Mounting Streamlit inside a parent ASGI app
@@ -172,6 +188,12 @@ app = st.App(
 
 User middleware runs before Streamlit's internal middleware on requests and after it on responses.
 
+To set a cookie when the page loads, call `response.set_cookie(...)` in middleware. Pass `httponly=True` and an explicit `samesite`. Pass `secure=True` only when the app is served over HTTPS; it drops the cookie on local HTTP. Starlette leaves `httponly` and `secure` off. User middleware runs on every HTTP response, including static assets and `/_stcore/*`, so set the cookie on the app page response or only when it is missing.
+
+- Middleware runs on HTTP requests, not script reruns, so it cannot set a cookie after a widget interaction.
+- The script reads cookies with the read-only `st.context.cookies`, which reflects the initial request.
+- Use a cookie component only when the script must read or change cookies after the page loads. For sign-in, prefer `st.login`. See [third-party-components.md](third-party-components.md).
+
 ## Lifespan hooks
 
 Use lifespan hooks for process-level startup/shutdown work, not per-user session state. A common pattern is to preload shared cached resources or data before the first browser session connects.
@@ -298,12 +320,14 @@ Keep these caveats in mind:
 - **This does not refresh before the TTL.** Calls made while the entry is fresh return the
   current value without executing the cached function. Polling controls how soon the server
   notices expiration and triggers background refresh.
-- **Poll comfortably below `ttl`.** Background refresh serves the stale value for only one
-  extra `ttl`; past `2 × ttl` the entry is hard-evicted and the next call (including a
-  scheduled touch) blocks on a foreground recompute. Keep the interval well under `ttl` (not
-  just under `2 × ttl`) so several touches land in the `[ttl, 2 × ttl)` grace window, giving
-  the scheduler multiple chances to trigger a refresh before hard eviction if a touch is
-  delayed or a refresh runs long.
+- **Poll comfortably below the stale window.** By default, background refresh serves the
+  stale value for one extra `ttl`; past `2 × ttl` the entry is hard-evicted and the next
+  call (including a scheduled touch) blocks on a foreground recompute. The
+  `runner.cacheBackgroundRefreshTTLMultiplier` option changes that bound to `M × ttl`.
+  Keep the polling interval well under `(M - 1) × ttl` so several touches land in the
+  stale grace window. With the default `M = 2.0` that is well under `ttl`; with
+  `M = 1.5`, poll comfortably below `0.5 × ttl` — a `0.75 × ttl` cadence can jump from
+  fresh to hard expiry without triggering a background refresh.
 - **Stale values remain possible.** The scheduled touch preserves the last good value while
   refreshing, but users can receive it until the refresh completes. If uninterrupted,
   atomically replaced fresh reads are required, refresh a shared external store instead.

@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 if TYPE_CHECKING:
     from streamlit.elements.widgets.checkbox import CheckboxMixin
@@ -76,6 +74,8 @@ if TYPE_CHECKING:
         bool,
     )
     assert_type(checkbox("Accept terms", on_change=None), bool)
+    assert_type(checkbox("Accept terms", on_change="rerun"), bool)
+    assert_type(checkbox("Accept terms", on_change="ignore"), bool)
 
     assert_type(
         checkbox(
@@ -137,6 +137,8 @@ if TYPE_CHECKING:
         bool,
     )
     assert_type(toggle("Enable feature", on_change=None), bool)
+    assert_type(toggle("Enable feature", on_change="rerun"), bool)
+    assert_type(toggle("Enable feature", on_change="ignore"), bool)
 
     assert_type(
         toggle(

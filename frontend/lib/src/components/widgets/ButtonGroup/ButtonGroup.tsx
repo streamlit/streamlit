@@ -16,20 +16,21 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useEffect,
   useMemo,
   useRef,
 } from "react"
 
-import { Selection } from "react-aria-components"
+import type { Selection } from "react-aria-components"
 
 import {
   ButtonGroup as ButtonGroupProto,
   LabelVisibility,
-  streamlit,
+  type streamlit,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
@@ -45,27 +46,29 @@ import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean
   element: ButtonGroupProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  widthConfig: streamlit.IWidthConfig | undefined | null
+  widthConfig: streamlit.WidthConfig.$Properties | undefined | null
 }
 
 /**
  * Get the base content string for an option.
  */
-function getOptionBaseContent(option: ButtonGroupProto.IOption): string {
+function getOptionBaseContent(
+  option: ButtonGroupProto.Option.$Properties
+): string {
   const icon = option.contentIcon
   const content = option.content ?? ""
-  return icon ? `${icon} ${content}`.trim() : content
+  return isNullOrEmptyString(icon) ? content : `${icon} ${content}`.trim()
 }
 
 /**
@@ -99,7 +102,7 @@ function scrollOptionIntoGroup(group: HTMLElement, option: Element): void {
  * for duplicate labels), or -1 if not found.
  */
 function findOptionIndex(
-  options: ButtonGroupProto.IOption[],
+  options: ButtonGroupProto.Option.$Properties[],
   content: string
 ): number {
   for (let i = options.length - 1; i >= 0; i--) {
@@ -114,7 +117,7 @@ function findOptionIndex(
  * Convert content strings to indices based on current options.
  */
 function contentStringsToIndices(
-  options: ButtonGroupProto.IOption[],
+  options: ButtonGroupProto.Option.$Properties[],
   contentStrings: string[]
 ): number[] {
   const indices: number[] = []
@@ -140,17 +143,21 @@ function getInitialValue(
 function getDefaultStateFromProto(
   element: ButtonGroupProto
 ): ButtonGroupValue {
-  const defaultIndices = element.default ?? []
-  return defaultIndices
+  return element.default
     .map(index => {
-      const option = element.options[index]
+      // A negative or missing index must stay missing. `at` would wrap
+      // negatives to the last option.
+      const option =
+        index >= 0 && index < element.options.length
+          ? element.options[index]
+          : undefined
       return option ? getOptionBaseContent(option) : ""
     })
     .filter(s => s !== "")
 }
 
 function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
-  return element.rawValues ?? []
+  return element.rawValues
 }
 
 function syncWithWidgetManager(
@@ -163,6 +170,10 @@ function syncWithWidgetManager(
     formId: element.formId,
     fragmentId,
     fromUser: valueWithSource.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
   })
 }
 
@@ -171,7 +182,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { clickMode, options, style, label, labelVisibility, help, required } =
     element
 
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_array_value" as const,
@@ -354,7 +365,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
             LabelVisibility.LabelVisibilityOptions.COLLAPSED
         )}
       >
-        {help && (
+        {!isNullOrEmptyString(help) && (
           <WidgetLabelHelpIconInline
             content={help}
             placement={Placement.TOP}

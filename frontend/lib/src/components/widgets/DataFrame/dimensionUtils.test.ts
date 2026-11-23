@@ -177,23 +177,5 @@ describe("width configuration utilities", () => {
 
       expect(shouldUseStretchHeight(heightConfig)).toBe(false)
     })
-
-    it("returns false when isInRoot is true, even if heightConfig.useStretch is true", () => {
-      const heightConfig = new streamlit.HeightConfig({ useStretch: true })
-
-      expect(shouldUseStretchHeight(heightConfig, true)).toBe(false)
-    })
-
-    it("returns true when isInRoot is false and heightConfig.useStretch is true", () => {
-      const heightConfig = new streamlit.HeightConfig({ useStretch: true })
-
-      expect(shouldUseStretchHeight(heightConfig, false)).toBe(true)
-    })
-
-    it("returns false when isInRoot is undefined and heightConfig.useStretch is false", () => {
-      const heightConfig = new streamlit.HeightConfig({ useStretch: false })
-
-      expect(shouldUseStretchHeight(heightConfig, undefined)).toBe(false)
-    })
   })
 })

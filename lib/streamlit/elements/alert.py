@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import validate_width
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
@@ -30,6 +31,23 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
     from streamlit.type_util import SupportsStr
+
+
+def _alert_agent_props(
+    command: str, body: str, icon: str, title: str | None
+) -> str | None:
+    """Describe an alert for the agent API.
+
+    st.error, st.warning, st.info, and st.success differ only in the format
+    they set, so each passes its own command name. `body`, `icon`, and
+    `title` are the processed values the browser receives.
+    """
+    return agent_spec.element(
+        command,
+        body=body,
+        icon=icon or None,
+        title=title or None,
+    )
 
 
 def _process_alert_body_and_icon(
@@ -91,7 +109,8 @@ class AlertMixin:
             is ``None`` (default), Streamlit attempts to extract a leading
             emoji or Material icon shortcode from ``body``. If found, the icon
             is displayed and removed from the body text. If no leading icon is
-            found, no icon is displayed. If ``icon`` is a string, it takes
+            found, no icon is displayed. Pass ``icon=""`` to skip extraction
+            and show no icon. If ``icon`` is a non-empty string, it takes
             precedence over any icon in the body, and the following options
             are valid:
 
@@ -163,7 +182,13 @@ class AlertMixin:
 
         alert_proto.width_config.CopyFrom(width_config)
 
-        return self.dg._enqueue("alert", alert_proto)
+        return self.dg._enqueue(
+            "alert",
+            alert_proto,
+            agent_props=_alert_agent_props(
+                "error", processed_body, processed_icon, alert_proto.title or None
+            ),
+        )
 
     @gather_metrics("warning")
     def warning(
@@ -200,7 +225,8 @@ class AlertMixin:
             is ``None`` (default), Streamlit attempts to extract a leading
             emoji or Material icon shortcode from ``body``. If found, the icon
             is displayed and removed from the body text. If no leading icon is
-            found, no icon is displayed. If ``icon`` is a string, it takes
+            found, no icon is displayed. Pass ``icon=""`` to skip extraction
+            and show no icon. If ``icon`` is a non-empty string, it takes
             precedence over any icon in the body, and the following options
             are valid:
 
@@ -271,7 +297,13 @@ class AlertMixin:
 
         alert_proto.width_config.CopyFrom(width_config)
 
-        return self.dg._enqueue("alert", alert_proto)
+        return self.dg._enqueue(
+            "alert",
+            alert_proto,
+            agent_props=_alert_agent_props(
+                "warning", processed_body, processed_icon, alert_proto.title or None
+            ),
+        )
 
     @gather_metrics("info")
     def info(
@@ -308,7 +340,8 @@ class AlertMixin:
             is ``None`` (default), Streamlit attempts to extract a leading
             emoji or Material icon shortcode from ``body``. If found, the icon
             is displayed and removed from the body text. If no leading icon is
-            found, no icon is displayed. If ``icon`` is a string, it takes
+            found, no icon is displayed. Pass ``icon=""`` to skip extraction
+            and show no icon. If ``icon`` is a non-empty string, it takes
             precedence over any icon in the body, and the following options
             are valid:
 
@@ -380,7 +413,13 @@ class AlertMixin:
 
         alert_proto.width_config.CopyFrom(width_config)
 
-        return self.dg._enqueue("alert", alert_proto)
+        return self.dg._enqueue(
+            "alert",
+            alert_proto,
+            agent_props=_alert_agent_props(
+                "info", processed_body, processed_icon, alert_proto.title or None
+            ),
+        )
 
     @gather_metrics("success")
     def success(
@@ -417,7 +456,8 @@ class AlertMixin:
             is ``None`` (default), Streamlit attempts to extract a leading
             emoji or Material icon shortcode from ``body``. If found, the icon
             is displayed and removed from the body text. If no leading icon is
-            found, no icon is displayed. If ``icon`` is a string, it takes
+            found, no icon is displayed. Pass ``icon=""`` to skip extraction
+            and show no icon. If ``icon`` is a non-empty string, it takes
             precedence over any icon in the body, and the following options
             are valid:
 
@@ -488,7 +528,13 @@ class AlertMixin:
 
         alert_proto.width_config.CopyFrom(width_config)
 
-        return self.dg._enqueue("alert", alert_proto)
+        return self.dg._enqueue(
+            "alert",
+            alert_proto,
+            agent_props=_alert_agent_props(
+                "success", processed_body, processed_icon, alert_proto.title or None
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

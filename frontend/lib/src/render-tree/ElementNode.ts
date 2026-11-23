@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { Element, ForwardMsgMetadata } from "@streamlit/protobuf"
+import type { Element, ForwardMsgMetadata } from "@streamlit/protobuf"
 
-import { AppNode } from "./AppNode.interface"
+import type { AppNode } from "./AppNode.interface"
 import { TransientNode } from "./TransientNode"
-import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
+import type { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 
@@ -40,6 +40,13 @@ export class ElementNode implements AppNode {
   // The hash of this element's payload for content-based deduplication.
   public readonly elementHash?: string
 
+  /**
+   * The skeleton a later run sent to this slot. The node keeps showing its
+   * previous content under the skeleton until new content replaces it, or
+   * until the run ends and the skeleton takes the slot.
+   */
+  public readonly pendingSkeleton?: ElementNode
+
   /** Create a new ElementNode. */
   public constructor(
     element: Element,
@@ -47,7 +54,8 @@ export class ElementNode implements AppNode {
     scriptRunId: string,
     activeScriptHash: string,
     fragmentId?: string,
-    elementHash?: string
+    elementHash?: string,
+    pendingSkeleton?: ElementNode
   ) {
     this.element = element
     this.metadata = metadata
@@ -55,6 +63,26 @@ export class ElementNode implements AppNode {
     this.activeScriptHash = activeScriptHash
     this.fragmentId = fragmentId
     this.elementHash = elementHash
+    this.pendingSkeleton = pendingSkeleton
+  }
+
+  /**
+   * Return a copy of this node that waits for content under `skeleton`, or
+   * that no longer waits if it's undefined. Returns this node if unchanged.
+   */
+  public withPendingSkeleton(skeleton: ElementNode | undefined): ElementNode {
+    if (skeleton === this.pendingSkeleton) {
+      return this
+    }
+    return new ElementNode(
+      this.element,
+      this.metadata,
+      this.scriptRunId,
+      this.activeScriptHash,
+      this.fragmentId,
+      this.elementHash,
+      skeleton
+    )
   }
 
   /**

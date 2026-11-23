@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import decamelize from "decamelize"
 import { get } from "lodash-es"
 import xxhash from "xxhashjs"
 
@@ -136,6 +135,16 @@ export function preserveEmbedQueryParams(): string {
 }
 
 /**
+ * Strip a leading `?` so callers get a bare query string.
+ *
+ * Accepts either `location.search` or an already-bare query string, so
+ * combining with embed params cannot produce `embed=true&?foo=bar`.
+ */
+export function normalizeQueryString(queryString: string): string {
+  return queryString.startsWith("?") ? queryString.slice(1) : queryString
+}
+
+/**
  * Builds a query string by combining an optional override with preserved embed params.
  * Used during page navigation to merge user query params with embed options.
  */
@@ -144,12 +153,14 @@ export function getQueryString(
   preservedQueryParams: string
 ): string {
   if (queryStringOverride !== undefined) {
+    const normalizedQueryStringOverride =
+      normalizeQueryString(queryStringOverride)
     if (preservedQueryParams) {
-      return queryStringOverride
-        ? `${preservedQueryParams}&${queryStringOverride}`
+      return normalizedQueryStringOverride
+        ? `${preservedQueryParams}&${normalizedQueryStringOverride}`
         : preservedQueryParams
     }
-    return queryStringOverride
+    return normalizedQueryStringOverride
   }
   return preservedQueryParams
 }
@@ -364,7 +375,8 @@ export function isFromWindows(): boolean {
 }
 
 /**
- * Sets cookie value
+ * Sets a cookie value. Silently skips the write when the document cannot
+ * store cookies (for example, a sandboxed iframe without `allow-same-origin`).
  */
 export function setCookie(
   name: string,
@@ -375,7 +387,12 @@ export function setCookie(
   const expirationStr: string = expirationDate
     ? `expires=${expirationDate.toUTCString()};`
     : ""
-  document.cookie = `${name}=${value};${expirationStr}path=/`
+  try {
+    document.cookie = `${name}=${value};${expirationStr}path=/`
+  } catch {
+    // Cookie writes are best-effort; callers must not rely on the value
+    // persisting.
+  }
 }
 
 export function isValidElementId(
@@ -398,8 +415,8 @@ export function getElementId(element: Element): string | undefined {
   const elementId = get(element as unknown as Record<string, unknown>, [
     requireNonNull(element.type),
     "id",
-  ])
-  if (elementId && isValidElementId(elementId)) {
+  ]) as unknown
+  if (typeof elementId === "string" && isValidElementId(elementId)) {
     // We only care about valid element IDs (with the correct prefix)
     return elementId
   }
@@ -530,9 +547,9 @@ function findAnIFrameWithClassName(
 function canAccessIFrame(iframe: HTMLIFrameElement): boolean {
   try {
     if (iframe.contentWindow === null) return false
-    const doc = iframe.contentDocument || iframe.contentWindow.document
+    const doc = iframe.contentDocument ?? iframe.contentWindow.document
     const html = doc.body.innerHTML
-    return html !== null && html !== ""
+    return html !== ""
   } catch {
     return false
   }
@@ -560,9 +577,7 @@ export function getIFrameEnclosingApp(
   if (foundIFrame) {
     return foundIFrame
   }
-  if (window.parent) {
-    qs = window.parent.document.querySelectorAll(qsStreamlitAppStr)
-  }
+  qs = window.parent.document.querySelectorAll(qsStreamlitAppStr)
   foundIFrame = findAnIFrameWithClassName(qs, embeddingIdClassName)
   if (foundIFrame && !canAccessIFrame(foundIFrame)) {
     return null
@@ -578,9 +593,7 @@ export function getIFrameEnclosingApp(
   if (foundIFrame) {
     return foundIFrame
   }
-  if (window.parent) {
-    htmlCollection = window.parent.document.getElementsByTagName("iframe")
-  }
+  htmlCollection = window.parent.document.getElementsByTagName("iframe")
   foundIFrame = findAnIFrameWithClassName(htmlCollection, embeddingIdClassName)
   if (foundIFrame && !canAccessIFrame(foundIFrame)) {
     return null
@@ -655,9 +668,7 @@ export function keysToSnakeCase(
 ): Record<string, unknown> {
   return Object.keys(obj).reduce(
     (acc, key) => {
-      const newKey = decamelize(key, {
-        preserveConsecutiveUppercase: true,
-      }).replace(".", "_")
+      const newKey = decamelizePreservingUppercase(key).replace(".", "_")
       let value = obj[key]
 
       if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -665,7 +676,7 @@ export function keysToSnakeCase(
       }
 
       if (Array.isArray(value)) {
-        value = value.map(item =>
+        value = (value as unknown[]).map(item =>
           item !== null && typeof item === "object"
             ? keysToSnakeCase(item as Record<string, unknown>)
             : item
@@ -676,6 +687,32 @@ export function keysToSnakeCase(
       return acc
     },
     {} as Record<string, unknown>
+  )
+}
+
+/** Convert camelCase to snake_case, keeping consecutive uppercase abbreviations intact (`XMLHttpRequest` → `XML_http_request`).
+ *  Adapted from sindresorhus/decamelize (`preserveConsecutiveUppercase: true`), MIT. */
+function decamelizePreservingUppercase(value: string): string {
+  if (value.length < 2) {
+    return value
+  }
+
+  // Insert `_` between a lowercase letter or digit and an uppercase letter.
+  const separated = value.replaceAll(
+    /([\p{Lowercase_Letter}\d])(\p{Uppercase_Letter})/gu,
+    "$1_$2"
+  )
+  // Lowercase isolated uppercase letters/digits so they are not treated as abbreviations.
+  const lowercasedSingleLetters = separated.replaceAll(
+    /((?<![\p{Uppercase_Letter}\d])[\p{Uppercase_Letter}\d](?![\p{Uppercase_Letter}\d]))/gu,
+    character => character.toLowerCase()
+  )
+
+  // Split an abbreviation from the capitalized word that follows it (`XMLHttp` → `XML_http`).
+  return lowercasedSingleLetters.replaceAll(
+    /(?<!\p{Uppercase_Letter})(\p{Uppercase_Letter}+)(\p{Uppercase_Letter}\p{Lowercase_Letter}+)/gu,
+    (_, uppercase: string, trailingWord: string) =>
+      `${uppercase}_${trailingWord.toLowerCase()}`
   )
 }
 

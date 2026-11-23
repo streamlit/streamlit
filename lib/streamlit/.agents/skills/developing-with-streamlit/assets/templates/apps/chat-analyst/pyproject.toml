@@ -1,0 +1,10 @@
+[project]
+name = "chat-analyst"
+version = "1.0.0"
+description = "A chat analyst that shows its steps, streams its answers, and lists recent chats"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26.0",
+    "pandas>=2.2.3",
+    "streamlit",
+]

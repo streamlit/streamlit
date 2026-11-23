@@ -15,11 +15,12 @@
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import re
 import sys
 from datetime import date, datetime, time
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -65,6 +66,10 @@ def _minor_version() -> int:
     if match is None:
         raise RuntimeError(f"Unable to parse Streamlit version: {st.__version__}")
     return int(match.group(1))
+
+
+def _dialog_supports_position() -> bool:
+    return "position" in inspect.signature(st.dialog).parameters
 
 
 def _module_available(module_name: str) -> bool:
@@ -513,6 +518,16 @@ def _render_charts(minor_version: int) -> None:
                 Delta --> Browser[Browser render]
         """)
 
+    if hasattr(st, "echarts_chart"):
+        st.echarts_chart(
+            {
+                "animation": False,
+                "xAxis": {"type": "category", "data": ["A", "B", "C", "D", "E"]},
+                "yAxis": {"type": "value"},
+                "series": [{"type": "bar", "data": [5, 20, 36, 10, 10]}],
+            }
+        )
+
 
 def _render_custom_ui(minor_version: int) -> None:
     st.header("Custom UI elements")
@@ -550,6 +565,14 @@ def _render_custom_ui(minor_version: int) -> None:
             st.write(f"Clicked link: {clicked_link}")
 
 
+_dialog_kwargs: dict[str, Any] = {}
+if _dialog_supports_position():
+    _dialog_kwargs["position"] = cast(
+        "Literal['left', 'center', 'right']",
+        st.session_state.get("dialog_position", "center"),
+    )
+
+
 @st.dialog(
     "Test dialog",
     width=cast(
@@ -557,6 +580,7 @@ def _render_custom_ui(minor_version: int) -> None:
         st.session_state.get("dialog_width", "small"),
     ),
     dismissible=st.session_state.get("dialog_dismissible", True),
+    **_dialog_kwargs,
 )
 def _dialog(item: str) -> None:
     reason = st.text_input("Dialog reason", key="dialog_reason")
@@ -809,6 +833,13 @@ def _render_inputs(minor_version: int, help_text: str | None, disabled: bool) ->
         default="small",
         key="dialog_width",
     )
+    if _dialog_supports_position():
+        st.segmented_control(
+            "Dialog position",
+            ["center", "left", "right"],
+            default="center",
+            key="dialog_position",
+        )
     st.toggle(
         "Dialog dismissible",
         True,

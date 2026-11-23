@@ -15,7 +15,7 @@
  */
 
 import {
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -35,16 +35,16 @@ import {
   saveSidebarState,
   shouldCollapse,
 } from "@streamlit/app/src/components/Sidebar/utils"
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import {
-  AppNode,
-  AppRoot,
+  type AppNode,
+  type AppRoot,
   BlockNode,
-  ComponentRegistry,
+  type ComponentRegistry,
   ContainerContentsWrapper,
   ElementNode,
-  FileUploadClient,
-  IGuestToHostMessage,
+  type FileUploadClient,
+  type IGuestToHostMessage,
   NavigationContext,
   Profiler,
   SidebarConfigContext,
@@ -56,11 +56,12 @@ import {
   useEmotionTheme,
   useExecuteWhenChanged,
   useWindowDimensionsContext,
-  WidgetStateManager,
+  type WidgetStateManager,
 } from "@streamlit/lib"
 import { Navigation } from "@streamlit/protobuf"
 
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
+import SkipToContentLink, { MAIN_ELEMENT_ID } from "./SkipToContentLink"
 import {
   StyledAppViewBlockContainer,
   StyledAppViewBlockSpacer,
@@ -76,26 +77,29 @@ import {
   StyledStickyBottomContainer,
 } from "./styled-components"
 
-/**
- * Recursively checks if the given node contains a chat input element.
- */
-function containsChatInput(node: AppNode): boolean {
+/** Recursively checks for a chat input auto-positioned at the bottom. */
+function containsAutoPositionedChatInput(node: AppNode): boolean {
   if (node instanceof ElementNode) {
-    return node.element.type === "chatInput"
+    return (
+      node.element.type === "chatInput" &&
+      node.element.chatInput?.isAutoPositionedAtBottom === true
+    )
   }
 
   if (node instanceof BlockNode) {
-    return node.children.some(containsChatInput)
+    return node.children.some(containsAutoPositionedChatInput)
   }
 
   if (node instanceof TransientNode) {
-    const anchorHasChatInput = node.anchor
-      ? containsChatInput(node.anchor)
+    const anchorHasAutoPositionedChatInput = node.anchor
+      ? containsAutoPositionedChatInput(node.anchor)
       : false
-    const transientHasChatInput = node.transientNodes.some(
-      el => el.element.type === "chatInput"
+    const transientHasAutoPositionedChatInput = node.transientNodes.some(
+      containsAutoPositionedChatInput
     )
-    return anchorHasChatInput || transientHasChatInput
+    return (
+      anchorHasAutoPositionedChatInput || transientHasAutoPositionedChatInput
+    )
   }
 
   // Unknown AppNode subtypes are assumed to not contain a chat input.
@@ -265,12 +269,15 @@ function AppView(props: AppViewProps): ReactElement {
     removeScriptFinishedHandler,
   ])
 
-  // Activate scroll to bottom only when there's a chat input in the bottom container:
-  const hasBottomChatInput = useMemo(
-    () => hasBottomElements && containsChatInput(elements.bottom),
+  // A chat input opts into app-level autoscroll when Streamlit automatically
+  // positions it at the bottom. Inputs explicitly placed in st.bottom remain
+  // fixed without changing the main area's scroll position.
+  const hasAutoPositionedChatInput = useMemo(
+    () =>
+      hasBottomElements && containsAutoPositionedChatInput(elements.bottom),
     [hasBottomElements, elements.bottom]
   )
-  const Component = hasBottomChatInput
+  const Component = hasAutoPositionedChatInput
     ? ScrollToBottomContainer
     : StyledAppViewMain
 
@@ -303,7 +310,7 @@ function AppView(props: AppViewProps): ReactElement {
     // No saved preference, use initial config + screen size logic
     return shouldCollapse(
       initialSidebarState,
-      parseInt(activeTheme.emotion.breakpoints.md, 10),
+      Number.parseInt(activeTheme.emotion.breakpoints.md, 10),
       innerWidth
     )
   })
@@ -325,7 +332,7 @@ function AppView(props: AppViewProps): ReactElement {
         setSidebarIsCollapsed(
           shouldCollapse(
             initialSidebarState,
-            parseInt(activeTheme.emotion.breakpoints.md, 10),
+            Number.parseInt(activeTheme.emotion.breakpoints.md, 10),
             innerWidth
           )
         )
@@ -371,7 +378,8 @@ function AppView(props: AppViewProps): ReactElement {
 
   // Determine if the header should have transparent background
   // Only transparent when no content is shown at all
-  const shouldShowLogo = logoElement && (!showSidebar || isSidebarCollapsed)
+  const shouldShowLogo =
+    logoElement !== null && (!showSidebar || isSidebarCollapsed)
   const shouldShowExpandButton = showSidebar && isSidebarCollapsed
   const shouldShowTopNav =
     navigationPosition === Navigation.Position.TOP &&
@@ -387,6 +395,7 @@ function AppView(props: AppViewProps): ReactElement {
       data-testid="stAppViewContainer"
       data-layout={layout}
     >
+      <SkipToContentLink />
       {showSidebar && (
         <Profiler id="Sidebar">
           <ThemedSidebar
@@ -421,6 +430,7 @@ function AppView(props: AppViewProps): ReactElement {
           showToolbar={showToolbar}
         />
         <Component
+          id={MAIN_ELEMENT_ID}
           tabIndex={0}
           isEmbedded={embedded}
           disableScrolling={disableScrolling}

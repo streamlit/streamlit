@@ -15,30 +15,37 @@
 """API usage dashboard template.
 
 Demonstrates:
-- Segmented control for category selection
+- Segmented control for category selection, bound to the URL
+  with ``bind="query-params"``
 - Multiselect for endpoint filtering
 - Starter kits / presets for quick selection
-- Time series visualization with normalization
-- Metric cards with 28-day deltas
+- Bordered container cards with bold labels
+- ``st.echarts_chart`` time series with normalization and a zoom slider
+- Metric cards with numeric values formatted by ``format=`` and 28-day deltas
 - Rolling average options
-- ``@st.cache_data(ttl=...)`` loader to keep data fresh and bounded
+- ``@st.cache_data(ttl=..., refresh_mode="background")`` loader that keeps
+  data fresh without blocking on a refresh
+- Layout-first loading: the main script draws each card's frame, title, and
+  ``st.skeleton``, and calls the card's ``@st.fragment(parallel=True)`` inside
+  it, so both cards load concurrently at their final size
 - Conditional rendering: the collapsed "Raw data" expander only computes and
-  sends its dataframe to the browser when it is open (``on_change="rerun"``)
+  sends its dataframe to the browser when it is open (``on_change="rerun"``),
+  and as a fragment, opening it reruns only that section
 
 This template uses synthetic data. Replace ``generate_api_data()`` with your
 actual data source (e.g., Snowflake queries, APIs, etc.).
 """
 
+import time
 from datetime import date, timedelta
 
-import altair as alt
 import numpy as np
 import pandas as pd
 
 import streamlit as st
 
 st.set_page_config(
-    page_title="API Usage Dashboard",
+    page_title="API usage",
     page_icon=":material/api:",
     layout="wide",
 )
@@ -47,6 +54,10 @@ st.set_page_config(
 # =============================================================================
 # Synthetic Data Generation (Replace with your data source)
 # =============================================================================
+
+# Simulates warehouse latency on the first (uncached) load so the skeletons
+# are visible. Set to 0 when you connect a real data source.
+SIMULATED_LATENCY_S = 0.8
 
 # API categories and their endpoints
 API_CATEGORIES = {
@@ -83,14 +94,16 @@ API_CATEGORIES = {
 
 # Starter kits - predefined endpoint selections
 STARTER_KITS = {
-    "None": [],
     "Core CRUD": ["/users", "/users/{id}", "/orders", "/orders/{id}"],
     "Search": ["/users/search", "/products/search", "/products/categories"],
     "Analytics": ["/analytics/events", "/analytics/metrics", "/analytics/reports"],
-    "High Volume": ["/users", "/products", "/orders", "/analytics/events"],
+    "High volume": ["/users", "/products", "/orders", "/analytics/events"],
 }
 
 ROLLING_OPTIONS = {"Raw": 1, "7-day average": 7, "28-day average": 28}
+# Card heights, shared with the skeletons that hold their slots while loading.
+METRIC_HEIGHT = 136
+CHART_HEIGHT = 450
 
 
 def generate_api_data(
@@ -117,7 +130,7 @@ def generate_api_data(
             trend = base * (1 + growth) ** i
 
             # Weekly seasonality (lower on weekends)
-            if dt.dayofweek >= 5:
+            if dt.day_of_week >= 5:
                 trend *= 0.4
 
             # Random noise
@@ -134,16 +147,16 @@ def generate_api_data(
     return pd.DataFrame(records)
 
 
-@st.cache_data(ttl="1h", show_spinner="Loading API usage data...")
+@st.cache_data(
+    ttl="1h", refresh_mode="background", show_spinner="Loading API usage data..."
+)
 def load_api_data() -> pd.DataFrame:
     """Load all API usage data (cached). Replace with your data source."""
+    time.sleep(SIMULATED_LATENCY_S)
     end_date = date.today() - timedelta(days=1)
     start_date = end_date - timedelta(days=365)
 
-    all_endpoints = []
-    for endpoints in API_CATEGORIES.values():
-        all_endpoints.extend(endpoints)
-
+    all_endpoints = [e for endpoints in API_CATEGORIES.values() for e in endpoints]
     return generate_api_data(all_endpoints, start_date, end_date)
 
 
@@ -152,19 +165,17 @@ def apply_rolling_average(df: pd.DataFrame, window: int) -> pd.DataFrame:
     if window == 1:
         return df
 
-    result = df.copy()
-    result["request_count"] = result.groupby("endpoint")["request_count"].transform(
-        lambda x: x.rolling(window, min_periods=1).mean()
+    return df.assign(
+        request_count=df.groupby("endpoint")["request_count"].transform(
+            lambda x: x.rolling(window, min_periods=1).mean()
+        )
     )
-    return result
 
 
 def normalize_data(df: pd.DataFrame) -> pd.DataFrame:
     """Normalize request counts to percentages (share of total per day)."""
-    result = df.copy()
-    daily_totals = result.groupby("date")["request_count"].transform("sum")
-    result["request_count"] /= daily_totals
-    return result
+    daily_totals = df.groupby("date")["request_count"].transform("sum")
+    return df.assign(request_count=df["request_count"] / daily_totals)
 
 
 def calculate_delta(df: pd.DataFrame, endpoint: str) -> tuple[float, float | None]:
@@ -185,42 +196,128 @@ def calculate_delta(df: pd.DataFrame, endpoint: str) -> tuple[float, float | Non
     return latest, delta
 
 
+def load_filtered(
+    endpoints: list[str], rolling_label: str, normalize: bool
+) -> pd.DataFrame:
+    """Load the usage data and apply the page's filters.
+
+    Only the load is cached; the filters are cheap, so every card applies them
+    to the cached data itself.
+    """
+    df = load_api_data()
+    df = df[df["endpoint"].isin(endpoints)]
+    df = apply_rolling_average(df, ROLLING_OPTIONS[rolling_label])
+    return normalize_data(df) if normalize else df
+
+
+# =============================================================================
+# Cards (parallel fragments, so they load concurrently on a full rerun)
+# =============================================================================
+
+
+@st.fragment(parallel=True)
+def latest_numbers(endpoints: list[str], rolling_label: str, normalize: bool) -> None:
+    """Each endpoint's latest value and its change over 28 days.
+
+    The page calls this inside ``st.skeleton``, and the metric row replaces it.
+    """
+    data = load_filtered(endpoints, rolling_label, normalize)
+    with st.container(horizontal=True):
+        for endpoint in endpoints:
+            latest, delta = calculate_delta(data, endpoint)
+            st.metric(
+                endpoint,
+                latest,
+                delta,
+                format="percent" if normalize else "%,.0f",
+                border=True,
+                height=METRIC_HEIGHT,
+            )
+
+
+@st.fragment(parallel=True)
+def time_series(endpoints: list[str], rolling_label: str, normalize: bool) -> None:
+    """One line per endpoint. The page calls this inside ``st.skeleton``."""
+    data = load_filtered(endpoints, rolling_label, normalize)
+    # Pivot to one column per endpoint, in the metric cards' order, so each
+    # line series can read its own dataset column.
+    wide = data.pivot_table(
+        index="date", columns="endpoint", values="request_count", aggfunc="sum"
+    )[endpoints]
+    option = {
+        "dataset": {"source": wide.reset_index()},
+        "legend": {"type": "scroll"},
+        "tooltip": {
+            "trigger": "axis",
+            "valueFormatter": "percent" if normalize else "%,.0f",
+        },
+        "xAxis": {"type": "time"},
+        "yAxis": {
+            "type": "value",
+            "axisLabel": {"formatter": "percent"} if normalize else {},
+        },
+        "dataZoom": [{"type": "inside"}, {"type": "slider"}],
+        "series": [
+            {
+                "type": "line",
+                "name": endpoint,
+                "encode": {"x": "date", "y": endpoint},
+                "showSymbol": False,
+            }
+            for endpoint in wide.columns
+        ],
+    }
+    st.echarts_chart(
+        option,
+        height=CHART_HEIGHT,
+        alt=(
+            f"{rolling_label} share of requests by endpoint over time"
+            if normalize
+            else f"{rolling_label} request count by endpoint over time"
+        ),
+    )
+
+
+@st.fragment
+def raw_data(endpoints: list[str], rolling_label: str, normalize: bool) -> None:
+    """A collapsed "Raw data" section that only builds its table when open.
+
+    ``on_change="rerun"`` makes ``.open`` available. In a fragment, opening or
+    closing the section reruns only this section, not the cards above it.
+    """
+    section = st.expander(
+        "Raw data", expanded=False, icon=":material/table:", on_change="rerun"
+    )
+    if section.open:
+        with section:
+            st.dataframe(
+                load_filtered(endpoints, rolling_label, normalize),
+                hide_index=True,
+                column_config={
+                    "request_count": st.column_config.NumberColumn(
+                        "Requests", format="percent" if normalize else None
+                    )
+                },
+                alt="Filtered endpoint request data",
+            )
+
+
 # =============================================================================
 # Page Layout
 # =============================================================================
 
-# Load data
-raw_data = load_api_data()
-
-# Header
-st.markdown("# API Usage :material/api:")
+st.title("API usage", icon=":material/api:")
 st.caption("Select an API category to explore endpoint usage over time.")
 
-# Category selection (not centered)
 category = st.segmented_control(
-    "Select category",
-    options=[
-        ":material/person: Users",
-        ":material/shopping_cart: Orders",
-        ":material/inventory_2: Products",
-        ":material/analytics: Analytics",
-    ],
-    default=":material/person: Users",
+    "Category",
+    options=list(API_CATEGORIES),
+    default="Users",
+    required=True,
+    key="category",
+    bind="query-params",
     label_visibility="collapsed",
 )
-
-if not category:
-    st.warning("Please select a category above.", icon=":material/warning:")
-    st.stop()
-
-# Map display name to category key
-category_map = {
-    ":material/person: Users": "Users",
-    ":material/shopping_cart: Orders": "Orders",
-    ":material/inventory_2: Products": "Products",
-    ":material/analytics: Analytics": "Analytics",
-}
-selected_category = category_map[category]
 
 st.subheader(f"{category} endpoints")
 
@@ -228,48 +325,41 @@ st.subheader(f"{category} endpoints")
 filter_col, chart_col = st.columns([1, 2])
 
 with filter_col:
-    # Metric selection
-    with st.expander("Metric", expanded=True, icon=":material/analytics:"):
+    with st.container(border=True):
+        st.markdown("**Metric**")
         rolling_label = st.segmented_control(
             "Time aggregation",
-            list(ROLLING_OPTIONS.keys()),
+            list(ROLLING_OPTIONS),
             default="7-day average",
+            required=True,
             label_visibility="collapsed",
         )
-
-        if rolling_label is None:
-            st.caption("Please select a time aggregation.")
-            st.stop()
-
-        rolling_window = ROLLING_OPTIONS[rolling_label]
-
         normalize = st.toggle(
             "Normalize",
             value=False,
             help="Normalize to show percentage share of total requests",
         )
 
-    # Starter kits
-    with st.expander("Starter kits", expanded=True, icon=":material/auto_awesome:"):
+    with st.container(border=True):
+        st.markdown("**Starter kits**")
         starter_kit = st.pills(
             "Quick select",
-            options=list(STARTER_KITS.keys()),
-            default="None",
+            options=list(STARTER_KITS),
             label_visibility="collapsed",
         )
 
-    # Endpoint selection
-    available_endpoints = API_CATEGORIES[selected_category]
-
-    # Determine default selection based on starter kit
-    if starter_kit and starter_kit != "None":
+    available_endpoints = API_CATEGORIES[category]
+    if starter_kit:
         default_endpoints = [
             e for e in STARTER_KITS[starter_kit] if e in available_endpoints
         ]
     else:
         default_endpoints = available_endpoints[:4]  # First 4 endpoints
 
-    with st.expander("Endpoints", expanded=True, icon=":material/checklist:"):
+    # The multiselect has no key, so a new default from a starter kit resets
+    # its selection.
+    with st.container(border=True):
+        st.markdown("**Endpoints**")
         selected_endpoints = st.multiselect(
             "Select endpoints",
             options=available_endpoints,
@@ -277,7 +367,6 @@ with filter_col:
             label_visibility="collapsed",
         )
 
-# Filter and process data
 if not selected_endpoints:
     with chart_col:
         st.info(
@@ -285,78 +374,20 @@ if not selected_endpoints:
         )
     st.stop()
 
-filtered_data = raw_data[raw_data["endpoint"].isin(selected_endpoints)].copy()
-filtered_data = apply_rolling_average(filtered_data, rolling_window)
-
-if normalize:
-    filtered_data = normalize_data(filtered_data)
-
+# Layout first: the main script draws each card's frame, title, and skeleton,
+# so the page has its final layout before any data loads. Each card's
+# fragment replaces its skeleton when its data arrives.
 with chart_col:
-    # Latest metrics
-    with st.expander("Latest numbers", expanded=True, icon=":material/numbers:"):
-        metrics_row = st.container(horizontal=True)
+    with st.container(border=True):
+        # The comparison is named once here: a delta_description on each
+        # metric makes four cards too wide for one row in this column.
+        st.markdown("**Latest numbers** :gray[vs. 28 days ago]")
+        with st.skeleton(height=METRIC_HEIGHT):
+            latest_numbers(selected_endpoints, rolling_label, normalize)
 
-        for endpoint in selected_endpoints:
-            latest, delta = calculate_delta(filtered_data, endpoint)
+    with st.container(border=True):
+        st.markdown("**Time series**")
+        with st.skeleton(height=CHART_HEIGHT):
+            time_series(selected_endpoints, rolling_label, normalize)
 
-            if normalize:
-                value_str = f"{latest:.2%}"
-                delta_str = f"{delta:+.2%}" if delta is not None else None
-            else:
-                value_str = f"{latest:,.0f}"
-                delta_str = f"{delta:+,.0f}" if delta is not None else None
-
-            metrics_row.metric(
-                label=endpoint,
-                value=value_str,
-                delta=delta_str,
-                border=True,
-            )
-
-    # Time series chart
-    with st.expander("Time series", expanded=True, icon=":material/show_chart:"):
-        y_format = ".1%" if normalize else ",.0f"
-        y_title = "Share of requests" if normalize else "Request count"
-
-        chart = (
-            alt.Chart(filtered_data)
-            .mark_line()
-            .encode(
-                x=alt.X("date:T", title="Date"),
-                y=alt.Y(
-                    "request_count:Q", title=y_title, axis=alt.Axis(format=y_format)
-                ),
-                color=alt.Color(
-                    "endpoint:N", title="Endpoint", legend=alt.Legend(orient="bottom")
-                ),
-                tooltip=[
-                    alt.Tooltip("date:T", title="Date", format="%Y-%m-%d"),
-                    alt.Tooltip("endpoint:N", title="Endpoint"),
-                    alt.Tooltip("request_count:Q", title="Requests", format=y_format),
-                ],
-            )
-            .properties(height=450)
-            .interactive()
-        )
-
-        st.altair_chart(chart)
-
-# Raw data section. The expander is collapsed by default, so guard the
-# dataframe behind `.open` (enabled by `on_change="rerun"`) to avoid building
-# and sending it to the browser until the user actually opens the section.
-raw_data_section = st.expander(
-    "Raw data", expanded=False, icon=":material/table:", on_change="rerun"
-)
-if raw_data_section.open:
-    with raw_data_section:
-        display_df = filtered_data.copy()
-        column_config = {}
-        if normalize:
-            column_config["request_count"] = st.column_config.NumberColumn(
-                "Requests", format="percent"
-            )
-        st.dataframe(
-            display_df,
-            hide_index=True,
-            column_config=column_config or None,
-        )
+raw_data(selected_endpoints, rolling_label, normalize)

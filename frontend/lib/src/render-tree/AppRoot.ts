@@ -16,11 +16,11 @@
 
 import {
   Block as BlockProto,
-  Delta,
-  Element,
+  type Delta,
+  type Element,
   ForwardMsgMetadata,
-  Logo,
-  Transient as TransientProto,
+  type Logo,
+  type Transient as TransientProto,
 } from "@streamlit/protobuf"
 
 import {
@@ -29,11 +29,13 @@ import {
   LoadingScreenType,
   makeAppSkeletonElement,
   makeElementWithInfoText,
+  notNullOrUndefined,
 } from "~lib/util/utils"
 
-import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
+import { type AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
+import { keepPreviousContentForSkeleton } from "./skeletonUtils"
 import { TransientNode } from "./TransientNode"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { ClearTransientNodesVisitor } from "./visitors/ClearTransientNodesVisitor"
@@ -61,7 +63,7 @@ function canReuseElementPayload(
     existingNode instanceof ElementNode &&
     existingNode.elementHash === elementHash &&
     existingNode.element.type === nextElement.type &&
-    !nextElement.hasOneShotEffect
+    nextElement.hasOneShotEffect !== true
   )
 }
 
@@ -144,7 +146,7 @@ export class AppRoot {
     )
 
     const sidebar =
-      sidebarElements ||
+      sidebarElements ??
       new BlockNode(
         mainScriptHash,
         [],
@@ -304,7 +306,9 @@ export class AppRoot {
     node: AppNode | undefined,
     mainScriptHash: string = this.mainScriptHash
   ): BlockNode {
-    return (node as BlockNode) ?? new BlockNode(mainScriptHash)
+    // Present children are blocks. Keep undefined on the cast so a missing
+    // child still allocates a block.
+    return (node as BlockNode | undefined) ?? new BlockNode(mainScriptHash)
   }
 
   /**
@@ -337,20 +341,28 @@ export class AppRoot {
     )
   }
 
+  /**
+   * @param preservedFragmentIds Fragments whose nodes, with their subtrees,
+   * are kept as-is because their output was dropped from this run and their
+   * own rerun cleans them up.
+   */
   public clearStaleNodes(
     currentScriptRunId: string,
-    fragmentIdsThisRun?: Array<string>
+    fragmentIdsThisRun?: Array<string>,
+    preservedFragmentIds?: ReadonlySet<string>
   ): AppRoot {
     const visitor = new ClearStaleNodeVisitor(
       currentScriptRunId,
-      fragmentIdsThisRun
+      fragmentIdsThisRun,
+      undefined,
+      preservedFragmentIds
     )
     const newChildren = this.root.children.map(node =>
       this.ensureBlockNode(node.accept(visitor))
     )
 
     // Check if we're running a fragment, ensure logo isn't cleared as stale (Issue #10350/#10382)
-    const isFragmentRun = fragmentIdsThisRun && fragmentIdsThisRun.length > 0
+    const isFragmentRun = (fragmentIdsThisRun?.length ?? 0) > 0
     const appLogo =
       isFragmentRun || this.appLogo?.scriptRunId === currentScriptRunId
         ? this.appLogo
@@ -428,12 +440,21 @@ export class AppRoot {
       fragmentId,
       elementHash
     )
+    // A skeleton keeps a previous run's content mounted until new content
+    // arrives, so cached reruns don't flash the skeleton.
+    const nodeToSet =
+      element.type === "skeleton"
+        ? (keepPreviousContentForSkeleton(
+            GetNodeByDeltaPathVisitor.getNodeAtPath(this.root, deltaPath),
+            elementNode
+          ) ?? elementNode)
+        : elementNode
     return new AppRoot(
       this.mainScriptHash,
       SetNodeByDeltaPathVisitor.setNodeAtPath(
         this.root,
         deltaPath,
-        elementNode,
+        nodeToSet,
         scriptRunId
       ) as BlockNode,
       this.appLogo
@@ -464,6 +485,7 @@ export class AppRoot {
     //  1. Widget State
     //  2. React state of all elements
     let children: AppNode[] = []
+    let retained: BlockNode["retained"] | undefined
     if (
       existingNode instanceof BlockNode &&
       existingNode.deltaBlock.type === block.type
@@ -473,12 +495,15 @@ export class AppRoot {
       // This prevents showing stale elements from a previous
       // dialog when switching between different dialogs (see issue #10907).
       const isDialogWithDifferentIdentity =
-        block.dialog &&
-        existingNode.deltaBlock.dialog &&
+        notNullOrUndefined(block.dialog) &&
+        notNullOrUndefined(existingNode.deltaBlock.dialog) &&
         block.id !== existingNode.deltaBlock.id
 
       if (!isDialogWithDifferentIdentity) {
+        // Inherit retained elements alongside `children` because they render
+        // among them.
         children = existingNode.children
+        retained = existingNode.retained
       }
     }
 
@@ -488,7 +513,8 @@ export class AppRoot {
       block,
       scriptRunId,
       fragmentId,
-      deltaMsgReceivedAt
+      deltaMsgReceivedAt,
+      retained
     )
     return new AppRoot(
       this.mainScriptHash,

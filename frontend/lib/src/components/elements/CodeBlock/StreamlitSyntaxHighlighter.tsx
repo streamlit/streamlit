@@ -14,12 +14,18 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, ReactNode, useCallback, useMemo } from "react"
+import {
+  memo,
+  type ReactElement,
+  type ReactNode,
+  useCallback,
+  useMemo,
+} from "react"
 
 import {
   createElement,
   Prism as SyntaxHighlighter,
-  SyntaxHighlighterProps,
+  type SyntaxHighlighterProps,
 } from "react-syntax-highlighter"
 
 import { isNullOrUndefined } from "@streamlit/utils"
@@ -170,7 +176,11 @@ function StreamlitSyntaxHighlighter({
             // using a renderer that wraps individual lines of code in their
             // own spans.
             // https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/376
-            renderer={showLineNumbers && wrapLines ? renderer : undefined}
+            renderer={
+              showLineNumbers === true && wrapLines === true
+                ? renderer
+                : undefined
+            }
           >
             {text}
           </SyntaxHighlighter>

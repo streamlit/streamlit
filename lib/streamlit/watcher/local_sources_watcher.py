@@ -47,6 +47,20 @@ class WatchedModule(NamedTuple):
 # thus initializing config options when this file is first imported.
 PathWatcher: PathWatcherType | None = None
 
+# Module names waiting to be removed from sys.modules. Every session shares
+# this set because sys.modules is process-wide. The next session to run a
+# script evicts those modules, including a session opened after the change
+# or after every older session has closed.
+_pending_evictions: Final[set[str]] = set()
+_pending_evictions_lock: Final = threading.Lock()
+
+# Ensures each file change queues its evictions once, even though every
+# session's watcher reports it. Queuing again after one session has evicted and
+# started reimporting the modules would remove them mid-import in that
+# session's script thread. Maps path -> (modification time, queued names); a
+# new modification time replaces the entry.
+_queued_evictions_by_path: Final[dict[str, tuple[float, set[str]]]] = {}
+
 
 class LocalSourcesWatcher:
     """Watch local Python sources and pages to trigger app reruns.
@@ -74,8 +88,6 @@ class LocalSourcesWatcher:
 
         self._watched_modules: dict[str, WatchedModule] = {}
         self._watched_pages: set[str] = set()
-        self._pending_evictions: set[str] = set()
-        self._pending_evictions_lock = threading.Lock()
 
         self.update_watched_pages()
 
@@ -175,8 +187,7 @@ class LocalSourcesWatcher:
             if wm.module_name is not None and wm.module_name in sys.modules
         }
         if modules_to_evict:
-            with self._pending_evictions_lock:
-                self._pending_evictions.update(modules_to_evict)
+            _queue_evictions(norm_filepath, modules_to_evict)
 
         for cb in self._on_path_changed:
             cb(filepath)
@@ -193,33 +204,33 @@ class LocalSourcesWatcher:
     def flush_pending_evictions(self) -> None:
         """Remove pending watched modules from ``sys.modules``.
 
-        Called at the start of each script run on the script thread so that
-        ``sys.modules`` is not mutated from the file watcher thread while user
-        code (or cache serialization) is executing.
+        The script thread calls this at the start of a run, before user code,
+        so the file-watcher thread does not mutate ``sys.modules`` during user
+        code or cache serialization. Every session shares the pending names, so
+        this call also removes modules that other sessions' watchers queued. It
+        does not wait for those sessions to finish their current script.
         """
-        with self._pending_evictions_lock:
-            pending = self._pending_evictions
-            self._pending_evictions = set()
+        # Hold the lock until the modules are removed, so a concurrent flush
+        # that finds the set empty cannot return before the removal finishes.
+        with _pending_evictions_lock:
+            if not _pending_evictions:
+                return
 
-        if not pending:
-            return
+            prefixes = tuple(f"{name}." for name in _pending_evictions)
+            all_to_evict = set(_pending_evictions)
+            _pending_evictions.clear()
+            for key in list(sys.modules.keys()):
+                if key.startswith(prefixes):
+                    all_to_evict.add(key)
 
-        prefixes = tuple(f"{name}." for name in pending)
-        all_to_evict = set(pending)
-        for key in list(sys.modules.keys()):
-            if key.startswith(prefixes):
-                all_to_evict.add(key)
-
-        for name in all_to_evict:
-            sys.modules.pop(name, None)
+            for name in all_to_evict:
+                sys.modules.pop(name, None)
 
     def close(self) -> None:
         for wm in self._watched_modules.values():
             wm.watcher.close()
         self._watched_modules = {}
         self._watched_pages = set()
-        with self._pending_evictions_lock:
-            self._pending_evictions.clear()
         self._is_closed = True
 
     def _register_watcher(
@@ -295,15 +306,49 @@ class LocalSourcesWatcher:
         return {p for p in paths if not self._folder_black_list.is_blacklisted(p)}
 
 
+def _queue_evictions(changed_path: str, module_names: set[str]) -> None:
+    """Queue module evictions for one file change.
+
+    Skip names that an earlier report of this change (same modification time)
+    already queued, including children of a queued package, which the flush
+    also evicts. Changes without a usable modification time always queue.
+    """
+    with _pending_evictions_lock:
+        # Read the time under the lock, so a delayed report can't replace a
+        # newer record that another session has already queued and flushed.
+        try:
+            modification_time = os.stat(changed_path).st_mtime
+        except OSError:
+            modification_time = 0.0
+
+        # Always queue a 0.0 time: s3fs/fuse always report 0.0, and a missing
+        # file is stored as 0.0 above, so those changes can't be told apart.
+        if modification_time > 0.0:
+            queued_time, queued_names = _queued_evictions_by_path.get(
+                changed_path, (0.0, set())
+            )
+            if queued_time != modification_time:
+                queued_names = set()
+            queued_prefixes = tuple(f"{name}." for name in queued_names)
+            module_names = {
+                name
+                for name in module_names
+                if name not in queued_names and not name.startswith(queued_prefixes)
+            }
+            _queued_evictions_by_path[changed_path] = (
+                modification_time,
+                queued_names | module_names,
+            )
+        _pending_evictions.update(module_names)
+
+
 def get_module_paths(module: ModuleType) -> set[str]:
     paths_extractors: list[Callable[[ModuleType], list[str | None]]] = [
         # https://docs.python.org/3/reference/datamodel.html
         # __file__ is the pathname of the file from which the module was loaded
         # if it was loaded from a file.
         # The __file__ attribute may be missing for certain types of modules
-        lambda m: (
-            [m.__file__] if hasattr(m, "__file__") else cast("list[str | None]", [])
-        ),
+        lambda m: [m.__file__] if hasattr(m, "__file__") else list[str | None](),
         # https://docs.python.org/3/reference/import.html#__spec__
         # The __spec__ attribute is set to the module spec that was used
         # when importing the module. one exception is __main__,
@@ -316,20 +361,20 @@ def get_module_paths(module: ModuleType) -> set[str]:
         lambda m: (
             [m.__spec__.origin]
             if hasattr(m, "__spec__") and m.__spec__ is not None
-            else cast("list[str | None]", [])
+            else list[str | None]()
         ),
         # https://www.python.org/dev/peps/pep-0420/
-        # Handling of "namespace packages" in which the __path__ attribute
-        # is a _NamespacePath object with a _path attribute containing
-        # the various paths of the package.
+        # Namespace packages expose a path object whose _path lists the
+        # package locations. The type is _NamespacePath through 3.14 and
+        # NamespacePath on 3.15+.
         lambda m: (
             cast("list[str | None]", list(m.__path__._path))  # ty: ignore[invalid-argument-type]
             if hasattr(m, "__path__")
             # This check prevents issues with torch classes:
             # https://github.com/streamlit/streamlit/issues/10992
-            and type(m.__path__).__name__ == "_NamespacePath"
+            and type(m.__path__).__name__ in {"_NamespacePath", "NamespacePath"}
             and hasattr(m.__path__, "_path")
-            else cast("list[str | None]", [])
+            else list[str | None]()
         ),
     ]
 

@@ -2,14 +2,17 @@
 #
 # Key ideas:
 # - Cache the browser binaries that Playwright downloads in ~/.cache/ms-playwright.
-# - Use a cache key that includes OS, architecture, and Playwright version so
-#   upgrades automatically bust the cache while maximizing hit rate otherwise.
+# - Use a cache key that includes OS, architecture, distro image, and Playwright
+#   version so upgrades automatically bust the cache while maximizing hit rate
+#   otherwise. The distro image matters: WebKit extracts Ubuntu 24.04 and 26.04
+#   builds into the same revision directory, and `playwright install` skips the
+#   download when that directory's INSTALLATION_COMPLETE marker already exists.
 # - Restore the cache BEFORE running the installer so the install becomes a
 #   quick validation/no-op on cache hits.
 # - On Linux, remove man-db to avoid costly apt trigger processing during
 #   playwright's --with-deps step.
 name: Install Playwright with Cache
-description: Install Playwright browsers with OS- and version-aware caching
+description: Install Playwright browsers with OS-, distro-, and version-aware caching
 
 inputs:
   with-deps:
@@ -41,22 +44,46 @@ runs:
         fi
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+    # Distro image, not just runner.os. runner.os is "Linux" for every Ubuntu
+    # release, but WebKit builds are not interchangeable across them.
+    - id: host-platform
+      name: Determine host platform
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ -n "${ImageOS:-}" ]]; then
+          # GitHub-hosted runners set this, for example ubuntu24 or ubuntu26.
+          platform="${ImageOS}"
+        elif [[ "$(uname -s)" == "Linux" && -r /etc/os-release ]]; then
+          # shellcheck disable=SC1091
+          platform="$(. /etc/os-release && printf '%s%s' "$ID" "${VERSION_ID%%.*}")"
+        else
+          platform="$(uname -s | tr '[:upper:]' '[:lower:]')"
+        fi
+        echo "platform=${platform}" >> "$GITHUB_OUTPUT"
+
     # Restore the Playwright browser cache. Playwright downloads browsers into
-    # ~/.cache/ms-playwright. These binaries are OS/arch-specific (not
+    # ~/.cache/ms-playwright. These binaries are OS/arch/distro-specific (not
     # Python-version-specific), so our cache key includes:
     #   - runner.os and runner.arch: to scope to the correct platform
+    #   - host platform (ImageOS / distro major version): WebKit for Ubuntu
+    #     24.04 and 26.04 share a revision directory, and install skips a
+    #     download when that directory is already present
     #   - Playwright version: to bust cache on browser upgrades
+    # The distro stays in front of the version in both the key and the
+    # restore prefix so a version upgrade can reuse same-distro browsers,
+    # and a newer Ubuntu image cannot restore the previous image's binaries.
     - name: Cache Playwright browsers
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/.cache/ms-playwright
-        key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ steps.pw-version.outputs.version }}
+        key: ${{ runner.os }}-${{ runner.arch }}-${{ steps.host-platform.outputs.platform }}-playwright-${{ steps.pw-version.outputs.version }}
         # `playwright install` validates required browser revisions for the
-        # current Playwright package and downloads mismatches, so we won't run
-        # playwright with non-matching browsers in the case of a Playwright
-        # version upgrade.
+        # current Playwright package and downloads mismatches, so a Playwright
+        # version upgrade can restore an older same-distro cache and only
+        # fetch the browsers whose revisions changed.
         restore-keys: |
-          ${{ runner.os }}-${{ runner.arch }}-playwright-
+          ${{ runner.os }}-${{ runner.arch }}-${{ steps.host-platform.outputs.platform }}-playwright-
 
     # On Ubuntu runners, apt triggers for man-db can take significant time.
     # Purging man-db (which we don't need in CI) avoids those triggers during

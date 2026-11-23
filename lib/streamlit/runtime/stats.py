@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import itertools
+import math
 from typing import TYPE_CHECKING, Any, Final, NamedTuple, Protocol, runtime_checkable
 
 from streamlit.logger import get_logger
@@ -282,6 +283,83 @@ class GaugeStat(NamedTuple):
 
         metric_point = metric.metric_points.add()
         metric_point.gauge_value.int_value = self.value
+
+
+def _format_bucket_bound(upper_bound: float) -> str:
+    """Render a histogram bucket bound as an OpenMetrics ``le`` label value."""
+    if math.isinf(upper_bound):
+        return "+Inf"
+    return repr(float(upper_bound))
+
+
+class HistogramStat(NamedTuple):
+    """A histogram stat.
+
+    Properties
+    ----------
+    family_name : str
+        The name of the metric family (e.g. 'cache_compute_duration_seconds').
+    buckets : tuple[tuple[float, int], ...]
+        ``(upper_bound, cumulative_count)`` pairs in ascending bound order. The
+        last pair must have an upper bound of ``math.inf`` and a count equal to
+        ``observation_count``.
+    observation_sum : float
+        The sum of all observed values, exported as the ``_sum`` series.
+    observation_count : int
+        The number of observed values, exported as the ``_count`` series.
+    labels : dict[str, str] | None
+        Labels to identify this specific histogram.
+    unit : str
+        The unit of the metric (e.g. 'seconds').
+    help : str
+        A description of the metric.
+    """
+
+    family_name: str
+    buckets: tuple[tuple[float, int], ...]
+    observation_sum: float
+    observation_count: int
+    labels: dict[str, str] | None = None
+    unit: str = ""
+    help: str = ""
+
+    @property
+    def type(self) -> str:
+        return "histogram"
+
+    def to_metric_str(self) -> str:
+        labels = self.labels or {}
+        label_str = _labels_to_str(labels)
+        series_labels = f"{{{label_str}}}" if label_str else ""
+        lines = [
+            f"{self.family_name}_bucket"
+            f"{{{_labels_to_str({**labels, 'le': _format_bucket_bound(bound)})}}}"
+            f" {bucket_count}"
+            for bound, bucket_count in self.buckets
+        ]
+        lines.append(
+            f"{self.family_name}_sum{series_labels} {float(self.observation_sum)!r}"
+        )
+        lines.append(
+            f"{self.family_name}_count{series_labels} {self.observation_count}"
+        )
+        return "\n".join(lines)
+
+    def marshall_metric_proto(self, metric: MetricProto) -> None:
+        """Fill an OpenMetrics `Metric` protobuf object."""
+        if self.labels:
+            for name, value in sorted(self.labels.items()):
+                label = metric.labels.add()
+                label.name = name
+                label.value = value
+
+        histogram_value = metric.metric_points.add().histogram_value
+        histogram_value.double_value = self.observation_sum
+        histogram_value.count = self.observation_count
+        for bound, bucket_count in self.buckets:
+            bucket = histogram_value.buckets.add()
+            bucket.upper_bound = bound
+            bucket.count = bucket_count
 
 
 def metric_type_string_to_proto(type_string: str) -> MetricType.ValueType:

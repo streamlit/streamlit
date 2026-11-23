@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
 import { SwitchCamera } from "@emotion-icons/material-rounded"
 
@@ -42,7 +42,11 @@ const SwitchFacingModeButton = ({
   return (
     <StyledSwitchFacingModeButton data-testid="stCameraInputSwitchButton">
       <Tooltip content="Switch camera" placement={Placement.TOP_RIGHT}>
-        <BaseButton kind={BaseButtonKind.MINIMAL} onClick={switchFacingMode}>
+        <BaseButton
+          kind={BaseButtonKind.MINIMAL}
+          onClick={switchFacingMode}
+          aria-label="Switch camera"
+        >
           <Icon
             content={SwitchCamera}
             size="twoXL"

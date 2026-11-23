@@ -401,3 +401,33 @@ st.write("Ignore slider value:", ignore_slider)
 
 if st.button("Apply ignore slider", key="apply_ignore"):
     st.write("Applied ignore slider value:", ignore_slider)
+
+# Slider with reversed min/max (swapped to [1, 10]; value stays inside the range).
+reversed_bounds_value = st.slider(
+    "Reversed bounds slider",
+    min_value=10,
+    max_value=1,
+    value=5,
+    key="reversed_bounds_slider",
+)
+st.write("Reversed bounds slider value:", reversed_bounds_value)
+
+# Default time slider: 00:00 to time.max in 15-minute steps. time.max is
+# 1 microsecond short of a step, so End must commit 23:59:59.999999 rather
+# than 23:45.
+default_time_slider = st.slider(
+    "Default time slider",
+    value=time(12, 0),
+)
+st.write("Default time slider value:", f"{default_time_slider}")
+
+# Same bounds as a range. End on the upper thumb must reach time.max
+# without moving the lower thumb.
+default_time_range = st.slider(
+    "Default time range slider",
+    value=(time(9, 0), time(17, 0)),
+)
+st.write(
+    "Default time range slider value:",
+    f"{default_time_range[0]} {default_time_range[1]}",
+)

@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import datetime
 import random
+from datetime import date, datetime, time, timedelta
 
 import numpy as np
 import pandas as pd
@@ -262,9 +262,9 @@ st.data_editor(
     pd.DataFrame(
         {
             "col_0": [
-                datetime.datetime(2021, 1, 1, 1, 0, 0, 123000),
-                datetime.datetime(2022, 1, 2, 2, 0, 0, 234000),
-                datetime.datetime(2023, 1, 3, 3, 0, 0, 345000),
+                datetime(2021, 1, 1, 1, 0, 0, 123000),
+                datetime(2022, 1, 2, 2, 0, 0, 234000),
+                datetime(2023, 1, 3, 3, 0, 0, 345000),
                 None,
             ],
         }
@@ -276,9 +276,9 @@ st.data_editor(
             help="This is a datetime column",
             required=True,
             disabled=False,
-            default=datetime.datetime(2021, 1, 1, 1, 0, 0),
-            min_value=datetime.datetime(2021, 1, 1, 1, 0, 0),
-            max_value=datetime.datetime(2022, 1, 1, 1, 0, 0),
+            default=datetime(2021, 1, 1, 1, 0, 0),
+            min_value=datetime(2021, 1, 1, 1, 0, 0),
+            max_value=datetime(2022, 1, 1, 1, 0, 0),
             step=0.01,
             format="YYYY-MM-DD HH:mm:ss.SSS",
         ),
@@ -297,9 +297,9 @@ st.data_editor(
     pd.DataFrame(
         {
             "col_0": [
-                datetime.date(2021, 1, 1),
-                datetime.date(2022, 1, 2),
-                datetime.date(2023, 1, 3),
+                date(2021, 1, 1),
+                date(2022, 1, 2),
+                date(2023, 1, 3),
                 None,
             ],
         }
@@ -311,9 +311,9 @@ st.data_editor(
             help="This is a date column",
             required=True,
             disabled=False,
-            default=datetime.date(2021, 1, 1),
-            min_value=datetime.date(2021, 1, 1),
-            max_value=datetime.date(2022, 1, 1),
+            default=date(2021, 1, 1),
+            min_value=date(2021, 1, 1),
+            max_value=date(2022, 1, 1),
             step=2,
         ),
     },
@@ -331,9 +331,9 @@ st.data_editor(
     pd.DataFrame(
         {
             "col_0": [
-                datetime.time(1, 2, 0, 123000),
-                datetime.time(2, 3, 0, 234000),
-                datetime.time(3, 4, 0, 345000),
+                time(1, 2, 0, 123000),
+                time(2, 3, 0, 234000),
+                time(3, 4, 0, 345000),
                 None,
             ]
         }
@@ -345,10 +345,10 @@ st.data_editor(
             help="This is a time column",
             required=True,
             disabled=False,
-            default=datetime.time(1, 2, 0),
-            min_value=datetime.time(1, 2, 0),
-            max_value=datetime.time(1, 3, 0),
-            step=datetime.timedelta(milliseconds=1),
+            default=time(1, 2, 0),
+            min_value=time(1, 2, 0),
+            max_value=time(1, 3, 0),
+            step=timedelta(milliseconds=1),
         ),
     },
     width="content",

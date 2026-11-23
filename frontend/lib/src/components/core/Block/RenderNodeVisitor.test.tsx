@@ -16,19 +16,32 @@
 
 import { isValidElement } from "react"
 
-import { BlockNode, TransientNode } from "~lib/AppNode"
+import {
+  Block as BlockProto,
+  Element,
+  ForwardMsgMetadata,
+} from "@streamlit/protobuf"
+
+import {
+  type AppNode,
+  BlockNode,
+  ElementNode,
+  TransientNode,
+} from "~lib/AppNode"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
 import {
   block,
   blockWithId,
+  FAKE_SCRIPT_HASH,
+  makeProto,
   text,
   textInput,
 } from "~lib/render-tree/test-utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { BlockPropsWithoutWidth } from "./Block"
+import type { BlockPropsWithoutWidth } from "./Block"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 
 // Mock props for testing
@@ -48,6 +61,21 @@ const createMockProps = (node: BlockNode): BlockPropsWithoutWidth => ({
   widgetsDisabled: false,
   componentRegistry: new ComponentRegistry(mockEndpoints()),
 })
+
+/** Create a keyed block whose add-block delta arrived at `deltaMsgReceivedAt`. */
+const blockWrittenAt = (
+  id: string,
+  deltaMsgReceivedAt: number,
+  children: AppNode[]
+): BlockNode =>
+  new BlockNode(
+    FAKE_SCRIPT_HASH,
+    children,
+    makeProto(BlockProto, { id }),
+    "script_run_id",
+    undefined,
+    deltaMsgReceivedAt
+  )
 
 describe("RenderNodeVisitor", () => {
   describe("constructor", () => {
@@ -231,6 +259,70 @@ describe("RenderNodeVisitor", () => {
   })
 
   describe("static collectReactElements", () => {
+    describe("retained elements", () => {
+      const retainedInput = textInput("retained", "retained_id", "prev_run")
+      const retainedId = "$$ID-retained_id-key"
+
+      const blockWithRetained = (before: number): BlockNode =>
+        new BlockNode(
+          "fake_script_hash",
+          [text("a"), text("b")],
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          [{ node: retainedInput, id: retainedId, before }]
+        )
+
+      it.each([
+        [0, [retainedId, "0", "1"]],
+        [1, ["0", retainedId, "1"]],
+        [2, ["0", "1", retainedId]],
+        [5, ["0", "1", retainedId]],
+      ])(
+        "renders an entry anchored before child %i in place",
+        (before, expectedKeys) => {
+          const result = RenderNodeVisitor.collectReactElements(
+            createMockProps(blockWithRetained(before))
+          )
+
+          // The retained element does not shift the positional keys.
+          expect(result.map(element => element.key)).toEqual(expectedKeys)
+        }
+      )
+
+      it("marks only the retained element as retained", () => {
+        const result = RenderNodeVisitor.collectReactElements(
+          createMockProps(blockWithRetained(1))
+        )
+
+        expect(result[1].props.node).toBe(retainedInput)
+        expect(result[1].props.isRetained).toBe(true)
+        expect(result[0].props.isRetained).toBeUndefined()
+        expect(result[2].props.isRetained).toBeUndefined()
+      })
+
+      it("skips a retained element whose id was already rendered", () => {
+        const current = textInput("current", "retained_id", "current_run")
+        const node = new BlockNode(
+          "fake_script_hash",
+          [current],
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          [{ node: retainedInput, id: retainedId, before: 1 }]
+        )
+
+        const result = RenderNodeVisitor.collectReactElements(
+          createMockProps(node)
+        )
+
+        expect(result).toHaveLength(1)
+        expect(result[0].props.node).toBe(current)
+      })
+    })
+
     it("returns empty array for block with no children", () => {
       const emptyBlock = block([])
       const mockProps = createMockProps(emptyBlock)
@@ -238,6 +330,150 @@ describe("RenderNodeVisitor", () => {
       const result = RenderNodeVisitor.collectReactElements(mockProps)
 
       expect(result).toEqual([])
+    })
+
+    it("skips a later block that reuses a keyed block id", () => {
+      // A rerun can leave the previous keyed container in place until stale
+      // nodes are cleared. The updated block is at the earlier index. The
+      // skipped copy still consumes an index, so a later unkeyed sibling keeps
+      // the positional key it would have had if that copy were rendered.
+      const blockId = "$$ID-abc123-my_key"
+      const currentBlock = blockWrittenAt(blockId, 2000, [text("current")])
+      const staleBlock = blockWrittenAt(blockId, 1000, [text("stale")])
+      const parentBlock = block([
+        currentBlock,
+        text("between"),
+        staleBlock,
+        text("after"),
+      ])
+
+      const result = RenderNodeVisitor.collectReactElements(
+        createMockProps(parentBlock)
+      )
+
+      expect(result).toHaveLength(3)
+      expect(result[0].key).toBe(blockId)
+      expect(result[0].props.node).toBe(currentBlock)
+      expect(result[1].key).toBe("1")
+      expect(result[2].key).toBe("3")
+      expect(result.some(element => element.props.node === staleBlock)).toBe(
+        false
+      )
+    })
+
+    it("renders a later copy of a keyed block in the first copy's slot when it was written last", () => {
+      // A fragment rerun writes a dialog it shares with the main script at a
+      // later event-container index. Stale cleanup keeps the full run's copy,
+      // so the fragment's copy must take over the rendered slot.
+      const blockId = "$$ID-abc123-dialog"
+      const fullRunCopy = blockWrittenAt(blockId, 1000, [text("full run")])
+      const fragmentRunCopy = blockWrittenAt(blockId, 2000, [text("fragment")])
+      const parentBlock = block([
+        fullRunCopy,
+        text("between"),
+        fragmentRunCopy,
+      ])
+
+      const result = RenderNodeVisitor.collectReactElements(
+        createMockProps(parentBlock)
+      )
+
+      expect(result.map(element => element.key)).toEqual([blockId, "1"])
+      expect(result[0].props.node).toBe(fragmentRunCopy)
+      expect(result.some(element => element.props.node === fullRunCopy)).toBe(
+        false
+      )
+    })
+
+    it("keeps the first copy of a keyed block when both copies have the same write time", () => {
+      const blockId = "$$ID-abc123-my_key"
+      const firstCopy = blockWithId(blockId, [text("first")])
+      const secondCopy = blockWithId(blockId, [text("second")])
+
+      const result = RenderNodeVisitor.collectReactElements(
+        createMockProps(block([firstCopy, secondCopy]))
+      )
+
+      expect(result).toHaveLength(1)
+      expect(result[0].props.node).toBe(firstCopy)
+    })
+
+    it("renders keyed blocks that have different ids", () => {
+      const parentBlock = block([
+        blockWithId("$$ID-abc123-one"),
+        blockWithId("$$ID-def456-two"),
+      ])
+
+      const result = RenderNodeVisitor.collectReactElements(
+        createMockProps(parentBlock)
+      )
+
+      expect(result.map(element => element.key)).toEqual([
+        "$$ID-abc123-one",
+        "$$ID-def456-two",
+      ])
+    })
+
+    describe("kept nodes that a skeleton waits to replace", () => {
+      const KEY = "$$ID-moved-key"
+      const skeleton = new ElementNode(
+        makeProto(Element, { skeleton: {} }),
+        ForwardMsgMetadata.create(),
+        "current_run",
+        FAKE_SCRIPT_HASH
+      )
+      const kinds: [
+        string,
+        (scriptRunId: string) => ElementNode | BlockNode,
+      ][] = [
+        ["an element", run => textInput("moved", "moved", run)],
+        ["a keyed container", run => blockWithId(KEY, [text("child")], run)],
+      ]
+
+      it.each(kinds)(
+        "show the skeleton in the kept slot of %s when this run's copy renders later",
+        (_, makeNode) => {
+          const current = makeNode("current_run")
+          const result = RenderNodeVisitor.collectReactElements(
+            createMockProps(
+              block([
+                makeNode("previous_run").withPendingSkeleton(skeleton),
+                current,
+              ])
+            )
+          )
+
+          // This run's copy takes over the React instance by key.
+          expect(result.map(element => element.key)).toEqual([
+            `${KEY}-skeleton`,
+            KEY,
+          ])
+          expect(result[0].props.node).toBe(skeleton)
+          expect(result[1].props.node).toBe(current)
+        }
+      )
+
+      it.each(kinds)(
+        "show the skeleton in the kept slot of %s when this run's copy renders first",
+        (_, makeNode) => {
+          const current = makeNode("current_run")
+          const result = RenderNodeVisitor.collectReactElements(
+            createMockProps(
+              block([
+                current,
+                makeNode("previous_run").withPendingSkeleton(skeleton),
+              ])
+            )
+          )
+
+          expect(result.map(element => element.key)).toEqual([
+            KEY,
+            `${KEY}-skeleton`,
+          ])
+          expect(result[0].props.node).toBe(current)
+          expect(result[1].props.node).toBe(skeleton)
+        }
+      )
     })
 
     it("collects React elements from block children", () => {

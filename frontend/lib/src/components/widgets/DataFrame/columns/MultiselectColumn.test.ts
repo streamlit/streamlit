@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
+import type { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 import { Field, List, Utf8 } from "apache-arrow"
 import { transparentize } from "color2k"
 
@@ -27,7 +27,7 @@ import MultiselectColumn, {
   type MultiselectColumnParams,
   prepareOptions,
 } from "./MultiselectColumn"
-import { BaseColumnProps, isErrorCell, isMissingValueCell } from "./utils"
+import { type BaseColumnProps, isErrorCell, isMissingValueCell } from "./utils"
 
 const MOCK_MULTISELECT_COLUMN_PROPS: BaseColumnProps = {
   id: "1",
@@ -111,6 +111,22 @@ describe("MultiselectColumn", () => {
     expect(mockCell.data.allowCreation).toEqual(true)
     expect(mockCell.data.allowDuplicates).toEqual(false)
   })
+
+  it.each([
+    [1, true],
+    [0, false],
+    [null, false],
+  ])(
+    "coerces a non-boolean accept_new_options %p to allowCreation %p",
+    (acceptNewOptions, expected) => {
+      const mockColumn = getMultiselectColumn({
+        options: ["foo", "bar"],
+        accept_new_options: acceptNewOptions as unknown as boolean,
+      })
+      const mockCell = mockColumn.getCell(["foo"]) as MultiSelectCellType
+      expect(mockCell.data.allowCreation).toBe(expected)
+    }
+  )
 
   it("validates values against options when accept_new_options is false", () => {
     const mockColumn = getMultiselectColumn({ options: ["A", "B"] })

@@ -26,4 +26,11 @@ message Heading {
   string help = 4;
   bool hide_anchor = 5;
   string divider = 6;
+
+  // If false, the heading stays on one line and ellipsizes instead of wrapping.
+  // Absent or true means the heading wraps.
+  optional bool wrap = 7;
+
+  // Optional emoji, Material icon shortcode, or "spinner". Empty = no icon.
+  string icon = 8;
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, PropsWithChildren, useContext } from "react"
+import { type FC, type PropsWithChildren, useContext } from "react"
 
 import { WindowDimensionsContext } from "~lib/components/shared/WindowDimensions"
 import { useWindowDimensions } from "~lib/components/shared/WindowDimensions/useWindowDimensions"

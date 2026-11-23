@@ -55,7 +55,7 @@ Central orchestrator managing everything.
 - Coordinates script run state
 
 **ForwardMsg handling by type** (essential types shown):
-- `newSession`: Initializes session metadata and script-run context; clears transients or page state as needed
+- `newSession`: Initializes session metadata and script-run context (run ID and fragment IDs from `ForwardMsg.metadata.run`); clears transients or page state as needed
 - `delta`: Updates tree via `AppRoot.applyDelta()`
 - `scriptFinished`: Clears stale nodes, removes inactive widget state, increments message cache run count
 - `sessionStatusChanged`: Updates script run state
@@ -83,6 +83,7 @@ Immutable root with 4 top-level containers:
 - Container for children (BlockNode | ElementNode | TransientNode)
 - Contains `BlockProto` (layout containers like: columns, expanders, forms, tabs, dialogs)
 - Tracks: `scriptRunId`, `fragmentId`, `activeScriptHash`
+- `retained`: displaced prior-run elements kept mounted (hidden) until the run re-emits them or stale cleanup removes them. Not delta-addressable; `RenderNodeVisitor` renders each entry in front of `children[before]`, and `GridContainer` gives each one a hidden grid cell there. See `elementRetention.ts` and [element-identity.md](element-identity.md).
 
 **ElementNode** (`ElementNode.ts`):
 - Leaf node for UI elements
@@ -133,6 +134,8 @@ Manages all widget state on the frontend.
 **Methods**: Provides getter/setter pairs for each value type (`setTriggerValue`/`getTriggerValue`, `setStringValue`/`getStringValue`, `setBoolValue`/`getBoolValue`, etc.).
 
 **Trigger batching**: Multiple trigger calls in same macrotask are batched to prevent race conditions.
+
+**No change detection**: Setters do not skip unchanged values. A user commit outside a form (`fromUser: true`) schedules a rerun even when the value is the same, so each widget compares before committing (see "Commit widget values only when they change" in `frontend/AGENTS.md`).
 
 **Element state**: Frontend-only state storage for components that need to persist state across remounts. Unlike widget state, element state is never sent to the server—it stays entirely in the browser. Useful when React components unmount and remount (e.g., during re-renders) but need to restore their previous UI state. Methods: `getElementState(elementId, key)`, `setElementState(elementId, key, value)`, `deleteElementState(elementId, key?)`. Inactive element states are cleaned up in `removeInactive()` after script runs.
 
@@ -198,6 +201,10 @@ Every node tracks:
 - `deltaMsgReceivedAt`: Timestamp for ordering
 
 Stale nodes are cleared after `scriptFinished`.
+
+### Skeleton slots
+- A loading block (`Block.loading`, set by `with st.skeleton()`) shows a skeleton until the current run draws its first visible element into it (`useSkeletonSlot`). Once it stops waiting, an empty loading block is hidden like an empty container (`BlockNodeRenderer`).
+- A skeleton delta that lands on an element or flex container with visible content from a previous run does not replace it (other blocks, such as tabs, are replaced). The node stays mounted with the skeleton in `pendingSkeleton` (on `BlockNode` and `ElementNode`), and `PendingSkeletonOverlay` covers it after a 0.5s CSS delay. New content at that path replaces the node; otherwise `ClearStaleNodeVisitor` swaps in the skeleton at the end of the run. `SetNodeByDeltaPathVisitor` and `ClearTransientNodesVisitor` carry `pendingSkeleton` over when they rebuild a node. If the run writes a kept widget or keyed container again at another index of the block (the layout shifted), `RenderNodeVisitor` renders the skeleton in the kept slot and the fresh copy at its new index. The agent API needs no matching rule: its message buffer already holds the skeleton delta that the end-of-run swap restores. See `render-tree/skeletonUtils.ts`.
 
 ### Lazy loading
 Components use `React.lazy()` for code splitting, deferring load until first render.

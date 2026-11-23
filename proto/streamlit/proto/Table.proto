@@ -38,4 +38,9 @@ message Table {
 
   // Whether to hide the column header row(s).
   bool hide_header = 4;
+
+  // Author-provided description of the table, exposed to assistive
+  // technologies as the accessible name. Unset when omitted or when an empty /
+  // whitespace-only value was normalized away in Python.
+  optional string alt = 5;
 }

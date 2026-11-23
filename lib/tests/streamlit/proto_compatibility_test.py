@@ -22,6 +22,7 @@ from streamlit.proto.Alert_pb2 import Alert
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.Exception_pb2 import Exception as Exception_
+from streamlit.proto.ForwardMsg_pb2 import RunIdentity
 from streamlit.proto.NewSession_pb2 import (
     Config,
     CustomThemeConfig,
@@ -57,21 +58,27 @@ pytestmark = pytest.mark.filterwarnings(
                 ("url_pathname", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("is_hidden", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("external_url", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("help", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
             },
         ),
         (
             NewSession,
             {
                 ("initialize", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
-                ("script_run_id", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("name", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("main_script_path", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("config", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("custom_theme", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("app_pages", FD.LABEL_REPEATED, FD.TYPE_MESSAGE),
                 ("page_script_hash", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
-                ("fragment_ids_this_run", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("main_script_hash", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+            },
+        ),
+        (
+            RunIdentity,
+            {
+                ("script_run_id", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("fragment_ids", FD.LABEL_REPEATED, FD.TYPE_STRING),
             },
         ),
         (
@@ -136,6 +143,11 @@ pytestmark = pytest.mark.filterwarnings(
                     FD.LABEL_OPTIONAL,
                     FD.TYPE_STRING,
                 ),
+                (
+                    "dataframe_header_text_color",
+                    FD.LABEL_OPTIONAL,
+                    FD.TYPE_STRING,
+                ),
                 ("show_sidebar_border", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("chart_categorical_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("chart_sequential_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
@@ -163,6 +175,8 @@ pytestmark = pytest.mark.filterwarnings(
                 ("gray_text_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("metric_value_font_size", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("metric_value_font_weight", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
+                ("padding_top", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("padding_bottom", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("sidebar", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("light", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("dark", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),

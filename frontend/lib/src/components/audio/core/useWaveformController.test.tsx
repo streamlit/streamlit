@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactNode } from "react"
+import type { ReactNode } from "react"
 
 import {
   act,
@@ -29,8 +29,41 @@ import { mockTheme } from "~lib/mocks/mockTheme"
 import { convertRemToPx } from "~lib/theme/utils"
 
 import { encodeToWav } from "./encodeToWav"
+import { RecordingCancelledError } from "./RecordingCancelledError"
 import type { StopResult } from "./types"
 import { useWaveformController } from "./useWaveformController"
+
+const loadWaveSurferModulesTest = vi.hoisted(() => {
+  let delayedLoad: (() => Promise<unknown>) | null = null
+
+  const loadActual = async (): Promise<unknown> => {
+    const [WaveSurferModule, RecordPluginModule] = await Promise.all([
+      import("wavesurfer.js"),
+      import("wavesurfer.js/dist/plugins/record.js"),
+    ])
+    return {
+      WaveSurfer: WaveSurferModule.default,
+      RecordPluginClass: RecordPluginModule.default,
+    }
+  }
+
+  return {
+    setDelayedLoad: (impl: typeof delayedLoad): void => {
+      delayedLoad = impl
+    },
+    loadActual,
+    loadWaveSurferModules: vi.fn(async () => {
+      if (delayedLoad) {
+        return delayedLoad()
+      }
+      return loadActual()
+    }),
+  }
+})
+
+vi.mock("~lib/components/audio/core/loadWaveSurferModules", () => ({
+  loadWaveSurferModules: loadWaveSurferModulesTest.loadWaveSurferModules,
+}))
 
 // Mock WaveSurfer and RecordPlugin
 vi.mock("wavesurfer.js", () => ({
@@ -39,7 +72,7 @@ vi.mock("wavesurfer.js", () => ({
   },
 }))
 
-vi.mock("wavesurfer.js/dist/plugins/record", () => ({
+vi.mock("wavesurfer.js/dist/plugins/record.js", () => ({
   default: {
     create: vi.fn(),
   },
@@ -266,7 +299,7 @@ describe("useWaveformController", () => {
 
     const WaveSurferModule = await import("wavesurfer.js")
     const RecordPluginModule =
-      await import("wavesurfer.js/dist/plugins/record")
+      await import("wavesurfer.js/dist/plugins/record.js")
 
     // Mock the WaveSurfer.create to return our mock instance
     const createMock = WaveSurferModule.default.create as ReturnType<
@@ -291,7 +324,9 @@ describe("useWaveformController", () => {
 
     // Wait for initialization
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0))
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
     })
 
     // Unmount the component
@@ -364,7 +399,7 @@ describe("useWaveformController", () => {
 
     const WaveSurferModule = await import("wavesurfer.js")
     const RecordPluginModule =
-      await import("wavesurfer.js/dist/plugins/record")
+      await import("wavesurfer.js/dist/plugins/record.js")
 
     const createMock = WaveSurferModule.default.create as ReturnType<
       typeof vi.fn
@@ -388,7 +423,9 @@ describe("useWaveformController", () => {
     )
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0))
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
     })
 
     act(() => {
@@ -454,7 +491,7 @@ describe("useWaveformController", () => {
 
       const WaveSurferModule = await import("wavesurfer.js")
       const RecordPluginModule =
-        await import("wavesurfer.js/dist/plugins/record")
+        await import("wavesurfer.js/dist/plugins/record.js")
       ;(
         WaveSurferModule.default.create as ReturnType<typeof vi.fn>
       ).mockReturnValue(mockWaveSurfer)
@@ -499,6 +536,8 @@ describe("useWaveformController", () => {
 
     afterEach(() => {
       vi.unstubAllGlobals()
+      loadWaveSurferModulesTest.setDelayedLoad(null)
+      vi.useRealTimers()
     })
 
     const startRecording = async (result: {
@@ -609,7 +648,9 @@ describe("useWaveformController", () => {
         recordHandlers.get("record-end")?.(
           new Blob(["audio"], { type: "audio/webm" })
         )
-        await new Promise(resolve => setTimeout(resolve, 0))
+        await new Promise(resolve => {
+          setTimeout(resolve, 0)
+        })
       })
 
       // Signal that the loaded audio is ready for playback.
@@ -672,6 +713,124 @@ describe("useWaveformController", () => {
 
       expect(mockWaveSurfer.load).toHaveBeenCalledWith("blob:mock-url")
       expect(mockWaveSurfer.seekTo).toHaveBeenCalledWith(0)
+    })
+
+    it("waits for in-flight WaveSurfer init before playback.load", async () => {
+      const { result } = renderHook(
+        () =>
+          useWaveformController({
+            containerRef: mockContainerRef,
+            events: mockEvents,
+          }),
+        { wrapper }
+      )
+
+      await act(async () => {
+        await result.current.playback.load(new Blob(["audio"]))
+      })
+
+      expect(mockWaveSurfer.load).toHaveBeenCalledWith("blob:mock-url")
+      expect(mockEvents.onError).not.toHaveBeenCalled()
+    })
+
+    it("keeps start() waiting when sampleRate changes during import", async () => {
+      const releaseImport: Array<() => void> = []
+      loadWaveSurferModulesTest.setDelayedLoad(async () => {
+        await new Promise<void>(resolve => {
+          releaseImport.push(resolve)
+        })
+        return loadWaveSurferModulesTest.loadActual()
+      })
+
+      const WaveSurferModule = await import("wavesurfer.js")
+      const createMock = WaveSurferModule.default.create as ReturnType<
+        typeof vi.fn
+      >
+      createMock.mockClear()
+      createMock.mockReturnValue(mockWaveSurfer)
+
+      const { result, rerender } = renderHook(
+        ({ sampleRate }: { sampleRate: number }) =>
+          useWaveformController({
+            containerRef: mockContainerRef,
+            events: mockEvents,
+            sampleRate,
+          }),
+        { wrapper, initialProps: { sampleRate: 16000 } }
+      )
+
+      expect(releaseImport).toHaveLength(1)
+
+      let startResult: Promise<void> = Promise.resolve()
+      act(() => {
+        startResult = result.current.start()
+      })
+
+      rerender({ sampleRate: 8000 })
+      expect(releaseImport).toHaveLength(2)
+
+      await act(async () => {
+        releaseImport[0]()
+        await Promise.resolve()
+      })
+
+      expect(createMock).not.toHaveBeenCalled()
+      expect(mockRecordPlugin.startRecording).not.toHaveBeenCalled()
+
+      await act(async () => {
+        releaseImport[1]()
+        await startResult
+      })
+
+      expect(createMock).toHaveBeenCalledTimes(1)
+      expect(mockRecordPlugin.startRecording).toHaveBeenCalledWith({
+        sampleRate: { ideal: 8000 },
+      })
+      expect(result.current.state).toBe("recording")
+      expect(mockEvents.onError).not.toHaveBeenCalled()
+    })
+
+    it("creates only the latest WaveSurfer when sampleRate changes during import", async () => {
+      vi.useFakeTimers()
+      loadWaveSurferModulesTest.setDelayedLoad(async () => {
+        await new Promise<void>(resolve => {
+          setTimeout(resolve, 50)
+        })
+        return loadWaveSurferModulesTest.loadActual()
+      })
+
+      const WaveSurferModule = await import("wavesurfer.js")
+      const createMock = WaveSurferModule.default.create as ReturnType<
+        typeof vi.fn
+      >
+      createMock.mockClear()
+      createMock.mockReturnValue(mockWaveSurfer)
+
+      const { result, rerender } = renderHook(
+        ({ sampleRate }: { sampleRate: number }) =>
+          useWaveformController({
+            containerRef: mockContainerRef,
+            events: mockEvents,
+            sampleRate,
+          }),
+        { wrapper, initialProps: { sampleRate: 16000 } }
+      )
+
+      rerender({ sampleRate: 8000 })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(50)
+      })
+
+      expect(createMock).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        await result.current.start()
+      })
+
+      expect(mockRecordPlugin.startRecording).toHaveBeenCalledWith({
+        sampleRate: { ideal: 8000 },
+      })
     })
 
     it("cancels an in-progress recording and resets the player", async () => {
@@ -757,6 +916,422 @@ describe("useWaveformController", () => {
         convertRemToPx(mockTheme.emotion.sizes.largestElementHeight) -
         2 * waveformPadding
       expect(options.height).toBe(expectedHeight)
+    })
+
+    it("restyles the existing WaveSurfer instead of re-creating it on theme changes", async () => {
+      const WaveSurferModule = await import("wavesurfer.js")
+      const createMock = vi.mocked(WaveSurferModule.default.create)
+      createMock.mockClear()
+
+      let theme = mockTheme.emotion
+      const themedWrapper = ({
+        children,
+      }: {
+        children: ReactNode
+      }): ReactNode => <ThemeProvider theme={theme}>{children}</ThemeProvider>
+
+      const { result, rerender } = renderHook(
+        () =>
+          useWaveformController({
+            containerRef: mockContainerRef,
+            events: mockEvents,
+          }),
+        { wrapper: themedWrapper }
+      )
+      await waitFor(() => {
+        expect(createMock).toHaveBeenCalledTimes(1)
+      })
+      await act(async () => {
+        await result.current.playback.load(new Blob(["audio"]))
+      })
+      const playbackBefore = result.current.playback
+      const startBefore = result.current.start
+
+      // A new theme object with the same values, then one with new colors.
+      theme = { ...mockTheme.emotion }
+      rerender()
+      theme = {
+        ...mockTheme.emotion,
+        colors: {
+          ...mockTheme.emotion.colors,
+          bodyText: "#123456",
+          secondaryBg: "#654321",
+        },
+      }
+      rerender()
+
+      expect(createMock).toHaveBeenCalledTimes(1)
+      expect(mockWaveSurfer.destroy).not.toHaveBeenCalled()
+      expect(mockWaveSurfer.setOptions).toHaveBeenLastCalledWith(
+        expect.objectContaining({ progressColor: "#123456" })
+      )
+      // Consumers (e.g. AudioInput's load effect) must not see a new playback
+      // API and reload the recording because of a color change.
+      expect(result.current.playback).toBe(playbackBefore)
+      expect(result.current.start).toBe(startBefore)
+      expect(mockWaveSurfer.load).toHaveBeenCalledTimes(1)
+    })
+
+    it("creates WaveSurfer with the latest theme when it changes during import", async () => {
+      const releaseImport: Array<() => void> = []
+      loadWaveSurferModulesTest.setDelayedLoad(async () => {
+        await new Promise<void>(resolve => {
+          releaseImport.push(resolve)
+        })
+        return loadWaveSurferModulesTest.loadActual()
+      })
+      const WaveSurferModule = await import("wavesurfer.js")
+      const createMock = vi.mocked(WaveSurferModule.default.create)
+      createMock.mockClear()
+
+      let theme = mockTheme.emotion
+      const themedWrapper = ({
+        children,
+      }: {
+        children: ReactNode
+      }): ReactNode => <ThemeProvider theme={theme}>{children}</ThemeProvider>
+
+      const { rerender } = renderHook(
+        () =>
+          useWaveformController({
+            containerRef: mockContainerRef,
+            events: mockEvents,
+          }),
+        { wrapper: themedWrapper }
+      )
+      expect(releaseImport).toHaveLength(1)
+
+      theme = {
+        ...mockTheme.emotion,
+        colors: {
+          ...mockTheme.emotion.colors,
+          primary: "#abcdef",
+          bodyText: "#123456",
+        },
+      }
+      rerender()
+
+      await act(async () => {
+        releaseImport[0]()
+        await Promise.resolve()
+      })
+
+      // The theme change must not start a second import or create.
+      expect(releaseImport).toHaveLength(1)
+      await waitFor(() => {
+        expect(createMock).toHaveBeenCalledTimes(1)
+      })
+      expect(createMock.mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          waveColor: "#abcdef",
+          progressColor: "#123456",
+        })
+      )
+    })
+
+    it("settles a pending stop() when the controller is destroyed", async () => {
+      const { result, unmount } = await renderInitialized()
+
+      await startRecording(result)
+      const stopPromise = result.current.stop()
+
+      // Deliver the recording so stop() waits for the player to be ready,
+      // then unmount before "ready" fires.
+      await act(async () => {
+        recordHandlers.get("record-end")?.(
+          new Blob(["audio"], { type: "audio/webm" })
+        )
+        await new Promise(resolve => {
+          setTimeout(resolve, 0)
+        })
+      })
+      unmount()
+
+      await expect(stopPromise).rejects.toThrow(RecordingCancelledError)
+      await expect(stopPromise).rejects.toThrow(
+        "Waveform controller destroyed"
+      )
+      expect(mockEvents.onError).not.toHaveBeenCalled()
+    })
+
+    it("settles a pending stop() when unmounted before the recording ends", async () => {
+      const { result, unmount } = await renderInitialized()
+
+      await startRecording(result)
+      const stopPromise = result.current.stop()
+      unmount()
+
+      await expect(stopPromise).rejects.toThrow(RecordingCancelledError)
+      expect(mockEvents.onError).not.toHaveBeenCalled()
+    })
+
+    it("settles a pending stop() when cancelled while waiting for playback", async () => {
+      const { result } = await renderInitialized()
+
+      await startRecording(result)
+      const stopPromise = result.current.stop()
+      await act(async () => {
+        recordHandlers.get("record-end")?.(
+          new Blob(["audio"], { type: "audio/webm" })
+        )
+        await new Promise(resolve => {
+          setTimeout(resolve, 0)
+        })
+      })
+
+      await act(async () => {
+        result.current.cancel()
+        await expect(stopPromise).rejects.toThrow(RecordingCancelledError)
+      })
+
+      expect(mockEvents.onError).not.toHaveBeenCalled()
+      expect(result.current.state).toBe("idle")
+    })
+
+    it("settles a pending stop() and reports the error when playback fails to decode", async () => {
+      const { result } = await renderInitialized()
+
+      await startRecording(result)
+      act(() => {
+        wsHandlers.get("play")?.()
+      })
+      expect(result.current.isPlaybackPlaying).toBe(true)
+
+      const stopPromise = result.current.stop()
+      await act(async () => {
+        recordHandlers.get("record-end")?.(
+          new Blob(["audio"], { type: "audio/webm" })
+        )
+        await new Promise(resolve => {
+          setTimeout(resolve, 0)
+        })
+      })
+
+      let fallback: StopResult | undefined
+      await act(async () => {
+        wsHandlers.get("error")?.(new Error("decode failed"))
+        fallback = await stopPromise
+      })
+
+      expect(fallback?.meta.size).toBe(0)
+      // Reported once by the player error handler and once by stop().
+      expect(mockEvents.onError).toHaveBeenCalledTimes(2)
+      expect(mockEvents.onError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "decode failed" })
+      )
+      expect(mockEvents.onRecordReady).not.toHaveBeenCalled()
+      expect(result.current.isPlaybackPlaying).toBe(false)
+      expect(result.current.state).toBe("idle")
+    })
+
+    it.each([
+      ["an Error", new Error("load failed")],
+      ["a non-Error value", "load failed"],
+    ])(
+      "reports %s thrown while loading the recording for playback",
+      async (_label, loadError) => {
+        const { result } = await renderInitialized()
+        mockWaveSurfer.load.mockRejectedValueOnce(loadError)
+
+        await startRecording(result)
+        const stopPromise = result.current.stop()
+
+        let fallback: StopResult | undefined
+        await act(async () => {
+          recordHandlers.get("record-end")?.(
+            new Blob(["audio"], { type: "audio/webm" })
+          )
+          fallback = await stopPromise
+        })
+
+        expect(fallback?.meta.size).toBe(0)
+        expect(mockEvents.onError).toHaveBeenCalledExactlyOnceWith(
+          new Error("load failed")
+        )
+        expect(mockEvents.onRecordReady).not.toHaveBeenCalled()
+        expect(result.current.state).toBe("idle")
+      }
+    )
+
+    it("settles stop() when destroyed right after the recording ends", async () => {
+      const { result } = await renderInitialized()
+
+      await startRecording(result)
+      const stopPromise = result.current.stop()
+
+      let fallback: StopResult | undefined
+      await act(async () => {
+        recordHandlers.get("record-end")?.(
+          new Blob(["audio"], { type: "audio/webm" })
+        )
+        // Tear down before stop() resumes and hands the blob to the player.
+        result.current.destroy()
+        fallback = await stopPromise
+      })
+
+      expect(fallback?.meta.size).toBe(0)
+      expect(mockWaveSurfer.load).not.toHaveBeenCalled()
+      expect(mockEvents.onRecordReady).not.toHaveBeenCalled()
+    })
+
+    it("rejects stop() from a stale render after the controller is destroyed", async () => {
+      const { result } = await renderInitialized()
+
+      await startRecording(result)
+      const staleStop = result.current.stop
+
+      act(() => {
+        result.current.destroy()
+      })
+
+      expect(result.current.state).toBe("idle")
+      await expect(staleStop()).rejects.toThrow("Backends not initialized")
+      expect(mockEvents.onError).not.toHaveBeenCalled()
+    })
+
+    it("reports null sample rate and a default mime type in stop() metadata", async () => {
+      const { result } = renderHook(
+        () =>
+          useWaveformController({
+            containerRef: mockContainerRef,
+            events: mockEvents,
+            sampleRate: null,
+          }),
+        { wrapper }
+      )
+      await waitFor(() => {
+        expect(mockWaveSurfer.on).toHaveBeenCalled()
+      })
+
+      await startRecording(result)
+      const stopPromise = result.current.stop()
+      await act(async () => {
+        // Some browsers produce a recording blob without a MIME type.
+        recordHandlers.get("record-end")?.(new Blob(["audio"]))
+        await new Promise(resolve => {
+          setTimeout(resolve, 0)
+        })
+      })
+
+      let stopResult: StopResult | undefined
+      await act(async () => {
+        wsHandlers.get("ready")?.()
+        stopResult = await stopPromise
+      })
+
+      expect(stopResult?.meta).toEqual({
+        durationMs: 3000,
+        sampleRate: null,
+        mimeType: "audio/webm",
+        size: 5,
+      })
+      expect(mockEvents.onError).not.toHaveBeenCalled()
+    })
+
+    it("ignores a failed import that a sampleRate change superseded", async () => {
+      const pendingImports: Array<{
+        resolve: () => void
+        reject: (error: Error) => void
+      }> = []
+      loadWaveSurferModulesTest.setDelayedLoad(async () => {
+        await new Promise<void>((resolve, reject) => {
+          pendingImports.push({ resolve, reject })
+        })
+        return loadWaveSurferModulesTest.loadActual()
+      })
+
+      const WaveSurferModule = await import("wavesurfer.js")
+      const createMock = vi.mocked(WaveSurferModule.default.create)
+      createMock.mockClear()
+
+      const { result, rerender } = renderHook(
+        ({ sampleRate }: { sampleRate: number }) =>
+          useWaveformController({
+            containerRef: mockContainerRef,
+            events: mockEvents,
+            sampleRate,
+          }),
+        { wrapper, initialProps: { sampleRate: 16000 } }
+      )
+
+      rerender({ sampleRate: 8000 })
+      expect(pendingImports).toHaveLength(2)
+
+      await act(async () => {
+        pendingImports[0].reject(new Error("stale chunk failed"))
+        await Promise.resolve()
+      })
+
+      await act(async () => {
+        pendingImports[1].resolve()
+        await Promise.resolve()
+      })
+      await waitFor(() => {
+        expect(createMock).toHaveBeenCalledTimes(1)
+      })
+
+      await act(async () => {
+        await result.current.start()
+      })
+      expect(result.current.state).toBe("recording")
+      expect(mockEvents.onError).not.toHaveBeenCalled()
+    })
+
+    it("wraps a non-Error import failure in an Error", async () => {
+      loadWaveSurferModulesTest.loadWaveSurferModules.mockRejectedValueOnce(
+        "chunk failed"
+      )
+
+      renderHook(
+        () =>
+          useWaveformController({
+            containerRef: mockContainerRef,
+            events: mockEvents,
+          }),
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        expect(mockEvents.onError).toHaveBeenCalledTimes(1)
+      })
+      const reported = vi.mocked(mockEvents.onError).mock.calls[0][0]
+      expect(reported).toBeInstanceOf(Error)
+      expect(reported.message).toBe("chunk failed")
+      expect(mockWaveSurfer.on).not.toHaveBeenCalled()
+    })
+
+    it("wraps a non-Error approve failure in an Error", async () => {
+      const { result } = await renderInitialized()
+      vi.mocked(encodeToWav).mockRejectedValueOnce("encode failed")
+
+      await act(async () => {
+        await result.current.approve(new Blob(["audio"]))
+      })
+
+      expect(mockEvents.onError).toHaveBeenCalledExactlyOnceWith(
+        new Error("encode failed")
+      )
+      expect(mockEvents.onApprove).not.toHaveBeenCalled()
+    })
+
+    it("rejects start() when the container is missing", async () => {
+      const { result } = renderHook(
+        () =>
+          useWaveformController({
+            containerRef: { current: null },
+            events: mockEvents,
+          }),
+        { wrapper }
+      )
+
+      await act(async () => {
+        await expect(result.current.start()).rejects.toThrow(
+          "Record backend not initialized"
+        )
+      })
+
+      expect(result.current.state).toBe("idle")
+      expect(mockEvents.onRecordStart).not.toHaveBeenCalled()
     })
 
     it("skips initialization and rejects playback when container is missing", async () => {

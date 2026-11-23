@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
@@ -72,6 +70,15 @@ if TYPE_CHECKING:
             height=300,
             hide_index=True,
             hide_header=False,
+            alt="Sales by region",
         ),
         DeltaGenerator,
     )
+
+    assert_type(table(df, alt="Sales by region"), DeltaGenerator)
+    assert_type(table(df, alt=None), DeltaGenerator)
+
+    # =====================================================================
+    # Invalid usages - should NOT type check
+    # =====================================================================
+    table(df, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

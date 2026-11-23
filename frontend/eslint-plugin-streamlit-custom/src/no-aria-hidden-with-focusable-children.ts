@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { AST_NODE_TYPES, TSESTree } from "@typescript-eslint/utils"
+import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils"
 
 import { createRule } from "./utils/createRule"
 
@@ -58,7 +58,7 @@ function getJsxNameText(name: TSESTree.JSXTagNameExpression): string | null {
 }
 
 function isAriaHiddenTruthy(attr: TSESTree.JSXAttribute): boolean {
-  if (attr.value === null || attr.value === undefined) {
+  if (attr.value === null) {
     // <div aria-hidden />
     return true
   }
@@ -104,7 +104,7 @@ function getTabIndexValue(
     return null
   }
 
-  if (attr.value === null || attr.value === undefined) {
+  if (attr.value === null) {
     // <div tabIndex /> is uncommon; treat as focusable.
     return 0
   }
@@ -199,8 +199,8 @@ const noAriaHiddenWithFocusableChildren = createRule<Options, MessageIds>({
       ariaHiddenWithFocusableChildren:
         "Do not set aria-hidden on a wrapper that contains focusable descendants. This hides interactive controls from assistive technology. Apply aria-hidden only to the specific visual text node instead (e.g. a <span>).",
     },
+    defaultOptions: [{}],
   },
-  defaultOptions: [{}],
   create(context, [options]) {
     const focusableComponents = new Set(DEFAULT_FOCUSABLE_COMPONENTS)
     for (const name of options?.additionalFocusableComponents ?? []) {

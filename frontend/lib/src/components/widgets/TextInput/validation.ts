@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 export const INVALID_TEXT_INPUT_MESSAGE = "Invalid input."
 
 export function getInvalidTextInputMessage(validateRegex: RegExp): string {
@@ -33,7 +35,7 @@ export function getInvalidTextInputMessage(validateRegex: RegExp): string {
 export function compileTextInputValidationRegex(
   pattern?: string | null
 ): RegExp | string | undefined {
-  if (!pattern) {
+  if (isNullOrEmptyString(pattern)) {
     return undefined
   }
 

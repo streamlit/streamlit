@@ -19,13 +19,18 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.policies import maybe_raise_label_warnings
 from streamlit.elements.lib.utils import (
     LabelVisibility,
     get_label_visibility_proto_value,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import (
@@ -153,6 +158,13 @@ class MetricMixin:
               the arrow points down and the delta is red.
             - Otherwise, the arrow points up and the delta is green.
 
+            Streamlit treats numeric zeros and the string ``"0"`` as zero. It
+            does not parse other string deltas as numbers to choose the arrow
+            and color, so they follow the sign rule above: ``"0%"`` is positive
+            and ``"-0.0%"`` is negative. To show a gray zero delta with
+            qualifier text, pass the number ``0`` as ``delta``. Put the
+            qualifier text in ``delta_description``.
+
             You can modify the display, color, and orientation of the arrow
             using the ``delta_color`` and ``delta_arrow`` parameters.
 
@@ -173,6 +185,9 @@ class MetricMixin:
               following: ``"red"``, ``"orange"``, ``"yellow"``, ``"green"``,
               ``"blue"``, ``"violet"``, ``"gray"``/``"grey"``, or
               ``"primary"``.
+
+            See the ``delta`` parameter for how Streamlit determines a zero
+            delta.
 
         help : str or None
             A tooltip that gets displayed next to the metric label. Streamlit
@@ -268,6 +283,9 @@ class MetricMixin:
             - ``"off"``: No arrow is shown, but the delta value remains
               visible.
 
+            See the ``delta`` parameter for how Streamlit determines a zero
+            delta.
+
         format : str or None
             A format string controlling how numbers are displayed for ``value``
             and ``delta``. The format is only applied if the value or delta is
@@ -282,7 +300,7 @@ class MetricMixin:
             - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
             - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
             - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
-            - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+            - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.57").
             - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
             - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
             - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
@@ -291,6 +309,12 @@ class MetricMixin:
               specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
               ``"%.2f"`` to show a float with 2 decimal places. Use ``,`` for
               thousand separators (e.g. ``"%,d"`` yields ``"1,234"``).
+
+            The ``"dollar"``, ``"euro"``, and ``"accounting"`` formats show
+            whole amounts without decimals (e.g. "$1,234" instead of
+            "$1,234.00") and keep cents otherwise (e.g. "$12.50"). To always
+            show two decimals, use a printf-style format string such as
+            ``"$%,.2f"`` or ``"€%,.2f"``.
 
         delta_description : str or None
             A short description displayed next to the delta value, such as
@@ -438,11 +462,12 @@ class MetricMixin:
             for val in convert_anything_to_list(chart_data):
                 try:
                     prepared_data.append(float(val))
-                except Exception as ex:  # noqa: PERF203
+                except Exception as ex:
                     raise StreamlitAPIException(
                         "Only numeric values are supported for chart data sequence. The "
                         f"value '{val}' is of type {type(val)} and "
-                        "cannot be converted to float."
+                        "cannot be converted to float.",
+                        error_id="metric-chart-data-not-numeric",
                     ) from ex
             if len(prepared_data) > 0:
                 metric_proto.chart_data.extend(prepared_data)
@@ -462,7 +487,40 @@ class MetricMixin:
             allow_content_height=True,
         )
 
-        return self.dg._enqueue("metric", metric_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "metric",
+            metric_proto,
+            layout_config=layout_config,
+            # `value` and `delta` are reported as authored, so a number stays a
+            # number for a caller that has to compute with it. `format` is
+            # applied by the frontend, so it is reported rather than a rendered
+            # string. `delta_color` and `delta_arrow` are likewise as authored
+            # rather than the `direction` and `color` pair they become on the
+            # wire, and only reported with a delta they apply to.
+            agent_props=agent_spec.element(
+                "metric",
+                label=label,
+                # A missing value is the em dash the browser shows. A number
+                # stays a number; the frontend applies `format`.
+                value=metric_proto.body if value is None else value,
+                delta=metric_proto.delta if isinstance(delta, str) else delta,
+                delta_color=delta_color if delta is not None else None,
+                delta_arrow=delta_arrow if delta is not None else None,
+                delta_description=delta_description,
+                help=metric_proto.help or None,
+                icon=icon,
+                format=format,
+                # The sparkline is already on the proto. Copy it only while
+                # recording; the gate inside element() runs after this argument.
+                chart_data=(
+                    list(metric_proto.chart_data) or None
+                    if agent_spec.is_recording()
+                    else None
+                ),
+                chart_type=chart_type if metric_proto.chart_data else None,
+                label_visibility=label_visibility,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -486,12 +544,27 @@ def _parse_delta_arrow(delta_arrow: DeltaArrow) -> DeltaArrow:
     return delta_arrow
 
 
+def _parse_metric_number(value: AnyNumber, parameter: str) -> str:
+    """Render ``value`` for display. Invalid types raise StreamlitInvalidParameterTypeError."""
+    try:
+        return from_number(value)
+    except TypeError as ex:
+        # from_number is a generic helper and raises a native TypeError, which
+        # would bypass Streamlit's user-facing error types.
+        raise StreamlitInvalidParameterTypeError(
+            parameter,
+            type(value).__name__,
+            ["int", "float", "Decimal", "NumPy number"],
+            detail="Convert the value to a number type.",
+        ) from ex
+
+
 def _parse_value(value: Value) -> str:
     if value is None:
         return "—"
     if isinstance(value, str):
         return value
-    return from_number(value)
+    return _parse_metric_number(value, "value")
 
 
 def _parse_delta(delta: Delta) -> str:
@@ -499,7 +572,7 @@ def _parse_delta(delta: Delta) -> str:
         return ""
     if isinstance(delta, str):
         return dedent(delta)
-    return from_number(delta)
+    return _parse_metric_number(delta, "delta")
 
 
 def _determine_delta_color_and_direction(

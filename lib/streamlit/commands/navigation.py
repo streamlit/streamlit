@@ -19,7 +19,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from streamlit import config
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.navigation.page import Page
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
@@ -56,9 +61,10 @@ def convert_to_streamlit_page(
         # Convert function to Page
         return Page(page_input)
 
-    raise StreamlitAPIException(
-        f"Invalid page type: {type(page_input)}. Must be either a string path, "
-        "a pathlib.Path, a callable function, or a st.Page object."
+    raise StreamlitInvalidParameterTypeError(
+        "pages",
+        type(page_input).__name__,
+        ["str", "Path", "callable", "st.Page"],
     )
 
 
@@ -76,6 +82,68 @@ def send_page_not_found(ctx: ScriptRunContext) -> None:
     msg = ForwardMsg()
     msg.page_not_found.page_name = ""
     ctx.enqueue(msg)
+
+
+def _describe_page_for_url_error(
+    page: Page, section_header: SectionHeader, main_script_parent: Path
+) -> str:
+    """Describe a page by its source and navigation context for error messages."""
+    if page.external_url is not None:
+        description = f"external URL `{page.external_url}`"
+    elif isinstance(page._page, Path):
+        page_path = page._page
+        if page_path.is_relative_to(main_script_parent):
+            page_path = page_path.relative_to(main_script_parent)
+        description = f"`{page_path}`"
+    else:
+        # Every callable page has a title, while function names can be shared
+        # (lambdas, methods) or missing.
+        description = f'callable titled "{page.title}"'
+
+    context = []
+    if section_header:
+        context.append(f'section "{section_header}"')
+    if page.visibility == "hidden":
+        context.append("hidden")
+    if page._default:
+        context.append("default page")
+    if context:
+        description += f" ({', '.join(context)})"
+    return description
+
+
+def _duplicate_url_pathname_error(
+    first: tuple[SectionHeader, Page],
+    second: tuple[SectionHeader, Page],
+    main_script_parent: Path,
+) -> StreamlitAPIException:
+    first_section, first_page = first
+    second_section, second_page = second
+    first_description = _describe_page_for_url_error(
+        first_page, first_section, main_script_parent
+    )
+    second_description = _describe_page_for_url_error(
+        second_page, second_section, main_script_parent
+    )
+    # Streamlit serves the default page at the app root, but the page still
+    # occupies its inferred or declared pathname. Mention that when either
+    # colliding page is the default.
+    default_page_note = (
+        " The default page is served at the app root, but it still reserves "
+        "this pathname."
+        if first_page._default or second_page._default
+        else ""
+    )
+    return StreamlitAPIException(
+        f"Two pages resolve to the URL pathname `/{second_page._url_path}`: "
+        f"{first_description} and {second_description}. Each page passed to "
+        "`st.navigation` needs a unique URL pathname, including pages in "
+        "different sections, hidden pages, and external URL pages. Streamlit "
+        "infers the pathname from the filename, callable name, or the title of "
+        f"an external URL page.{default_page_note} Set a unique `url_path` in "
+        "`st.Page` for one of these pages.",
+        error_id="navigation-duplicate-url-pathname",
+    )
 
 
 def _set_external_url(page_proto: AppPageProto, page: Page) -> None:
@@ -138,6 +206,13 @@ def navigation(
         objects. In this case, the page will have the default title, icon, and
         path inferred from its path or filename. To customize these attributes
         for your page, initialize your page with ``st.Page``.
+
+        Each page must have a unique URL pathname across all of ``pages``,
+        including pages in different sections, hidden pages, and external URL
+        pages. Because the pathname is inferred from the filename,
+        ``admin/settings.py`` and ``user/settings.py`` both resolve to
+        ``settings``. Set ``url_path`` in ``st.Page`` to give one of them a
+        different pathname.
 
     position : "sidebar", "top", or "hidden"
         The position of the navigation menu. If this is ``"sidebar"``
@@ -343,8 +418,8 @@ def _navigation(
     page_list = pages_from_nav_sections(nav_sections)
 
     if not page_list:
-        raise StreamlitAPIException(
-            "`st.navigation` must be called with at least one `st.Page`."
+        raise StreamlitMissingRequiredParameterError(
+            "pages", detail="Provide at least one `st.Page`."
         )
 
     default_page = None
@@ -357,7 +432,8 @@ def _navigation(
                 if default_page is not None:
                     raise StreamlitAPIException(
                         "Multiple Pages specified with `default=True`. "
-                        "At most one Page can be set to default."
+                        "At most one Page can be set to default.",
+                        error_id="navigation-multiple-default-pages",
                     )
                 default_page = page
 
@@ -366,7 +442,8 @@ def _navigation(
         if not non_external_pages:
             raise StreamlitAPIException(
                 "At least one non-external page is required. "
-                "External URL pages cannot be the default page."
+                "External URL pages cannot be the default page.",
+                error_id="navigation-external-only-pages",
             )
         default_page = non_external_pages[0]
         default_page._default = True
@@ -379,26 +456,29 @@ def _navigation(
         return default_page
 
     # Build the pagehash-to-pageinfo mapping.
+    pages_by_hash: dict[PageHash, tuple[SectionHeader, Page]] = {}
     for section_header in nav_sections:
         for page in nav_sections[section_header]:
             script_path = str(page._page) if isinstance(page._page, Path) else ""
 
             script_hash = page._script_hash
-            if script_hash in pagehash_to_pageinfo:
+            if script_hash in pages_by_hash:
                 # The page script hash is solely based on the url path
                 # So duplicate page script hashes are due to duplicate url paths
-                raise StreamlitAPIException(
-                    f"Multiple Pages specified with URL pathname {page.url_path}. "
-                    "URL pathnames must be unique. The url pathname may be "
-                    "inferred from the filename, callable name, or title."
+                raise _duplicate_url_pathname_error(
+                    pages_by_hash[script_hash],
+                    (section_header, page),
+                    ctx.pages_manager.main_script_parent.resolve(),
                 )
 
+            pages_by_hash[script_hash] = (section_header, page)
             pagehash_to_pageinfo[script_hash] = {
                 "page_script_hash": script_hash,
                 "page_name": page.title,
                 "icon": page.icon,
                 "script_path": script_path,
                 "url_pathname": page.url_path,
+                "help": page.help,
             }
 
     msg = ForwardMsg()
@@ -425,9 +505,10 @@ def _navigation(
             # Don't set visible_items - leave it unset to use default
     elif isinstance(expanded, int):
         if expanded < 0:
-            raise StreamlitAPIException(
-                f"Invalid value for expanded: {expanded!r}. "
-                "When using an int, expanded must be a non-negative integer."
+            raise StreamlitValueError(
+                "expanded",
+                ["True", "False", "a non-negative integer"],
+                detail=f"Provided value: {expanded!r}.",
             )
         if expanded == 0:
             # Documented default behavior: collapsed, default visible_items
@@ -438,9 +519,10 @@ def _navigation(
             msg.navigation.expanded = False
             msg.navigation.visible_items = expanded
     else:
-        raise StreamlitAPIException(
-            f"Invalid type for expanded: {type(expanded).__name__!s}. "
-            "expanded must be a bool or a non-negative integer."
+        raise StreamlitInvalidParameterTypeError(
+            "expanded",
+            type(expanded).__name__,
+            ["bool", "int"],
         )
 
     msg.navigation.sections[:] = nav_sections.keys()
@@ -454,6 +536,7 @@ def _navigation(
             p.section_header = section_header
             p.url_pathname = page.url_path
             p.is_hidden = page._visibility == "hidden"
+            p.help = page.help
             _set_external_url(p, page)
 
     # Inform our page manager about the set of pages we have and resolve the page

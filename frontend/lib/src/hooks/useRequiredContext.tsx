@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Context, useContext } from "react"
+import { type Context, useContext } from "react"
 
 export const useRequiredContext = <R,>(context: Context<R | null>): R => {
   const foundContext = useContext(context)

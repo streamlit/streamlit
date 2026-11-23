@@ -1,0 +1,10 @@
+[project]
+name = "dashboard-revenue"
+version = "1.0.0"
+description = "A revenue BI dashboard template with certified KPIs, card menus, drill-down drawers, and layout-first loading"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26.0",
+    "pandas>=2.2.3",
+    "streamlit",
+]

@@ -44,7 +44,7 @@ import * as ReactPlotlyModule from "react-plotly.js"
 
 import { resolveDefaultExport } from "./resolveDefaultExport"
 
-type UpstreamPlotParams = import("react-plotly.js").PlotParams
+type UpstreamPlotParams = ReactPlotlyModule.PlotParams
 
 // react-plotly.js v4 intentionally types Plotly-owned values as unknown.
 // Streamlit uses the installed plotly.js types for the fields it reads/writes.

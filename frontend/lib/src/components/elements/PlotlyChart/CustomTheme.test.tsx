@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 
+import { getLogger } from "loglevel"
+import { vi } from "vitest"
+
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { getGray70 } from "~lib/theme/getColors"
 
 import {
   applyStreamlitTheme,
   applyStreamlitThemeTemplateLayout,
-  layoutWithThemeDefaults,
   replaceTemporaryColors,
 } from "./CustomTheme"
+import { applyTheming } from "./utils"
 
 const theme = mockTheme.emotion
 
@@ -91,13 +94,44 @@ describe("PlotlyChart CustomTheme", () => {
       expect(result).not.toContain("#000021")
     })
 
-    it("replaces GO specific colors", () => {
+    it("replaces graph-object colors for the streamlit theme", () => {
       // #000032 is INCREASING
       const spec = JSON.stringify({ color: "#000032" })
       const result = replaceTemporaryColors(spec, theme, "streamlit")
 
       // getIncreasingGreen(theme) -> usually equals theme.colors.green80 or similar logic
       expect(result).not.toContain("#000032")
+    })
+
+    it("maps graph-object placeholders to Plotly defaults when theme is empty", () => {
+      // A dark app theme must not leak into theme=None placeholders; they should
+      // resolve to Plotly defaults that stay readable on white paper:
+      // - #000036 GRAY_70 (Sankey text) -> #2a3f5f
+      // - #000038 BG_COLOR (table cells) -> #EBF0F8
+      // - #000034 TOTAL (waterfall totals) -> #4499FF
+      const darkAppTheme = {
+        ...theme,
+        colors: {
+          ...theme.colors,
+          bgColor: "#0e1117",
+          bodyText: "#fafafa",
+        },
+      }
+      const spec = JSON.stringify({
+        textfont: { color: "#000036" },
+        cells: { fill: { color: "#000038" } },
+        totals: { marker: { color: "#000034" } },
+      })
+      const result = replaceTemporaryColors(spec, darkAppTheme, "")
+
+      expect(result).toContain("#2a3f5f")
+      expect(result).toContain("#EBF0F8")
+      expect(result).toContain("#4499FF")
+      expect(result).not.toContain("#000036")
+      expect(result).not.toContain("#000038")
+      expect(result).not.toContain("#000034")
+      expect(result).not.toContain("#fafafa")
+      expect(result).not.toContain("#0e1117")
     })
   })
 
@@ -121,16 +155,71 @@ describe("PlotlyChart CustomTheme", () => {
       expect(spec.layout.template.layout).toHaveProperty("paper_bgcolor")
     })
 
-    it("handles missing template gracefully", () => {
-      const spec = {
+    it("bolds layout.title when it is a plain string", () => {
+      const spec: Record<string, unknown> = {
         layout: {
-          title: { text: "My Chart" },
-          // missing template
+          title: "My Chart",
+          template: {
+            layout: {},
+          },
         },
       }
 
-      // Should not throw
+      applyStreamlitTheme(spec, theme)
+
+      expect((spec.layout as { title: { text: string } }).title.text).toBe(
+        "<b>My Chart</b>"
+      )
+    })
+
+    it("creates a template when missing so Streamlit colors still apply", () => {
+      const errorSpy = vi
+        .spyOn(getLogger("PlotlyChart:CustomTheme"), "error")
+        .mockImplementation(() => {})
+      const spec: Record<string, unknown> = {
+        layout: {
+          title: { text: "My Chart" },
+          // missing template — raw figure JSON / plotly.js v4 defaults
+        },
+      }
+
       expect(() => applyStreamlitTheme(spec, theme)).not.toThrow()
+      const layout = spec.layout as {
+        title: { text: string }
+        template: { layout: { paper_bgcolor: string; plot_bgcolor: string } }
+      }
+      expect(layout.title.text).toBe("<b>My Chart</b>")
+      expect(layout.template.layout.paper_bgcolor).toBe(theme.colors.bgColor)
+      expect(layout.template.layout.plot_bgcolor).toBe(theme.colors.bgColor)
+      expect(errorSpy).not.toHaveBeenCalled()
+
+      errorSpy.mockRestore()
+    })
+
+    it("replaces a named string template with Streamlit layout colors", () => {
+      const spec: Record<string, unknown> = {
+        layout: {
+          template: "plotly",
+        },
+      }
+
+      applyStreamlitTheme(spec, theme)
+
+      const layout = spec.layout as {
+        template: { layout: { paper_bgcolor: string } }
+      }
+      expect(layout.template.layout.paper_bgcolor).toBe(theme.colors.bgColor)
+    })
+
+    it("creates layout and template when both are missing", () => {
+      const spec: Record<string, unknown> = {}
+
+      applyStreamlitTheme(spec, theme)
+
+      const layout = spec.layout as {
+        template: { layout: { paper_bgcolor: string } }
+      }
+      expect(layout.template.layout.paper_bgcolor).toBe(theme.colors.bgColor)
     })
 
     it("scrubs sankey template textfont.color when user set layout.font.color", () => {
@@ -319,29 +408,48 @@ describe("PlotlyChart CustomTheme", () => {
     })
   })
 
-  describe("layoutWithThemeDefaults", () => {
-    it("applies defaults when properties are missing", () => {
-      const layout = {}
-      const result = layoutWithThemeDefaults(layout, theme)
+  describe("applyTheming with theme=None", () => {
+    const themeWithLightText = {
+      ...theme,
+      colors: {
+        ...theme.colors,
+        bodyText: "#fafafa",
+      },
+    }
 
-      expect((result.font as Record<string, unknown>).family).toBe(
-        theme.genericFonts.bodyFont
-      )
-      expect(result.paper_bgcolor).toBe(theme.colors.bgColor)
-      expect(result.plot_bgcolor).toBe(theme.colors.secondaryBg)
+    it("leaves unset font and backgrounds unset", () => {
+      const figure = {
+        data: [{}],
+        layout: {},
+        frames: [],
+      }
+
+      const result = applyTheming(figure, "", themeWithLightText)
+      const layout = result.layout as Record<string, unknown>
+
+      expect(layout.font).toBeUndefined()
+      expect(layout.paper_bgcolor).toBeUndefined()
+      expect(layout.plot_bgcolor).toBeUndefined()
     })
 
-    it("preserves existing properties", () => {
-      const layout = {
-        font: { family: "Arial" },
-        paper_bgcolor: "red",
+    it("preserves explicit layout font and backgrounds", () => {
+      const figure = {
+        data: [{}],
+        layout: {
+          font: { color: "#111111", family: "Courier" },
+          paper_bgcolor: "white",
+          plot_bgcolor: "white",
+        },
+        frames: [],
       }
-      const result = layoutWithThemeDefaults(layout, theme)
 
-      expect((result.font as Record<string, unknown>).family).toBe("Arial")
-      expect(result.paper_bgcolor).toBe("red")
-      // Should still apply missing ones
-      expect(result.plot_bgcolor).toBe(theme.colors.secondaryBg)
+      const result = applyTheming(figure, "", themeWithLightText)
+      const layout = result.layout as Record<string, unknown>
+      const font = layout.font as Record<string, unknown>
+
+      expect(font).toEqual({ color: "#111111", family: "Courier" })
+      expect(layout.paper_bgcolor).toBe("white")
+      expect(layout.plot_bgcolor).toBe("white")
     })
   })
 })

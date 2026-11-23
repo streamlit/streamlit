@@ -22,13 +22,8 @@ import statistics
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
-
-# tomllib is available in Python 3.11+, use tomli as fallback for Python 3.10
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib
 
 import matplotlib as mpl
 import pytest

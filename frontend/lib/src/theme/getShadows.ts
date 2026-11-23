@@ -17,11 +17,11 @@
 import { getLuminance, transparentize } from "color2k"
 
 import lightElevationShadows, {
-  ElevationShadows,
+  type ElevationShadows,
 } from "./emotionBaseTheme/elevationShadows"
 import darkElevationShadows from "./emotionDarkTheme/elevationShadows"
 import { sizes } from "./primitives/sizes"
-import { EmotionThemeColors } from "./types"
+import type { EmotionThemeColors } from "./types"
 
 /**
  * Derived shadows - computed from theme colors.

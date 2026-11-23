@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useMemo, useRef } from "react"
+import { memo, type ReactElement, useEffect, useMemo, useRef } from "react"
 
 import { getLogger } from "loglevel"
 
-import { Audio as AudioProto } from "@streamlit/protobuf"
+import type { Audio as AudioProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
-import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
+import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import type { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
 import { StyledAudio, StyledAudioContainer } from "./styled-components"
 
@@ -40,7 +41,11 @@ function Audio({
 }: Readonly<AudioProps>): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
 
-  const { startTime, endTime, loop, autoplay } = element
+  const { startTime, endTime, loop, autoplay, alt } = element
+  const trimmedAlt = alt?.trim()
+  const accessibleName = isNullOrEmptyString(trimmedAlt)
+    ? undefined
+    : trimmedAlt
 
   const preventAutoplay = useMemo<boolean>(() => {
     if (!element.id) {
@@ -55,7 +60,7 @@ function Audio({
       "preventAutoplay"
     )
 
-    if (!preventAutoplayState) {
+    if (preventAutoplayState !== true) {
       // Set the state to prevent autoplay in case there is an unmount + mount
       // for the same element.
       elementMgr.setElementState(element.id, "preventAutoplay", true)
@@ -120,7 +125,7 @@ function Audio({
     }
 
     return () => {
-      if (audioNode && endTime > 0) {
+      if (endTime > 0) {
         audioNode.removeEventListener("timeupdate", handleTimeUpdate)
       }
     }
@@ -145,9 +150,7 @@ function Audio({
     audioNode.addEventListener("ended", handleAudioEnd)
 
     return () => {
-      if (audioNode) {
-        audioNode.removeEventListener("ended", handleAudioEnd)
-      }
+      audioNode.removeEventListener("ended", handleAudioEnd)
     }
   }, [loop, startTime])
 
@@ -174,6 +177,10 @@ function Audio({
         data-testid="stAudio"
         ref={audioRef}
         controls
+        // Only set an accessible name when the author provided one. Blank input
+        // is treated as absent: aria-label=" " computes to an empty accessible
+        // name, which is worse than having no aria-label at all.
+        aria-label={accessibleName}
         autoPlay={autoplay && !preventAutoplay}
         src={uri}
         onError={handleAudioError}

@@ -27,6 +27,7 @@ from typing import (
     overload,
 )
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     WidthWithoutContent,
@@ -44,9 +45,12 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
-    StreamlitAPIException,
+    StreamlitInvalidMinMaxError,
     StreamlitInvalidParameterTypeError,
+    StreamlitValueAboveMaxError,
+    StreamlitValueBelowMinError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
@@ -55,12 +59,14 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    OnChangeMode,
     PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     get_session_state,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.string_util import to_help_str
 from streamlit.time_util import adjust_years
@@ -84,13 +90,43 @@ DateWidgetRangeReturn: TypeAlias = tuple[()] | tuple[date] | tuple[date, date]
 DateWidgetReturn: TypeAlias = date | DateWidgetRangeReturn | None
 
 DEFAULT_STEP_MINUTES: Final = 15
+_SUPPORTED_DATE_FORMATS: Final = [
+    "YYYY/MM/DD",
+    "DD/MM/YYYY",
+    "MM/DD/YYYY",
+    "YYYY.MM.DD",
+    "DD.MM.YYYY",
+    "MM.DD.YYYY",
+    "YYYY-MM-DD",
+    "DD-MM-YYYY",
+    "MM-DD-YYYY",
+]
 ALLOWED_DATE_FORMATS: Final = re.compile(
-    r"^(YYYY[/.\-]MM[/.\-]DD|DD[/.\-]MM[/.\-]YYYY|MM[/.\-]DD[/.\-]YYYY)$"
+    "^(" + "|".join(re.escape(fmt) for fmt in _SUPPORTED_DATE_FORMATS) + ")$"
 )
 _DATETIME_LEGACY_FORMAT: Final = "%Y/%m/%d, %H:%M"
 _DATETIME_ISO_FORMAT: Final = "%Y-%m-%dT%H:%M"
+_DATETIME_ISO_FORMAT_WITH_SECONDS: Final = "%Y-%m-%dT%H:%M:%S"
 _DEFAULT_MIN_BOUND_TIME: Final = time(hour=0, minute=0)
-_DEFAULT_MAX_BOUND_TIME: Final = time(hour=23, minute=59)
+# Include seconds so sub-minute steps can select through the end of the day;
+# minute-granular steps strip seconds during normalization.
+_DEFAULT_MAX_BOUND_TIME: Final = time(hour=23, minute=59, second=59)
+
+
+def _validate_date_format(date_format: object) -> None:
+    """Raise if ``format`` is not one of the supported Moment.js date strings."""
+    if not isinstance(date_format, str):
+        raise StreamlitInvalidParameterTypeError(
+            "format",
+            type(date_format).__name__,
+            ["str"],
+        )
+    if not ALLOWED_DATE_FORMATS.match(date_format):
+        raise StreamlitValueError(
+            "format",
+            [repr(fmt) for fmt in _SUPPORTED_DATE_FORMATS],
+            detail=f"Provided value: {date_format!r}.",
+        )
 
 
 def _date_to_proto_string(value: date) -> str:
@@ -102,9 +138,17 @@ def _date_to_proto_string(value: date) -> str:
     return f"{value.year:04d}-{value.month:02d}-{value.day:02d}"
 
 
-def _datetime_to_iso_string(value: datetime) -> str:
+def _step_includes_seconds(step: int) -> bool:
+    """Whether ``step`` is not a whole number of minutes (seconds UI + wire)."""
+    return step % 60 != 0
+
+
+def _datetime_to_iso_string(value: datetime, *, include_seconds: bool = False) -> str:
     """Serialize a datetime to ISO 8601 with a guaranteed four-digit year."""
-    return f"{_date_to_proto_string(value)}T{value.hour:02d}:{value.minute:02d}"
+    base = f"{_date_to_proto_string(value)}T{value.hour:02d}:{value.minute:02d}"
+    if include_seconds:
+        return f"{base}:{value.second:02d}"
+    return base
 
 
 def _convert_timelike_to_time(value: TimeValue) -> time:
@@ -232,21 +276,40 @@ def _parse_max_date(
     return parsed_max_date
 
 
-def _normalize_time(value: time) -> time:
-    """Return a time without seconds, microseconds, or timezone info."""
+def _normalize_time(value: time, *, keep_seconds: bool = False) -> time:
+    """Return a time without microseconds or timezone info.
+
+    Seconds are stripped unless ``keep_seconds`` is true (sub-minute steps).
+    """
+    if keep_seconds:
+        return value.replace(microsecond=0, tzinfo=None)
     return value.replace(second=0, microsecond=0, tzinfo=None)
 
 
-def _normalize_datetime_value(value: datetime) -> datetime:
-    """Return a datetime without seconds, microseconds, or timezone info."""
+def _normalize_datetime_value(
+    value: datetime, *, keep_seconds: bool = False
+) -> datetime:
+    """Return a datetime without microseconds or timezone info.
+
+    Seconds are stripped unless ``keep_seconds`` is true (sub-minute steps).
+    """
     if value.tzinfo is not None:
         value = value.replace(tzinfo=None)
+    if keep_seconds:
+        return value.replace(microsecond=0)
     return value.replace(second=0, microsecond=0)
 
 
-def _combine_date_time(component_date: date, component_time: time) -> datetime:
+def _combine_date_time(
+    component_date: date,
+    component_time: time,
+    *,
+    keep_seconds: bool = False,
+) -> datetime:
     """Combine a date and time into a normalized datetime."""
-    return datetime.combine(component_date, _normalize_time(component_time))
+    return datetime.combine(
+        component_date, _normalize_time(component_time, keep_seconds=keep_seconds)
+    )
 
 
 def _try_parse_datetime_with_format(value: str, fmt: str) -> datetime | None:
@@ -262,28 +325,29 @@ def _convert_datetimelike_to_datetime(
     *,
     fallback_date: date,
     fallback_time: time,
+    keep_seconds: bool = False,
 ) -> datetime:
     """Convert supported datetime inputs into a normalized datetime."""
-    fallback_time = _normalize_time(fallback_time)
+    fallback_time = _normalize_time(fallback_time, keep_seconds=keep_seconds)
 
     if value == "now":
-        return _normalize_datetime_value(datetime.now())
+        return _normalize_datetime_value(datetime.now(), keep_seconds=keep_seconds)
 
     if isinstance(value, datetime):
-        return _normalize_datetime_value(value)
+        return _normalize_datetime_value(value, keep_seconds=keep_seconds)
 
     if isinstance(value, date) and not isinstance(value, datetime):
-        return _combine_date_time(value, fallback_time)
+        return _combine_date_time(value, fallback_time, keep_seconds=keep_seconds)
 
     if isinstance(value, time):
-        return _combine_date_time(fallback_date, value)
+        return _combine_date_time(fallback_date, value, keep_seconds=keep_seconds)
 
     if isinstance(value, str):
         stripped_value = value.strip()
 
         try:
             parsed_dt = datetime.fromisoformat(stripped_value)
-            return _normalize_datetime_value(parsed_dt)
+            return _normalize_datetime_value(parsed_dt, keep_seconds=keep_seconds)
         except ValueError:
             pass
 
@@ -295,17 +359,23 @@ def _convert_datetimelike_to_datetime(
         ):
             maybe_parsed_dt = _try_parse_datetime_with_format(stripped_value, fmt)
             if maybe_parsed_dt is not None:
-                return _normalize_datetime_value(maybe_parsed_dt)
+                return _normalize_datetime_value(
+                    maybe_parsed_dt, keep_seconds=keep_seconds
+                )
 
         try:
             parsed_date = date.fromisoformat(stripped_value)
-            return _combine_date_time(parsed_date, fallback_time)
+            return _combine_date_time(
+                parsed_date, fallback_time, keep_seconds=keep_seconds
+            )
         except ValueError:
             pass
 
         try:
             parsed_time = time.fromisoformat(stripped_value)
-            return _combine_date_time(fallback_date, parsed_time)
+            return _combine_date_time(
+                fallback_date, parsed_time, keep_seconds=keep_seconds
+            )
         except ValueError:
             pass
 
@@ -322,15 +392,17 @@ def _default_min_datetime(base_date: date) -> datetime:
     )
 
 
-def _default_max_datetime(base_date: date) -> datetime:
+def _default_max_datetime(base_date: date, *, keep_seconds: bool = False) -> datetime:
     return _combine_date_time(
-        adjust_years(base_date, years=10), _DEFAULT_MAX_BOUND_TIME
+        adjust_years(base_date, years=10),
+        _DEFAULT_MAX_BOUND_TIME,
+        keep_seconds=keep_seconds,
     )
 
 
-def _datetime_to_proto_string(value: datetime) -> str:
-    normalized = _normalize_datetime_value(value)
-    return _datetime_to_iso_string(normalized)
+def _datetime_to_proto_string(value: datetime, *, include_seconds: bool = False) -> str:
+    normalized = _normalize_datetime_value(value, keep_seconds=include_seconds)
+    return _datetime_to_iso_string(normalized, include_seconds=include_seconds)
 
 
 @dataclass(frozen=True)
@@ -345,6 +417,8 @@ class _DateTimeInputValues:
         value: DateTimeValue,
         min_value: DateTimeValue,
         max_value: DateTimeValue,
+        *,
+        keep_seconds: bool = False,
     ) -> _DateTimeInputValues:
         parsed_value = (
             None
@@ -353,6 +427,7 @@ class _DateTimeInputValues:
                 value,
                 fallback_date=date.today(),
                 fallback_time=_DEFAULT_MIN_BOUND_TIME,
+                keep_seconds=keep_seconds,
             )
         )
 
@@ -367,16 +442,18 @@ class _DateTimeInputValues:
                 min_value,
                 fallback_date=base_date_for_bounds,
                 fallback_time=_DEFAULT_MIN_BOUND_TIME,
+                keep_seconds=keep_seconds,
             )
         )
 
         parsed_max = (
-            _default_max_datetime(base_date_for_bounds)
+            _default_max_datetime(base_date_for_bounds, keep_seconds=keep_seconds)
             if max_value is None
             else _convert_datetimelike_to_datetime(
                 max_value,
                 fallback_date=base_date_for_bounds,
                 fallback_time=_DEFAULT_MAX_BOUND_TIME,
+                keep_seconds=keep_seconds,
             )
         )
 
@@ -388,16 +465,13 @@ class _DateTimeInputValues:
 
     def __post_init__(self) -> None:
         if self.min > self.max:
-            raise StreamlitAPIException(
-                f"The `min_value`, set to {self.min}, shouldn't be larger "
-                f"than the `max_value`, set to {self.max}."
-            )
+            raise StreamlitInvalidMinMaxError(self.min, self.max)
 
-        if self.value is not None and (self.value < self.min or self.value > self.max):
-            raise StreamlitAPIException(
-                f"The default `value` of {self.value} must lie between the `min_value` "
-                f"of {self.min} and the `max_value` of {self.max}, inclusively."
-            )
+        if self.value is not None:
+            if self.value < self.min:
+                raise StreamlitValueBelowMinError(self.value, self.min)
+            if self.value > self.max:
+                raise StreamlitValueAboveMaxError(self.value, self.max)
 
 
 @dataclass(frozen=True)
@@ -440,21 +514,16 @@ class _DateInputValues:
 
     def __post_init__(self) -> None:
         if self.min > self.max:
-            raise StreamlitAPIException(
-                f"The `min_value`, set to {self.min}, shouldn't be larger "
-                f"than the `max_value`, set to {self.max}."
-            )
+            raise StreamlitInvalidMinMaxError(self.min, self.max)
 
         if self.value:
             start_value = self.value[0]
             end_value = self.value[-1]
 
-            if (start_value < self.min) or (end_value > self.max):
-                raise StreamlitAPIException(
-                    f"The default `value` of {self.value} "
-                    f"must lie between the `min_value` of {self.min} "
-                    f"and the `max_value` of {self.max}, inclusively."
-                )
+            if start_value < self.min:
+                raise StreamlitValueBelowMinError(start_value, self.min)
+            if end_value > self.max:
+                raise StreamlitValueAboveMaxError(end_value, self.max)
 
 
 @dataclass
@@ -462,13 +531,25 @@ class DateTimeInputSerde:
     value: datetime | None
     min: datetime
     max: datetime
+    step: int = 900
+
+    @property
+    def _include_seconds(self) -> bool:
+        return _step_includes_seconds(self.step)
 
     def deserialize(self, ui_value: list[str] | None) -> datetime | None:
         if ui_value is not None and len(ui_value) > 0:
-            for fmt in (_DATETIME_ISO_FORMAT, _DATETIME_LEGACY_FORMAT):
+            # Prefer seconds when present so sub-minute steps round-trip;
+            # fall back to minute-only and the legacy display format.
+            for fmt in (
+                _DATETIME_ISO_FORMAT_WITH_SECONDS,
+                _DATETIME_ISO_FORMAT,
+                _DATETIME_LEGACY_FORMAT,
+            ):
                 try:
                     deserialized = _normalize_datetime_value(
-                        datetime.strptime(ui_value[0], fmt)
+                        datetime.strptime(ui_value[0], fmt),
+                        keep_seconds=self._include_seconds,
                     )
                     break
                 except ValueError:
@@ -484,7 +565,7 @@ class DateTimeInputSerde:
     def serialize(self, v: datetime | None) -> list[str]:
         if v is None:
             return []
-        return [_datetime_to_proto_string(v)]
+        return [_datetime_to_proto_string(v, include_seconds=self._include_seconds)]
 
 
 @dataclass
@@ -494,7 +575,7 @@ class TimeInputSerde:
 
     @property
     def _wire_fmt(self) -> str:
-        return "%H:%M:%S" if self.step % 60 != 0 else "%H:%M"
+        return "%H:%M:%S" if _step_includes_seconds(self.step) else "%H:%M"
 
     def deserialize(self, ui_value: str | None) -> time | None:
         if ui_value is None:
@@ -516,7 +597,7 @@ class TimeInputSerde:
             return self.value
         # Strip seconds when step is minute-granular so the returned value is
         # consistent regardless of how the value arrived (query-param, session state).
-        if self.step % 60 == 0:
+        if not _step_includes_seconds(self.step):
             parsed = parsed.replace(second=0, microsecond=0)
         return parsed
 
@@ -658,7 +739,7 @@ class DateInputSerde:
         for fmt in ("%Y-%m-%d", "%Y/%m/%d"):
             try:
                 return datetime.strptime(value, fmt).date()
-            except ValueError:  # noqa: PERF203
+            except ValueError:
                 continue
         raise ValueError(f"Unable to parse date: {value}")
 
@@ -671,12 +752,16 @@ class DateInputSerde:
                 # Invalid URL query param value (e.g. "not-a-date") — revert to default.
                 return_value = self.value.value
             else:
-                # Reject out-of-range dates from URL query params — revert to default.
-                # Matches SliderSerde.deserialize which validates bounds in the
-                # deserializer so _seed_widget_from_url can detect default equality
-                # and clear the URL param via _clear_url_param.
-                if return_value and any(
-                    d < self.value.min or d > self.value.max for d in return_value
+                # Return the default for out-of-range dates and for ranges whose
+                # start is after the end. URL seeding then sees the default and
+                # removes the bad query param.
+                if return_value and (
+                    any(d < self.value.min or d > self.value.max for d in return_value)
+                    or (
+                        self.value.is_range
+                        and len(return_value) > 1
+                        and return_value[0] > return_value[1]
+                    )
                 ):
                     return_value = self.value.value
         else:
@@ -705,11 +790,12 @@ class TimeWidgetsMixin:
         value: TimeValue = "now",
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         format: Literal["12h", "24h", "localized"] = "24h",
@@ -726,11 +812,12 @@ class TimeWidgetsMixin:
         value: None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         format: Literal["12h", "24h", "localized"] = "24h",
@@ -747,11 +834,12 @@ class TimeWidgetsMixin:
         value: TimeValue | None = "now",
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         format: Literal["12h", "24h", "localized"] = "24h",
@@ -831,8 +919,30 @@ class TimeWidgetsMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this time_input's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the time input should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the time input. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (pressing Enter, blurring the field,
+              pressing the up or down arrow keys, pasting a valid time, or
+              clearing the value).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The time input still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -843,6 +953,26 @@ class TimeWidgetsMixin:
         disabled : bool
             An optional boolean that disables the time input if set to
             ``True``. The default is ``False``.
+
+        required : bool
+            An optional boolean that requires a non-empty value if set to
+            ``True``. The default is ``False``. If this is ``True``, empty
+            values (``None``) cannot be submitted.
+
+            Outside a form, clearing the field does not rerun the app, and
+            the last committed value is kept. Inside a form, submission is
+            blocked until the field has a value. The widget still returns
+            its default value until the user provides input.
+
+            ``required=True`` does not change the widget's default. A
+            time input still starts at the current time unless you pass
+            ``value=None``. Use ``value=None`` together with
+            ``required=True`` for an empty required field.
+
+            .. note::
+               This check runs in the user's browser and can be bypassed.
+               If requiredness is security-relevant, you must also check the
+               value on the server (in your app code) after it is submitted.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -913,6 +1043,14 @@ class TimeWidgetsMixin:
             is ``None``, an empty query parameter (e.g., ``?my_key=``)
             clears the widget.
 
+            When ``on_change="ignore"``, the URL is updated as soon as the
+            value is committed (Enter, blur, arrow keys, pasting a valid
+            time, or clearing the value); typing a segment alone does not
+            update it. As with widgets inside a form, the URL can show a
+            value that Python hasn't received yet. Python receives the
+            new value on the next rerun, so a page load or share uses the
+            updated URL value.
+
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
             If this is ``None`` (default), the value is lost when the widget
@@ -938,10 +1076,10 @@ class TimeWidgetsMixin:
         --------
         **Example 1: Basic usage**
 
-        >>> import datetime
+        >>> from datetime import time
         >>> import streamlit as st
         >>>
-        >>> t = st.time_input("Set an alarm for", datetime.time(8, 45))
+        >>> t = st.time_input("Set an alarm for", time(8, 45))
         >>> st.write("Alarm is set for", t)
 
         .. output::
@@ -952,7 +1090,6 @@ class TimeWidgetsMixin:
 
         To initialize an empty time input, use ``None`` as the value:
 
-        >>> import datetime
         >>> import streamlit as st
         >>>
         >>> t = st.time_input("Set an alarm for", value=None)
@@ -973,6 +1110,7 @@ class TimeWidgetsMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            required=required,
             label_visibility=label_visibility,
             step=step,
             format=format,
@@ -988,11 +1126,12 @@ class TimeWidgetsMixin:
         value: TimeValue | None = "now",
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         format: Literal["12h", "24h", "localized"] = "24h",
@@ -1002,11 +1141,15 @@ class TimeWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> time | None:
         key = to_key(key)
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+        )
 
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=value if value != "now" else None,
         )
         label = maybe_raise_label_warnings(label, label_visibility)
@@ -1025,14 +1168,19 @@ class TimeWidgetsMixin:
             if isinstance(step, int)
             else 0  # Invalid type; validation raises below.
         )
-        if parsed_time is not None and _step_secs > 0 and _step_secs % 60 == 0:
+        if (
+            parsed_time is not None
+            and _step_secs > 0
+            and not _step_includes_seconds(_step_secs)
+        ):
             parsed_time = parsed_time.replace(second=0, microsecond=0)
 
         element_id = compute_and_register_element_id(
             "time_input",
             user_key=key,
-            # Ensure stable ID when key is provided; only whitelist step since it
-            # affects the selection granularity and available options.
+            # `required` is hashed only for unkeyed widgets: toggling it cannot
+            # make a stored time illegal. `step` stays in the keyed identity
+            # because it changes which fields the widget edits.
             key_as_main_identity={"step"},
             dg=self.dg,
             label=label,
@@ -1040,6 +1188,7 @@ class TimeWidgetsMixin:
             help=help,
             step=step,
             width=width,
+            required=required,
         )
         del value
 
@@ -1058,9 +1207,14 @@ class TimeWidgetsMixin:
             )
         if isinstance(step, timedelta):
             step = int(step.total_seconds())
-        if step < 1 or step > timedelta(hours=23).seconds:
-            raise StreamlitAPIException(
-                f"`step` must be between 1 second and 23 hours but is currently set to {step} seconds."
+        if not 1 <= step <= timedelta(hours=23).seconds:
+            # Use unit labels so the message reads [1 second, 23 hours]
+            # rather than [1, 82800].
+            raise StreamlitValueOutOfRangeError(
+                "step",
+                value=f"{step} seconds",
+                min_value="1 second",
+                max_value="23 hours",
             )
 
         serde = TimeInputSerde(parsed_time, step=step)
@@ -1069,6 +1223,7 @@ class TimeWidgetsMixin:
         time_input_proto.form_id = current_form_id(self.dg)
         time_input_proto.step = step
         time_input_proto.disabled = disabled
+        time_input_proto.required = required
         time_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
@@ -1083,9 +1238,12 @@ class TimeWidgetsMixin:
             raise StreamlitValueError("format", ["'12h'", "'24h'", "'localized'"])
         time_input_proto.format = format
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            time_input_proto.ignore_rerun = True
+
         widget_state = register_widget(
             time_input_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
@@ -1110,6 +1268,26 @@ class TimeWidgetsMixin:
             time_input_proto,
             layout_config=layout_config,
             has_one_shot_effect=widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "time_input",
+                key=element_id,
+                action="value",
+                # No initial time, and not required: a later value can be cleared.
+                clearable=parsed_time is None and not required,
+                # JSON Schema "time" is RFC 3339 and requires an offset. A naive
+                # time has none, so the value stays a plain string.
+                value_schema=agent_spec.STRING,
+                label=label,
+                # Times serialize as ISO 8601, which is also what the public
+                # API accepts back.
+                step=step,
+                format=time_input_proto.format,
+                help=time_input_proto.help or None,
+                disabled=disabled,
+                required=required,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
         return widget_state.value
 
@@ -1123,12 +1301,13 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         format: str = "YYYY/MM/DD",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1145,12 +1324,13 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         format: str = "YYYY/MM/DD",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1167,12 +1347,13 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         format: str = "YYYY/MM/DD",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1220,6 +1401,11 @@ class TimeWidgetsMixin:
             - ``None``: The widget initializes with no value and returns ``None``
               until the user selects a datetime.
 
+            Any seconds in the initial value are only preserved in the returned
+            ``datetime`` when ``step`` is not a whole number of minutes
+            (``step % 60 != 0``). With the default step, seconds are stripped
+            from the initial value.
+
         min_value : "now", datetime.datetime, datetime.date, datetime.time, str, or None
             The minimum selectable datetime. This can be any of the datetime
             types accepted by ``value``.
@@ -1234,7 +1420,8 @@ class TimeWidgetsMixin:
 
             If this is ``None`` (default), the maximum selectable datetime is
             ten years after the initial value. If no initial value is set, the
-            maximum selectable datetime is ten years after today at 23:59.
+            maximum selectable datetime is ten years after today at ``23:59``
+            for minute-granular steps or ``23:59:59`` for sub-minute steps.
 
         key : str, int, or None
             An optional string or integer to use as the unique key for
@@ -1264,8 +1451,30 @@ class TimeWidgetsMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this datetime_input's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the datetime input should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the datetime input. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (pressing Enter, closing the popover
+              after selecting a date or typing a complete datetime, pasting a
+              datetime, or clearing the value).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The datetime input still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -1282,11 +1491,43 @@ class TimeWidgetsMixin:
         step : int or timedelta
             The stepping interval in seconds. This defaults to ``900`` (15
             minutes). You can also pass a ``datetime.timedelta`` object. The
-            value must be between 60 seconds and 23 hours.
+            value must be between 1 second and 23 hours.
+
+            - If ``step`` is divisible by 60: hour and minute components
+              are shown. Arrow keys snap to the nearest step boundary.
+            - Otherwise (``step`` is not a whole number of minutes,
+              i.e. ``step % 60 != 0``): hour, minute, and second
+              components are shown. The returned ``datetime`` includes
+              seconds, and so does the URL query parameter when
+              ``bind="query-params"``. Arrow keys snap to the nearest
+              step boundary across the full time value.
+
+            Any valid datetime may be entered regardless of the step value.
+            Step does not restrict or snap the entered value.
 
         disabled : bool
             An optional boolean that disables the widget if set to ``True``.
             The default is ``False``.
+
+        required : bool
+            An optional boolean that requires a non-empty value if set to
+            ``True``. The default is ``False``. If this is ``True``, empty
+            values (``None``) cannot be submitted.
+
+            Outside a form, clearing the field does not rerun the app, and
+            the last committed value is kept. Inside a form, submission is
+            blocked until the field has a value. The widget still returns
+            its default value until the user provides input.
+
+            ``required=True`` does not change the widget's default. A
+            datetime input still starts at the current date and time unless
+            you pass ``value=None``. Use ``value=None`` together with
+            ``required=True`` for an empty required field.
+
+            .. note::
+               This check runs in the user's browser and can be bypassed.
+               If requiredness is security-relevant, you must also check the
+               value on the server (in your app code) after it is submitted.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -1318,10 +1559,20 @@ class TimeWidgetsMixin:
             ``st.query_params``; it can only be programmatically changed
             through ``st.session_state``.
 
-            Datetimes use ISO 8601 format (YYYY-MM-DDThh:mm) in the URL.
-            Invalid query parameter values are ignored and removed from
-            the URL. If ``value`` is ``None``, an empty query parameter
-            (e.g., ``?my_key=``) clears the widget.
+            Datetimes use ISO 8601 format in the URL (``YYYY-MM-DDThh:mm``,
+            or ``YYYY-MM-DDThh:mm:ss`` when ``step`` has a sub-minute
+            component). Invalid query parameter values are ignored and
+            removed from the URL. If ``value`` is ``None``, an empty query
+            parameter (e.g., ``?my_key=``) clears the widget.
+
+            When ``on_change="ignore"``, the URL is updated as soon as the
+            value is committed (pressing Enter, closing the popover after
+            selecting a date or typing a complete datetime, pasting a
+            datetime, or clearing the value); typing a segment alone does
+            not update it. As with widgets inside a form, the URL can show
+            a value that Python hasn't received yet. Python receives the
+            new value on the next rerun, so a page load or share uses the
+            updated URL value.
 
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
@@ -1348,12 +1599,12 @@ class TimeWidgetsMixin:
         --------
         **Example 1: Basic usage**
 
-        >>> import datetime
+        >>> from datetime import datetime
         >>> import streamlit as st
         >>>
         >>> event_time = st.datetime_input(
         ...     "Schedule your event",
-        ...     datetime.datetime(2025, 11, 19, 16, 45),
+        ...     datetime(2025, 11, 19, 16, 45),
         ... )
         >>> st.write("Event scheduled for", event_time)
 
@@ -1365,7 +1616,6 @@ class TimeWidgetsMixin:
 
         To initialize an empty datetime input, use ``None`` as the value:
 
-        >>> import datetime
         >>> import streamlit as st
         >>>
         >>> event_time = st.datetime_input("Schedule your event", value=None)
@@ -1390,6 +1640,7 @@ class TimeWidgetsMixin:
             format=format,
             step=step,
             disabled=disabled,
+            required=required,
             label_visibility=label_visibility,
             width=width,
             bind=bind,
@@ -1406,12 +1657,13 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         format: str = "YYYY/MM/DD",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1419,61 +1671,20 @@ class TimeWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> datetime | None:
         key = to_key(key)
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+        )
 
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=value if value != "now" else None,
         )
         label = maybe_raise_label_warnings(label, label_visibility)
 
-        datetime_values = _DateTimeInputValues.from_raw_values(
-            value=value,
-            min_value=min_value,
-            max_value=max_value,
-        )
-
-        default_value = datetime_values.value
-        min_value_proto = _datetime_to_proto_string(datetime_values.min)
-        max_value_proto = _datetime_to_proto_string(datetime_values.max)
-
-        if isinstance(value, (datetime, date, time)):
-            value_for_id: Any = (
-                None
-                if default_value is None
-                else _datetime_to_proto_string(default_value)
-            )
-        else:
-            value_for_id = value
-
-        element_id = compute_and_register_element_id(
-            "date_time_input",
-            user_key=key,
-            # When a key is set, format and step stay in the widget identity,
-            # so a format change resets the widget and a new step invalidates
-            # the current selection.
-            key_as_main_identity={"format", "step"},
-            dg=self.dg,
-            label=label,
-            value=value_for_id,
-            min_value=min_value_proto,
-            max_value=max_value_proto,
-            help=help,
-            format=format,
-            step=step,
-            width=width,
-        )
-        # Track if user explicitly set bounds (before del)
-        has_explicit_bounds = min_value is not None or max_value is not None
-        del value, min_value, max_value
-
-        if not bool(ALLOWED_DATE_FORMATS.match(format)):
-            raise StreamlitAPIException(
-                f"The provided format (`{format}`) is not valid. DateTimeInput format "
-                "should be one of `YYYY/MM/DD`, `DD/MM/YYYY`, or `MM/DD/YYYY` "
-                "and can also use a period (.) or hyphen (-) as separators."
-            )
+        _validate_date_format(format)
 
         if isinstance(step, bool) or not isinstance(step, (int, timedelta)):
             raise StreamlitInvalidParameterTypeError(
@@ -1484,10 +1695,66 @@ class TimeWidgetsMixin:
         step_seconds = (
             int(step.total_seconds()) if isinstance(step, timedelta) else step
         )
-        if step_seconds < 60 or step_seconds > timedelta(hours=23).seconds:
-            raise StreamlitAPIException(
-                f"`step` must be between 60 seconds and 23 hours but is currently set to {step_seconds} seconds."
+        if not 1 <= step_seconds <= timedelta(hours=23).seconds:
+            # Use unit labels so the message reads [1 second, 23 hours]
+            # rather than [1, 82800].
+            raise StreamlitValueOutOfRangeError(
+                "step",
+                value=f"{step_seconds} seconds",
+                min_value="1 second",
+                max_value="23 hours",
             )
+        include_seconds = _step_includes_seconds(step_seconds)
+
+        datetime_values = _DateTimeInputValues.from_raw_values(
+            value=value,
+            min_value=min_value,
+            max_value=max_value,
+            keep_seconds=include_seconds,
+        )
+
+        default_value = datetime_values.value
+        min_value_proto = _datetime_to_proto_string(
+            datetime_values.min, include_seconds=include_seconds
+        )
+        max_value_proto = _datetime_to_proto_string(
+            datetime_values.max, include_seconds=include_seconds
+        )
+
+        if isinstance(value, (datetime, date, time)):
+            value_for_id: Any = (
+                None
+                if default_value is None
+                else _datetime_to_proto_string(
+                    default_value, include_seconds=include_seconds
+                )
+            )
+        else:
+            value_for_id = value
+
+        element_id = compute_and_register_element_id(
+            "date_time_input",
+            user_key=key,
+            # When a key is set, format and step stay in the widget identity,
+            # so a format change resets the widget and a new step invalidates
+            # the current selection. `required` is hashed only for unkeyed
+            # widgets: toggling it cannot make a stored value incompatible, so
+            # it is omitted from keyed identity.
+            key_as_main_identity={"format", "step"},
+            dg=self.dg,
+            label=label,
+            value=value_for_id,
+            min_value=min_value_proto,
+            max_value=max_value_proto,
+            help=help,
+            format=format,
+            step=step,
+            width=width,
+            required=required,
+        )
+        # Track if user explicitly set bounds (before del)
+        has_explicit_bounds = min_value is not None or max_value is not None
+        del value, min_value, max_value
 
         session_state = get_session_state().filtered_state
         default_value_for_proto = default_value
@@ -1499,13 +1766,16 @@ class TimeWidgetsMixin:
         date_time_input_proto.label = label
         if default_value_for_proto is not None:
             date_time_input_proto.default[:] = [
-                _datetime_to_proto_string(default_value_for_proto)
+                _datetime_to_proto_string(
+                    default_value_for_proto, include_seconds=include_seconds
+                )
             ]
         date_time_input_proto.min = min_value_proto
         date_time_input_proto.max = max_value_proto
         date_time_input_proto.form_id = current_form_id(self.dg)
         date_time_input_proto.step = step_seconds
         date_time_input_proto.disabled = disabled
+        date_time_input_proto.required = required
         date_time_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
@@ -1518,14 +1788,18 @@ class TimeWidgetsMixin:
         if bind == "query-params" and key is not None:
             date_time_input_proto.query_param_key = str(key)
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            date_time_input_proto.ignore_rerun = True
+
         serde = DateTimeInputSerde(
             value=default_value_for_proto,
             min=datetime_values.min,
             max=datetime_values.max,
+            step=step_seconds,
         )
         widget_state = register_widget(
             date_time_input_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
@@ -1566,6 +1840,32 @@ class TimeWidgetsMixin:
             date_time_input_proto,
             layout_config=layout_config,
             has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "datetime_input",
+                key=element_id,
+                action="value",
+                # The browser clears when the default it receives is empty.
+                # Session state None empties that default even when the author
+                # set one, so the flag follows the value sent to the browser.
+                # A required field cannot be emptied.
+                clearable=default_value_for_proto is None and not required,
+                # JSON Schema "date-time" is RFC 3339 and requires an offset. A
+                # naive datetime has none, so the value stays a plain string.
+                value_schema=agent_spec.STRING,
+                label=label,
+                # The resolved bounds, which are always present: st.date_input
+                # and st.datetime_input default to a window around the value
+                # when the author sets none.
+                min_value=date_time_input_proto.min or None,
+                max_value=date_time_input_proto.max or None,
+                step=step,
+                format=date_time_input_proto.format or None,
+                help=date_time_input_proto.help or None,
+                disabled=disabled,
+                required=required,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
         return current_value
 
@@ -1578,12 +1878,13 @@ class TimeWidgetsMixin:
         max_value: NullableScalarDateValue = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1599,12 +1900,13 @@ class TimeWidgetsMixin:
         max_value: NullableScalarDateValue = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1622,12 +1924,13 @@ class TimeWidgetsMixin:
         max_value: NullableScalarDateValue = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1643,12 +1946,13 @@ class TimeWidgetsMixin:
         max_value: NullableScalarDateValue = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1750,8 +2054,30 @@ class TimeWidgetsMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this date_input's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the date input should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the date input. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (selecting a date in the calendar,
+              closing the popover after typing a complete date, pasting a
+              date, or clearing the value).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The date input still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -1767,6 +2093,29 @@ class TimeWidgetsMixin:
         disabled : bool
             An optional boolean that disables the date input if set to
             ``True``. The default is ``False``.
+
+        required : bool
+            An optional boolean that requires a non-empty value if set to
+            ``True``. The default is ``False``. If this is ``True``, empty
+            values cannot be submitted.
+
+            Outside a form, clearing the field does not rerun the app, and
+            the last committed value is kept. Inside a form, submission is
+            blocked until the field has a value. The widget still returns
+            its default value until the user provides input.
+
+            ``required=True`` does not change the widget's default. A date
+            input still starts at today unless you pass ``value=None``. Use
+            ``value=None`` together with ``required=True`` for an empty
+            required field. In range mode, a complete start and end date is
+            non-empty; ``()``, a missing bound, and a one-element interval
+            are empty. Use ``value=[]`` together with ``required=True`` for
+            an empty required range.
+
+            .. note::
+               This check runs in the user's browser and can be bypassed.
+               If requiredness is security-relevant, you must also check the
+               value on the server (in your app code) after it is submitted.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -1806,6 +2155,15 @@ class TimeWidgetsMixin:
             parameters (e.g.,
             ``?vacation=2025-01-01&vacation=2025-01-31``).
 
+            When ``on_change="ignore"``, the URL is updated as soon as the
+            value is committed (selecting a date in the calendar, closing
+            the popover after typing a complete date, pasting a date, or
+            clearing the value); typing in the field alone does not update
+            it. As with widgets inside a form, the URL can show a value
+            that Python hasn't received yet. Python receives the new value
+            on the next rerun, so a page load or share uses the updated
+            URL value.
+
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
             If this is ``None`` (default), the value is lost when the widget
@@ -1831,10 +2189,10 @@ class TimeWidgetsMixin:
         --------
         **Example 1: Basic usage**
 
-        >>> import datetime
+        >>> from datetime import date
         >>> import streamlit as st
         >>>
-        >>> d = st.date_input("When's your birthday", datetime.date(2019, 7, 6))
+        >>> d = st.date_input("When's your birthday", date(2019, 7, 6))
         >>> st.write("Your birthday is:", d)
 
         .. output::
@@ -1843,17 +2201,17 @@ class TimeWidgetsMixin:
 
         **Example 2: Date range**
 
-        >>> import datetime
+        >>> from datetime import date, datetime
         >>> import streamlit as st
         >>>
-        >>> today = datetime.datetime.now()
+        >>> today = datetime.now()
         >>> next_year = today.year + 1
-        >>> jan_1 = datetime.date(next_year, 1, 1)
-        >>> dec_31 = datetime.date(next_year, 12, 31)
+        >>> jan_1 = date(next_year, 1, 1)
+        >>> dec_31 = date(next_year, 12, 31)
         >>>
         >>> d = st.date_input(
         ...     "Select your vacation for next year",
-        ...     (jan_1, datetime.date(next_year, 1, 7)),
+        ...     (jan_1, date(next_year, 1, 7)),
         ...     jan_1,
         ...     dec_31,
         ...     format="MM.DD.YYYY",
@@ -1868,7 +2226,6 @@ class TimeWidgetsMixin:
 
         To initialize an empty date input, use ``None`` as the value:
 
-        >>> import datetime
         >>> import streamlit as st
         >>>
         >>> d = st.date_input("When's your birthday", value=None)
@@ -1891,6 +2248,7 @@ class TimeWidgetsMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            required=required,
             label_visibility=label_visibility,
             format=format,
             width=width,
@@ -1907,12 +2265,13 @@ class TimeWidgetsMixin:
         max_value: NullableScalarDateValue = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1920,11 +2279,15 @@ class TimeWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> DateWidgetReturn:
         key = to_key(key)
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+        )
 
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=value if value != "today" else None,
         )
         label = maybe_raise_label_warnings(label, label_visibility)
@@ -1961,7 +2324,9 @@ class TimeWidgetsMixin:
             user_key=key,
             # When a key is set, only format stays in the widget identity, so a
             # format change resets the widget. min_value and max_value can
-            # change without remounting.
+            # change without remounting. `required` is hashed only for unkeyed
+            # widgets: toggling it cannot make a stored value incompatible, so
+            # it is omitted from keyed identity.
             key_as_main_identity={"format"},
             dg=self.dg,
             label=label,
@@ -1971,13 +2336,9 @@ class TimeWidgetsMixin:
             help=help,
             format=format,
             width=width,
+            required=required,
         )
-        if not bool(ALLOWED_DATE_FORMATS.match(format)):
-            raise StreamlitAPIException(
-                f"The provided format (`{format}`) is not valid. DateInput format "
-                "should be one of `YYYY/MM/DD`, `DD/MM/YYYY`, or `MM/DD/YYYY` "
-                "and can also use a period (.) or hyphen (-) as separators."
-            )
+        _validate_date_format(format)
 
         parsed_values = _DateInputValues.from_raw_values(
             value=value,
@@ -2010,6 +2371,7 @@ class TimeWidgetsMixin:
         date_input_proto.id = element_id
         date_input_proto.is_range = parsed_values.is_range
         date_input_proto.disabled = disabled
+        date_input_proto.required = required
         date_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
@@ -2034,11 +2396,14 @@ class TimeWidgetsMixin:
         if bind == "query-params" and key is not None:
             date_input_proto.query_param_key = str(key)
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            date_input_proto.ignore_rerun = True
+
         serde = DateInputSerde(parsed_values)
 
         widget_state = register_widget(
             date_input_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
@@ -2080,6 +2445,25 @@ class TimeWidgetsMixin:
             date_input_proto,
             layout_config=layout_config,
             has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "date_input",
+                key=element_id,
+                action="value",
+                # No initial date, and not required: a later value can be cleared.
+                clearable=parsed_values.value is None and not required,
+                value_schema=agent_spec.range_of(agent_spec.DATE, partial=True)
+                if parsed_values.is_range
+                else agent_spec.DATE,
+                label=label,
+                min_value=date_input_proto.min or None,
+                max_value=date_input_proto.max or None,
+                format=date_input_proto.format or None,
+                help=date_input_proto.help or None,
+                disabled=disabled,
+                required=required,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
         return current_value
 

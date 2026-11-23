@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import datetime
 import unittest
+from datetime import date, datetime, time, timedelta
 
 import pytest
 
@@ -225,10 +225,10 @@ class ColumnTypesTest(unittest.TestCase):
                 disabled=False,
                 required=True,
                 pinned=True,
-                default=datetime.datetime(2021, 1, 1),
-                min_value=datetime.datetime(2020, 1, 1),
-                max_value=datetime.datetime(2022, 1, 2),
-                step=datetime.timedelta(milliseconds=100),
+                default=datetime(2021, 1, 1),
+                min_value=datetime(2020, 1, 1),
+                max_value=datetime(2022, 1, 2),
+                step=timedelta(milliseconds=100),
                 format="yyyy-MM-dd",
             )
         ) == {
@@ -263,10 +263,10 @@ class ColumnTypesTest(unittest.TestCase):
                 disabled=False,
                 required=True,
                 pinned=True,
-                default=datetime.time(12, 0),
-                min_value=datetime.time(0, 0),
-                max_value=datetime.time(23, 59),
-                step=datetime.timedelta(milliseconds=100),
+                default=time(12, 0),
+                min_value=time(0, 0),
+                max_value=time(23, 59),
+                step=timedelta(milliseconds=100),
                 format="HH:mm",
             )
         ) == {
@@ -301,9 +301,9 @@ class ColumnTypesTest(unittest.TestCase):
                 disabled=False,
                 required=True,
                 pinned=True,
-                default=datetime.date(2021, 1, 1),
-                min_value=datetime.date(2020, 1, 1),
-                max_value=datetime.date(2022, 1, 2),
+                default=date(2021, 1, 1),
+                min_value=date(2020, 1, 1),
+                max_value=date(2022, 1, 2),
                 step=1,
                 format="yyyy-MM-dd",
             )

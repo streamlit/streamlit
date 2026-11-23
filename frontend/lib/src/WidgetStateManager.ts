@@ -14,22 +14,21 @@
  * limitations under the License.
  */
 
-import { Draft, produce } from "immer"
+import { type Draft, produce } from "immer"
 import { getLogger } from "loglevel"
-import { Long, util } from "protobufjs"
+import { type Long, util } from "protobufjs/minimal"
 import queryString from "query-string"
-import { Signal, SignalConnection } from "typed-signals"
+import { Signal, type SignalConnection } from "typed-signals"
 
 import {
+  type ArrowTable,
   ChatInputValue,
   DoubleArray,
-  IArrowTable,
-  IChatInputValue,
-  IFileUploaderState,
+  type FileUploaderState,
   SInt64Array,
   StringArray,
   StringTriggerValue,
-  Button as SubmitButtonProto,
+  type Button as SubmitButtonProto,
   WidgetState,
   WidgetStates,
 } from "@streamlit/protobuf"
@@ -38,6 +37,7 @@ import { assertNever } from "~lib/util/assertNever"
 import {
   isNullOrUndefined,
   isValidFormId,
+  normalizeQueryString,
   notNullOrUndefined,
 } from "~lib/util/utils"
 
@@ -496,7 +496,7 @@ export class WidgetStateManager {
    */
   public setChatInputValue(
     elementId: string,
-    value: IChatInputValue,
+    value: ChatInputValue.$Properties,
     update: WidgetUpdate
   ): void {
     // 1. Store the value in a temporary WidgetState proto.
@@ -567,10 +567,8 @@ export class WidgetStateManager {
     // If we already have a pending trigger for this widget in the current
     // macrotask, append to it instead of overwriting so multiple triggers are
     // delivered in a single backend message.
-    let widgetState = this.getWidgetState(widget)
-    if (widgetState === undefined) {
-      widgetState = this.createWidgetState(widget, update)
-    }
+    const widgetState =
+      this.getWidgetState(widget) ?? this.createWidgetState(widget, update)
 
     if (value === undefined) {
       // Simple boolean trigger.
@@ -750,15 +748,12 @@ export class WidgetStateManager {
     update: WidgetUpdate
   ): void {
     const widget = { id: elementId, formId: update.formId }
-    // Filter out invalid values (NaN, undefined, null) before storing.
-    const validValue = value.filter(
-      v => v !== undefined && v !== null && !Number.isNaN(v)
-    )
-    // If all values are invalid, preserve previous state and warn.
-    // This can happen if user code passes NaN values (e.g., from empty DataFrame operations).
+    // Drop NaN before storing. If every value is NaN (for example from an empty
+    // DataFrame), keep the previous widget state and warn.
+    const validValue = value.filter(v => !Number.isNaN(v))
     if (validValue.length === 0) {
       LOG.warn(
-        `setDoubleArrayValue: All values were invalid (NaN/null/undefined) ` +
+        `setDoubleArrayValue: All values were NaN ` +
           `for widget "${elementId}". Preserving previous state.`
       )
       this.maybeSyncValueToUrl(widget, update, [])
@@ -819,7 +814,7 @@ export class WidgetStateManager {
 
   public setArrowValue(
     elementId: string,
-    value: IArrowTable,
+    value: ArrowTable.$Properties,
     update: WidgetUpdate
   ): void {
     const widget = { id: elementId, formId: update.formId }
@@ -827,7 +822,9 @@ export class WidgetStateManager {
     this.onWidgetValueChanged(update)
   }
 
-  public getArrowValue(widget: WidgetInfo): IArrowTable | undefined {
+  public getArrowValue(
+    widget: WidgetInfo
+  ): ArrowTable.$Properties | undefined {
     const state = this.getWidgetState(widget)
     if (
       notNullOrUndefined(state) &&
@@ -861,7 +858,7 @@ export class WidgetStateManager {
 
   public setFileUploaderStateValue(
     elementId: string,
-    value: IFileUploaderState,
+    value: FileUploaderState.$Properties,
     update: WidgetUpdate
   ): void {
     const widget = { id: elementId, formId: update.formId }
@@ -871,13 +868,13 @@ export class WidgetStateManager {
 
   public getFileUploaderStateValue(
     widget: WidgetInfo
-  ): IFileUploaderState | undefined {
+  ): FileUploaderState.$Properties | undefined {
     const state = this.getWidgetState(widget)
     if (
       notNullOrUndefined(state) &&
       state.value === "fileUploaderStateValue"
     ) {
-      return state.fileUploaderStateValue as IFileUploaderState
+      return state.fileUploaderStateValue as FileUploaderState.$Properties
     }
 
     return undefined
@@ -942,13 +939,26 @@ export class WidgetStateManager {
   }
 
   /**
-   * Remove the state of widgets that are not contained in `activeIds`.
-   * This is called when a script finishes running, so that we don't retain
-   * data for widgets that have been removed from the app.
+   * Remove widget and element state that is no longer in `activeIds`, except
+   * in-flight trigger ids in `pendingTriggerIds`.
+   *
+   * Called when a script finishes running so we do not keep data for widgets
+   * that have been removed from the app. The excepted trigger ids are waiting
+   * on the batched flush, and some (such as the Custom Components v2 trigger
+   * aggregator) are synthetic ids that never appear in `activeIds` at all;
+   * dropping one leaves that flush to send a rerun with no trigger, silently
+   * losing the interaction (GitHub issue #16732). Element state is never part
+   * of the rerun message, so it follows `activeIds` only.
    */
   public removeInactive(activeIds: Set<string>): void {
-    this.widgetStates.removeInactive(activeIds)
-    this.forms.forEach(form => form.widgetStates.removeInactive(activeIds))
+    // Nothing in flight is the common case, so avoid copying the set for it.
+    const retainedIds =
+      this.pendingTriggerIds.size === 0
+        ? activeIds
+        : new Set([...activeIds, ...this.pendingTriggerIds])
+
+    this.widgetStates.removeInactive(retainedIds)
+    this.forms.forEach(form => form.widgetStates.removeInactive(retainedIds))
     this.elementStates.forEach((_, elementId) => {
       if (!activeIds.has(elementId)) {
         this.deleteElementState(elementId)
@@ -1163,9 +1173,7 @@ export class WidgetStateManager {
     // Update the stored fragmentId if we don't have one yet. If multiple calls
     // happen and at least one of them specifies a fragmentId, we keep the
     // first non-undefined value.
-    if (this.scheduledFragmentId === undefined) {
-      this.scheduledFragmentId = fragmentId
-    }
+    this.scheduledFragmentId ??= fragmentId
 
     // If we already have a scheduled fragmentId and a new (different) one is
     // provided in the same macrotask, log a warning and proceed with the first
@@ -1450,8 +1458,8 @@ export class WidgetStateManager {
     })
 
     if (value === null) {
-      // Remove the param
-      delete currentParams[paramKey]
+      // Drop this param from the query string; stringify uses skipNull: true.
+      currentParams[paramKey] = null
     } else if (Array.isArray(value)) {
       if (value.length === 0) {
         // Empty array: write as empty string to produce ?key= in URL
@@ -1481,7 +1489,7 @@ export class WidgetStateManager {
       .replaceAll("%20", "+")
 
     // Skip replaceState if the URL wouldn't actually change
-    const currentSearch = window.location.search.replace(/^\?/, "")
+    const currentSearch = normalizeQueryString(window.location.search)
     if (newSearch === currentSearch) {
       return
     }

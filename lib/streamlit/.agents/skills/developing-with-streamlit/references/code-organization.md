@@ -41,7 +41,7 @@ When you do split, keep Streamlit files focused on UI and move complex logic to 
 import streamlit as st
 from utils.data import load_sales_data, compute_metrics
 
-st.title("Sales Dashboard")
+st.title("Sales dashboard")
 
 start = st.date_input("Start")
 end = st.date_input("End")
@@ -50,19 +50,19 @@ data = load_sales_data(start, end)
 metrics = compute_metrics(data)
 
 st.metric("Revenue", f"${metrics['revenue']:,.0f}")
-st.dataframe(data)
+st.dataframe(data, alt="Sales by day")
 ```
 
-## Avoid if __name__ == "__main__"
+## Omit the `if __name__ == "__main__"` guard
 
-Streamlit apps run the entire file on each interaction. Don't use the main guard in Streamlit files.
+Streamlit executes the app file and each page file with `__name__` set to `"__main__"`, so the guard's body always runs there. Leave it out of those files; it adds nothing and hides the top-level flow.
 
 ```python
-# BAD - don't do this in streamlit_app.py or pages
+# Unnecessary in streamlit_app.py or pages
 if __name__ == "__main__":
     main()
 
-# GOOD - just put the code directly
+# Instead, put the code at the top level
 import streamlit as st
 
 st.title("My App")

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 import streamlit as st
 
 st.set_page_config(layout="wide")
@@ -50,3 +52,17 @@ def toast_notification():
 
 
 st.button("Trigger dialog", on_click=toast_notification)
+
+
+# The st.toast docstring example for updating a toast in place, with longer
+# sleeps so the test can reliably observe each intermediate state.
+def cook_breakfast() -> None:
+    msg = st.toast("Gathering ingredients...")
+    time.sleep(1.5)
+    msg.toast("Cooking...")
+    time.sleep(1.5)
+    msg.toast("Ready!", icon="🥞")
+
+
+if st.button("Cook breakfast"):
+    cook_breakfast()

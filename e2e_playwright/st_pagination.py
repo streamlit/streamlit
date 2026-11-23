@@ -143,3 +143,21 @@ with col3:
 
 controlled_page = st.pagination(10, key="controlled")
 st.write(f"controlled-page: {controlled_page}")
+
+# --- on_change="ignore" pagination ---
+# Run counter so test_pagination_on_change_ignore can detect an unexpected rerun.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+ignore_page = st.pagination(
+    5,
+    key="ignore_pagination",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore pagination value:", ignore_page)
+
+if st.button("Apply ignore pagination", key="apply_ignore_pagination"):
+    st.write("Applied ignore pagination value:", ignore_page)

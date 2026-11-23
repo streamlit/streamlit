@@ -60,3 +60,18 @@ else:
         kwargs={"param": "initial kwarg param"},
     )
     st.write("Initial camera input value:", cam_val is not None)
+
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+ignore_camera = st.camera_input(
+    "Ignore change camera input",
+    key="ignore_camera",
+    on_change="ignore",
+)
+st.write("Ignore camera value:", ignore_camera is not None)
+
+if st.button("Apply ignore camera", key="apply_ignore_camera"):
+    st.write("Applied ignore camera value:", ignore_camera is not None)

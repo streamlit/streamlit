@@ -21,7 +21,7 @@ import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constant
 import { render } from "~lib/test_util"
 
 import JsonPathTooltip, {
-  JsonPathTooltipProps,
+  type JsonPathTooltipProps,
   OPEN_GUARD_MS,
 } from "./JsonPathTooltip"
 

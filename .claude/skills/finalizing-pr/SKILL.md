@@ -52,58 +52,15 @@ Run the `reviewing-local-changes` subagent to review the changes. Wait for compl
 Review the recommendations from step 6. For each recommendation:
 
 - If valid and improves code quality: implement the change
-- If not applicable or would over-engineer: skip with brief reasoning
+- If not applicable or would over-engineer: skip with brief reasoning. This includes fixes for rare, low-impact edge cases that would add new state, abstractions, or long special-case branches (see the proportionality check in `/addressing-pr-review-comments`)
 
 ### 8. Run checks (second pass)
 
-Run the /checking-changes skill in a subagent with `E2E_CHECK=true make check` to also run changed e2e tests. Wait for completion, then fix any issues found before proceeding. Snapshot mismatches can be ignored (they require manual updates).
+Run the /checking-changes skill in a subagent with `E2E_CHECK=true make check` to also run changed e2e tests. Wait for completion, then fix any issues found before proceeding. Snapshot mismatches can be ignored while iterating. On a pull request, add the `update-snapshots` label and merge the snapshot PR the workflow opens.
 
 ### 9. Create or update PR
 
-> **Note:** If currently on `develop`, create a new branch first following the naming conventions in `wiki/pull-requests.md`.
-
-Check if a PR exists for the current branch:
-
-```bash
-gh pr view --json number,title,url
-```
-
-**If no PR exists**, create one following the guidelines in `wiki/pull-requests.md` (please read!) and the title/description guidance in the `/reviewing-pr-description` skill. Add appropriate labels and fill in the body based on `.github/pull_request_template.md`.
-
-**Link related issues:** Add `- Closes #12345` to the PR description for any known GitHub issues this PR resolves.
-
-**Required labels:**
-
-| Category | Options |
-|----------|---------|
-| Impact | `impact:users` (affects user behavior) OR `impact:internal` (no user behavior change) |
-| Change type | `change:feature`, `change:bugfix`, `change:chore`, `change:refactor`, `change:docs`, `change:spec`, `change:other` |
-
-Note: PRs labeled `change:spec` (for spec/design documents only) are exempt from Impact label requirements.
-
-```bash
-# Push branch to origin first (required for gh pr create in non-interactive mode)
-git push -u origin HEAD
-
-# Create the PR
-gh pr create --base develop --title "[type] Description" --body "$(cat <<'EOF'
-## Describe your changes
-
-- Change 1
-- Change 2
-
-## GitHub Issue Link (if applicable)
-
-- Closes #12345
-
-## Testing Plan
-
-- [x] Unit Tests (JS and/or Python)
-EOF
-)" --label "impact:users,change:feature"
-```
-
-**If PR exists**, check if description needs updating based on current changes.
+Run the `/creating-pull-requests` skill to create or update the PR. Steps 11 and 12 rely on the `impact:*` and `change:*` labels it sets.
 
 ### 10. Upload intermediate files
 
@@ -111,15 +68,14 @@ If relevant intermediate files exist (specs, plans, implementation notes in `wor
 
 ### 11. AI review and fix loop
 
-Iterate through AI review and fixes until the review passes (max 5 iterations):
+Run the AI review and fix loop up to 5 times. After each review, always run `fixing-pr` so it can wait for CI and address comments, then exit if that review was approved:
 
 ```
 for iteration 1 to 5:
     1. Trigger AI review by applying the "ai-review" label
     2. Run the `fixing-pr` subagent in foreground to wait for CI, fix failures, and address review comments
-    3. Check AI review verdict in the latest github-actions bot comment
-    4. If verdict is "approved" → exit loop
-    5. Otherwise → continue to next iteration
+    3. Check the latest AI review verdict
+    4. If it is "approved" → exit loop
 ```
 
 **Triggering AI review:**
@@ -148,15 +104,25 @@ gh api --paginate "repos/streamlit/streamlit/pulls/${PR_NUM}/reviews" \
 ```
 
 The verdict section contains a bold keyword indicating the result:
+
 - **`**APPROVED**`** → exit loop, PR is ready
 - **`**CHANGES_REQUESTED**`** → continue iterating, address the feedback
 
-**Important:** After each `fixing-pr` run, re-check if changes were made. If changes were pushed, the AI review will be stale and needs re-triggering. Continue iterating until the review verdict is "approved" or max iterations reached.
+Do not start another iteration after an `APPROVED` verdict, even if `fixing-pr` pushed follow-up CI fixes. Those commits are covered by CI but not by the AI review.
 
-### 12. Post agent metrics
+### 12. Final AI review
 
-Post the agent metrics to the PR body:
+After the review loop, apply `ai-final-review` once. When the PR has both `change:feature` and `impact:users`, also apply `ai-qa-test` so AI QA runs on that user-facing feature.
+
+Wait until a `queued` or `in_progress` `ai-pr-review.yml` run shows up for this branch, then start `/fixing-pr` — it returns immediately if nothing is queued yet:
 
 ```bash
-uv run python scripts/log_agent_metrics.py --post
+gh pr edit --add-label "ai-final-review"
+# Only when the PR has both change:feature and impact:users:
+gh pr edit --add-label "ai-qa-test"
+
+gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --status queued
+gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --status in_progress
 ```
+
+Run `/fixing-pr` exactly once, whether step 11 was approved or ran out of iterations, so it can wait for CI and address comments. Tell `/fixing-pr` to skip `ai-qa-testing.yml` when polling CI; that workflow posts its report as a PR comment for a maintainer to review and adds `do-not-merge` on `FAIL`. Do not re-apply `ai-final-review`. After `/fixing-pr`, commit and push remaining changes.

@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
-import { FloatingPortal } from "@floating-ui/react"
-import type { FloatingPortalProps } from "@floating-ui/react"
+import { FloatingPortal, type FloatingPortalProps } from "@floating-ui/react"
 
 import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 

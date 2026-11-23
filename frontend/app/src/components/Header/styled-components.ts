@@ -16,10 +16,15 @@
 
 import styled from "@emotion/styled"
 
-import { EmotionTheme } from "@streamlit/lib"
+import type { EmotionTheme } from "@streamlit/lib"
 
 export const StyledLogoContainer = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.lg,
+  // Match the sidebar's minimum width so a wide wordmark in the header
+  // cannot crowd top nav or the expand control.
+  maxWidth: theme.sizes.minSidebarWidth,
+  display: "flex",
+  alignItems: "center",
 }))
 
 interface StyledHeaderProps {
@@ -27,7 +32,7 @@ interface StyledHeaderProps {
 }
 
 export const StyledHeader = styled.header<StyledHeaderProps>(
-  ({ theme, isTransparentBackground }) => ({
+  ({ theme, isTransparentBackground = false }) => ({
     position: "absolute",
     top: 0,
     left: 0,

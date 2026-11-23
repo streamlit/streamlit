@@ -19,7 +19,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Generator, Mapping
 
     from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
     from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
@@ -58,14 +58,26 @@ class SafeSessionState:
         with self._lock:
             return self._state.register_widget(metadata, user_key)
 
-    def on_script_will_rerun(self, latest_widget_states: WidgetStatesProto) -> None:
+    def on_script_will_rerun(
+        self,
+        fresh_widget_states: WidgetStatesProto | None,
+        *,
+        replay_trigger_states: WidgetStatesProto | None = None,
+        replay_trigger_values: Mapping[str, Any] | None = None,
+        is_history_navigation: bool = False,
+    ) -> None:
         self._yield_callback()
         with self._lock:
             # TODO: rewrite this to copy the callbacks list into a local
             #  variable so that we don't need to hold our lock for the
             #  duration. (This will also allow us to downgrade our RLock
             #  to a Lock.)
-            self._state.on_script_will_rerun(latest_widget_states)
+            self._state.on_script_will_rerun(
+                fresh_widget_states,
+                replay_trigger_states=replay_trigger_states,
+                replay_trigger_values=replay_trigger_values,
+                is_history_navigation=is_history_navigation,
+            )
 
     def on_script_finished(
         self,
@@ -90,6 +102,10 @@ class SafeSessionState:
     def is_new_state_value(self, user_key: str) -> bool:
         with self._lock:
             return self._state.is_new_state_value(user_key)
+
+    def was_set_by_callback(self, user_key: str) -> bool:
+        with self._lock:
+            return self._state.was_set_by_callback(user_key)
 
     def reset_state_value(self, user_key: str, value: Any | None) -> None:
         """Reset a new session state value to a given value
@@ -147,7 +163,7 @@ class SafeSessionState:
         return f"{{{s}}}"
 
     @contextmanager
-    def query_params(self) -> Iterator[QueryParams]:
+    def query_params(self) -> Generator[QueryParams, None, None]:
         self._yield_callback()
         with self._lock:
             yield self._state.query_params

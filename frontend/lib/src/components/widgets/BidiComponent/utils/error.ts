@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import { LOG } from "~lib/components/widgets/BidiComponent/utils/logger"
 
 /**
@@ -24,7 +26,9 @@ export const normalizeError = (error: unknown, context?: string): Error => {
     return error
   }
 
-  const message = context ? `${context}: ${String(error)}` : String(error)
+  const message = isNullOrEmptyString(context)
+    ? String(error)
+    : `${context}: ${String(error)}`
   return new Error(message)
 }
 

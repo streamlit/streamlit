@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-import datetime
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -104,7 +104,7 @@ with st.popover(
 with st.popover("popover 21 (date dismissal)", key="date_dismissal_popover"):
     st.date_input(
         "Date in popover",
-        value=datetime.date(2020, 1, 1),
+        value=date(2020, 1, 1),
         key="date_dismissal",
     )
 
@@ -294,3 +294,7 @@ with st.popover(
     key="wrap_false_popover",
 ):
     st.write("wrap popover content")
+
+# Menu-style icon passed via `icon` with an empty label (chevron should be hidden)
+with st.popover("", icon=":material/more_vert:", key="more_vert_icon_param_popover"):
+    st.markdown("Icon param popover content")

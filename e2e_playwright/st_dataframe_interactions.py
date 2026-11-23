@@ -112,6 +112,15 @@ st.container(key="column-menu-test").dataframe(
     width="content",
 )
 
+st.header("Fixed-height fullscreen")
+
+# 40 rows with a 12-row fixed height; fullscreen must grow past it.
+FIXED_HEIGHT_FULLSCREEN = (12 + 1) * 35 + 3  # 458
+st.container(key="fixed-height-fullscreen").dataframe(
+    pd.DataFrame({"a": range(40), "b": range(40)}),
+    height=FIXED_HEIGHT_FULLSCREEN,
+)
+
 st.header("Categorical column statistics")
 
 # Deterministic text/boolean data so the statistics submenu snapshots are stable.

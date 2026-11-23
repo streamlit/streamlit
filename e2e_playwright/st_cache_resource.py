@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import uuid
 from typing import cast
 
 import streamlit as st
@@ -62,9 +63,14 @@ if st.button("Cached function with element replay"):
 # interfere with the other cache_resource tests in this app.
 _BACKGROUND_REFRESH_TTL_SECONDS = 8
 
+if "cache_resource_background_refresh_key" not in st.session_state:
+    st.session_state.cache_resource_background_refresh_key = uuid.uuid4().hex
+
 
 @st.cache_resource(show_spinner=False)
-def background_refresh_execution_counter() -> dict[str, int]:
+def background_refresh_execution_counter(
+    session_key: str,  # noqa: ARG001 - Parameter is the per-session cache key.
+) -> dict[str, int]:
     return {"count": 0}
 
 
@@ -73,8 +79,8 @@ def background_refresh_execution_counter() -> dict[str, int]:
     refresh_mode="background",
     show_spinner=False,
 )
-def background_refresh_value() -> int:
-    counter = background_refresh_execution_counter()
+def background_refresh_value(session_key: str) -> int:
+    counter = background_refresh_execution_counter(session_key)
     counter["count"] += 1
     return counter["count"]
 
@@ -84,7 +90,7 @@ def background_refresh_value() -> int:
     refresh_mode="background",
     show_spinner=False,
 )
-def background_refresh_with_display() -> None:
+def background_refresh_with_display(session_key: str) -> None:  # noqa: ARG001
     st.markdown("Inside background cache_resource function")
 
 
@@ -92,5 +98,8 @@ if st.button("Run cache_resource background refresh test"):
     st.session_state.run_cache_resource_background_refresh_test = True
 
 if st.session_state.get("run_cache_resource_background_refresh_test", False):
-    st.markdown(f"Background refresh value: {background_refresh_value()}")
-    background_refresh_with_display()
+    background_refresh_key = st.session_state.cache_resource_background_refresh_key
+    st.markdown(
+        f"Background refresh value: {background_refresh_value(background_refresh_key)}"
+    )
+    background_refresh_with_display(background_refresh_key)

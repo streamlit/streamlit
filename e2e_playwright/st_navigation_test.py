@@ -46,6 +46,110 @@ def test_sidebar_navigation_mode_shows_sidebar_nav_only(app: Page) -> None:
     expect(app.get_by_test_id("stTopNavLink")).not_to_be_visible()
 
 
+def test_app_shell_landmarks_skip_link_and_focus_ring(app: Page) -> None:
+    """Shell exposes main and page-nav landmarks, a skip link into main, and a focus ring on main."""
+    main = app.get_by_role("main")
+    expect(main).to_be_attached()
+    expect(main).to_have_attribute("id", "stMain")
+
+    expect(app.get_by_role("navigation", name="App pages")).to_be_visible()
+    # Top nav landmark is absent in sidebar mode.
+    expect(app.get_by_test_id("stTopNav")).not_to_be_attached()
+
+    skip_link = app.get_by_role("link", name="Skip to main content")
+    expect(skip_link).to_be_attached()
+    expect(skip_link).to_have_attribute("href", "#stMain")
+
+    hash_before = app.evaluate("() => window.location.hash")
+
+    # From a cleared focus state, the first Tab should land on the skip link.
+    app.evaluate(
+        "() => document.activeElement instanceof HTMLElement && document.activeElement.blur()"
+    )
+    app.keyboard.press("Tab")
+    expect(skip_link).to_be_focused()
+
+    content_top_before_focus = app.get_by_test_id("stMainBlockContainer").evaluate(
+        "el => el.getBoundingClientRect().top"
+    )
+    scroll_before_focus = main.evaluate("el => el.scrollTop")
+
+    app.keyboard.press("Enter")
+    expect(main).to_be_focused()
+    # Skip activation must not write #stMain (embed hosts mirror hashchange).
+    expect(app).not_to_have_url(re.compile(r"#stMain"))
+    assert app.evaluate("() => window.location.hash") == hash_before
+
+    # Focusing main must not shift content (preventScroll + sticky ring layout).
+    expect(main).to_have_js_property("scrollTop", scroll_before_focus)
+    content_top_after_focus = app.get_by_test_id("stMainBlockContainer").evaluate(
+        "el => el.getBoundingClientRect().top"
+    )
+    assert abs(content_top_after_focus - content_top_before_focus) < 1
+
+    ring_shadow = main.evaluate("el => getComputedStyle(el, '::before').boxShadow")
+    assert ring_shadow != "none"
+    assert "inset" in ring_shadow
+
+    # Overflow the scrollport, then confirm the sticky ring stays under the header.
+    main.evaluate(
+        """el => {
+            const spacer = document.createElement("div");
+            spacer.dataset.testid = "stMainScrollSpacer";
+            spacer.style.height = "2000px";
+            spacer.style.flexShrink = "0";
+            spacer.style.width = "100%";
+            el.appendChild(spacer);
+        }"""
+    )
+    assert main.evaluate("el => el.scrollHeight > el.clientHeight")
+
+    # Mirror ::before sticky geometry with a real node so we can read painted
+    # top (pseudo-elements have no getBoundingClientRect). Include the negative
+    # marginBottom — that is what keeps the ring from taking layout flow.
+    main.evaluate(
+        """el => {
+            const before = getComputedStyle(el, "::before");
+            const probe = document.createElement("div");
+            probe.dataset.testid = "stMainFocusRingProbe";
+            probe.setAttribute("aria-hidden", "true");
+            Object.assign(probe.style, {
+                position: before.position,
+                top: before.top,
+                height: before.height,
+                marginBottom: before.marginBottom,
+                flexShrink: "0",
+                alignSelf: "stretch",
+                width: "100%",
+                pointerEvents: "none",
+            });
+            el.insertBefore(probe, el.firstChild);
+        }"""
+    )
+
+    content_top_before_scroll = app.get_by_test_id("stMainBlockContainer").evaluate(
+        "el => el.getBoundingClientRect().top"
+    )
+    main.evaluate("el => { el.scrollTop = 400 }")
+    assert main.evaluate("el => el.scrollTop") > 0
+    content_top_after_scroll = app.get_by_test_id("stMainBlockContainer").evaluate(
+        "el => el.getBoundingClientRect().top"
+    )
+    assert content_top_after_scroll < content_top_before_scroll - 100
+
+    scrolled_shadow = main.evaluate("el => getComputedStyle(el, '::before').boxShadow")
+    assert scrolled_shadow != "none"
+    assert "inset" in scrolled_shadow
+
+    header_bottom = app.get_by_test_id("stHeader").evaluate(
+        "el => el.getBoundingClientRect().bottom"
+    )
+    probe = app.get_by_test_id("stMainFocusRingProbe")
+    expect(probe).to_be_attached()
+    probe_top = probe.evaluate("el => el.getBoundingClientRect().top")
+    assert abs(probe_top - header_bottom) < 2
+
+
 def test_top_navigation_mode_shows_top_nav_only(app: Page) -> None:
     """Top position: top navigation is visible, sidebar navigation is hidden."""
     # Switch navigation position to top.
@@ -55,6 +159,10 @@ def test_top_navigation_mode_shows_top_nav_only(app: Page) -> None:
     # but the sidebar navigation menu should be hidden.
     expect(app.get_by_test_id("stSidebar")).to_be_visible()
     expect(app.get_by_test_id("stSidebarNav")).not_to_be_visible()
+
+    # Named top-nav landmark on the measured overflow host.
+    expect(app.get_by_role("navigation", name="App pages")).to_be_visible()
+    expect(app.get_by_test_id("stTopNav")).to_be_visible()
 
     # Top navigation should be visible with links for both pages.
     nav_links = app.get_by_test_id("stTopNavLink")

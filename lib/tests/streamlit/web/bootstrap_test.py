@@ -18,16 +18,22 @@ import asyncio
 import os
 import os.path
 import sys
+import threading
 import types
+from contextlib import contextmanager
 from io import StringIO
+from typing import Any
 from unittest import IsolatedAsyncioTestCase, TestCase
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, mock_open, patch
 
 import pytest
+from starlette.middleware.sessions import SessionMiddleware
 
 from streamlit import config
 from streamlit.runtime.runtime import Runtime
+from streamlit.runtime.secrets import Secrets
 from streamlit.web import bootstrap
+from streamlit.web.server.starlette.starlette_app import create_streamlit_middleware
 from tests import testutil
 from tests.testutil import patch_config_options
 
@@ -370,8 +376,9 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         assert not re.search(r"(?<!Local )(?<!Network )URL:", out)
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
-    @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists", Mock())
+    @patch.object(Secrets, "_parse", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
+    @patch("streamlit.web.bootstrap._update_global_skills_in_background", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning")
     def test_maybe_print_static_folder_warning_called_once_on_server_start(
         self, mock_maybe_print_static_folder_warning
@@ -495,7 +502,8 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
-    @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
+    @patch("streamlit.web.bootstrap._update_global_skills_in_background", Mock())
+    @patch.object(Secrets, "_parse")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
         bootstrap._on_server_start(Mock())
@@ -504,8 +512,9 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
+    @patch("streamlit.web.bootstrap._update_global_skills_in_background", Mock())
     @patch("streamlit.web.bootstrap._LOGGER.exception")
-    @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
+    @patch.object(Secrets, "_parse")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_exception):
         """If secrets throws an error on startup, we catch and log it."""
         mock_exception = Exception("Secrets exploded!")
@@ -544,6 +553,100 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         )
 
 
+class BootstrapSecretsLoadTest(TestCase):
+    """Eager secrets loading in ``prepare_streamlit_environment``."""
+
+    MOCK_SECRETS_PATH = "/mock/secrets.toml"
+
+    def setUp(self) -> None:
+        self._prev_environ = dict(os.environ)
+        self.secrets = Secrets()
+
+    def tearDown(self) -> None:
+        os.environ.clear()
+        os.environ.update(self._prev_environ)
+
+    @contextmanager
+    def _secrets_patches(self, contents: str | None):
+        """Patch startup so ``contents`` is the secrets file. ``None`` means the file is absent."""
+        open_patch = (
+            patch("builtins.open", mock_open(read_data=contents))
+            if contents is not None
+            else patch("builtins.open", side_effect=FileNotFoundError())
+        )
+        with (
+            patch.object(bootstrap, "secrets", self.secrets),
+            patch(
+                "streamlit.web.server.server_util.secrets_singleton",
+                self.secrets,
+            ),
+            patch_config_options(
+                {
+                    "secrets.files": [self.MOCK_SECRETS_PATH],
+                    "server.cookieSecret": "from-config",
+                }
+            ),
+            patch("streamlit.watcher.path_watcher.watch_file"),
+            patch.object(bootstrap, "_initialize_mimetypes"),
+            patch.object(bootstrap, "_fix_pydeck_mapbox_api_warning"),
+            patch.object(bootstrap, "_maybe_print_static_folder_warning"),
+            open_patch,
+        ):
+            yield
+
+    def _prepare_with_secrets_file(self, contents: str | None) -> None:
+        with self._secrets_patches(contents):
+            bootstrap.prepare_streamlit_environment("app.py")
+
+    def test_absent_secrets_file_is_non_fatal(self) -> None:
+        """Missing secrets.toml must not log an error or prevent startup."""
+        with patch.object(bootstrap._LOGGER, "exception") as mock_log:
+            self._prepare_with_secrets_file(contents=None)
+        mock_log.assert_not_called()
+        assert os.environ.get("SMTP_PASSWORD") is None
+
+    def test_malformed_secrets_toml_logs_and_continues(self) -> None:
+        """Malformed TOML logs once and does not abort ``prepare_streamlit_environment``."""
+        with self.assertLogs(bootstrap._LOGGER, level="ERROR") as logs:
+            self._prepare_with_secrets_file(
+                'SMTP_PASSWORD = "synthetic-secret-value"\nSMTP_PORT = ---\n'
+            )
+
+        assert len(logs.records) == 1
+        record = logs.records[0]
+        assert "Failed to load secrets:" in record.getMessage()
+        assert "Error parsing secrets file" in record.getMessage()
+
+    def test_malformed_secrets_do_not_abort_middleware_construction(self) -> None:
+        """Malformed secrets.toml uses the config cookie secret, then startup logs the parse error."""
+
+        malformed = 'SMTP_PASSWORD = "synthetic-secret-value"\nSMTP_PORT = ---\n'
+        with self._secrets_patches(malformed):
+            middleware_list = create_streamlit_middleware()
+            session_middleware = next(
+                mw for mw in middleware_list if mw.cls is SessionMiddleware
+            )
+            assert session_middleware.kwargs["secret_key"] == "from-config"
+
+            with self.assertLogs(bootstrap._LOGGER, level="ERROR") as logs:
+                bootstrap.prepare_streamlit_environment("app.py")
+
+        assert len(logs.records) == 1
+        record = logs.records[0]
+        assert "Failed to load secrets:" in record.getMessage()
+        assert "Error parsing secrets file" in record.getMessage()
+
+    def test_valid_top_level_secrets_are_promoted_to_environ(self) -> None:
+        """Valid scalar secrets are still copied into ``os.environ`` at startup."""
+        with patch.object(bootstrap._LOGGER, "exception") as mock_log:
+            self._prepare_with_secrets_file(
+                'SMTP_PASSWORD = "synthetic-secret-value"\nSMTP_PORT = 587\n'
+            )
+        mock_log.assert_not_called()
+        assert os.environ["SMTP_PASSWORD"] == "synthetic-secret-value"
+        assert os.environ["SMTP_PORT"] == "587"
+
+
 class BootstrapRunTest(IsolatedAsyncioTestCase):
     def tearDown(self):
         #  Reset the Runtime._instance for subsequent test runs. Otherwise we will get
@@ -555,18 +658,19 @@ class BootstrapRunTest(IsolatedAsyncioTestCase):
         with testutil.patch_config_options({"server.headless": True}):
             bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
 
-    def test_bootstrap_run_in_existing_event_loop(self):
+    async def test_bootstrap_run_in_existing_event_loop(self):
         """Bootstrap run works within an existing event loop."""
-        import asyncio
-
-        event_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(event_loop)
         with testutil.patch_config_options({"server.headless": True}):
-
-            async def _run():
-                bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
-
-            event_loop.run_until_complete(_run())
+            bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
+            # When a loop is already running, run() schedules the server and
+            # returns. Await that task so serve_with_signal is not leaked.
+            bootstrap_tasks = [
+                task
+                for task in asyncio.all_tasks()
+                if task.get_name() == "bootstrap.run_server"
+            ]
+            assert bootstrap_tasks
+            await asyncio.gather(*bootstrap_tasks)
 
     def test_bootstrap_run_without_existing_event_loop(self):
         """Bootstrap run creates event loop when none exists."""
@@ -580,55 +684,130 @@ class BootstrapRunTest(IsolatedAsyncioTestCase):
 
 
 class BootstrapUvloopTest(TestCase):
-    def test_installs_uvloop_when_available(self):
-        """uvloop is installed as the default policy when present."""
+    def test_returns_uvloop_factory_when_available(self):
+        """uvloop's new_event_loop is used as the asyncio loop factory."""
         fake_uvloop = types.ModuleType("uvloop")
-        fake_uvloop.install = Mock()
+        fake_uvloop.new_event_loop = Mock(name="new_event_loop")
 
         with (
             patch.object(bootstrap.env_util, "IS_WINDOWS", False),
             patch.dict("sys.modules", {"uvloop": fake_uvloop}),
         ):
-            bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+            factory = bootstrap._get_uvloop_loop_factory()
 
-        fake_uvloop.install.assert_called_once()
+        assert factory is fake_uvloop.new_event_loop
 
-    def test_skips_install_when_loop_running(self):
-        """uvloop installation is skipped if a loop is already running."""
+    def test_returns_none_on_windows(self):
+        """uvloop is not used on Windows."""
         fake_uvloop = types.ModuleType("uvloop")
-        fake_uvloop.install = Mock()
-
-        with (
-            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
-            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
-        ):
-            bootstrap._maybe_install_uvloop(running_in_event_loop=True)
-
-        fake_uvloop.install.assert_not_called()
-
-    def test_skips_install_on_windows(self):
-        """uvloop installation is skipped on Windows."""
-        fake_uvloop = types.ModuleType("uvloop")
-        fake_uvloop.install = Mock()
+        fake_uvloop.new_event_loop = Mock()
 
         with (
             patch.object(bootstrap.env_util, "IS_WINDOWS", True),
             patch.dict("sys.modules", {"uvloop": fake_uvloop}),
         ):
-            bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+            assert bootstrap._get_uvloop_loop_factory() is None
 
-        fake_uvloop.install.assert_not_called()
+    def test_returns_none_when_uvloop_missing(self):
+        """Missing uvloop yields no loop factory."""
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": None}),
+        ):
+            assert bootstrap._get_uvloop_loop_factory() is None
 
-    def test_handles_missing_uvloop(self):
-        """Missing uvloop does not raise."""
-        with patch.object(bootstrap.env_util, "IS_WINDOWS", False):
-            with patch.dict("sys.modules", {"uvloop": None}):
-                bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+    def test_returns_none_when_new_event_loop_missing(self):
+        """An older uvloop without ``new_event_loop`` yields no loop factory."""
+        fake_uvloop = types.ModuleType("uvloop")
+
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+        ):
+            assert bootstrap._get_uvloop_loop_factory() is None
+
+    def test_run_server_loop_uses_runner_loop_factory(self):
+        """When uvloop can build a loop, the server uses loop_factory=uvloop."""
+        fake_loop = Mock(name="uvloop")
+        fake_factory = Mock(name="uvloop_factory", return_value=fake_loop)
+        mock_runner = Mock()
+        mock_runner.__enter__ = Mock(return_value=mock_runner)
+        mock_runner.__exit__ = Mock(return_value=False)
+        coro = Mock(name="main_coro")
+
+        with (
+            patch.object(
+                bootstrap, "_get_uvloop_loop_factory", return_value=fake_factory
+            ),
+            patch(
+                "streamlit.web.bootstrap.asyncio.Runner",
+                return_value=mock_runner,
+                create=True,
+            ) as mock_runner_cls,
+        ):
+            bootstrap._run_server_loop(coro)
+
+        fake_factory.assert_called_once_with()
+        mock_runner_cls.assert_called_once()
+        assert mock_runner_cls.call_args.kwargs["loop_factory"]() is fake_loop
+        mock_runner.run.assert_called_once_with(coro)
+
+    def test_run_server_loop_falls_back_when_factory_fails(self):
+        """A failing uvloop factory falls back to the default loop."""
+        coro = Mock(name="main_coro")
+        fake_factory = Mock(name="uvloop_factory", side_effect=RuntimeError("boom"))
+
+        with (
+            patch.object(
+                bootstrap, "_get_uvloop_loop_factory", return_value=fake_factory
+            ),
+            patch(
+                "streamlit.web.bootstrap.asyncio.Runner",
+                create=True,
+            ) as mock_runner_cls,
+            patch.object(bootstrap, "_try_install_uvloop") as mock_install,
+            patch("streamlit.web.bootstrap.asyncio.run") as mock_run,
+            patch.object(bootstrap._LOGGER, "warning") as mock_warning,
+        ):
+            bootstrap._run_server_loop(coro)
+
+        mock_runner_cls.assert_not_called()
+        mock_install.assert_not_called()
+        mock_run.assert_called_once_with(coro)
+        mock_warning.assert_called_once()
+
+    def test_run_server_loop_falls_back_to_asyncio_run(self):
+        """Without uvloop, the server uses the stdlib event loop."""
+        coro = Mock(name="main_coro")
+
+        with (
+            patch.object(bootstrap, "_get_uvloop_loop_factory", return_value=None),
+            patch.object(bootstrap, "_try_install_uvloop") as mock_install,
+            patch("streamlit.web.bootstrap.asyncio.run") as mock_run,
+        ):
+            bootstrap._run_server_loop(coro)
+
+        mock_install.assert_called_once()
+        mock_run.assert_called_once_with(coro)
+
+    def test_try_install_uvloop_skips_when_install_missing(self):
+        """uvloop without install() does not raise or warn."""
+        fake_uvloop = types.ModuleType("uvloop")
+
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+            patch.object(bootstrap._LOGGER, "warning") as mock_warning,
+        ):
+            bootstrap._try_install_uvloop()
+
+        mock_warning.assert_not_called()
 
 
 class BootstrapAsgiTest(IsolatedAsyncioTestCase):
     """Test bootstrap functions for ASGI app mode."""
 
+    @patch("streamlit.web.bootstrap._update_global_skills_in_background", Mock())
     @patch("streamlit.web.bootstrap.report_watchdog_availability")
     @patch("streamlit.web.bootstrap._install_config_watchers")
     @patch("streamlit.web.bootstrap._fix_sys_argv")
@@ -768,34 +947,23 @@ class BootstrapPydeckMapboxTest(TestCase):
     """Tests for _fix_pydeck_mapbox_api_warning."""
 
     def test_sets_mapbox_env_var_when_missing(self):
-        """Sets MAPBOX_API_KEY from config when env var is absent."""
-        env_without_key = {k: v for k, v in os.environ.items() if k != "MAPBOX_API_KEY"}
-        with (
-            patch.dict(os.environ, env_without_key, clear=True),
-            patch.object(
-                bootstrap.config, "get_option", return_value="cfg-token"
-            ) as mock_get_option,
-        ):
+        """Sets MAPBOX_API_KEY to empty when it is unset."""
+        with patch.dict(os.environ):
+            os.environ.pop("MAPBOX_API_KEY", None)
             bootstrap._fix_pydeck_mapbox_api_warning()
-            assert os.environ["MAPBOX_API_KEY"] == "cfg-token"
-
-        mock_get_option.assert_called_once_with("mapbox.token")
+            assert os.environ["MAPBOX_API_KEY"] == ""
 
     def test_does_not_overwrite_existing_mapbox_env_var(self):
         """Preserves an externally-set MAPBOX_API_KEY value."""
-        with (
-            patch.dict(os.environ, {"MAPBOX_API_KEY": "external"}, clear=False),
-            patch.object(bootstrap.config, "get_option") as mock_get_option,
-        ):
+        with patch.dict(os.environ, {"MAPBOX_API_KEY": "external"}):
             bootstrap._fix_pydeck_mapbox_api_warning()
             assert os.environ["MAPBOX_API_KEY"] == "external"
-
-        mock_get_option.assert_not_called()
 
 
 @patch("streamlit.web.bootstrap.prepare_streamlit_environment", Mock())
 @patch("streamlit.web.bootstrap._print_url", Mock())
 @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
+@patch("streamlit.web.bootstrap._update_global_skills_in_background", Mock())
 @patch("streamlit.web.bootstrap.cli_util.open_browser")
 class BootstrapOnServerStartBrowserTest(IsolatedAsyncioTestCase):
     """Tests for the maybe_open_browser path inside _on_server_start."""
@@ -918,3 +1086,94 @@ class BootstrapPrintUrlSpecificAddressTest(IsolatedAsyncioTestCase):
         # Should not also show the localhost/network URLs.
         assert "Local URL" not in out
         assert "Network URL" not in out
+
+
+@patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
+@patch("streamlit.web.bootstrap.prepare_streamlit_environment", Mock())
+@patch("streamlit.web.bootstrap._print_url", Mock())
+@patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
+@patch("streamlit.web.bootstrap._update_global_skills_in_background")
+def test_on_server_start_updates_global_skills(mock_update: Mock) -> None:
+    """Starting the server kicks off the background global skills update."""
+    bootstrap._on_server_start(Mock())
+
+    mock_update.assert_called_once_with()
+
+
+@patch("streamlit.web.bootstrap.report_watchdog_availability", Mock())
+@patch("streamlit.web.bootstrap._install_config_watchers", Mock())
+@patch("streamlit.web.bootstrap._fix_sys_argv", Mock())
+@patch("streamlit.web.bootstrap._fix_sys_path", Mock())
+@patch("streamlit.web.bootstrap._update_global_skills_in_background")
+def test_asgi_app_run_context_updates_global_skills(mock_update: Mock) -> None:
+    """Launching an st.App from the CLI also kicks off the global skills update."""
+    with patch.object(config, "_server_mode", None):
+        bootstrap._prepare_asgi_app_run_context("/path/to/main.py", [], {})
+
+    mock_update.assert_called_once_with()
+
+
+@patch_config_options({"server.headless": False})
+def test_global_skills_update_runs_in_a_daemon_thread() -> None:
+    """The update runs in a daemon thread, so it neither delays startup nor
+    blocks the process from exiting.
+    """
+    threads: list[threading.Thread] = []
+    real_thread = threading.Thread
+
+    def make_thread(*args: Any, **kwargs: Any) -> threading.Thread:
+        thread = real_thread(*args, **kwargs)
+        threads.append(thread)
+        return thread
+
+    with (
+        patch("streamlit.web.skills.update_global_skills") as mock_update,
+        patch.object(bootstrap.threading, "Thread", side_effect=make_thread),
+    ):
+        bootstrap._update_global_skills_in_background()
+        assert len(threads) == 1
+        threads[0].join(timeout=10)
+
+    assert threads[0].daemon
+    mock_update.assert_called_once_with()
+
+
+@patch_config_options({"server.headless": True})
+def test_headless_start_skips_global_skills_update() -> None:
+    """Headless starts, such as deployments and CI, never start the update."""
+    with patch.object(bootstrap.threading, "Thread") as mock_thread:
+        bootstrap._update_global_skills_in_background()
+
+    mock_thread.assert_not_called()
+
+
+@patch_config_options({"server.headless": False})
+def test_global_skills_update_errors_never_escape() -> None:
+    """Neither a failing update nor a thread that cannot start reaches the caller
+    or the thread exception hook.
+    """
+    with (
+        patch(
+            "streamlit.web.skills.update_global_skills",
+            side_effect=RuntimeError("boom"),
+        ),
+        patch.object(threading, "excepthook") as mock_excepthook,
+    ):
+        bootstrap._update_global_skills_in_background()
+        for thread in threading.enumerate():
+            if thread.name == "GlobalSkillsUpdate":
+                thread.join(timeout=10)
+
+    mock_excepthook.assert_not_called()
+
+    with (
+        patch.object(
+            bootstrap.threading, "Thread", side_effect=RuntimeError("can't start")
+        ),
+        patch.object(bootstrap, "_LOGGER") as mock_logger,
+    ):
+        bootstrap._update_global_skills_in_background()
+
+    mock_logger.debug.assert_called_once_with(
+        "Could not start the global skills update", exc_info=True
+    )

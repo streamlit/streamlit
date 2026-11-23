@@ -16,7 +16,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import { ensureError } from "./ErrorHandling"
+import { ensureError, formatRejectionMessage } from "./ErrorHandling"
 
 describe("ensureError", () => {
   it("returns the same Error instance when given an Error", () => {
@@ -55,5 +55,27 @@ describe("ensureError", () => {
     const result = ensureError({ reason: "nope" })
     expect(result).toBeInstanceOf(Error)
     expect(result.message).toBe("[object Object]")
+  })
+})
+
+describe("formatRejectionMessage", () => {
+  it("uses Error.toString for Error values", () => {
+    expect(formatRejectionMessage(new Error("boom"))).toBe("Error: boom")
+  })
+
+  it("returns strings unchanged", () => {
+    expect(formatRejectionMessage("Upload URLs failed")).toBe(
+      "Upload URLs failed"
+    )
+  })
+
+  it("uses the fallback for falsy values", () => {
+    expect(formatRejectionMessage(null)).toBe("Unknown error")
+    expect(formatRejectionMessage(undefined)).toBe("Unknown error")
+    expect(formatRejectionMessage("")).toBe("Unknown error")
+  })
+
+  it("stringifies other truthy values", () => {
+    expect(formatRejectionMessage(42)).toBe("42")
   })
 })

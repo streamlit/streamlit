@@ -15,7 +15,7 @@
  */
 import { createContext } from "react"
 
-import { BackendOperationClient } from "~lib/BackendOperationClient"
+import type { BackendOperationClient } from "~lib/BackendOperationClient"
 
 export interface BackendOperationContextProps {
   /** Client for making backend operation requests without triggering a script rerun. */

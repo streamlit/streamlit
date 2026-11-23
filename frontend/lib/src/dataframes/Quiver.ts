@@ -16,19 +16,21 @@
 
 // Private members use _.
 
-import { Field, Vector } from "apache-arrow"
+import { type Field, Vector } from "apache-arrow"
 
-import { ArrowData, IArrowData } from "@streamlit/protobuf"
-
-import { hashString } from "~lib/util/utils"
+import type { ArrowData } from "@streamlit/protobuf"
 
 import {
-  ColumnNames,
-  Data,
-  IndexData,
+  type ColumnNames,
+  type Data,
+  type IndexData,
   parseArrowIpcBytes,
 } from "./arrowParseUtils"
-import { ArrowType, DataFrameCellType, DataType } from "./arrowTypeUtils"
+import {
+  type ArrowType,
+  DataFrameCellType,
+  type DataType,
+} from "./arrowTypeUtils"
 
 /**
  * Pandas Styler data from proto message.
@@ -137,10 +139,10 @@ export class Quiver {
   /** [optional] Pandas Styler data. This will be defined if the user styled the dataframe. */
   private readonly _styler?: PandasStylerData
 
-  /** Number of bytes in the Arrow IPC bytes. */
-  private readonly _num_bytes: number
+  /** The Arrow IPC bytes this Quiver was parsed from. */
+  private readonly _bytes: Uint8Array
 
-  constructor(arrowData: IArrowData) {
+  constructor(arrowData: ArrowData.$Properties) {
     const {
       pandasIndexData,
       columnNames,
@@ -162,7 +164,7 @@ export class Quiver {
     this._dataColumnTypes = dataColumnTypes
     this._pandasIndexColumnTypes = pandasIndexColumnTypes
     this._styler = styler
-    this._num_bytes = arrowData.data?.length ?? 0
+    this._bytes = arrowData.data ?? new Uint8Array()
     this._columnTypes = this._pandasIndexColumnTypes.concat(
       this._dataColumnTypes
     )
@@ -210,24 +212,31 @@ export class Quiver {
   }
 
   /**
-   * A hash that identifies the underlying data.
+   * Whether `other` was parsed from byte-identical Arrow IPC data.
    *
-   * This hash is based on various descriptive information
-   * but is not 100% guaranteed to be unique.
+   * Two views of the same buffer region (for example, a chart re-delivered
+   * from the ForwardMsg cache) match without a scan. Otherwise the
+   * comparison stops at the first differing byte, so only identical data in
+   * a new buffer reads every byte.
    */
-  public get hash(): string {
-    // Calculate this at runtime for the eventual case that the underlying data changes.
-    const valuesToHash = [
-      this.dimensions.numColumns,
-      this.dimensions.numDataColumns,
-      this.dimensions.numDataRows,
-      this.dimensions.numIndexColumns,
-      this.dimensions.numHeaderRows,
-      this.dimensions.numRows,
-      this._num_bytes,
-      this._columnNames,
-    ]
-    return hashString(valuesToHash.join("-"))
+  public hasSameBytes(other: Quiver): boolean {
+    const bytes = this._bytes
+    const otherBytes = other._bytes
+    if (bytes.length !== otherBytes.length) {
+      return false
+    }
+    if (
+      bytes.buffer === otherBytes.buffer &&
+      bytes.byteOffset === otherBytes.byteOffset
+    ) {
+      return true
+    }
+    for (let i = 0; i < bytes.length; i++) {
+      if (bytes[i] !== otherBytes[i]) {
+        return false
+      }
+    }
+    return true
   }
 
   /** Return a single cell from an (Pandas) index- or data-column of the DataFrame.
@@ -272,6 +281,27 @@ export class Quiver {
     }
   }
 
+  /** Return a function that reads the raw values of a single data column.
+   *
+   * Use this to read every row of a column: the column is looked up once
+   * instead of on every `getCell` call, which matters for large tables.
+   *
+   * @param dataColumnIndex - The data column index (0 is the first data column, excluding index columns)
+   * @returns A function that takes a row index (0 is the first data row) and returns the cell's raw value. Row indexes are not range-checked.
+   */
+  public getDataColumnReader(
+    dataColumnIndex: number
+  ): (rowIndex: number) => DataType {
+    if (
+      dataColumnIndex < 0 ||
+      dataColumnIndex >= this._dataColumnTypes.length
+    ) {
+      throw new Error(`Data column index is out of range: ${dataColumnIndex}`)
+    }
+    const column = this._data.getChildAt(dataColumnIndex)
+    return rowIndex => column?.get(rowIndex) as DataType
+  }
+
   /** Get the raw value of an index cell.
    *
    * Index columns only exist if the DataFrame was created based on a Pandas DataFrame.
@@ -279,13 +309,15 @@ export class Quiver {
   private getIndexValue(rowIndex: number, columnIndex: number): DataType {
     const index = this._pandasIndexData[columnIndex]
     const value =
-      index instanceof Vector ? index.get(rowIndex) : index[rowIndex]
+      index instanceof Vector
+        ? (index.get(rowIndex) as DataType)
+        : index[rowIndex]
     return value
   }
 
   /** Get the raw value of a data cell. */
   private getDataValue(rowIndex: number, columnIndex: number): DataType {
-    return this._data.getChildAt(columnIndex)?.get(rowIndex)
+    return this._data.getChildAt(columnIndex)?.get(rowIndex) as DataType
   }
 }
 

@@ -32,7 +32,12 @@ from streamlit.elements.media import (
     _parse_start_time_end_time,
     marshall_video,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidParameterTypeError,
+    StreamlitInvalidWidthError,
+)
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -277,9 +282,9 @@ def test_marshall_av_media_raw_io_read_returns_none() -> None:
 
 @pytest.mark.parametrize("invalid_data", [42, 3.14, object()])
 def test_marshall_av_media_invalid_binary_type_raises(invalid_data: object) -> None:
-    """Unsupported data types should raise RuntimeError."""
+    """Unsupported data types should raise StreamlitInvalidParameterTypeError."""
     proto = VideoProto()
-    with pytest.raises(RuntimeError, match="Invalid binary data format"):
+    with pytest.raises(StreamlitInvalidParameterTypeError, match="Invalid `data` type"):
         _marshall_av_media("coord", proto, invalid_data, "video/mp4")  # type: ignore[arg-type]
 
 
@@ -321,7 +326,7 @@ def test_marshall_video_youtube_with_subtitles_raises() -> None:
     """Subtitles are rejected for YouTube iframe URLs."""
     proto = VideoProto()
     with pytest.raises(
-        StreamlitAPIException, match="Subtitles are not supported for YouTube"
+        StreamlitIncompatibleParametersError, match="data=<YouTube URL>"
     ):
         marshall_video(
             mock.Mock(),
@@ -338,9 +343,7 @@ def test_marshall_video_unsupported_subtitles_type_raises(
 ) -> None:
     """Reject subtitle containers that are not str, bytes, Path, BytesIO, or dict."""
     proto = VideoProto()
-    with pytest.raises(
-        StreamlitAPIException, match="Unsupported data type for subtitles"
-    ):
+    with pytest.raises(StreamlitInvalidParameterTypeError) as exc_info:
         marshall_video(
             mock.Mock(),
             "coord",
@@ -348,6 +351,7 @@ def test_marshall_video_unsupported_subtitles_type_raises(
             "https://example.com/video.mp4",
             subtitles=bad_subtitles,  # type: ignore[arg-type]
         )
+    assert exc_info.value.exec_kwargs["parameter"] == "subtitles"
 
 
 def test_parse_start_end_time_none_start_raises() -> None:

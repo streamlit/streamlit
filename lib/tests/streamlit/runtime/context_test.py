@@ -14,20 +14,29 @@
 
 from __future__ import annotations
 
+import operator
 import unittest
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.proto.ClientState_pb2 import ContextInfo
 from streamlit.runtime.context import (
+    _CONTEXT_KEYS,
+    ContextProxy,
     StreamlitCookies,
     StreamlitHeaders,
     StreamlitTheme,
     _get_client_context,
     _normalize_header,
 )
+from streamlit.runtime.pages_manager import PagesManager
+
+if TYPE_CHECKING:
+    from contextlib import AbstractContextManager
 
 
 def _create_mock_client_context(
@@ -134,6 +143,76 @@ class StContextTest(unittest.TestCase):
         mock_add_path.assert_called_once_with(
             "https://example.com/", mock_ctx.pages_manager
         )
+
+    def test_context_keys_match_public_properties(self) -> None:
+        """Allowlist must stay in sync with ContextProxy public properties."""
+        public_properties = {
+            name
+            for name, value in vars(ContextProxy).items()
+            if isinstance(value, property) and not name.startswith("_")
+        }
+        assert public_properties == _CONTEXT_KEYS
+
+    @parameterized.expand([(key,) for key in sorted(_CONTEXT_KEYS)])
+    @patch("streamlit.runtime.context.get_script_run_ctx")
+    @patch("streamlit.runtime.context._get_client_context")
+    def test_getitem_matches_attribute(
+        self,
+        property_name: str,
+        mock_get_client_context: MagicMock,
+        mock_get_script_run_ctx: MagicMock,
+    ) -> None:
+        """Bracket access returns the same populated value as attribute access."""
+        mock_get_client_context.return_value = _create_mock_client_context(
+            headers=[("host", "example.com")],
+            cookies={"session": "abc"},
+            remote_ip="8.8.8.8",
+        )
+        mock_context_info = MagicMock()
+        mock_context_info.timezone = "Europe/Berlin"
+        mock_context_info.timezone_offset = -120
+        mock_context_info.locale = "en-US"
+        mock_context_info.color_scheme = "dark"
+        mock_context_info.is_embedded = True
+        mock_context_info.url = "https://example.com/app"
+        mock_ctx = MagicMock()
+        mock_ctx.context_info = mock_context_info
+        mock_ctx.pages_manager.get_pages.return_value = {}
+        mock_get_script_run_ctx.return_value = mock_ctx
+
+        attr_value = getattr(st.context, property_name)
+        item_value = st.context[property_name]
+        if property_name in {"headers", "cookies"}:
+            assert item_value.to_dict() == attr_value.to_dict() != {}
+        elif property_name == "theme":
+            assert item_value.type == attr_value.type == "dark"
+        else:
+            assert item_value == attr_value
+            assert item_value is not None
+
+    def test_getitem_unknown_key(self) -> None:
+        """Unknown keys raise KeyError."""
+        with pytest.raises(KeyError, match=r'st.context has no key "not_a_property"'):
+            st.context["not_a_property"]
+
+    def test_contains_known_and_unknown_keys(self) -> None:
+        """Membership uses the public property allowlist."""
+        assert "timezone" in st.context
+        assert "theme" in st.context
+        assert "not_a_property" not in st.context
+
+    @patch("streamlit.runtime.context.get_script_run_ctx")
+    def test_contains_does_not_read_properties(
+        self, mock_get_script_run_ctx: MagicMock
+    ) -> None:
+        """Membership must not trigger property getters such as theme."""
+        assert "theme" in st.context
+        mock_get_script_run_ctx.assert_not_called()
+
+    def test_context_is_not_iterable(self) -> None:
+        """st.context is a property bag, not a sequence."""
+        with pytest.raises(TypeError):
+            iter(st.context)
 
     @parameterized.expand(
         [
@@ -391,3 +470,55 @@ class GetClientContextTest(unittest.TestCase):
         mock_runtime.get_instance.return_value = mock_instance
 
         assert _get_client_context() == mock_client_context
+
+
+def _patch_script_run_ctx(
+    context_info: ContextInfo, pages_manager: PagesManager | None = None
+) -> AbstractContextManager[MagicMock]:
+    """Patch the script context ``st.context`` reads to carry ``context_info``."""
+    ctx = MagicMock()
+    ctx.context_info = context_info
+    ctx.pages_manager = pages_manager or PagesManager("/fake/app.py")
+    return patch("streamlit.runtime.context.get_script_run_ctx", return_value=ctx)
+
+
+@pytest.mark.parametrize(
+    "attribute",
+    ["timezone", "timezone_offset", "locale", "url", "is_embedded", "theme.type"],
+)
+def test_unset_context_info_fields_read_none(attribute: str) -> None:
+    """A field the client did not send reads as None, not as the proto default."""
+    with _patch_script_run_ctx(ContextInfo()):
+        assert operator.attrgetter(attribute)(st.context) is None
+
+
+def test_explicit_falsy_context_info_fields_are_kept() -> None:
+    """A stated zero offset or non-embedded flag is a value, not a missing one."""
+    with _patch_script_run_ctx(ContextInfo(timezone_offset=0, is_embedded=False)):
+        assert st.context.timezone_offset == 0
+        assert st.context.is_embedded is False
+
+
+def test_set_url_is_still_rewritten_to_the_current_page() -> None:
+    """A stated URL gets the same page-path rewrite as a browser's."""
+    pages_manager = PagesManager("/fake/app.py")
+    pages_manager.set_pages_and_resolve(
+        {
+            "home_hash": {
+                "page_script_hash": "home_hash",
+                "script_path": "/fake/home.py",
+                "url_pathname": "home",
+            },
+            "report_hash": {
+                "page_script_hash": "report_hash",
+                "script_path": "/fake/report.py",
+                "url_pathname": "report",
+            },
+        }
+    )
+    pages_manager.set_current_page_script_hash("report_hash")
+
+    with _patch_script_run_ctx(
+        ContextInfo(url="https://example.com/app/home/"), pages_manager
+    ):
+        assert st.context.url == "https://example.com/app/report"

@@ -16,14 +16,16 @@
 
 import { useCallback, useRef, useState } from "react"
 
-import {
+import type {
   DataEditorProps,
   GridCell,
   GridMouseEventArgs,
 } from "@glideapps/glide-data-grid"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
-  BaseColumn,
+  type BaseColumn,
   hasTooltip,
   isErrorCell,
   isMissingValueCell,
@@ -86,7 +88,7 @@ function useTooltips(
       pendingTooltipRef.current = undefined
       setTooltip(undefined)
 
-      if ((args.kind === "header" || args.kind === "cell") && args.location) {
+      if (args.kind === "header" || args.kind === "cell") {
         const colIdx = args.location[0]
         const rowIdx = args.location[1]
         let tooltipContent: string | undefined
@@ -113,7 +115,7 @@ function useTooltips(
             // If the cell is an error cell, we don't need to check for required or missing values.
             tooltipContent = cell.errorDetails
           } else if (
-            column.isRequired &&
+            column.isRequired === true &&
             column.isEditable &&
             isMissingValueCell(cell)
           ) {
@@ -123,7 +125,7 @@ function useTooltips(
           }
         }
 
-        if (tooltipContent) {
+        if (!isNullOrEmptyString(tooltipContent)) {
           pendingTooltipRef.current = {
             content: tooltipContent,
             left: args.bounds.x + args.bounds.width / 2,

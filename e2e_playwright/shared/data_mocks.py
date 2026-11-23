@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import random
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from typing import NamedTuple
 
@@ -292,16 +292,14 @@ DATETIME_TYPES_DF = pd.DataFrame(
             (pd.to_datetime("2022-03-11 17:41:00-05:00")) for _ in range(8)
         ]
         + [None],
-        "datetime_UTC_TZ": [
-            random_date().replace(tzinfo=timezone.utc) for _ in range(8)
-        ]
+        "datetime_UTC_TZ": [random_date().replace(tzinfo=UTC) for _ in range(8)]
         + [None],
         # TODO: Mixed timezones within a column will force the column to be of type object
         # It also seems to not work correctly.
         "mixed_timezones": [
             random.choice(
                 [
-                    random_date().replace(tzinfo=timezone.utc),
+                    random_date().replace(tzinfo=UTC),
                     pd.to_datetime("2022-03-11 17:41:00-05:00"),
                     random_date(),
                 ]
@@ -377,6 +375,34 @@ PERIOD_TYPES_DF = pd.DataFrame(
             + [None]
         )
         for offset_type in _offset_types
+    }
+)
+
+
+# A pyarrow.Table has no pandas metadata, so only the Arrow types and extension
+# tags (pandas.period, pandas.interval) identify these columns.
+PYARROW_TABLE_TYPES = pa.table(
+    {
+        "decimal256": pa.array(
+            [
+                Decimal("-0.03864734299516908213"),
+                Decimal("1234.5"),
+                Decimal("-1.5"),
+            ],
+            pa.decimal256(42, 20),
+        ),
+        "period": pa.array(pd.period_range("2020-01", periods=3, freq="M")),
+        "period_category": pa.DictionaryArray.from_arrays(
+            pa.array([1, 0, 1], pa.int8()),
+            pa.array(pd.period_range("2020-01", periods=2, freq="M")),
+        ),
+        "interval": pa.array(pd.interval_range(0, 3)),
+        "interval_category": pa.array(pd.cut([0.5, 1.5, 2.5], bins=[0, 1, 2, 3])),
+        "date_category": pa.array(
+            [date(2024, 1, 2), date(2024, 1, 1), date(2024, 1, 2)]
+        ).dictionary_encode(),
+        "list_of_dicts": pa.array([[{"a": 1}], [{"a": 2}, {"a": 3}], []]),
+        "float_inf": pa.array([float("inf"), float("-inf"), 1.5]),
     }
 )
 

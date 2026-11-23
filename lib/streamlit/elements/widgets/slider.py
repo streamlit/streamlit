@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta, timezone, tzinfo
+from datetime import UTC, date, datetime, time, timedelta, tzinfo
 from numbers import Integral, Real
 from typing import (
     TYPE_CHECKING,
@@ -30,6 +30,7 @@ from typing import (
     overload,
 )
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
 from streamlit.elements.lib.layout_utils import create_layout_config
@@ -45,11 +46,12 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
-    StreamlitAPIException,
+    StreamlitInvalidMinMaxError,
     StreamlitInvalidParameterTypeError,
     StreamlitJSNumberBoundsError,
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
+    StreamlitValueError,
 )
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -116,7 +118,7 @@ SliderReturn: TypeAlias = (
 SECONDS_TO_MICROS: Final = 1000 * 1000
 DAYS_TO_MICROS: Final = 24 * 60 * 60 * SECONDS_TO_MICROS
 
-UTC_EPOCH: Final = datetime(1970, 1, 1, tzinfo=timezone.utc)
+UTC_EPOCH: Final = datetime(1970, 1, 1, tzinfo=UTC)
 
 SUPPORTED_TYPES: Final = {
     Integral: SliderProto.INT,
@@ -141,6 +143,10 @@ _MIN_SAFE_DAY: Final = (datetime(1970, 1, 1) - _SAFE_TIMELIKE_SPAN).date() + tim
 _MAX_SAFE_DAY: Final = (datetime(1970, 1, 1) + _SAFE_TIMELIKE_SPAN).date() - timedelta(
     days=1
 )
+
+
+def _int_to_float(value: Any) -> Any:
+    return float(value) if isinstance(value, Integral) else value
 
 
 def _time_to_datetime(time_: time) -> datetime:
@@ -211,7 +217,7 @@ def _datetime_to_micros(dt: datetime) -> int:
     # as it is in the given datetime object, we just set the tzinfo to UTC and
     # do not do any timezone conversions. Only the backend knows about
     # original timezone and will replace the UTC timestamp in the deserialization.
-    utc_dt = dt.replace(tzinfo=timezone.utc)
+    utc_dt = dt.replace(tzinfo=UTC)
     return _delta_to_micros(utc_dt - UTC_EPOCH)
 
 
@@ -304,8 +310,8 @@ class SliderSerde:
 
 
 class SliderMixin:
-    # If min/max/value/step are not provided, then we return an int.
-    # if ONLY step is provided, then it must be an int and we return an int.
+    # No bounds or value, and step omitted or an int: return an int.
+    # A float step is handled by the numeric overload below.
     @overload
     def slider(
         self,
@@ -647,6 +653,12 @@ class SliderMixin:
             - ``"accounting"``: Show in accounting format with parentheses for negatives.
             - ``"bytes"``: Show in byte units (e.g. ``1.2KB``).
 
+            If ``step`` is a whole number, the ``"dollar"``, ``"euro"``, and
+            ``"accounting"`` formats show whole amounts without decimals (e.g.
+            ``$1,234`` instead of ``$1,234.00``). Sliders with a fractional
+            ``step`` keep the decimals. To always show two decimals, use a
+            printf-style format string such as ``"$%,.2f"`` or ``"€%,.2f"``.
+
             For information about printf-style format strings, see
             `sprintf.js
             <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
@@ -790,8 +802,11 @@ class SliderMixin:
         Returns
         -------
         int/float/date/time/datetime or tuple of int/float/date/time/datetime
-            The current value of the slider widget. The return type will match
-            the data type of the value parameter.
+            The current value of the slider widget. The return type matches
+            the numeric or date/time type of ``value``, ``min_value``,
+            ``max_value``, and ``step``. Mixing ``int`` and ``float`` across
+            those arguments makes a float slider that returns ``float``
+            values.
 
         Examples
         --------
@@ -878,10 +893,9 @@ class SliderMixin:
     ) -> SliderReturn:
         key = to_key(key)
 
-        validate_on_change_mode(on_change)
-
-        on_change_callback: WidgetCallback | None = (
-            on_change if callable(on_change) else None
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
         )
 
         check_widget_policies(
@@ -939,9 +953,17 @@ class SliderMixin:
             # type mismatch — listing list/tuple as expected types would
             # contradict the provided type.
             if isinstance(value, (list, tuple)):
-                raise StreamlitAPIException(
-                    "Slider value should either be an int/float/datetime or a "
-                    "list/tuple of 0 to 2 ints/floats/datetimes"
+                raise StreamlitValueError(
+                    "value",
+                    [
+                        "int",
+                        "float",
+                        "date",
+                        "time",
+                        "datetime",
+                        "a list containing up to two such values",
+                        "a tuple containing up to two such values",
+                    ],
                 )
             raise StreamlitInvalidParameterTypeError(
                 "value",
@@ -951,6 +973,18 @@ class SliderMixin:
 
         # Simplify future logic by always making value a list
         prepared_value: Sequence[SliderScalar] = [value] if single_value else value  # ty: ignore[invalid-assignment]
+
+        # Mixing ints and floats makes a float slider, so an int default taken
+        # from data (value=25) works with float bounds (max_value=60.0).
+        value_and_bounds = [*prepared_value, min_value, max_value, step]
+        if all(a is None or isinstance(a, Real) for a in value_and_bounds) and any(
+            isinstance(a, Real) and not isinstance(a, Integral)
+            for a in value_and_bounds
+        ):
+            prepared_value = [_int_to_float(v) for v in prepared_value]
+            min_value = _int_to_float(min_value)
+            max_value = _int_to_float(max_value)
+            step = _int_to_float(step)
 
         def value_to_generic_type(v: Any) -> SliderProto.DataType.ValueType:
             if isinstance(v, Integral):
@@ -1030,17 +1064,28 @@ class SliderMixin:
             max_value = defaults[data_type]["max_value"]
         if step is None:
             step = defaults[data_type]["step"]
+            # Use the absolute span so reversed date/datetime bounds still get
+            # a one-day step when the range is a day or more.
             if data_type in {
                 SliderProto.DATETIME,
                 SliderProto.DATE,
-            } and max_value - min_value < timedelta(days=1):
+            } and abs(max_value - min_value) < timedelta(days=1):
                 step = timedelta(minutes=15)
         if format is None:
             format = cast("str", defaults[data_type]["format"])  # noqa: A001
 
-        if step == 0:
-            raise StreamlitAPIException(
-                "Slider components cannot be passed a `step` of 0."
+        if isinstance(step, timedelta):
+            if step == timedelta(0):
+                raise StreamlitValueError(
+                    "step",
+                    ["a timedelta"],
+                    detail="Zero is not allowed.",
+                )
+        elif step == 0:
+            raise StreamlitValueError(
+                "step",
+                ["a number"],
+                detail="Zero is not allowed.",
             )
 
         # Ensure that all arguments are of the same type.
@@ -1079,8 +1124,9 @@ class SliderMixin:
             )
 
         # Ensure that min <= value(s) <= max, adjusting the bounds as necessary.
-        min_value = min(min_value, max_value)
-        max_value = max(min_value, max_value)
+        # Swap min and max when the caller passed them reversed.
+        if min_value > max_value:
+            min_value, max_value = max_value, min_value
         if len(prepared_value) == 1:
             min_value = min(prepared_value[0], min_value)
             max_value = max(prepared_value[0], max_value)
@@ -1096,8 +1142,13 @@ class SliderMixin:
             # Empty list, so let's just use the outer bounds
             prepared_value = [min_value, max_value]
 
+        # The effective bounds and step in their own types, for the agent API:
+        # below, dates and times become microseconds, which is the wire format
+        # rather than anything a client could compare a date against.
+        described_bounds = (min_value, max_value, step)
+
         # Bounds checks. JSNumber produces human-readable exceptions that
-        # we simply re-package as StreamlitAPIExceptions.
+        # we re-raise as StreamlitJSNumberBoundsError.
         # (We check `min_value` and `max_value` here; `value` and `step` are
         # already known to be in the [min_value, max_value] range.)
         # Timelike bounds are checked further down instead, after the conversion to
@@ -1135,10 +1186,7 @@ class SliderMixin:
         # The frontend will error if the values are equal, so checking here
         # lets us produce a nicer python error message and stack trace.
         if min_value == max_value:
-            raise StreamlitAPIException(
-                "Slider `min_value` must be less than the `max_value`."
-                f"\nThe values were {min_value} and {max_value}."
-            )
+            raise StreamlitInvalidMinMaxError(min_value, max_value)
 
         # Now, convert to microseconds (so we can serialize datetime to a long)
         if data_type in TIMELIKE_TYPES:
@@ -1167,7 +1215,7 @@ class SliderMixin:
                 ("`max_value`", max_value),
             ):
                 if abs(micros) > JSNumber.MAX_SAFE_INTEGER:
-                    raise StreamlitAPIException(
+                    raise StreamlitJSNumberBoundsError(
                         f"{name} is too far from 1970 for Streamlit to represent "
                         "exactly. Use a value between "
                         f"{_MIN_SAFE_DAY:%Y-%m-%d} and "
@@ -1268,12 +1316,36 @@ class SliderMixin:
             slider_proto.set_value = True
 
         layout_config = create_layout_config(width=width)
+        # Times and datetimes are reported without an offset, which the
+        # standard `time` and `date-time` formats require.
+        value_item = {
+            SliderProto.INT: agent_spec.INTEGER,
+            SliderProto.FLOAT: agent_spec.NUMBER,
+            SliderProto.DATE: agent_spec.DATE,
+        }.get(data_type, agent_spec.STRING)
 
         self.dg._enqueue(
             "slider",
             slider_proto,
             layout_config=layout_config,
             has_one_shot_effect=widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "slider",
+                key=element_id,
+                action="value",
+                value_schema=value_item
+                if single_value
+                else agent_spec.range_of(value_item),
+                label=label,
+                min_value=described_bounds[0],
+                max_value=described_bounds[1],
+                step=described_bounds[2],
+                format=format,
+                help=slider_proto.help or None,
+                disabled=disabled,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
         return cast("SliderReturn", widget_state.value)
 

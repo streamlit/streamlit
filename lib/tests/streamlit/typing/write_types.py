@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, Any, assert_type
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
@@ -86,13 +84,13 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # unsafe_allow_html must be a bool
-    write("Text", unsafe_allow_html="yes")  # type: ignore[arg-type]
+    write("Text", unsafe_allow_html="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # cursor must be str or None
-    write_stream(text_generator, cursor=123)  # type: ignore[arg-type]
+    write_stream(text_generator, cursor=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # cursor is keyword-only, cannot be passed positionally
-    write_stream(text_generator, "▌")  # type: ignore[call-arg]
+    write_stream(text_generator, "▌")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
 
     # stream must be a Callable, Generator, Iterable, or AsyncGenerator
-    write_stream(123)  # type: ignore[arg-type]
+    write_stream(123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

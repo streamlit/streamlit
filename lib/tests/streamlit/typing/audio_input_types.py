@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform type checking tests for st.audio_input
 # The return type is always UploadedFile | None
@@ -119,6 +117,8 @@ if TYPE_CHECKING:
         UploadedFile | None,
     )
     assert_type(audio_input("Record audio", on_change=None), UploadedFile | None)
+    assert_type(audio_input("Record audio", on_change="rerun"), UploadedFile | None)
+    assert_type(audio_input("Record audio", on_change="ignore"), UploadedFile | None)
 
     # =====================================================================
     # Test with all parameters combined

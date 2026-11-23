@@ -15,9 +15,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, TextIO, TypeAlias, TypedDict
-
-from typing_extensions import NotRequired
+from typing import TYPE_CHECKING, NotRequired, TextIO, TypeAlias, TypedDict
 
 from streamlit.string_util import extract_leading_emoji
 
@@ -36,6 +34,7 @@ class PageInfo(TypedDict):
     icon: NotRequired[Icon]
     page_name: NotRequired[PageName]
     url_pathname: NotRequired[str]
+    help: NotRequired[str]
 
 
 def open_python_file(filename: str) -> TextIO:

@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
+
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import AlertContainer, {
-  Kind,
+  type Kind,
 } from "~lib/components/shared/AlertContainer/AlertContainer"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
@@ -48,16 +50,18 @@ function AlertElement({
   kind,
 }: Readonly<AlertElementProps>): ReactElement {
   const theme = useEmotionTheme()
+  const hasIcon = !isNullOrEmptyString(icon)
+  const hasTitle = !isNullOrEmptyString(title)
 
   // Fix issue #6394 - Need to account for icon size (iconSizes.lg) + gap when icon present.
   // Only needed for the no-title layout where icon and body are side by side in a flex row.
   // In the title layout, StyledAlertTitle already constrains width via flexbox.
-  const markdownWidth = icon
+  const markdownWidth = hasIcon
     ? { width: `calc(100% - (${theme.iconSizes.lg} + ${theme.spacing.sm}))` }
     : undefined
 
   // Extract icon element to avoid duplication between title and no-title layouts.
-  const iconElement = icon ? (
+  const iconElement = hasIcon ? (
     <StyledAlertIcon>
       <DynamicIcon iconValue={icon} size="lg" testid="stAlertDynamicIcon" />
     </StyledAlertIcon>
@@ -68,8 +72,8 @@ function AlertElement({
   return (
     <div className="stAlert" data-testid="stAlert">
       <AlertContainer kind={kind}>
-        <StyledAlertContent $hasTitle={!!title}>
-          {title ? (
+        <StyledAlertContent $hasTitle={hasTitle}>
+          {hasTitle ? (
             <>
               <StyledAlertHeader>
                 {iconElement}

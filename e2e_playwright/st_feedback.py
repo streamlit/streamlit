@@ -67,8 +67,8 @@ test_fragment()
 
 if st.button("Create some elements to unmount component"):
     for _ in range(3):
-        # The sleep here is needed, because it won't unmount the
-        # component if this is too fast.
+        # The sleep lets the browser render each element on its own, so the
+        # component below is displaced (and kept mounted) before it is re-emitted.
         time.sleep(1)
         st.write("Another element")
 
@@ -119,3 +119,33 @@ else:
         options="stars",
     )
     st.write("Initial feedback value:", dyn_val)
+
+# --- on_change="ignore" feedback ---
+# Reuse the run counter above so the ignore-mode test can detect an unexpected rerun.
+ignore_feedback = st.feedback(
+    "thumbs",
+    key="ignore_feedback",
+    on_change="ignore",
+)
+st.write("Ignore feedback value:", ignore_feedback)
+
+if st.button("Apply ignore feedback", key="apply_ignore_feedback"):
+    st.write("Applied ignore feedback value:", ignore_feedback)
+
+# Clearing a non-null default must buffer None until the next rerun, rather
+# than falling back to the default when the empty-string wire value arrives.
+ignore_default_feedback = st.feedback(
+    "thumbs",
+    key="ignore_feedback_default",
+    default=1,
+    on_change="ignore",
+)
+st.write("Ignore default feedback value:", ignore_default_feedback)
+
+if st.button("Apply ignore default feedback", key="apply_ignore_default_feedback"):
+    st.write("Applied ignore default feedback value:", ignore_default_feedback)
+
+bound_feedback = st.feedback(
+    "stars", key="bound_rating", default=2, bind="query-params"
+)
+st.write("Bound feedback value:", bound_feedback)

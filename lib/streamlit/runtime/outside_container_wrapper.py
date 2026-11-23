@@ -38,9 +38,14 @@ class OutsideContainerWrapper:
     creating_fragment_id : str | None
         The fragment whose scope created the outside container (``None`` for the
         main script). Drives per-fragment eviction when that scope reruns.
+    agent_props : str or None
+        The agent description sent with the wrapper block. Retained so a
+        fragment rerun re-emits it. ``None`` when the creating session was not
+        recording.
     """
 
     delta_generator: DeltaGenerator
     creation_delta_path: list[int]
     block_proto: Block_pb2.Block
     creating_fragment_id: str | None
+    agent_props: str | None = None

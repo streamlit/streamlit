@@ -15,9 +15,9 @@
  */
 
 import {
-  FC,
-  ProfilerOnRenderCallback,
-  PropsWithChildren,
+  type FC,
+  type ProfilerOnRenderCallback,
+  type PropsWithChildren,
   Profiler as ReactProfiler,
 } from "react"
 
@@ -44,15 +44,13 @@ const handleRender: ProfilerOnRenderCallback = (
   startTime,
   commitTime
 ) => {
-  window.__streamlit_profiles__ = window.__streamlit_profiles__ || {}
+  window.__streamlit_profiles__ ??= {}
 
-  window.__streamlit_profiles__[id] =
-    window.__streamlit_profiles__[id] ||
-    // Use a CircularBuffer to limit the number of profiles stored in memory to
-    // prevent any potential memory leaks.
-    // 1000 is an arbitrary number that should be enough to store more than
-    // enough entries for debugging purposes without consuming too much memory.
-    new CircularBuffer<(typeof window.__streamlit_profiles__)[string]>(1000)
+  if (!Object.hasOwn(window.__streamlit_profiles__, id)) {
+    // Bound the history so a long session cannot retain every commit.
+    // 1000 entries is enough for performance debugging.
+    window.__streamlit_profiles__[id] = new CircularBuffer(1000)
+  }
 
   window.__streamlit_profiles__[id].push({
     phase,

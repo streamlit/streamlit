@@ -93,7 +93,12 @@ jobs:
         run: make python-lint
         env:
           RUFF_OUTPUT_FORMAT: github
+      # NumPy >=2.5 stubs use Python 3.12 syntax, and mypy/ty type-check as 3.11,
+      # so interpreters that install that floor skip make python-types. Keep
+      # this condition aligned with the numpy>=2.5 marker in pyproject.toml
+      # (Python 3.15 today). 3.11-3.14 still run the type checkers.
       - name: Run Type Checkers
+        if: env.PYTHON_VERSION != '3.15'
         run: make python-types
         env:
           TY_OUTPUT_FORMAT: github
@@ -102,7 +107,7 @@ jobs:
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
       - name: Upload coverage data
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage_data_${{ matrix.python_version }}
           path: ${{ env.COVERAGE_FILE }}
@@ -142,7 +147,7 @@ jobs:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
       - name: Upload coverage data
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage_data_integration
           path: ${{ env.COVERAGE_FILE }}
@@ -153,9 +158,7 @@ jobs:
     needs:
       - build_info
 
-    # The min pillow version we support in Streamlit cannot be installed on
-    # Ubuntu 24 -> thats why we use Ubuntu 22.04 here instead.
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
@@ -244,7 +247,7 @@ jobs:
         env:
           UV_NO_SYNC: 1
       - name: Upload coverage data
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage_data_min_deps
           path: ${{ env.COVERAGE_FILE }}
@@ -272,12 +275,12 @@ jobs:
           submodules: "recursive"
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
 
       - name: Download all coverage files
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: coverage_data_*
           merge-multiple: true
@@ -292,6 +295,12 @@ jobs:
 
           # Generate JSON report
           python -m coverage json -o coverage.json
+
+          # Cobertura XML for GitHub's code coverage API. coverage.py writes
+          # filenames relative to the `streamlit` source package, so prefix
+          # them to make them repo-root relative.
+          python -m coverage xml -o coverage.xml
+          sed -i 's| filename="| filename="lib/streamlit/|g' coverage.xml
 
           # Generate HTML report
           python -m coverage html --directory=htmlcov
@@ -309,22 +318,28 @@ jobs:
         working-directory: lib
 
       - name: Upload combined coverage data
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: combined_coverage_data
           path: lib/.coverage
           include-hidden-files: true
       - name: Upload combined coverage JSON
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: combined_coverage_json
           path: lib/coverage.json
       - name: Upload combined coverage HTML report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: combined_coverage_report
           path: lib/htmlcov
           retention-days: 14
+      - name: Upload Cobertura coverage artifact
+        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cobertura_coverage_python
+          path: lib/coverage.xml
 
       - name: Find latest develop coverage
         if: github.event_name == 'pull_request'
@@ -336,7 +351,7 @@ jobs:
 
       - name: Download develop coverage
         if: github.event_name == 'pull_request' && steps.get-latest-run.outputs.run_id != ''
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           repository: streamlit/streamlit
           run-id: ${{ steps.get-latest-run.outputs.run_id }}
@@ -447,3 +462,27 @@ jobs:
               console.error(`Error checking coverage changes: ${error.message}`);
               throw error;
             }
+
+  upload-coverage-python:
+    needs:
+      - py-coverage-report
+    # Nightly and release runs call this workflow with their own event, and
+    # the action would attribute their coverage to the wrong commit.
+    if: ${{ !cancelled() && needs.py-coverage-report.result == 'success' && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      code-quality: write
+    steps:
+      - name: Download Cobertura coverage artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: cobertura_coverage_python
+      - uses: actions/upload-code-coverage@2b21a77928be8d5168c2b9581a67f2adbebacc52 # v1.4.4
+        with:
+          file: coverage.xml
+          language: Python
+          label: coverage.py
+          # This upload supplements the existing coverage reports, so an API
+          # outage shouldn't fail develop runs that later serve as baselines.
+          fail-on-error: false

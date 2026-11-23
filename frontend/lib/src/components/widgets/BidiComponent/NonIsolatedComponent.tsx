@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo, useRef, useState } from "react"
+import { type FC, memo, useRef, useState } from "react"
 
 import ErrorElement from "~lib/components/shared/ErrorElement/ErrorElement"
 import { useHandleHtmlAndCssContent } from "~lib/components/widgets/BidiComponent/hooks/useHandleHtmlAndCssContent"

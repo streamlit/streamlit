@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { render } from "~lib/test_util"
@@ -31,21 +31,41 @@ const SAMPLE_SVG_WITH_DIMENSIONS =
 
 const mockWriteText = vi.fn().mockResolvedValue(undefined)
 
+// One module mock for the whole file. Vitest 5.1 keeps a mocked "mermaid"
+// module cached, so a later vi.doMock does not replace it.
+const mermaidMock = vi.hoisted(() => ({
+  importError: null as Error | null,
+  initialize: vi.fn(),
+  render: vi.fn(),
+}))
+
+vi.mock("mermaid", () => ({
+  get default(): {
+    initialize: ReturnType<typeof vi.fn>
+    render: ReturnType<typeof vi.fn>
+  } {
+    if (mermaidMock.importError) {
+      throw mermaidMock.importError
+    }
+    return {
+      initialize: mermaidMock.initialize,
+      render: mermaidMock.render,
+    }
+  },
+}))
+
 function mockMermaidSuccess(svg = SAMPLE_SVG_WITH_VIEWBOX): {
   initialize: ReturnType<typeof vi.fn>
   render: ReturnType<typeof vi.fn>
 } {
-  const initialize = vi.fn()
-  const renderFn = vi.fn().mockResolvedValue({ svg })
-
-  vi.doMock("mermaid", () => ({
-    default: {
-      initialize,
-      render: renderFn,
-    },
-  }))
-
-  return { initialize, render: renderFn }
+  mermaidMock.importError = null
+  mermaidMock.initialize.mockReset()
+  mermaidMock.render.mockReset()
+  mermaidMock.render.mockResolvedValue({ svg })
+  return {
+    initialize: mermaidMock.initialize,
+    render: mermaidMock.render,
+  }
 }
 
 async function waitForChartImage(): Promise<HTMLElement> {
@@ -72,16 +92,17 @@ async function waitForMermaidError(): Promise<HTMLElement> {
 
 function stubImageLoad(mode: "load" | "error"): void {
   class MockImage {
-    onload: ((this: MockImage, ev: Event) => void) | null = null
-    onerror: ((this: MockImage, ev: Event) => void) | null = null
     naturalWidth = mode === "load" ? 200 : 0
     naturalHeight = mode === "load" ? 100 : 0
+    private readonly listeners = new Map<string, ((ev: Event) => void)[]>()
+    addEventListener(type: string, listener: (ev: Event) => void): void {
+      const existing = this.listeners.get(type) ?? []
+      existing.push(listener)
+      this.listeners.set(type, existing)
+    }
     set src(_value: string) {
-      if (mode === "load") {
-        this.onload?.(new Event("load"))
-      } else {
-        this.onerror?.(new Event("error"))
-      }
+      const event = new Event(mode)
+      this.listeners.get(mode)?.forEach(listener => listener(event))
     }
   }
   vi.stubGlobal("Image", MockImage)
@@ -96,6 +117,10 @@ describe("MermaidChart", () => {
   )
 
   beforeEach(() => {
+    mermaidMock.importError = null
+    mermaidMock.initialize.mockReset()
+    mermaidMock.render.mockReset()
+    mermaidMock.render.mockResolvedValue({ svg: SAMPLE_SVG_WITH_VIEWBOX })
     global.URL.createObjectURL = vi.fn(() => "blob:mermaid-test")
     global.URL.revokeObjectURL = vi.fn()
     mockWriteText.mockClear()
@@ -106,7 +131,6 @@ describe("MermaidChart", () => {
   })
 
   afterEach(() => {
-    vi.doUnmock("mermaid")
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
     if (originalClipboardDescriptor) {
@@ -120,14 +144,13 @@ describe("MermaidChart", () => {
     }
   })
 
-  it("renders loading skeleton initially and error element is not present", () => {
+  it("renders loading skeleton initially and error element is not present", async () => {
     // Keep mermaid pending so loading UI stays visible for this assertion.
-    vi.doMock("mermaid", () => ({
-      default: {
-        initialize: vi.fn(),
-        render: vi.fn().mockReturnValue(new Promise(() => {})),
-      },
-    }))
+    let resolveRender: (value: { svg: string }) => void = () => {}
+    const pendingRender = new Promise<{ svg: string }>(resolve => {
+      resolveRender = resolve
+    })
+    mermaidMock.render.mockReturnValue(pendingRender)
 
     render(<MermaidChart source="graph TD\nA-->B" />)
     expect(screen.getByTestId("stMermaidChart")).toBeVisible()
@@ -142,13 +165,18 @@ describe("MermaidChart", () => {
     expect(screen.queryByTestId("stSkeletonElement")).not.toBeInTheDocument()
     // Negative assertion: error element should not be present during loading
     expect(screen.queryByTestId("stMermaidError")).not.toBeInTheDocument()
+
+    // Settle the render so a later test does not join a hung mermaid.render().
+    await act(async () => {
+      resolveRender({ svg: SAMPLE_SVG_WITH_VIEWBOX })
+      await pendingRender
+    })
   })
 
   it("shows error state when mermaid import fails", async () => {
-    // Mock the dynamic import to reject
-    vi.doMock("mermaid", () => {
-      throw new Error("Failed to load mermaid")
-    })
+    // The cached module cannot be replaced per test on Vitest 5.1. Throwing
+    // from the default export is the failure the component catches.
+    mermaidMock.importError = new Error("Failed to load mermaid")
 
     render(<MermaidChart source="graph TD\nA-->B" />)
 
@@ -158,12 +186,7 @@ describe("MermaidChart", () => {
   })
 
   it("shows a generic error message when render rejects with a non-Error", async () => {
-    vi.doMock("mermaid", () => ({
-      default: {
-        initialize: vi.fn(),
-        render: vi.fn().mockRejectedValue("boom"),
-      },
-    }))
+    mermaidMock.render.mockRejectedValue("boom")
 
     render(<MermaidChart source="graph TD\nA-->B" />)
 
@@ -188,6 +211,9 @@ describe("MermaidChart", () => {
 
     const config = initialize.mock.calls[0][0]
     expect(config.securityLevel).toBe("strict")
+    // Mermaid 12's per-diagram default is the neo skin. Pin classic so the
+    // Streamlit palette stays flat; front matter can still override `look`.
+    expect(config.look).toBe("classic")
     // Locked set must include Mermaid defaults plus Streamlit hardening keys.
     expect(config.secure).toEqual([
       // Mermaid defaults
@@ -244,6 +270,44 @@ describe("MermaidChart", () => {
 
     it.each([
       {
+        name: "Streamlit stAlt marker before diagram type",
+        source: [
+          "%% stAlt: Streamlit taxonomy",
+          "mindmap",
+          "root((App))",
+        ].join("\n"),
+        expectedAlt: "Streamlit taxonomy",
+      },
+      {
+        name: "Streamlit stAlt marker after diagram type",
+        source: [
+          "mindmap",
+          "%% stAlt: Streamlit taxonomy",
+          "root((App))",
+        ].join("\n"),
+        expectedAlt: "Streamlit taxonomy",
+      },
+      {
+        name: "stAlt preferred over accTitle",
+        source: [
+          "flowchart TD",
+          "%% stAlt: From Streamlit",
+          "accTitle: From Mermaid",
+          "A-->B",
+        ].join("\n"),
+        expectedAlt: "From Streamlit",
+      },
+      {
+        name: "empty stAlt does not capture the next line",
+        source: [
+          "%% stAlt:",
+          "accTitle: Checkout",
+          "flowchart TD",
+          "A-->B",
+        ].join("\n"),
+        expectedAlt: "Checkout",
+      },
+      {
         name: "title and description",
         source: [
           "flowchart TD",
@@ -279,15 +343,12 @@ describe("MermaidChart", () => {
         ].join("\n"),
         expectedAlt: "First line Second line",
       },
-    ])(
-      "uses $name from accessibility directives",
-      async ({ source, expectedAlt }) => {
-        render(<MermaidChart source={source} />)
+    ])("uses $name for the image alt", async ({ source, expectedAlt }) => {
+      render(<MermaidChart source={source} />)
 
-        const img = await waitForChartImage()
-        expect(img).toHaveAttribute("alt", expectedAlt)
-      }
-    )
+      const img = await waitForChartImage()
+      expect(img).toHaveAttribute("alt", expectedAlt)
+    })
 
     it.each([
       {
@@ -343,7 +404,7 @@ describe("MermaidChart", () => {
       // Toolbar is opacity:0 until hover; fireEvent avoids userEvent visibility checks.
       // eslint-disable-next-line testing-library/prefer-user-event -- opacity:0 toolbar blocks userEvent
       fireEvent.click(
-        screen.getByRole("button", { name: "Copy to clipboard" })
+        screen.getByRole("button", { name: /Copy to clipboard/ })
       )
 
       await waitFor(() => {
@@ -356,12 +417,64 @@ describe("MermaidChart", () => {
       await waitForChartImage()
 
       // Toolbar is opacity:0 until hover — presence in the DOM is enough.
+      // Unlabeled diagrams keep generic chrome names (author alt only).
       expect(
-        screen.getByRole("button", { name: "Download as PNG" })
+        screen.getByRole("button", { name: /^Download as PNG$/ })
       ).toBeInTheDocument()
       expect(
-        screen.getByRole("button", { name: "Copy to clipboard" })
+        screen.getByRole("button", { name: /^Copy to clipboard$/ })
       ).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: /^Fullscreen$/ })
+      ).toBeInTheDocument()
+    })
+
+    it("composes an author-provided diagram name into toolbar aria-labels", async () => {
+      const source = ["flowchart TD", "%% stAlt: Checkout flow", "A-->B"].join(
+        "\n"
+      )
+      render(<MermaidChart source={source} />)
+      await waitForChartImage()
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Download as PNG: Checkout flow$/,
+        })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Checkout flow$/,
+        })
+      ).toBeInTheDocument()
+    })
+
+    it("drops author context from the accessible name while showing Copied", async () => {
+      const source = ["flowchart TD", "%% stAlt: Checkout flow", "A-->B"].join(
+        "\n"
+      )
+      render(<MermaidChart source={source} />)
+      await waitForChartImage()
+
+      // Toolbar is opacity:0 until hover; fireEvent avoids userEvent visibility checks.
+      // eslint-disable-next-line testing-library/prefer-user-event -- opacity:0 toolbar blocks userEvent
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: /^Copy to clipboard: Checkout flow$/,
+        })
+      )
+
+      await waitFor(() => {
+        expect(mockWriteText).toHaveBeenCalledWith(source)
+      })
+
+      expect(
+        await screen.findByRole("button", { name: /^Copied$/ })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: /Copied: Checkout flow/,
+        })
+      ).not.toBeInTheDocument()
     })
 
     it("downloads a PNG when the download toolbar action succeeds", async () => {
@@ -385,7 +498,7 @@ describe("MermaidChart", () => {
       await waitForChartImage()
 
       // eslint-disable-next-line testing-library/prefer-user-event -- opacity:0 toolbar blocks userEvent
-      fireEvent.click(screen.getByRole("button", { name: "Download as PNG" }))
+      fireEvent.click(screen.getByRole("button", { name: /Download as PNG/ }))
 
       await waitFor(() => {
         expect(anchorClick).toHaveBeenCalled()
@@ -404,9 +517,9 @@ describe("MermaidChart", () => {
       await waitForChartImage()
 
       // eslint-disable-next-line testing-library/prefer-user-event -- opacity:0 toolbar blocks userEvent
-      fireEvent.click(screen.getByRole("button", { name: "Download as PNG" }))
+      fireEvent.click(screen.getByRole("button", { name: /Download as PNG/ }))
 
-      // onerror is synchronous via the MockImage setter; no download link click.
+      // load/error listeners are synchronous via the MockImage setter; no download link click.
       expect(anchorClick).not.toHaveBeenCalled()
     })
   })

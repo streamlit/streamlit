@@ -24,7 +24,7 @@ st.html("<style>.stButton button { background: #0969da; }</style>")
 primaryColor = "#0969da"
 ```
 
-Read `theme.md` for the full option set, ready-made theme configs, and the narrow escape hatch for when the user explicitly asks for CSS.
+Read `theme.md` — start with **Choose a config shape** and the **Cheat sheet**. Use deeper sections and templates when the ask needs them. CSS only when the user explicitly asks.
 
 ## Page config
 
@@ -32,7 +32,7 @@ Set browser tab title, icon, and layout. Place this at the top of your script to
 
 ```python
 st.set_page_config(
-    page_title="My Dashboard",
+    page_title="My dashboard",
     page_icon=":material/analytics:",
     layout="wide",  # Use "wide" for dashboards with lots of data
 )
@@ -104,7 +104,10 @@ Avoid the old verbose syntax:
 st.markdown(":orange-background[:orange[Pending]]")
 ```
 
-## Spacing: remove dividers
+## Spacing
+
+- **Page / sidebar chrome:** `paddingTop` (gap under the header, or before the first sidebar widget) and `paddingBottom` (bottom inset) in `.streamlit/config.toml` — see Content padding in `theme.md`. Do not inject CSS for `.block-container`.
+- **Between widgets or sections:** see below (and `layouts.md` for container `gap`).
 
 Dividers (`st.divider()` or `---`) look heavy. Just remove them—Streamlit's default spacing is usually enough.
 
@@ -172,7 +175,7 @@ Use `text_alignment` for text elements:
 
 ```python
 st.title("Centered title", text_alignment="center")
-st.write("Right aligned", text_alignment="right")
+st.markdown("Right aligned", text_alignment="right")
 st.caption("Justified text", text_alignment="justify")
 ```
 
@@ -180,11 +183,15 @@ Options: `"left"` (default), `"center"`, `"right"`, `"justify"`
 
 **Note:** `horizontal_alignment` on containers positions elements but also sets their `text_alignment`. If you need different text alignment within a horizontally-aligned container, override `text_alignment` on the text element itself.
 
-## Icons in callouts and expanders
+## Icons in headings, callouts, and expanders
 
-Material Symbols can make callouts and expanders look nicer:
+Material Symbols can make headings, callouts, and expanders look nicer:
 
 ```python
+st.title("Dashboard", icon=":material/dashboard:")
+st.header("Sales overview", icon=":material/bar_chart:")
+st.subheader("Recent orders", icon=":material/receipt_long:")
+
 st.info("Processing complete", icon=":material/check_circle:")
 st.warning("Rate limit approaching", icon=":material/warning:")
 st.error("Connection failed", icon=":material/error:")

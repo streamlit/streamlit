@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, PropsWithChildren, useContext } from "react"
+import { type FC, type PropsWithChildren, useContext } from "react"
 
 import { createPortal } from "react-dom"
 
@@ -25,9 +25,5 @@ export const RenderInPortalIfExists: FC<PropsWithChildren> = ({
 }) => {
   const portalElement = useContext(PortalContext)?.()
 
-  return portalElement ? (
-    createPortal(children, portalElement)
-  ) : (
-    <>{children}</>
-  )
+  return portalElement ? createPortal(children, portalElement) : children
 }

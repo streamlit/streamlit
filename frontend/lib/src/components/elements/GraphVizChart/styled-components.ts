@@ -16,6 +16,8 @@
 
 import styled from "@emotion/styled"
 
+import { printWidthCapStyles } from "~lib/components/shared/printWidthCap"
+
 interface StyledGraphVizChartProps {
   shouldUseFullWidth: boolean
   shouldUseFullHeight: boolean
@@ -37,8 +39,14 @@ export const StyledGraphVizChart = styled.div<StyledGraphVizChartProps>(
       width: shouldUseFullWidth ? "100%" : "auto",
       height: shouldUseFullHeight ? "100%" : "auto",
       borderRadius: theme.radii.default,
+      // An inline SVG paints outside its line box and covers the next
+      // heading. A block box keeps that height in the flow.
+      "@media print": {
+        display: "block",
+      },
     },
     width: shouldUseFullWidth ? "100%" : "auto",
     height: shouldUseFullHeight ? "100%" : "auto",
+    ...printWidthCapStyles,
   })
 )

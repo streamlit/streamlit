@@ -25,6 +25,23 @@ config.set_option("server.maxUploadSize", 1)
 # If no key is specified, show all chat inputs
 key = st.query_params.get("key")
 
+if key == "initial_scroll":
+    st.title("Dashboard heading")
+
+    if st.query_params.get("messages") == "true":
+        for number in range(30):
+            with st.chat_message("assistant"):
+                st.write(f"Transcript message {number}")
+    else:
+        for number in range(30):
+            st.write(f"Dashboard row {number}")
+
+    if st.query_params.get("placement") == "automatic":
+        st.chat_input("Ask about the dashboard", key="initial_scroll")
+    else:
+        with st.bottom:
+            st.chat_input("Ask about the dashboard", key="initial_scroll")
+
 if key is None or key == "inline":
     inline_value = st.container().chat_input("Chat input (inline)", key="inline")
     st.write("inline - value:", inline_value)
@@ -193,6 +210,19 @@ if key is None or key == "audio_only":
 
         if audio_only_value.audio:
             st.audio(audio_only_value.audio)
+
+if key is None or key == "audio_height_200":
+    audio_height_value = st.container().chat_input(
+        "Chat input (audio, height=200px)",
+        accept_audio=True,
+        height=200,
+        key="audio_height_200",
+    )
+
+    if audio_height_value:
+        st.write(
+            f"audio_height_200 - audio: {audio_height_value.audio.name if audio_height_value.audio else None}"
+        )
 
 if key is None or key == "audio_disabled":
     # Note: This input is disabled, so audio_disabled_value will always be None.

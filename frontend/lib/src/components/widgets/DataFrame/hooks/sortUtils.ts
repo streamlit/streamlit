@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { isListType, isObjectType } from "~lib/dataframes/arrowTypeUtils"
 
 /**
@@ -60,7 +60,7 @@ export function getNextColumnSort(
   current: ActiveColumnSort | undefined,
   columnId: string,
   direction?: "asc" | "desc" | "auto",
-  autoReset?: boolean
+  autoReset = false
 ): ActiveColumnSort | undefined {
   let nextDirection: "asc" | "desc" | undefined
   if (direction === "auto") {

@@ -14,6 +14,7 @@
 
 """color_picker unit test."""
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -21,7 +22,11 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.color_picker import ColorPickerSerde
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -58,7 +63,7 @@ class ColorPickerTest(DeltaGeneratorTestCase):
 
     def test_invalid_value_type_error(self):
         """Tests that when the value type is invalid, an exception is generated"""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.color_picker("the label", 1234567)
 
     def test_invalid_string(self):
@@ -264,7 +269,9 @@ class ColorPickerTest(DeltaGeneratorTestCase):
 
     def test_empty_key_raises_exception(self) -> None:
         """Test that an empty key raises an exception."""
-        with pytest.raises(StreamlitAPIException, match=r"`key`.*non-empty"):
+        with pytest.raises(
+            StreamlitValueError, match=r"Invalid `key` value.*a non-empty string"
+        ):
             st.color_picker("the label", key="")
 
 
@@ -305,3 +312,50 @@ class TestColorPickerSerde:
         serde = ColorPickerSerde("#ff0000")
 
         assert serde.deserialize("##000000") == "#ff0000"
+
+
+class ColorPickerOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.color_picker("the label", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.color_picker
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.color_picker("the label", on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.color_picker("the label", on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.color_picker("the label", on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.color_picker
+        assert c.ignore_rerun is True

@@ -16,7 +16,7 @@
 
 import { Suspense } from "react"
 
-import type { IconSize } from "~lib/theme/types"
+import type { IconSizeProp } from "~lib/theme/types"
 
 import { EmojiIcon } from "./Icon"
 import MaterialFontIcon from "./Material/MaterialFontIcon"
@@ -87,29 +87,56 @@ export function extractLeadingMaterialIcon(
   return { icon: null, text: label }
 }
 
-/** Icons that indicate a menu-style trigger where the chevron should be hidden. */
-const MENU_STYLE_ICONS = new Set([
-  ":material/menu:",
-  ":material/more_vert:",
-  ":material/more_horiz:",
+/**
+ * Accessible names for triggers whose only content is a menu-style icon.
+ * These icons already signal a menu, so such triggers hide the expansion
+ * chevron.
+ */
+const MENU_STYLE_ICON_NAMES = new Map([
+  [":material/menu:", "Menu"],
+  [":material/more_vert:", "More options"],
+  [":material/more_horiz:", "More options"],
 ])
 
 /**
- * Checks if a label is a menu-style icon-only label (no separate icon prop, no text).
- * When true, expansion chevrons should be hidden as the icon itself indicates a menu.
+ * Returns the accessible name (e.g. "More options") for a trigger whose only
+ * content is a menu-style icon, or undefined otherwise. The icon can be the
+ * label (with no icon prop) or the icon prop (with an empty label). Callers
+ * hide the expansion chevron when a name is returned, since the icon already
+ * signals a menu.
  *
  * @param icon - The icon prop (from element.icon)
  * @param label - The label prop (from element.label)
- * @returns true if label is exactly one of the menu-style icons with no additional text
  */
-export function isMenuStyleIconLabel(
+export function getMenuTriggerAccessibleName(
   icon: string | undefined,
   label: string | undefined
-): boolean {
-  if (icon) {
-    return false
+): string | undefined {
+  const trimmedIcon = icon?.trim() ?? ""
+  const trimmedLabel = label?.trim() ?? ""
+  if (trimmedIcon === "") {
+    return MENU_STYLE_ICON_NAMES.get(trimmedLabel)
   }
-  return Boolean(label && MENU_STYLE_ICONS.has(label.trim()))
+  return trimmedLabel === ""
+    ? MENU_STYLE_ICON_NAMES.get(trimmedIcon)
+    : undefined
+}
+
+/**
+ * Accessible name for an icon-only control.
+ * Uses the same `"{name} icon"` wording as the Markdown material-icon plugin.
+ */
+export function getIconAccessibleName(iconValue: string): string {
+  // Name the loading spinner as "Loading"; DynamicIcon renders "spinner" as a glyph, not an icon pack.
+  if (iconValue === "spinner") {
+    return "Loading"
+  }
+  const { pack, icon } = parseIconPackEntry(iconValue)
+  if (pack === "material" && icon) {
+    return `${icon} icon`
+  }
+  // Strip the optional "emoji:" prefix so the name matches what EmojiIcon renders.
+  return (icon || iconValue).replace(/^emoji:/, "")
 }
 
 /**
@@ -122,7 +149,11 @@ export function getFilledStarIconSrc(): string {
 
 export interface DynamicIconProps {
   iconValue: string
-  size?: IconSize
+  /**
+   * Icon size token, or `"inherit"` to match the parent font-size (`1em`).
+   * Use inherit for inline contexts such as heading icons.
+   */
+  size?: IconSizeProp
   testid?: string
   color?: string
 }
@@ -136,7 +167,7 @@ const DynamicIconDispatcher = ({
       <StyledDynamicIcon {...props}>
         <StyledSpinnerIcon
           aria-hidden="true"
-          data-testid={props.testid || "stSpinnerIcon"}
+          data-testid={props.testid ?? "stSpinnerIcon"}
           {...props}
         />
       </StyledDynamicIcon>
@@ -152,7 +183,8 @@ const DynamicIconDispatcher = ({
             <StyledDynamicIcon {...props}>
               <StyledImageIcon
                 src={getFilledStarIconSrc()}
-                data-testid={props.testid || "stImageIcon"}
+                alt=""
+                data-testid={props.testid ?? "stImageIcon"}
               />
             </StyledDynamicIcon>
           )

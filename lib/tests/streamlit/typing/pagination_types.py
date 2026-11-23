@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
@@ -69,6 +67,8 @@ if TYPE_CHECKING:
         pagination(10, on_change=callback_with_args, kwargs={"x": 1, "y": "a"}), int
     )
     assert_type(pagination(10, on_change=None), int)
+    assert_type(pagination(10, on_change="rerun"), int)
+    assert_type(pagination(10, on_change="ignore"), int)
 
     # Pagination with all parameters combined
     assert_type(
@@ -82,6 +82,8 @@ if TYPE_CHECKING:
             args=None,
             kwargs=None,
             disabled=False,
+            bind="query-params",
+            persist_state="session",
         ),
         int,
     )

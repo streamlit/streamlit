@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-import { forwardRef, ReactElement, Ref } from "react"
+import { forwardRef, type ReactElement, type Ref } from "react"
+
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import {
   BaseButtonKind,
-  BaseButtonProps as BaseButtonPropsT,
+  type BaseButtonProps as BaseButtonPropsT,
   BaseButtonSize,
   StyledBorderlessIconButton,
   StyledBorderlessIconButtonActive,
@@ -94,14 +96,20 @@ const BaseButton = forwardRef(function BaseButton(
       ref={ref}
       kind={kind}
       size={size ?? BaseButtonSize.MEDIUM}
-      containerWidth={containerWidth || false}
-      disabled={disabled || false}
-      onClick={onClick || (() => {})}
-      autoFocus={autoFocus || false}
+      containerWidth={containerWidth ?? false}
+      disabled={disabled ?? false}
+      onClick={onClick ?? (() => {})}
+      autoFocus={autoFocus ?? false}
       data-testid={props["data-testid"] ?? `stBaseButton-${kind}`}
-      aria-label={props["aria-label"] ?? ""}
+      // Omit an empty aria-label so visible button text remains the accessible name.
+      aria-label={
+        isNullOrEmptyString(props["aria-label"])
+          ? undefined
+          : props["aria-label"]
+      }
       aria-haspopup={props["aria-haspopup"]}
       aria-expanded={props["aria-expanded"]}
+      aria-controls={props["aria-controls"]}
     >
       {children}
     </ComponentType>

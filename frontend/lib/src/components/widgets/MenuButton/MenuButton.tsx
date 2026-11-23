@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useId,
   useMemo,
@@ -25,9 +25,9 @@ import {
 } from "react"
 
 import { FloatingPortal } from "@floating-ui/react"
-import { type Key } from "react-aria-components"
+import type { Key } from "react-aria-components"
 
-import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
+import type { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { Box } from "~lib/components/shared/Base/styled-components"
@@ -41,14 +41,14 @@ import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWr
 import {
   DynamicIcon,
   extractLeadingMaterialIcon,
-  isMenuStyleIconLabel,
+  getMenuTriggerAccessibleName,
 } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { convertRemToPx } from "~lib/theme/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledMenuButtonExpansionIcon,
@@ -89,7 +89,7 @@ function MenuButton(props: Props): ReactElement {
   // Floating UI provides scroll-tracking via autoUpdate. RAC's Popover is
   // fully replaced with FloatingPortal here because Menu is a self-contained
   // collection root — it doesn't need to be a child of any other RAC component.
-  const { refs, floatingStyles } = useFloatingOverlay({
+  const { floatingStyles, setFloating, setReference } = useFloatingOverlay({
     open: isOpen,
     placement: "bottom-start",
     offsetPx: convertRemToPx(theme.spacing.twoXS),
@@ -101,8 +101,8 @@ function MenuButton(props: Props): ReactElement {
   const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen,
     onClose: () => setIsOpen(false),
-    floatingSetFn: refs.setFloating,
-    referenceSetFn: refs.setReference,
+    floatingSetFn: setFloating,
+    referenceSetFn: setReference,
     restoreFocusFn: () =>
       containerRef.current
         ?.querySelector<HTMLButtonElement>("button")
@@ -130,7 +130,14 @@ function MenuButton(props: Props): ReactElement {
   const buttonDisabled =
     disabled || element.disabled || element.options.length === 0
 
-  const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
+  // An icon-only menu-style trigger (e.g. :material/more_vert:) hides the chevron,
+  // and both it and the menu it opens are named by purpose ("More options"),
+  // not by glyph.
+  const menuTriggerName = getMenuTriggerAccessibleName(
+    element.icon,
+    element.label
+  )
+  const hideChevron = menuTriggerName !== undefined
 
   // When wrap resolves to no-wrap, reveal the full label on hover via a native
   // title, skipped when help is set since help provides the tooltip.
@@ -169,6 +176,7 @@ function MenuButton(props: Props): ReactElement {
           disabled={buttonDisabled}
           containerWidth={true}
           onClick={() => setIsOpen(o => !o)}
+          aria-label={menuTriggerName}
           aria-haspopup="menu"
           aria-expanded={isOpen}
         >
@@ -207,7 +215,8 @@ function MenuButton(props: Props): ReactElement {
             <StyledMenuList
               onAction={handleItemSelect}
               aria-label={
-                extractLeadingMaterialIcon(element.label).text || "Menu"
+                menuTriggerName ??
+                (extractLeadingMaterialIcon(element.label).text || "Menu")
               }
               autoFocus="first"
             >
@@ -220,7 +229,7 @@ function MenuButton(props: Props): ReactElement {
                     textValue={text}
                   >
                     <StyledMenuOptionLabel>
-                      {icon && (
+                      {icon !== null && (
                         <StyledMenuOptionIcon aria-hidden="true">
                           <DynamicIcon iconValue={icon} size="md" />
                         </StyledMenuOptionIcon>

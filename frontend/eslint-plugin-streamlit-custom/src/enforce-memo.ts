@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { AST_NODE_TYPES, TSESTree } from "@typescript-eslint/utils"
-import { RuleFix, RuleFixer } from "@typescript-eslint/utils/ts-eslint"
+import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils"
+import type { RuleFix, RuleFixer } from "@typescript-eslint/utils/ts-eslint"
 
 import { createRule } from "./utils/createRule"
 
@@ -25,7 +25,7 @@ type MessageIds = "enforceMemo"
  * Checks if a name follows PascalCase convention (used to identify components)
  */
 const isPascalCase = (name: string): boolean =>
-  name?.[0] === name?.[0].toUpperCase() && name?.length > 1
+  name.length > 1 && name[0] === name[0].toUpperCase()
 
 /**
  * This rule enforces the use of React.memo for React components.
@@ -44,8 +44,8 @@ const enforceMemo = createRule<[], MessageIds>({
     messages: {
       enforceMemo: "React components should be wrapped with memo",
     },
+    defaultOptions: [],
   },
-  defaultOptions: [],
   create(context) {
     // Track state for components used in various contexts
     const componentsUsedInHOCs = new Map<string, string | boolean>() // Maps component name to HOC variable name or true if memoized
@@ -94,7 +94,7 @@ const enforceMemo = createRule<[], MessageIds>({
 
         let match
         while ((match = hocPattern.exec(sourceText)) !== null) {
-          if (match?.[1]) {
+          if (match[1]) {
             hocVarNames.push(match[1])
           }
         }
@@ -102,7 +102,7 @@ const enforceMemo = createRule<[], MessageIds>({
         hocPatternCache.set(componentName, hocVarNames)
       }
 
-      const hocVarNames = hocPatternCache.get(componentName) || []
+      const hocVarNames = hocPatternCache.get(componentName) ?? []
 
       // Check if any of the HOC variables are exported with memo
       for (const hocVarName of hocVarNames) {
@@ -224,8 +224,10 @@ const enforceMemo = createRule<[], MessageIds>({
 
         if (hasNamedImports) {
           // Add to existing named imports
-          const lastSpecifier =
-            reactImport.specifiers[reactImport.specifiers.length - 1]
+          const lastSpecifier = reactImport.specifiers.at(-1)
+          if (!lastSpecifier) {
+            return null
+          }
           return fixer.insertTextAfter(lastSpecifier, ", memo")
         }
         // Add as new named import alongside default import
@@ -241,20 +243,27 @@ const enforceMemo = createRule<[], MessageIds>({
           // Handle the case where there are no specifiers
           return fixer.insertTextAfter(reactImport.source, " { memo }")
         }
-        const lastSpecifier =
-          reactImport.specifiers[reactImport.specifiers.length - 1]
+        const lastSpecifier = reactImport.specifiers.at(-1)
+        if (!lastSpecifier) {
+          return null
+        }
         return fixer.insertTextAfter(lastSpecifier, ", memo")
       } else if (allImports.length > 0) {
         // Add after the last import
-        const lastImport = allImports[allImports.length - 1]
+        const lastImport = allImports.at(-1)
+        if (!lastImport) {
+          return null
+        }
         return fixer.insertTextAfter(
           lastImport,
           "\nimport { memo } from 'react';"
         )
       }
-      // Add at the beginning of the file
+      // Add before the first statement. The Program node's range starts at
+      // offset 0, so anchoring on it would place the import above leading
+      // comments such as the license header.
       return fixer.insertTextBefore(
-        sourceCode.ast,
+        sourceCode.ast.body[0] ?? sourceCode.ast,
         "import { memo } from 'react';\n\n"
       )
     }
@@ -266,14 +275,12 @@ const enforceMemo = createRule<[], MessageIds>({
       node: TSESTree.Node,
       results: TSESTree.ReturnStatement[] = []
     ): TSESTree.ReturnStatement[] => {
-      if (!node) return results
-
       if (node.type === AST_NODE_TYPES.ReturnStatement) {
         results.push(node)
       } else if ("body" in node && node.body) {
         if (Array.isArray(node.body)) {
           node.body.forEach(child => {
-            if (child && typeof child === "object" && "type" in child) {
+            if (typeof child === "object" && "type" in child) {
               findReturnStatements(child, results)
             }
           })
@@ -285,7 +292,6 @@ const enforceMemo = createRule<[], MessageIds>({
       // Handle conditionals and switch statements
       if (
         "consequent" in node &&
-        node.consequent &&
         typeof node.consequent === "object" &&
         "type" in node.consequent
       ) {
@@ -299,9 +305,9 @@ const enforceMemo = createRule<[], MessageIds>({
       ) {
         findReturnStatements(node.alternate, results)
       }
-      if ("cases" in node && node.cases && Array.isArray(node.cases)) {
+      if ("cases" in node && Array.isArray(node.cases)) {
         node.cases.forEach(c => {
-          if (c && typeof c === "object" && "type" in c) {
+          if (typeof c === "object" && "type" in c) {
             findReturnStatements(c, results)
           }
         })
@@ -349,13 +355,12 @@ const enforceMemo = createRule<[], MessageIds>({
       componentName: string
     ): boolean =>
       (node.parent?.type === AST_NODE_TYPES.CallExpression &&
-        node.parent.callee &&
         ((node.parent.callee.type === AST_NODE_TYPES.Identifier &&
           node.parent.callee.name === "memo") ||
           (node.parent.callee.type === AST_NODE_TYPES.MemberExpression &&
-            node.parent.callee.object?.type === AST_NODE_TYPES.Identifier &&
+            node.parent.callee.object.type === AST_NODE_TYPES.Identifier &&
             node.parent.callee.object.name === "React" &&
-            node.parent.callee.property?.type === AST_NODE_TYPES.Identifier &&
+            node.parent.callee.property.type === AST_NODE_TYPES.Identifier &&
             node.parent.callee.property.name === "memo"))) ||
       isWrappedInExport(componentName) ||
       isComponentUsedInMemoizedHOC(componentName)
@@ -385,7 +390,7 @@ const enforceMemo = createRule<[], MessageIds>({
 
       // Apply fixes in reverse order to avoid position shifts
       return exportMatches
-        .reverse()
+        .toReversed()
         .map(({ start, end }) =>
           fixer.replaceTextRange([start, end], `memo(${componentName})`)
         )
@@ -395,7 +400,7 @@ const enforceMemo = createRule<[], MessageIds>({
     return {
       // Handle direct exports like: export default MyComponent
       ExportDefaultDeclaration(node) {
-        if (node.declaration?.type === AST_NODE_TYPES.Identifier) {
+        if (node.declaration.type === AST_NODE_TYPES.Identifier) {
           const exportedName = node.declaration.name
           exportedComponents.add(exportedName)
 
@@ -421,15 +426,15 @@ const enforceMemo = createRule<[], MessageIds>({
       CallExpression(node) {
         // Capture component used in HOC call: someHOC(MyComponent)
         if (
-          node.arguments?.[0]?.type === AST_NODE_TYPES.Identifier &&
+          node.arguments[0]?.type === AST_NODE_TYPES.Identifier &&
           isPascalCase(node.arguments[0].name)
         ) {
           const componentName = node.arguments[0].name
 
           // If part of a variable declaration: const Enhanced = someHOC(MyComponent)
           if (
-            node.parent?.type === AST_NODE_TYPES.VariableDeclarator &&
-            node.parent.id?.type === AST_NODE_TYPES.Identifier
+            node.parent.type === AST_NODE_TYPES.VariableDeclarator &&
+            node.parent.id.type === AST_NODE_TYPES.Identifier
           ) {
             const hocVarName = node.parent.id.name
             hocWrappedComponents.add(hocVarName)
@@ -437,22 +442,22 @@ const enforceMemo = createRule<[], MessageIds>({
           }
 
           // If directly exported: export default someHOC(MyComponent)
-          if (node.parent?.type === AST_NODE_TYPES.ExportDefaultDeclaration) {
+          if (node.parent.type === AST_NODE_TYPES.ExportDefaultDeclaration) {
             exportedComponents.add(componentName)
           }
         }
 
         // Capture export default memo(Component)
         if (
-          ((node.callee?.type === AST_NODE_TYPES.Identifier &&
+          ((node.callee.type === AST_NODE_TYPES.Identifier &&
             node.callee.name === "memo") ||
-            (node.callee?.type === AST_NODE_TYPES.MemberExpression &&
-              node.callee.object?.type === AST_NODE_TYPES.Identifier &&
+            (node.callee.type === AST_NODE_TYPES.MemberExpression &&
+              node.callee.object.type === AST_NODE_TYPES.Identifier &&
               node.callee.object.name === "React" &&
-              node.callee.property?.type === AST_NODE_TYPES.Identifier &&
+              node.callee.property.type === AST_NODE_TYPES.Identifier &&
               node.callee.property.name === "memo")) &&
-          node.arguments?.[0]?.type === AST_NODE_TYPES.Identifier &&
-          node.parent?.type === AST_NODE_TYPES.ExportDefaultDeclaration
+          node.arguments[0]?.type === AST_NODE_TYPES.Identifier &&
+          node.parent.type === AST_NODE_TYPES.ExportDefaultDeclaration
         ) {
           exportedComponents.add(node.arguments[0].name)
         }
@@ -463,7 +468,7 @@ const enforceMemo = createRule<[], MessageIds>({
         node: TSESTree.CallExpression
       ) {
         if (
-          node.arguments?.[0]?.type === AST_NODE_TYPES.Identifier &&
+          node.arguments[0]?.type === AST_NODE_TYPES.Identifier &&
           hocWrappedComponents.has(node.arguments[0].name)
         ) {
           // When a memo wraps an HOC variable, mark any components used in that HOC as memoized
@@ -475,7 +480,7 @@ const enforceMemo = createRule<[], MessageIds>({
               componentsUsedInHOCs.set(componentName, true)
 
               if (
-                node.parent?.type === AST_NODE_TYPES.ExportDefaultDeclaration
+                node.parent.type === AST_NODE_TYPES.ExportDefaultDeclaration
               ) {
                 exportedComponents.add(componentName)
               }
@@ -529,7 +534,7 @@ const enforceMemo = createRule<[], MessageIds>({
       VariableDeclarator(node) {
         // Skip if not a PascalCase component name
         if (
-          node.id?.type !== AST_NODE_TYPES.Identifier ||
+          node.id.type !== AST_NODE_TYPES.Identifier ||
           !isPascalCase(node.id.name)
         )
           return
@@ -564,16 +569,7 @@ const enforceMemo = createRule<[], MessageIds>({
             const fixes = []
             const importFix = ensureMemoImport(fixer)
             if (importFix) fixes.push(importFix)
-
-            if (isVariableStatementExported) {
-              fixes.push(...fixExportStatements(fixer, componentName))
-            } else {
-              // Wrap the function definition with memo
-              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              const nodeText = sourceCode.getText(node.init!)
-              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              fixes.push(fixer.replaceText(node.init!, `memo(${nodeText})`))
-            }
+            fixes.push(...fixExportStatements(fixer, componentName))
 
             return fixes.length > 0 ? fixes : null
           },

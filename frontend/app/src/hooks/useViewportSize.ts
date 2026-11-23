@@ -22,6 +22,6 @@ export const useViewportSize = (): { isMobile: boolean } => {
   const { activeTheme } = useContext(ThemeContext)
   const { innerWidth } = useWindowDimensionsContext()
 
-  const breakpoint = parseInt(activeTheme.emotion.breakpoints.md, 10)
+  const breakpoint = Number.parseInt(activeTheme.emotion.breakpoints.md, 10)
   return { isMobile: innerWidth < breakpoint }
 }

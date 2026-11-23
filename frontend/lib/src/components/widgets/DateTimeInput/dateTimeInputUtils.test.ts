@@ -17,10 +17,10 @@
 import { CalendarDateTime } from "@internationalized/date"
 import { describe, expect, it, vi } from "vitest"
 
-import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
+import type { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 
-import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   calendarDateTimeToIso,
@@ -28,9 +28,11 @@ import {
   createDateTimeErrorMessage,
   dateTimesEqual,
   formatCalendarDateTime,
+  getSegmentState,
+  getTypedDateFromDom,
+  getTypedTimeFromDom,
   isoToCalendarDateTime,
   parsePastedDateTime,
-  snapTimeStep,
   updateWidgetMgrState,
   validateDateTime,
 } from "./dateTimeInputUtils"
@@ -61,7 +63,7 @@ describe("isoToCalendarDateTime", () => {
     expect(isoToCalendarDateTime("2024-01-01T00:60")).toBeNull()
   })
 
-  it("accepts ISO with seconds (discards seconds)", () => {
+  it("accepts ISO with seconds (preserves seconds)", () => {
     const result = isoToCalendarDateTime("2024-07-04T08:15:30")
     expect(result).toMatchObject({
       year: 2024,
@@ -69,6 +71,7 @@ describe("isoToCalendarDateTime", () => {
       day: 4,
       hour: 8,
       minute: 15,
+      second: 30,
     })
   })
 
@@ -79,9 +82,14 @@ describe("isoToCalendarDateTime", () => {
 })
 
 describe("calendarDateTimeToIso", () => {
-  it("serializes to the expected wire format", () => {
-    const dt = new CalendarDateTime(2024, 1, 5, 9, 3)
+  it("serializes to the expected minute wire format", () => {
+    const dt = new CalendarDateTime(2024, 1, 5, 9, 3, 45)
     expect(calendarDateTimeToIso(dt)).toBe("2024-01-05T09:03")
+  })
+
+  it("includes seconds when requested", () => {
+    const dt = new CalendarDateTime(2024, 1, 5, 9, 3, 45)
+    expect(calendarDateTimeToIso(dt, true)).toBe("2024-01-05T09:03:45")
   })
 })
 
@@ -240,6 +248,32 @@ describe("updateWidgetMgrState", () => {
     expect(widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
   })
 
+  it("passes triggerRerun: false when ignoreRerun is set", () => {
+    const widgetMgr = makeWidgetMgr()
+    const vws: ValueWithSource<string | null> = {
+      value: "2024-06-01T12:00",
+      fromUser: true,
+    }
+
+    updateWidgetMgrState(
+      { ...element, ignoreRerun: true } as DateTimeInputProto,
+      widgetMgr,
+      vws,
+      "fragment"
+    )
+
+    expect(widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      element.id,
+      ["2024-06-01T12:00"],
+      {
+        formId: element.formId,
+        fragmentId: "fragment",
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+  })
+
   it("allows null values", () => {
     const widgetMgr = makeWidgetMgr()
     const vws: ValueWithSource<string | null> = {
@@ -254,88 +288,6 @@ describe("updateWidgetMgrState", () => {
       [],
       { formId: element.formId, fragmentId: undefined, fromUser: false }
     )
-  })
-})
-
-describe("snapTimeStep", () => {
-  describe("minute-granular (max=1440)", () => {
-    it("snaps up from aligned position", () => {
-      // 16:00 (960 min), step=15 → 16:15 (975)
-      expect(snapTimeStep(960, 15, true, 1440)).toBe(975)
-    })
-
-    it("snaps up from unaligned position", () => {
-      // 16:45 (1005 min), step=15 → 17:00 (1020)
-      expect(snapTimeStep(1005, 15, true, 1440)).toBe(1020)
-    })
-
-    it("snaps down from aligned position", () => {
-      // 16:15 (975 min), step=15 → 16:00 (960)
-      expect(snapTimeStep(975, 15, false, 1440)).toBe(960)
-    })
-
-    it("snaps down from unaligned position", () => {
-      // 16:47 (1007 min), step=15 → 16:45 (1005)
-      expect(snapTimeStep(1007, 15, false, 1440)).toBe(1005)
-    })
-
-    it("wraps past midnight on ArrowUp", () => {
-      // 23:45 (1425 min), step=15 → 00:00 (0)
-      expect(snapTimeStep(1425, 15, true, 1440)).toBe(0)
-    })
-
-    it("wraps below zero on ArrowDown", () => {
-      // 00:00 (0 min), step=15 → 23:45 (1425)
-      expect(snapTimeStep(0, 15, false, 1440)).toBe(1425)
-    })
-
-    it("handles step=30 correctly", () => {
-      // 10:15 (615 min), step=30, up → 10:30 (630)
-      expect(snapTimeStep(615, 30, true, 1440)).toBe(630)
-      // 10:15 (615 min), step=30, down → 10:00 (600)
-      expect(snapTimeStep(615, 30, false, 1440)).toBe(600)
-    })
-
-    it("already on boundary goes to next/prev", () => {
-      // 10:00 (600 min), step=15, up → 10:15 (615)
-      expect(snapTimeStep(600, 15, true, 1440)).toBe(615)
-      // 10:00 (600 min), step=15, down → 09:45 (585)
-      expect(snapTimeStep(600, 15, false, 1440)).toBe(585)
-    })
-  })
-
-  describe("hour-granular (max=24)", () => {
-    it("snaps up from aligned hour", () => {
-      // hour=6, step=3 → 9
-      expect(snapTimeStep(6, 3, true, 24)).toBe(9)
-    })
-
-    it("snaps up from unaligned hour", () => {
-      // hour=10, step=3 → 12
-      expect(snapTimeStep(10, 3, true, 24)).toBe(12)
-    })
-
-    it("snaps down from aligned hour", () => {
-      // hour=9, step=3 → 6
-      expect(snapTimeStep(9, 3, false, 24)).toBe(6)
-    })
-
-    it("wraps past 24 on ArrowUp", () => {
-      // hour=23, step=3 → 0
-      expect(snapTimeStep(23, 3, true, 24)).toBe(0)
-    })
-
-    it("wraps below zero on ArrowDown", () => {
-      // hour=0, step=3 → 21
-      expect(snapTimeStep(0, 3, false, 24)).toBe(21)
-    })
-
-    it("handles step=2 correctly", () => {
-      // hour=5, step=2, up → 6
-      expect(snapTimeStep(5, 2, true, 24)).toBe(6)
-      // hour=5, step=2, down → 4
-      expect(snapTimeStep(5, 2, false, 24)).toBe(4)
-    })
   })
 })
 
@@ -367,9 +319,42 @@ describe("computeStepSnap", () => {
     expect(computeStepSnap(dt, "year", 900, true)).toBeNull()
   })
 
-  it("returns null when step is not divisible by 60 (minute segment)", () => {
-    const dt = new CalendarDateTime(2025, 11, 19, 16, 45)
-    expect(computeStepSnap(dt, "minute", 90, true)).toBeNull()
+  it("snaps the second segment to the next step boundary for a sub-minute step", () => {
+    const dt = new CalendarDateTime(2025, 11, 19, 16, 45, 0)
+    const result = computeStepSnap(dt, "second", 90, true)
+    expect(result).toMatchObject({
+      year: 2025,
+      month: 11,
+      day: 19,
+      hour: 16,
+      minute: 46,
+      second: 30,
+    })
+  })
+
+  it("moves the minute segment to the next step boundary at least one minute away for a sub-minute step", () => {
+    // 16:45:00 + at least 60s, ceil to 90 → 16:46:30
+    const dt = new CalendarDateTime(2025, 11, 19, 16, 45, 0)
+    const result = computeStepSnap(dt, "minute", 90, true)
+    expect(result).toMatchObject({
+      hour: 16,
+      minute: 46,
+      second: 30,
+    })
+  })
+
+  it("wraps total-seconds snap past midnight on the same calendar day", () => {
+    // 2025-11-19 23:59:30 + 30s → 00:00:00 still on the 19th, not the 20th.
+    const dt = new CalendarDateTime(2025, 11, 19, 23, 59, 30)
+    const result = computeStepSnap(dt, "second", 30, true)
+    expect(result).toMatchObject({
+      year: 2025,
+      month: 11,
+      day: 19,
+      hour: 0,
+      minute: 0,
+      second: 0,
+    })
   })
 
   it("preserves date fields when snapping time", () => {
@@ -382,5 +367,214 @@ describe("computeStepSnap", () => {
       hour: 10,
       minute: 15,
     })
+  })
+})
+
+/** Builds segments in the shape `DateFieldState.segments` exposes. React Aria
+ * leaves `value` undefined and `isPlaceholder` true until the user types into the
+ * segment, and drops `aria-valuenow` entirely on iOS. */
+const renderSegments = (
+  segments: Partial<
+    Record<
+      "year" | "month" | "day" | "hour" | "minute" | "second",
+      number | null
+    >
+  >
+): HTMLElement => {
+  const el = document.createElement("div")
+  el.innerHTML = Object.entries(segments)
+    .map(([type, value]) =>
+      value === null || value === undefined
+        ? `<div role="spinbutton" data-type="${type}" data-placeholder="true">––</div>`
+        : `<div role="spinbutton" data-type="${type}" aria-valuenow="${value}">${value}</div>`
+    )
+    .join("")
+  return el
+}
+
+describe("getSegmentState", () => {
+  it("reports a fully cleared field", () => {
+    expect(
+      getSegmentState(renderSegments({ year: null, month: null, day: null }))
+    ).toMatchObject({ isPartiallyTyped: false, isFullyCleared: true })
+  })
+
+  it("reports a partially typed field", () => {
+    expect(
+      getSegmentState(renderSegments({ year: 2025, month: null, day: null }))
+    ).toMatchObject({ isPartiallyTyped: true, isFullyCleared: false })
+  })
+
+  it("reports a fully typed field as neither", () => {
+    expect(
+      getSegmentState(renderSegments({ year: 2025, month: 11, day: 19 }))
+    ).toMatchObject({ isPartiallyTyped: false, isFullyCleared: false })
+  })
+
+  it("counts segments on iOS, where they render as textboxes", () => {
+    // Matching on `role="spinbutton"` found nothing here, so `totalSegments` was 0
+    // and `isFullyCleared` could never be true — clearing every segment could not
+    // commit null on iOS.
+    const el = document.createElement("div")
+    el.innerHTML =
+      '<div role="textbox" data-type="hour" data-placeholder="true">––</div>' +
+      '<div role="textbox" data-type="literal">:</div>' +
+      '<div role="textbox" data-type="minute" data-placeholder="true">––</div>'
+    expect(getSegmentState(el)).toMatchObject({
+      totalSegments: 2,
+      placeholderCount: 2,
+      isFullyCleared: true,
+    })
+  })
+
+  it("does not count the literal separators between segments", () => {
+    const el = document.createElement("div")
+    el.innerHTML =
+      '<div role="spinbutton" data-type="hour" aria-valuenow="9">09</div>' +
+      '<div data-type="literal">:</div>' +
+      '<div role="spinbutton" data-type="minute" aria-valuenow="45">45</div>'
+    expect(getSegmentState(el)).toMatchObject({ totalSegments: 2 })
+  })
+})
+
+describe("getTypedTimeFromDom", () => {
+  it("returns null for a missing container", () => {
+    expect(getTypedTimeFromDom(null)).toBeNull()
+  })
+
+  it("returns null when hour, minute, and second are all empty", () => {
+    expect(
+      getTypedTimeFromDom(
+        renderSegments({
+          year: null,
+          hour: null,
+          minute: null,
+          second: null,
+        })
+      )
+    ).toBeNull()
+  })
+
+  it("reads a time typed while the date segments are still placeholders", () => {
+    expect(
+      getTypedTimeFromDom(renderSegments({ year: null, hour: 3, minute: 24 }))
+    ).toMatchObject({ hour: 3, minute: 24 })
+  })
+
+  it("treats an untyped half of the pair as zero", () => {
+    expect(
+      getTypedTimeFromDom(renderSegments({ hour: 3, minute: null }))
+    ).toMatchObject({ hour: 3, minute: 0 })
+    expect(
+      getTypedTimeFromDom(renderSegments({ hour: null, minute: 24 }))
+    ).toMatchObject({ hour: 0, minute: 24 })
+  })
+
+  it("reads a typed second segment", () => {
+    expect(
+      getTypedTimeFromDom(renderSegments({ hour: 3, minute: 24, second: 45 }))
+    ).toMatchObject({ hour: 3, minute: 24, second: 45 })
+  })
+
+  it("defaults an untyped second to zero", () => {
+    expect(
+      getTypedTimeFromDom(renderSegments({ hour: 3, minute: 24 }))
+    ).toMatchObject({ hour: 3, minute: 24, second: 0 })
+  })
+
+  it("preserves a seconds-only draft when hour and minute are empty", () => {
+    expect(
+      getTypedTimeFromDom(
+        renderSegments({ hour: null, minute: null, second: 30 })
+      )
+    ).toMatchObject({ hour: 0, minute: 0, second: 30 })
+  })
+
+  it("reads hour 0 as typed rather than as absent", () => {
+    expect(
+      getTypedTimeFromDom(renderSegments({ hour: 0, minute: 30 }))
+    ).toMatchObject({ hour: 0, minute: 30 })
+  })
+
+  it("returns null when only the date segments are typed", () => {
+    expect(
+      getTypedTimeFromDom(
+        renderSegments({
+          year: 2025,
+          hour: null,
+          minute: null,
+          second: null,
+        })
+      )
+    ).toBeNull()
+  })
+
+  it("prefers the placeholder marker over a value on the same segment", () => {
+    // Defensive: React Aria omits `aria-valuenow` on an hour or minute
+    // placeholder, so it never emits this shape.
+    const el = document.createElement("div")
+    el.innerHTML =
+      '<div role="spinbutton" data-type="hour" data-placeholder="true" aria-valuenow="7">07</div>'
+    expect(getTypedTimeFromDom(el)).toBeNull()
+  })
+
+  it("falls back to the rendered text where aria-valuenow is absent", () => {
+    // React Aria renders segments as textboxes with no aria-valuenow on iOS.
+    const el = document.createElement("div")
+    el.innerHTML =
+      '<div role="textbox" data-type="hour">09</div>' +
+      '<div role="textbox" data-type="minute">45</div>'
+    expect(getTypedTimeFromDom(el)).toMatchObject({ hour: 9, minute: 45 })
+  })
+
+  it("ignores a non-numeric segment value", () => {
+    const el = document.createElement("div")
+    el.innerHTML = '<div role="textbox" data-type="hour">––</div>'
+    expect(getTypedTimeFromDom(el)).toBeNull()
+  })
+})
+
+describe("getTypedDateFromDom", () => {
+  it("returns null for a missing container", () => {
+    expect(getTypedDateFromDom(null)).toBeNull()
+  })
+
+  it("reads a fully typed date", () => {
+    expect(
+      getTypedDateFromDom(renderSegments({ year: 2025, month: 11, day: 19 }))
+    ).toMatchObject({ year: 2025, month: 11, day: 19 })
+  })
+
+  it("returns null unless every part is filled", () => {
+    expect(
+      getTypedDateFromDom(renderSegments({ year: 2025, month: 11, day: null }))
+    ).toBeNull()
+    expect(
+      getTypedDateFromDom(renderSegments({ year: null, month: 11, day: 19 }))
+    ).toBeNull()
+  })
+
+  it("rejects a day that does not exist in its month", () => {
+    // The day segment's maximum is the longest month, not the current one, so
+    // this combination is typeable and must be rejected rather than clamped to
+    // Feb 28.
+    expect(
+      getTypedDateFromDom(renderSegments({ year: 2025, month: 2, day: 30 }))
+    ).toBeNull()
+  })
+
+  it("accepts a leap day in a leap year and rejects it otherwise", () => {
+    expect(
+      getTypedDateFromDom(renderSegments({ year: 2024, month: 2, day: 29 }))
+    ).toMatchObject({ year: 2024, month: 2, day: 29 })
+    expect(
+      getTypedDateFromDom(renderSegments({ year: 2025, month: 2, day: 29 }))
+    ).toBeNull()
+  })
+
+  it("rejects a zero part", () => {
+    expect(
+      getTypedDateFromDom(renderSegments({ year: 2025, month: 0, day: 19 }))
+    ).toBeNull()
   })
 })

@@ -83,8 +83,14 @@ message MetricsEvent {
   string server_mode = 45;
   repeated string installed_skills = 46;
   repeated string installed_agents = 47;
+  // Same as PageProfile.agent_api_usage.
+  AgentApiUsage agent_api_usage = 49;
+  // Same as PageProfile.cache_usage.
+  CacheUsage cache_usage = 50;
+  // Same as PageProfile.server_uptime_seconds.
+  optional int64 server_uptime_seconds = 51;
 
-  // Next ID: 49
+  // Next ID: 52
 }
 
 message BrowserInfo {

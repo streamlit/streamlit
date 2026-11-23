@@ -31,14 +31,13 @@ from streamlit.elements.lib.layout_utils import (
     validate_space_size,
     validate_vertical_alignment,
     validate_width,
+    validate_wrap,
 )
 from streamlit.errors import (
-    StreamlitInvalidColumnGapError,
     StreamlitInvalidHeightError,
-    StreamlitInvalidHorizontalAlignmentError,
-    StreamlitInvalidSizeError,
-    StreamlitInvalidVerticalAlignmentError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.Block_pb2 import Block
 from streamlit.proto.GapSize_pb2 import GapSize
@@ -74,6 +73,14 @@ class LayoutUtilsTest(unittest.TestCase):
 
         with pytest.raises(StreamlitInvalidWidthError):
             validate_width(width, allow_content=allow_content)  # type: ignore[arg-type]
+
+    def test_validate_width_above_uint32_max_raises(self):
+        """Pixel widths above a protobuf uint32 raise a Streamlit range error."""
+
+        with pytest.raises(StreamlitValueOutOfRangeError, match=r"\[1, 4294967295\]"):
+            validate_width(2**32)
+
+        validate_width(2**32 - 1)
 
     @parameterized.expand(
         [
@@ -127,6 +134,14 @@ class LayoutUtilsTest(unittest.TestCase):
                 allow_stretch=allow_stretch,
                 additional_allowed=additional_allowed,
             )
+
+    def test_validate_height_above_uint32_max_raises(self):
+        """Pixel heights above a protobuf uint32 raise a Streamlit range error."""
+
+        with pytest.raises(StreamlitValueOutOfRangeError, match=r"`height`"):
+            validate_height(2**32)
+
+        validate_height(2**32 - 1)
 
     @parameterized.expand(
         [
@@ -217,7 +232,7 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_get_gap_config_string(self, gap: str | None, expected: GapSize.ValueType):
         """get_gap_config sets gap_size for string / None inputs."""
 
-        config = get_gap_config(gap, "st.columns")
+        config = get_gap_config(gap)
         assert config.WhichOneof("gap_spec") == "gap_size"
         assert config.gap_size == expected
 
@@ -232,28 +247,46 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_get_gap_config_int(self, gap: int):
         """get_gap_config sets pixel_gap for non-negative integer inputs."""
 
-        config = get_gap_config(gap, "st.columns")
+        config = get_gap_config(gap)
         assert config.WhichOneof("gap_spec") == "pixel_gap"
         assert config.pixel_gap == gap
 
     def test_get_gap_config_negative_int_raises(self):
         """get_gap_config raises for negative integer inputs."""
 
-        with pytest.raises(StreamlitInvalidColumnGapError):
-            get_gap_config(-1, "st.columns")
+        with pytest.raises(StreamlitValueError, match=r"`gap`"):
+            get_gap_config(-1)
+
+    def test_get_gap_config_above_uint32_max_raises(self):
+        """Pixel gaps above a protobuf uint32 raise a Streamlit range error."""
+
+        with pytest.raises(StreamlitValueOutOfRangeError, match=r"\[0, 4294967295\]"):
+            get_gap_config(2**32)
+
+        assert get_gap_config(2**32 - 1).pixel_gap == 2**32 - 1
 
     @parameterized.expand([(True,), (False,)])
     def test_get_gap_config_bool_raises(self, gap: bool):
         """get_gap_config rejects boolean inputs even though ``bool`` is a subclass of ``int``."""
 
-        with pytest.raises(StreamlitInvalidColumnGapError):
-            get_gap_config(gap, "st.columns")  # type: ignore[arg-type]
+        with pytest.raises(StreamlitValueError, match=r"`gap`"):
+            get_gap_config(gap)  # type: ignore[arg-type]
 
     def test_get_gap_config_invalid_string_raises(self):
         """get_gap_config raises for unknown gap strings."""
 
-        with pytest.raises(StreamlitInvalidColumnGapError):
-            get_gap_config("tiny", "st.columns")  # type: ignore[arg-type]
+        with pytest.raises(StreamlitValueError, match=r"`gap`"):
+            get_gap_config("tiny")  # type: ignore[arg-type]
+
+    def test_get_gap_config_custom_detail(self):
+        """get_gap_config uses a caller-supplied detail in the error."""
+
+        with pytest.raises(StreamlitValueError, match=r"column gap in `gap`"):
+            get_gap_config(
+                "tiny",  # type: ignore[arg-type]
+                parameter="gap",
+                detail="Got 'tiny' for the column gap in `gap`.",
+            )
 
     @parameterized.expand(
         [
@@ -271,7 +304,7 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_validate_horizontal_alignment_invalid(self):
         """validate_horizontal_alignment raises for unknown values."""
 
-        with pytest.raises(StreamlitInvalidHorizontalAlignmentError):
+        with pytest.raises(StreamlitValueError, match=r"`horizontal_alignment`"):
             validate_horizontal_alignment("middle")  # type: ignore[arg-type]
 
     @parameterized.expand(
@@ -290,7 +323,7 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_validate_vertical_alignment_invalid(self):
         """validate_vertical_alignment raises for unknown values."""
 
-        with pytest.raises(StreamlitInvalidVerticalAlignmentError):
+        with pytest.raises(StreamlitValueError, match=r"`vertical_alignment`"):
             validate_vertical_alignment("middle")  # type: ignore[arg-type]
 
     @parameterized.expand(
@@ -355,7 +388,7 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_validate_size_invalid(self, size: any):
         """validate_size raises for invalid size values."""
 
-        with pytest.raises(StreamlitInvalidSizeError):
+        with pytest.raises(StreamlitValueError, match=r"`size`"):
             validate_space_size(size)  # type: ignore[arg-type]
 
     @parameterized.expand(
@@ -397,3 +430,14 @@ class LayoutUtilsTest(unittest.TestCase):
         assert not config.use_content
         assert not config.use_stretch
         assert config.pixel_height == 0
+
+    def test_validate_wrap_valid(self):
+        """validate_wrap accepts True and False."""
+        validate_wrap(True)
+        validate_wrap(False)
+
+    @parameterized.expand(["yes", None, 1])
+    def test_validate_wrap_invalid(self, wrap: object):
+        """validate_wrap raises for non-bool values."""
+        with pytest.raises(StreamlitValueError):
+            validate_wrap(wrap)  # type: ignore[arg-type]

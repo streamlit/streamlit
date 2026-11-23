@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo } from "react"
+import { type FC, memo } from "react"
 
 /*
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
@@ -25,7 +25,7 @@ import Flake1 from "~lib/assets/img/snow/flake-1.png"
 import Flake2 from "~lib/assets/img/snow/flake-2.png"
 import { RenderInPortalIfExists } from "~lib/components/core/Portal/RenderInPortalIfExists"
 import Particles, {
-  ParticleProps,
+  type ParticleProps,
 } from "~lib/components/elements/Particles/Particles"
 import { getCrossOriginAttribute } from "~lib/util/UriUtil"
 

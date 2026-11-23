@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform type checking tests for st.chat_input
 # The return type depends on accept_file and accept_audio parameters:
@@ -62,6 +60,33 @@ if TYPE_CHECKING:
     )
     assert_type(
         chat_input("Message", accept_file="multiple", accept_audio=True),
+        ChatInputValue | None,
+    )
+
+    # Non-literal bool values return the union of both result types.
+    accept: bool = True
+    # ty infers `ChatInputValue | None` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
+        chat_input("Message", accept_file=accept), str | ChatInputValue | None
+    )
+    # ty infers `ChatInputValue | None` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
+        chat_input("Message", accept_audio=accept), str | ChatInputValue | None
+    )
+
+    # Mixed: accept_audio=True with a non-literal accept_file infers
+    # ChatInputValue | None, including when audio_sample_rate is passed.
+    assert_type(
+        chat_input("Message", accept_file=accept, accept_audio=True),
+        ChatInputValue | None,
+    )
+    assert_type(
+        chat_input(
+            "Message",
+            accept_file=accept,
+            accept_audio=True,
+            audio_sample_rate=16000,
+        ),
         ChatInputValue | None,
     )
 
@@ -124,6 +149,10 @@ if TYPE_CHECKING:
     # =====================================================================
     # Test audio_sample_rate parameter (only with accept_audio=True)
     # =====================================================================
+
+    # audio_sample_rate is only on the accept_audio=True overloads, so passing
+    # it with accept_audio omitted is a type error.
+    chat_input("Message", audio_sample_rate=16000)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
     assert_type(
         chat_input("Message", accept_audio=True, audio_sample_rate=16000),

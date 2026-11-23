@@ -27,8 +27,8 @@ from streamlit.commands.page_config import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidSidebarStateError,
     StreamlitInvalidURLError,
+    StreamlitValueError,
 )
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.string_util import is_emoji
@@ -126,7 +126,7 @@ class PageConfigTest(DeltaGeneratorTestCase):
         assert c.initial_sidebar_state == PageConfigProto.LOCKED
 
     def test_set_page_config_sidebar_invalid(self):
-        with pytest.raises(StreamlitInvalidSidebarStateError):
+        with pytest.raises(StreamlitValueError, match=r"Got 'INVALID'\."):
             st.set_page_config(initial_sidebar_state="INVALID")
 
     def test_set_page_config_sidebar_width_positive(self):
@@ -137,7 +137,7 @@ class PageConfigTest(DeltaGeneratorTestCase):
 
     @parameterized.expand([param(0), param(-100)])
     def test_set_page_config_sidebar_width_invalid(self, invalid_value: int):
-        with pytest.raises(StreamlitInvalidSidebarStateError):
+        with pytest.raises(StreamlitValueError, match=rf"Got {invalid_value}\."):
             st.set_page_config(initial_sidebar_state=invalid_value)
 
     def test_set_page_config_menu_items_about(self):
@@ -160,7 +160,7 @@ class PageConfigTest(DeltaGeneratorTestCase):
         assert c.get_help_url == "https://get_help.com"
 
     def test_set_page_config_menu_items_empty_string(self):
-        with pytest.raises(StreamlitInvalidURLError):
+        with pytest.raises(StreamlitInvalidURLError, match="mailto:"):
             menu_items = {"report a bug": "", "GET HELP": "", "about": ""}
             st.set_page_config(menu_items=menu_items)
 
@@ -173,13 +173,11 @@ class PageConfigTest(DeltaGeneratorTestCase):
         assert c.about_section_md == ""
 
     def test_set_page_config_menu_items_invalid(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(
+            StreamlitValueError, match=r"`invalid` is not a supported menu item key"
+        ):
             menu_items = {"invalid": "fdsa"}
             st.set_page_config(menu_items=menu_items)
-        assert str(e.value) == (
-            'We only accept the keys: `"Get help"`, `"Report a bug"`, and `"About"` '
-            '(`"invalid"` is not a valid key.)'
-        )
 
     def test_set_page_config_menu_items_empty_dict(self):
         st.set_page_config(menu_items={})
@@ -251,3 +249,19 @@ def test_get_favicon_string_reraises_for_non_string_icon() -> None:
         pytest.raises(RuntimeError, match="boom"),
     ):
         _get_favicon_string(b"123")
+
+
+def test_get_favicon_string_reraises_streamlit_errors_for_string_icon() -> None:
+    """Re-raise ``StreamlitAPIException`` for a string icon instead of returning it.
+
+    That error means Streamlit rejected the image, so falling back to the string
+    would hide the reason.
+    """
+    with (
+        mock.patch(
+            "streamlit.commands.page_config.image_to_url",
+            side_effect=StreamlitAPIException("unsupported", error_id="test"),
+        ),
+        pytest.raises(StreamlitAPIException, match="unsupported"),
+    ):
+        _get_favicon_string("icon.eps")

@@ -16,8 +16,8 @@
 
 // Workaround for type-only exports:
 // https://stackoverflow.com/questions/53728230/cannot-re-export-a-type-when-using-the-isolatedmodules-with-ts-3-2-2
-import { RenderData as RenderData_, Theme as Theme_ } from "./streamlit"
-import { ComponentProps as ComponentProps_ } from "./StreamlitReact"
+import type { RenderData as RenderData_, Theme as Theme_ } from "./streamlit"
+import type { ComponentProps as ComponentProps_ } from "./StreamlitReact"
 
 export { ArrowTable } from "./ArrowTable"
 export {

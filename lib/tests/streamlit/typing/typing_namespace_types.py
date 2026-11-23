@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, Any, assert_type, cast
 
 # Perform type checking tests for the public ``streamlit.typing`` namespace.
 # Each export must resolve to the same type as its internal definition, so the
@@ -27,6 +25,7 @@ if TYPE_CHECKING:
         ChatInputValue,
         DataEditorState,
         DataframeState,
+        EChartsState,
         PlotlyState,
         PydeckState,
         UploadedFile,
@@ -100,6 +99,16 @@ if TYPE_CHECKING:
     assert_type(plotly_state["selection"]["points"], list[dict[str, Any]])
     assert_type(plotly_state.selection.point_indices, list[int])
     assert_type(plotly_state["selection"]["point_indices"], list[int])
+
+    # =====================================================================
+    # EChartsState: attribute and item access on the selection payload
+    # =====================================================================
+
+    echarts_state = cast("EChartsState", object())
+    assert_type(echarts_state.selection.selected, list[dict[str, Any]])
+    assert_type(echarts_state["selection"]["selected"], list[dict[str, Any]])
+    assert_type(echarts_state.selection.areas, list[dict[str, Any]])
+    assert_type(echarts_state["selection"]["areas"], list[dict[str, Any]])
 
     # =====================================================================
     # PydeckState: attribute and item access on the selection payload

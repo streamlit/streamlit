@@ -130,22 +130,18 @@ export default function useScrollAnimation(
     // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
     animate(target.scrollTop, 1)
 
-    if (target) {
-      target.addEventListener("pointerdown", handleCancelAnimation, {
-        passive: true,
-      })
-      target.addEventListener("wheel", handleCancelAnimation, {
-        passive: true,
-      })
+    target.addEventListener("pointerdown", handleCancelAnimation, {
+      passive: true,
+    })
+    target.addEventListener("wheel", handleCancelAnimation, {
+      passive: true,
+    })
 
-      return () => {
-        target.removeEventListener("pointerdown", handleCancelAnimation)
-        target.removeEventListener("wheel", handleCancelAnimation)
-        cancelAnimationFrame(animatorRef.current)
-      }
+    return () => {
+      target.removeEventListener("pointerdown", handleCancelAnimation)
+      target.removeEventListener("wheel", handleCancelAnimation)
+      cancelAnimationFrame(animatorRef.current)
     }
-
-    return () => cancelAnimationFrame(animatorRef.current)
   }, [
     animate,
     animatorRef,

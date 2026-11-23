@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import { sprintf } from "./sprintfjs.js"
+import { sprintf } from "./sprintfjs"
 
 describe("sprintf", () => {
   const pi = 3.141592653589793
@@ -323,12 +323,16 @@ describe("sprintf", () => {
     })
 
     it("throws for invalid format", () => {
-      expect(() => sprintf("%z", 42)).toThrow()
+      expect(() => sprintf("%z", 42)).toThrow(
+        "[sprintf] unexpected placeholder"
+      )
     })
 
     it("throws for mixing named and positional arguments", () => {
       // sprintf.js throws when mixing named (%(name)s) with positional arguments
-      expect(() => sprintf("%(name)s %d", { name: "test" }, 42)).toThrow()
+      expect(() => sprintf("%(name)s %d", { name: "test" }, 42)).toThrow(
+        "[sprintf] mixing positional and named placeholders is not (yet) supported"
+      )
     })
 
     it("throws own Error when expression evaluation would raise TypeError", () => {

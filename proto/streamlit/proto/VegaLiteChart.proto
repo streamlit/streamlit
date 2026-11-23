@@ -46,5 +46,10 @@ message VegaLiteChart {
   // The form ID of the widget, this is required if selections are activated on the chart.
   string form_id = 9;
 
+  // Accessible name for the chart (author `alt`). Applied on the frontend as
+  // Vega-Lite `description` (→ aria-label on role="graphics-document").
+  // Never written into the hashed `spec` JSON.
+  optional string alt = 10;
+
   reserved 3;
 }

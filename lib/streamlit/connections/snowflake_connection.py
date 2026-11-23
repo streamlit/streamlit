@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from streamlit import logger
@@ -33,6 +34,7 @@ _LOGGER: Final = logger.get_logger(__name__)
 
 if TYPE_CHECKING:
     from datetime import timedelta
+    from types import FrameType
     from uuid import UUID
 
     from pandas import DataFrame
@@ -48,10 +50,13 @@ if TYPE_CHECKING:
 SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED: Final = "08001"
 
 # The location on disk where Snowpark Container Services will mount service connection tokens.
-SNOWPARK_CONNECTION_TOKEN_FILE = "/snowflake/session/token"  # noqa: S105 (not a password)
+SNOWPARK_CONNECTION_TOKEN_FILE: Final = "/snowflake/session/token"  # noqa: S105 (not a password)
 
 # The header where Snowpark Container Services will put per-user connection tokens.
-SNOWPARK_USER_TOKEN_HEADER_NAME = "Sf-Context-Current-User-Token"  # noqa: S105 (not a password)
+SNOWPARK_USER_TOKEN_HEADER_NAME: Final = "Sf-Context-Current-User-Token"  # noqa: S105 (not a password)
+
+# The minimum version of the Snowflake Connector for Python that supports the container fallback.
+_MIN_CONNECTOR_VERSION_FOR_FALLBACK: Final = (3, 11)
 
 
 class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
@@ -155,9 +160,12 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             ttl
         ).replace(".", "_")
         _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl_str}"
+        # Query results share the connection's scope so that results fetched with a
+        # session-scoped identity are never cached where other sessions can read them.
         cached_query = cache_data(
             show_spinner=show_spinner,
             ttl=ttl,
+            scope=self.scope(),
         )(_query)
 
         return cached_query(self._connection_instance_id, sql, params)
@@ -375,12 +383,16 @@ class SnowflakeConnection(BaseSnowflakeConnection):
     case. Use ``secrets.toml`` and ``**kwargs`` to configure your connection
     for local development.
 
-    When an app is running in Snowpark Container Services and has caller's rights
-    enabled, ``st.connection("snowflake-callers-rights")`` connects automatically
+    When an app is running in Snowpark Container Services or on Snowflake serverless
+    compute (``compute_resource: SERVERLESS``) and has caller's rights enabled,
+    ``st.connection("snowflake-callers-rights")`` connects automatically
     using the current user's identity tokens. This is a session-scoped connection
-    to ensure that the identity stays tied to the active user. Unlike with
-    ``"snowflake"`` connections, it will use the Snowpark Container Services
-    connection settings even when other ``**kwargs`` are provided.
+    to ensure that the identity stays tied to the active user. A caller's rights
+    connection can only be used by the session that created it, and its
+    ``.query()`` results are cached per session. It always uses the Snowpark
+    Container Services connection settings and applies other ``**kwargs`` on top
+    of them. A ``"snowflake"`` connection does this only in the container
+    fallback described in Example 7.
 
     The Snowflake connection includes several convenience methods. For example, you
     can directly execute a SQL query with ``.query()`` or access the underlying
@@ -409,6 +421,19 @@ class SnowflakeConnection(BaseSnowflakeConnection):
           connects to a Streamlit app. These credentials are only valid for about
           two minutes. Therefore, caller's rights connections must be created at
           the top of an app or else the connection may fail.
+
+        - A caller's rights connection carries the identity of the user whose
+          session created it. Call ``st.connection("snowflake-callers-rights")``
+          inside your app script or inside the functions that use it. Python
+          imports a module once per process, so a connection created at the top
+          level of an imported module would make every user run queries as the
+          first user, and ``QUERY_HISTORY`` would attribute those queries to that
+          user. Streamlit raises an error when a caller's rights connection is
+          requested while a module is being imported, and when a session uses a
+          connection that another session created. Don't store the connection,
+          its ``.cursor()``, its ``.raw_connection``, or its ``.session()`` in a
+          global variable or a global ``st.cache_resource`` function; objects
+          taken from the connection aren't checked.
 
         - To develop locally with a caller's rights connection, use an
           environment variable to logically switch between a ``"snowflake"``
@@ -452,6 +477,8 @@ class SnowflakeConnection(BaseSnowflakeConnection):
     don't have a ``[connections.snowflake]`` dictionary in your
     ``secrets.toml`` file, Streamlit will ignore any keyword arguments and use
     the default Snowflake connection as described in Example 5 and Example 6.
+    The Snowpark Container Services fallback described in Example 7 is the
+    exception: it applies keyword arguments.
     To configure your connection using only keyword arguments, declare a name
     for the connection other than ``"snowflake"``.
 
@@ -579,16 +606,56 @@ class SnowflakeConnection(BaseSnowflakeConnection):
         conn = st.connection("snowflake")
         df = conn.query("SELECT * FROM my_table")
 
-    **Example 7: Caller's rights connection when running in Snowpark Container Services**
+    **Example 7: Service connection in Snowpark Container Services**
+
+    When your app runs in Snowpark Container Services and has no
+    ``[connections.snowflake]`` section in ``secrets.toml`` and no Snowflake
+    connector configuration (``connections.toml``, ``config.toml``, or
+    ``SNOWFLAKE_CONNECTIONS``), ``st.connection("snowflake")`` connects as the
+    service. It uses the ``SNOWFLAKE_ACCOUNT`` and
+    ``SNOWFLAKE_HOST`` environment variables, the service token at
+    ``/snowflake/session/token``, and ``SNOWFLAKE_DATABASE``,
+    ``SNOWFLAKE_SCHEMA``, ``SNOWFLAKE_PROTOCOL``, and ``SNOWFLAKE_PORT`` when
+    they are set. Keyword arguments passed to ``st.connection`` override these
+    values.
+
+    In this case, Streamlit authenticates by setting ``token_file_path`` to the
+    service token file. The connector prefers ``token_file_path`` over ``token``,
+    so passing ``token`` has no effect and Streamlit logs a warning. To use a
+    different token, pass ``token_file_path`` with the path to a file that contains
+    it. This replaces the default path.
+
+    This requires ``snowflake-connector-python`` 3.11.0 or later. With an older
+    connector, Streamlit skips this fallback and uses the connector's default
+    connection.
+
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        conn = st.connection("snowflake")
+        df = conn.query("SELECT * FROM my_table")
+
+    This connection uses the service's identity, not the caller's. For the
+    caller's identity, use ``"snowflake-callers-rights"`` as described in the
+    next example.
+
+    **Example 8: Caller's rights connection when running in Snowpark Container Services**
 
     You can use ``"snowflake-callers-rights"`` type connections in any
     environment running on Snowpark Container Services, including Streamlit in
-    Snowflake on containers and any self-managed caller's rights Service.
+    Snowflake on containers and any self-managed caller's rights Service. They
+    also work on Snowflake serverless compute (``compute_resource: SERVERLESS``).
 
-    This will use the Snowpark-provided account, host, database, and schema to connect.
-    Additionally, it will set ``client_session_keep_alive`` to ``True``. These values
-    may be overridden with ``**kwargs`` in ``st.connection``. For a complete list
-    of keyword arguments, see the documentation for |snowflake.connector.connect()|_.
+    This will use the Snowpark-provided account and host to connect. If the
+    container sets a database, schema, protocol, or port, the connection uses
+    them too. Without a database and schema, the session has no default
+    namespace, so queries must use fully qualified table names.
+    Additionally, it will set ``client_session_keep_alive`` to ``True``. These
+    values may be overridden with ``**kwargs`` in ``st.connection``. For a
+    complete list of keyword arguments, see the documentation for
+    |snowflake.connector.connect()|_.
 
     .. |snowflake.connector.connect()| replace:: ``snowflake.connector.connect()``
     .. _snowflake.connector.connect(): https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#label-snowflake-connector-methods-connect
@@ -646,6 +713,10 @@ class SnowflakeConnection(BaseSnowflakeConnection):
         # Otherwise, attempt to create a new connection from whatever credentials we
         # have available.
         st_secrets = self._secrets.to_dict()
+        # Set when the container fallback runs. Its connector errors are real
+        # connection errors, so they must not be reported as a missing configuration.
+        used_container_env = False
+
         try:
             if len(st_secrets):
                 _LOGGER.info(
@@ -657,6 +728,27 @@ class SnowflakeConnection(BaseSnowflakeConnection):
 
             # Use the default configuration as defined in https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection
             if self._connection_name == "snowflake":
+                if _should_use_container_env_fallback():
+                    _LOGGER.info(
+                        "No connector config file found. Connecting to Snowflake using the "
+                        "SNOWFLAKE_* environment variables and the service token file."
+                    )
+                    container_params = {
+                        **_get_container_connection_params(),
+                        "token_file_path": SNOWPARK_CONNECTION_TOKEN_FILE,
+                        **kwargs,
+                    }
+                    # The token file path is always set, so a `token` here came from kwargs.
+                    if "token" in container_params:
+                        _LOGGER.warning(
+                            "Both `token` and `token_file_path` are set for the Snowflake "
+                            "connection. The Snowflake connector uses the contents of the "
+                            "token file and ignores `token`. To use a different token, pass "
+                            "`token_file_path` pointing to a file that contains the token instead."
+                        )
+                    used_container_env = True
+                    return snowflake.connector.connect(**container_params)
+
                 _LOGGER.info(
                     "Connecting to Snowflake using the default configuration as defined "
                     "in https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-connect#setting-a-default-connection"
@@ -675,26 +767,250 @@ class SnowflakeConnection(BaseSnowflakeConnection):
 
             return snowflake.connector.connect(**kwargs)
         except SnowflakeError:
-            if not len(st_secrets) and not kwargs:
+            if not len(st_secrets) and not kwargs and not used_container_env:
                 raise StreamlitAPIException(
                     "Missing Snowflake connection configuration. "
                     "Did you forget to set this in `secrets.toml`, a Snowflake configuration file, "
                     "or as kwargs to `st.connection`? "
                     "See the [SnowflakeConnection configuration documentation]"
                     "(https://docs.streamlit.io/st.connections.snowflakeconnection-configuration) "
-                    "for more details and examples."
+                    "for more details and examples.",
+                    error_id="snowflake-missing-connection-config",
                 )
             raise
+
+
+def _get_container_connection_params() -> dict[str, str | bool]:
+    """Return OAuth connection params derived from the container's ``SNOWFLAKE_*`` env vars.
+
+    The result has no credentials; callers add ``token`` or ``token_file_path``.
+
+    Raises
+    ------
+        StreamlitAPIException: if ``SNOWFLAKE_ACCOUNT`` or ``SNOWFLAKE_HOST``
+        is unset.
+    """
+    # See Snowflake docs:
+    # https://docs.snowflake.com/en/developer-guide/snowpark-container-services/additional-considerations-services-jobs#configuring-caller-s-rights-for-your-service
+
+    # Base parameters, common to all connections.
+    params: dict[str, str | bool] = {
+        "authenticator": "oauth",
+        # OCSP checks do not work in Snowflake containers.
+        "ocsp_fail_open": True,
+        # Keep the session alive, because the short-lived token it was opened with
+        # can't be used to reopen it once it expires.
+        "client_session_keep_alive": True,
+    }
+    for param_name, env_var_name in (
+        ("account", "SNOWFLAKE_ACCOUNT"),
+        ("host", "SNOWFLAKE_HOST"),
+    ):
+        value = os.getenv(env_var_name)
+        if value is None:
+            raise StreamlitAPIException(
+                f"Environment variable `{env_var_name}` not found. Is this app "
+                "running in a Snowflake container environment?",
+                error_id="snowflake-env-var-not-found",
+            )
+        params[param_name] = value
+
+    # Forward these only when the container sets them. When the container mounts a
+    # default connection file, the "snowflake" connection reads them from that file instead.
+    # - Database and schema: some containers do not mount them. The session then
+    #   has no default namespace, so queries need fully qualified names.
+    # - Protocol and port: some containers route the connector through a local
+    #   proxy (for example, http and 8082). Otherwise the connector uses https
+    #   on port 443.
+    for param_name, env_var_name in (
+        ("database", "SNOWFLAKE_DATABASE"),
+        ("schema", "SNOWFLAKE_SCHEMA"),
+        ("protocol", "SNOWFLAKE_PROTOCOL"),
+        ("port", "SNOWFLAKE_PORT"),
+    ):
+        value = os.getenv(env_var_name)
+        if value is not None:
+            params[param_name] = value
+
+    return params
+
+
+def _should_use_container_env_fallback() -> bool:
+    """Return whether to build the default connection from the container environment.
+
+    Connector config files and ``SNOWFLAKE_CONNECTIONS`` take precedence over the
+    fallback, so a configured user or role is never silently replaced.
+    """
+    # Check the container environment first, so the skip reasons below are logged
+    # only inside a container, where the fallback could apply.
+    if not _can_connect_from_container_env():
+        return False
+    if os.getenv("SNOWFLAKE_CONNECTIONS"):
+        _LOGGER.info(
+            "Not using the container environment for the Snowflake connection "
+            "because the SNOWFLAKE_CONNECTIONS environment variable is set."
+        )
+        return False
+    try:
+        from snowflake.connector.constants import (  # type:ignore[import]
+            CONFIG_FILE,
+            CONNECTIONS_FILE,
+        )
+        from snowflake.connector.version import VERSION  # type:ignore[import]
+    except ImportError:
+        # A connector without these keeps the default connection path.
+        return False
+    # The fallback passes token_file_path, which the connector supports from 3.11.0.
+    if tuple(VERSION[:2]) < _MIN_CONNECTOR_VERSION_FOR_FALLBACK:
+        _LOGGER.info(
+            "Not using the container environment for the Snowflake connection "
+            "because snowflake-connector-python %s.%s.0 or later is required.",
+            *_MIN_CONNECTOR_VERSION_FOR_FALLBACK,
+        )
+        return False
+    # A file or parent directory that can't be read counts as absent, so the fallback
+    # is used. The connector couldn't use that configuration either.
+    if os.path.exists(CONNECTIONS_FILE) or os.path.exists(CONFIG_FILE):
+        _LOGGER.info(
+            "Not using the container environment for the Snowflake connection "
+            "because a Snowflake connector configuration file exists."
+        )
+        return False
+    return True
+
+
+def _can_connect_from_container_env() -> bool:
+    """Return whether the container env vars and service token file are all present.
+
+    An empty environment variable counts as unset.
+    """
+    return (
+        bool(os.getenv("SNOWFLAKE_ACCOUNT"))
+        and bool(os.getenv("SNOWFLAKE_HOST"))
+        and os.path.exists(SNOWPARK_CONNECTION_TOKEN_FILE)
+    )
+
+
+# Module names of Python's import machinery, frozen or not.
+_IMPORT_MACHINERY_MODULES: Final = frozenset(
+    {
+        "_frozen_importlib",
+        "_frozen_importlib_external",
+        "importlib._bootstrap",
+        "importlib._bootstrap_external",
+    }
+)
+
+
+def _is_module_being_imported() -> bool:
+    """Returns whether the current call happens while a Python module is imported.
+
+    Streamlit runs app scripts and pages with ``exec``, so this is only ``True`` for
+    code that runs at the top level of an imported module, including a module that a
+    function imports lazily.
+    """
+    frame: FrameType | None = sys._getframe(1)
+    while frame is not None:
+        if frame.f_globals.get("__name__") in _IMPORT_MACHINERY_MODULES:
+            return True
+        frame = frame.f_back
+    return False
 
 
 class SnowflakeCallersRightsConnection(SnowflakeConnection):
     """A caller's rights connection to Snowflake using the Snowflake Connector for Python.
 
-    This will only work when running on Snowpark Container Services or another
-    compatible platform.
+    This will only work when running on Snowpark Container Services, Snowflake
+    serverless compute, or another compatible platform.
 
     See ``BaseSnowflakeConnection`` for complete docs.
     """
+
+    def __init__(self, connection_name: str, **kwargs: Any) -> None:
+        self._raise_if_module_being_imported()
+        # The owning session must be recorded before the base class opens the first
+        # connection with that session's user token.
+        self._owner_session_id = self._get_current_session_id()
+        super().__init__(connection_name, **kwargs)
+
+    @staticmethod
+    def _raise_if_module_being_imported() -> None:
+        """Raises if a caller's rights connection is requested during a module import.
+
+        Python imports a module once per process, so anything a module stores at
+        import time, such as this connection or a cursor taken from it, would be
+        shared by every later session with the identity of the first user.
+        ``st.connection`` calls this before its cache lookup, because a cached
+        connection returned during an import would be shared the same way.
+        """
+        if _is_module_being_imported():
+            raise StreamlitAPIException(
+                "Caller's rights connections can't be requested while a module is "
+                "being imported, because every user would then share the first "
+                'user\'s identity. Call `st.connection("snowflake-callers-rights")` '
+                "inside the functions that use it or in your app script.",
+                error_id="snowflake-callers-rights-during-import",
+            )
+
+    @staticmethod
+    def _get_current_session_id() -> str:
+        """Returns the ID of the session running on the current thread.
+
+        Raises
+        ------
+            StreamlitAPIException: if this is called outside of a session context.
+        """
+        # Local import needed to avoid cycles.
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            get_script_run_ctx,
+        )
+
+        ctx = get_script_run_ctx(suppress_warning=True)
+        if ctx is None:
+            raise StreamlitAPIException(
+                "Caller's rights connections can only be created and used in an app "
+                "execution thread. To use one from a thread you started, attach the "
+                "session's context with "
+                "`streamlit.runtime.scriptrunner.add_script_run_ctx`.",
+                error_id="snowflake-callers-rights-outside-session",
+            )
+        return ctx.session_id
+
+    def _verify_owner_session(self) -> None:
+        """Raises if the current session is not the one that created this connection.
+
+        A caller's rights connection carries the identity of the user whose session
+        created it, so any other session using it would act as that user.
+        """
+        if self._get_current_session_id() != self._owner_session_id:
+            raise StreamlitAPIException(
+                "This caller's rights connection belongs to a different session and "
+                "can't be shared. Call `st.connection` inside the functions that use "
+                "it instead of storing the connection in a module-level variable "
+                "or a global `st.cache_resource` function.",
+                error_id="snowflake-callers-rights-shared-across-sessions",
+            )
+
+    @property
+    def _instance(self) -> InternalSnowflakeConnection:
+        self._verify_owner_session()
+        return super()._instance
+
+    def query(
+        self,
+        sql: str,
+        *,  # keyword-only arguments:
+        ttl: float | int | timedelta | None = None,
+        show_spinner: bool | str = "Running `snowflake.query(...)`.",
+        params: Any = None,
+        **kwargs: Any,
+    ) -> DataFrame:
+        # Cached results don't touch `_instance`, so verify ownership before the cache
+        # lookup.
+        self._verify_owner_session()
+        return super().query(
+            sql, ttl=ttl, show_spinner=show_spinner, params=params, **kwargs
+        )
 
     @classmethod
     def scope(cls) -> Literal["session"]:
@@ -717,43 +1033,21 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
 
         Raises
         ------
-            StreamlitAPIException: if any Snowpark environment variables or connection
-            tokens are missing; or if this is called outside of a session context.
+            StreamlitAPIException: if ``SNOWFLAKE_ACCOUNT`` or ``SNOWFLAKE_HOST``
+            is unset, the Snowpark token file is missing, or the caller's rights
+            token header is missing.
         """
         # Local import needed to avoid cycles.
         from streamlit import context as st_context
 
-        # See Snowflake docs:
-        # https://docs.snowflake.com/en/developer-guide/snowpark-container-services/additional-considerations-services-jobs#configuring-caller-s-rights-for-your-service
-
-        # Base parameters, common to all connections.
-        params: dict[str, str | bool] = {
-            "authenticator": "oauth",
-            # OCSP checks do not work in Snowflake containers.
-            "ocsp_fail_open": True,
-            # We want to keep this alive, as the user token will expire fairly quickly
-            # - so we can't create a new session on expiration.
-            "client_session_keep_alive": True,
-        }
-        for param_name, env_var_name in (
-            ("account", "SNOWFLAKE_ACCOUNT"),
-            ("host", "SNOWFLAKE_HOST"),
-            ("database", "SNOWFLAKE_DATABASE"),
-            ("schema", "SNOWFLAKE_SCHEMA"),
-        ):
-            value = os.getenv(env_var_name)
-            if value is None:
-                raise StreamlitAPIException(
-                    f"Environment variable `{env_var_name}` not found. Is this app "
-                    "running in a Snowflake container environment?"
-                )
-            params[param_name] = value
+        params = _get_container_connection_params()
 
         # Validate the token file exists, and read it.
         if not os.path.exists(SNOWPARK_CONNECTION_TOKEN_FILE):
             raise StreamlitAPIException(
                 f"Token file `{SNOWPARK_CONNECTION_TOKEN_FILE}` not found. Is this app "
-                "running in a Snowflake container environment?"
+                "running in a Snowflake container environment?",
+                error_id="snowflake-token-file-not-found",
             )
         login_token = cls._read_token_file()
 
@@ -762,14 +1056,39 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
             raise StreamlitAPIException(
                 "Token header not found. Is this app running with caller's "
                 "rights enabled, and is this connection being created in an app "
-                "execution thread?"
+                "execution thread?",
+                error_id="snowflake-token-header-not-found",
             )
         user_token = st_context.headers[SNOWPARK_USER_TOKEN_HEADER_NAME]
 
-        # Build the actual caller's rights token.
-        params["token"] = f"{login_token}.{user_token}"
+        params["token"] = cls._build_callers_rights_token(login_token, user_token)
 
         return params
+
+    @staticmethod
+    def _build_callers_rights_token(login_token: str, user_token: str) -> str:
+        """Returns the OAuth token that authenticates as the calling user.
+
+        The mounted service token selects the format:
+
+        - Contains ``.``: Snowpark Container Services expects
+          ``<service token>.<user token>``.
+        - No ``.``: Snowflake serverless compute mounts an opaque service token, and
+          its user token header is already a complete caller's rights token, so the
+          header is used alone.
+
+        Whitespace around the service token, such as a trailing newline in the token
+        file, is ignored.
+        """
+        # Snowflake documents neither token's format, and no environment variable
+        # distinguishes serverless compute from Snowpark Container Services, so the
+        # service token's shape is the only available signal. The opaque, dotless
+        # serverless token and its complete header token were observed on a live
+        # serverless deployment.
+        login_token = login_token.strip()
+        if "." in login_token:
+            return f"{login_token}.{user_token}"
+        return user_token
 
     def _connect(self, **kwargs: Any) -> InternalSnowflakeConnection:
         import snowflake.connector  # type:ignore[import]

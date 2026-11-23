@@ -125,8 +125,8 @@ function score(
     return SCORE_MIN
   }
 
-  const D = new Array(n)
-  const M = new Array(n)
+  const D: number[][] = new Array(n)
+  const M: number[][] = new Array(n)
 
   compute(needle, haystack, D, M, caseSensitive)
 
@@ -137,7 +137,7 @@ function positions(needle: string, haystack: string): number[] {
   const n = needle.length
   const m = haystack.length
 
-  const positions = new Array(n)
+  const positions: number[] = new Array(n)
 
   if (!n || !m) return positions
 
@@ -150,8 +150,8 @@ function positions(needle: string, haystack: string): number[] {
     return positions
   }
 
-  const D = new Array(n)
-  const M = new Array(n)
+  const D: number[][] = new Array(n)
+  const M: number[][] = new Array(n)
 
   compute(needle, haystack, D, M)
 

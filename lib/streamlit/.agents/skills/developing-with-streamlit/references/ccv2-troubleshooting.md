@@ -4,18 +4,18 @@
 
 - **v1 contamination (most common failure)**
 - Packaged assets and manifests (`asset_dir`, component key)
-- Renaming / placeholder drift
+- Renamed project/package still shows old template names
 - Inline strings vs file-backed assets (path heuristic)
 - Globs (0 matches or multiple matches)
 - Defaults, callbacks, and missing result attributes
 - Keys (Python `key=` vs frontend `key`)
 - Shadow DOM / `isolate_styles` surprises
-- Frontend build (Vite) gotchas
+- Frontend build gotchas
 - DOM clobbering (overwriting injected HTML/CSS)
 
 ### v1 contamination (most common failure)
 
-The single most common cause of broken CCv2 components is accidentally mixing in **v1 APIs** from outdated examples, blog posts, or training data. v1 is deprecated and will not work.
+The single most common cause of broken CCv2 components is accidentally mixing in **v1 APIs** from outdated examples, blog posts, or training data. v1 APIs don’t work inside a v2 component.
 
 Symptoms:
 - Component renders as blank/empty iframe
@@ -29,7 +29,7 @@ Check your code for these **banned patterns** and replace them:
 |------------------------------------------|-------------------------------------------------------|
 | `st.components.v1`                       | `st.components.v2.component(...)`                     |
 | `components.declare_component()`         | `st.components.v2.component(...)`                     |
-| `components.html()`                      | `st.components.v2.component(...)` with `html=`        |
+| `components.html()`                      | `st.iframe()` / `st.html()` for static HTML, or `st.components.v2.component(...)` with `html=` when it needs events |
 | `Streamlit.setComponentValue(val)`       | `setStateValue("key", val)` or `setTriggerValue(...)` |
 | `Streamlit.setFrameHeight()`             | Remove entirely (v2 handles sizing)                   |
 | `Streamlit.setComponentReady()`          | Remove entirely (v2 has no ready signal)              |
@@ -60,12 +60,12 @@ Important context:
 
 ### Inline strings vs file-backed assets (path heuristic)
 
-CCv2 uses a heuristic: strings that “look like” paths are treated as file references. A multi-line string is always treated as inline content.
+CCv2 uses a heuristic: strings that “look like” paths are treated as file references. A string with a line break inside it is always treated as inline content. Leading and trailing newlines are stripped first, so they don't count.
 
 Fix:
 
 - Prefer triple-quoted multi-line strings for inline `html`/`css`/`js`.
-- Avoid single-line minified JS/CSS in `js=`/`css=`; add a newline if you must.
+- Avoid single-line minified JS/CSS in `js=`/`css=`; if you must use it, put a line break inside the code.
 
 ### Globs (0 matches or multiple matches)
 
@@ -97,7 +97,7 @@ Fix:
 
 ### Defaults, callbacks, and missing result attributes
 
-#### `default={...}` doesn’t apply / missing result attributes
+#### `default={...}` raises "is not a valid state name" / missing result attributes
 
 Defaults only apply to **state keys**, and Streamlit expects those keys to be declared via `on_<key>_change` callback parameters at mount time.
 
@@ -105,6 +105,10 @@ Fix:
 
 - If you pass `default={"value": ...}`, also pass `on_value_change=lambda: None`.
 - For triggers, don’t expect defaults; triggers are transient and default to `None`.
+
+#### Trigger never fires inside `st.form`
+
+`setTriggerValue` is ignored when the component is inside `st.form`; the browser console logs a warning instead. Inside a form, use `setStateValue` and let the form’s submit button commit it.
 
 ### Keys (Python `key=` vs frontend `key`)
 

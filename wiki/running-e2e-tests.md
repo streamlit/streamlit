@@ -13,7 +13,7 @@ Before running a single test, ensure you have installed all necessary test depen
 make run-e2e-test e2e_playwright/name_of_the_test.py
 ```
 
-Screenshot tests will only operate against your local operating system version, typically found in the `e2e_playwright/__snapshots__/darwin/` folder. This is because our CI pipeline runs on Ubuntu, which may generate slightly different snapshots. To update screenshots locally, simply delete outdated snapshots in `e2e_playwright/__snapshots__/darwin/` and run `make update-snapshots` once. The initial run may fail due to the absence of screenshots.
+Screenshot tests compare against `e2e_playwright/__snapshots__/<os>/` for the machine running the test (`darwin` on macOS, `linux` in CI). CI checks the committed `linux` snapshots, which can differ from a local OS, so a green local run does not update the images CI uses. A missing snapshot is written into that OS folder and the test still fails once, so one run can generate every missing image.
 
 ## Debugging tests
 
@@ -48,7 +48,7 @@ Available options (also configurable via environment variables):
 
 ## Accessing local test results
 
-All screenshots are stored in a test-specific folder under `e2e_playwright/__snapshots__/<os>/`. Any missing screenshots will be generated in this location. For any failed e2e tests, additional resources such as videos, differential screenshots, and traces will be stored in `e2e_playwright/test-results/`. The `snapshot_updates` folder contains all screenshots updated during the test run.
+Committed screenshots live under `e2e_playwright/__snapshots__/linux/`. A local run also writes missing screenshots under `e2e_playwright/__snapshots__/<os>/` for that machine. Failed tests store videos, traces, and diff images under `e2e_playwright/test-results/`. Updated images for mismatches and missing snapshots are under `e2e_playwright/test-results/snapshot-updates/`.
 
 ## Accessing GitHub test results
 
@@ -56,29 +56,17 @@ Upon completion of every [Playwright E2E Tests workflow](../.github/workflows/pl
 
 <img width="700" alt="image" src="https://github.com/streamlit/streamlit/assets/2852129/3c7f7739-7ced-4d93-b131-9628c83bc49e">
 
-The `playwright_test_results` folder, uploaded only when tests fail, contains data such as videos, differential screenshots as well as all updated screenshots within the `snapshot-updates` folder.
+Each Playwright run uploads `playwright_test_results_` plus the first 6 characters of the head SHA (the pull request head on a PR). When tests fail, that artifact contains videos, differential screenshots, and a `snapshot-updates` folder for missing or mismatched snapshots.
 
 ## Updating screenshots
 
-To update screenshots, delete all outdated screenshots locally and push the changes to your PR. After the CI workflow completes, you can obtain all updated screenshots from the uploaded workflow artifacts. If the updated screenshots are as expected, push them back to your branch.
+CI checks the `linux` snapshots. On a pull request, add the `update-snapshots` label before the Playwright run or after it has failed. When that run fails because snapshots are missing or mismatched, [Snapshot Autofix](../.github/workflows/snapshot-autofix.yml) opens a pull request with the updated `linux` images. A pass, or a failure that produced no snapshot updates, removes the label. Review that pull request before merging it.
 
-Note: there is a folder in the artifacts called `snapshot-updates` that makes updating these screenshots easier.
+To pull the same images into your checkout, push your branch and run `make update-snapshots`. The script looks up the Playwright run for your local `HEAD`. If that run failed, it merges the artifact's `snapshot-updates` folder into `e2e_playwright/__snapshots__/`. If the run passed, or there is no run for that commit yet, it exits. It waits while the run is still in progress. `make update-snapshots-changed` does the same for the changed-files workflow.
 
-### Automatic screenshot update script
+`make update-snapshots` does not regenerate snapshots for your local OS. Re-run the test locally to write missing images under `__snapshots__/<os>/`. Only `__snapshots__/linux/` is committed. Other OS folders are gitignored. On Linux, a local run writes into that committed folder, so prefer the images CI produces.
 
-To simplify the process of updating snapshots, we provide a script that can be run locally:
-
-```
-make update-snapshots
-```
-
-This script will:
-
-1. Match your local branch with the corresponding PR on GitHub.
-2. Wait for the latest Playwright e2e workflow run to finish.
-3. Update the snapshots in your local repository once the workflow is complete.
-
-After the script finishes, commit & push all the snapshots that are expected to be updated. Be cautious of flaky tests that might cause unrelated snapshots to change; these should not be pushed or merged.
+After either path, commit only the snapshots you expect to change. Flaky tests can change unrelated images.
 
 > **Note**: If you cloned the repository using `https` with a token, the script should work out of the box. If you cloned via `ssh`, the script will prompt you for a Personal Access Token (PAT). You can create one [here](https://github.com/settings/tokens/new) (only requires the `repo/public_repo` scope). Alternatively, you can provide the token via command-line arguments: `uv run python scripts/update_e2e_snapshots.py --token MY_TOKEN`
 

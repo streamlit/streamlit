@@ -19,7 +19,6 @@ from __future__ import annotations
 import collections
 import collections.abc
 import dataclasses
-import datetime
 import functools
 import inspect
 import io
@@ -32,6 +31,7 @@ import threading
 import uuid
 import weakref
 from collections.abc import Callable
+from datetime import datetime
 from enum import Enum
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Final, TypeAlias, cast
@@ -459,7 +459,7 @@ class _CacheFuncHasher:
         if isinstance(obj, uuid.UUID):
             return obj.bytes
 
-        if isinstance(obj, datetime.datetime):
+        if isinstance(obj, datetime):
             return obj.isoformat().encode()
 
         if isinstance(obj, (list, tuple)):
@@ -620,19 +620,23 @@ class _CacheFuncHasher:
 
             pil_obj: Image = cast("Image", obj)
 
-            # We don't just hash the results of obj.tobytes() because we want to use
-            # the sampling logic for numpy data.
-            pixel_bytes = pil_obj.tobytes()
+            # Hash mode and size, because tobytes() is a flat pixel stream that
+            # images of different modes or sizes can share.
+            self.update(h, pil_obj.mode)
+            self.update(h, pil_obj.size)
 
-            # P-mode (palette-indexed) images need the palette included in the hash,
-            # since tobytes() only returns palette indices, not the color table.
-            if pil_obj.mode == "P":
-                palette_data = pil_obj.getpalette()
+            # Hash the palette, since tobytes() returns only palette indices. Read it
+            # as RGBA so palette alpha counts, and hash it on its own so the
+            # sampling of large images below can't skip it.
+            if pil_obj.mode in {"P", "PA"}:
+                palette_data = pil_obj.getpalette("RGBA")
                 if palette_data is not None:
-                    pixel_bytes = bytes(palette_data) + pixel_bytes
+                    self.update(h, bytes(palette_data))
 
-            np_array = np.frombuffer(pixel_bytes, dtype="uint8")
-            return self.to_bytes(np_array)
+            # Hash the pixels as a uint8 array so large images are sampled like
+            # large arrays.
+            self.update(h, np.frombuffer(pil_obj.tobytes(), dtype="uint8"))
+            return h.digest()
 
         elif inspect.isbuiltin(obj):
             return bytes(obj.__name__.encode())

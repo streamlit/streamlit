@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are incorrect.
 # Note: Due to https://mypy.readthedocs.io/en/latest/duck_type_compatibility.html, mypy will not detect
@@ -58,11 +56,13 @@ if TYPE_CHECKING:
     )
     assert_type(slider("foo", max_value=10.0, value=5.0, step=1.0), float)
     assert_type(slider("foo", max_value=10.0, step=1.0), float)
-    # kwsingularfloat7 = slider("foo", step=1.0)  # noqa: ERA001
-    # ^ This actually raises an exception and is an invalid signature
+    assert_type(slider("foo", step=1.0), float)
 
     assert_type(slider("foo", min_value=5.0, max_value=10.0), float)
     assert_type(slider("foo", min_value=5.0, max_value=10.0, step=1.0), float)
+    # Mixed ints and floats make a float slider.
+    assert_type(slider("foo", min_value=0.0, max_value=60.0, value=25, step=2.5), float)
+    assert_type(slider("foo", value=[1, 2.5]), tuple[float, float])
 
     assert_type(slider("foo", min_value=5, value=[5, 9]), tuple[int, int])
     assert_type(
@@ -391,3 +391,22 @@ if TYPE_CHECKING:
     assert_type(slider("foo", on_change=lambda: None), int)
     assert_type(slider("foo", value=5.0, on_change="ignore"), float)
     assert_type(slider("foo", value=(1, 10), on_change="ignore"), tuple[int, int])
+
+    def on_slider_change(prefix: str) -> None: ...
+
+    # Common parameters combined
+    assert_type(
+        slider(
+            "foo",
+            value=5,
+            key="threshold",
+            help="Choose a threshold",
+            on_change=on_slider_change,
+            args=("threshold",),
+            kwargs={},
+            disabled=False,
+            label_visibility="visible",
+            width=400,
+        ),
+        int,
+    )

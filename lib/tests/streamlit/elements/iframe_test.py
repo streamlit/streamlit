@@ -17,10 +17,15 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.iframe import IframeMixin, _is_file, marshall
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -42,13 +47,25 @@ def test_marshall_with_valid_tab_index(tab_index: int | None) -> None:
 
 @pytest.mark.parametrize(
     "invalid_value",
-    ["0", 1.5, True, [], {}, -2, -100],
-    ids=["string", "float", "bool", "list", "dict", "minus_two", "minus_hundred"],
+    ["0", 1.5, True, [], {}],
+    ids=["string", "float", "bool", "list", "dict"],
 )
-def test_marshall_with_invalid_tab_index(invalid_value: object) -> None:
-    """Test that invalid tab_index types and values raise StreamlitAPIException."""
+def test_marshall_with_invalid_tab_index_type(invalid_value: object) -> None:
+    """Invalid tab_index types raise StreamlitInvalidParameterTypeError."""
     proto = IFrameProto()
-    with pytest.raises(StreamlitAPIException):
+    with pytest.raises(StreamlitInvalidParameterTypeError):
+        marshall(proto, src="https://example.com", tab_index=invalid_value)
+
+
+@pytest.mark.parametrize(
+    "invalid_value",
+    [-2, -100],
+    ids=["minus_two", "minus_hundred"],
+)
+def test_marshall_with_invalid_tab_index_value(invalid_value: object) -> None:
+    """Out-of-range tab_index integers raise StreamlitValueError."""
+    proto = IFrameProto()
+    with pytest.raises(StreamlitValueError):
         marshall(proto, src="https://example.com", tab_index=invalid_value)
 
 
@@ -218,6 +235,36 @@ class StIframeTest(DeltaGeneratorTestCase):
         assert element.width_config.use_stretch is True
         assert element.height_config.pixel_height == 600
 
+    def test_iframe_alt_is_forwarded(self):
+        """Non-empty alt is stripped and set on the proto."""
+        st.iframe("https://example.com", alt="  Streamlit documentation  ")
+
+        element = self.get_delta_from_queue().new_element
+        assert element.iframe.HasField("alt")
+        assert element.iframe.alt == "Streamlit documentation"
+
+    @parameterized.expand(["", "   "])
+    def test_iframe_empty_alt_is_unset(self, blank_alt: str):
+        """Empty or whitespace-only alt must not set the proto field."""
+        st.iframe("https://example.com", alt=blank_alt)
+
+        element = self.get_delta_from_queue().new_element
+        assert not element.iframe.HasField("alt")
+
+    def test_iframe_omitted_alt_is_unset(self):
+        """Omitting alt leaves the proto field unset."""
+        st.iframe("https://example.com")
+
+        element = self.get_delta_from_queue().new_element
+        assert not element.iframe.HasField("alt")
+
+    def test_components_v1_iframe_does_not_set_alt(self):
+        """Deprecated components.v1.iframe does not accept or set alt."""
+        st.components.v1.iframe("https://example.com")
+
+        element = self.get_delta_from_queue().new_element
+        assert not element.iframe.HasField("alt")
+
     def test_iframe_with_data_url(self):
         """Test st.iframe with a data: URL."""
         st.iframe("data:text/html,<h1>Hello</h1>", height=100)
@@ -329,7 +376,7 @@ class StIframeTest(DeltaGeneratorTestCase):
 
     def test_iframe_with_invalid_tab_index_raises(self):
         """Test that invalid tab_index values raise an exception."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.iframe("https://example.com", height=400, tab_index=-2)
 
     def test_iframe_with_invalid_width_raises(self):

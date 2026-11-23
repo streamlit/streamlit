@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { createElement, MouseEvent } from "react"
+import { createElement, type MouseEvent } from "react"
 
 import { act, render, renderHook, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
   useDetailsAnimation,
-  UseDetailsAnimationOptions,
+  type UseDetailsAnimationOptions,
 } from "./useDetailsAnimation"
 
 /** Wrapper component that renders DOM elements wired to the hook's refs. */

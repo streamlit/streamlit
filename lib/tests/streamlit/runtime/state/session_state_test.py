@@ -31,6 +31,7 @@ from hypothesis import strategies as hst
 import streamlit as st
 import tests.streamlit.runtime.state.strategies as stst
 from streamlit.components.v2.bidi_component.main import _make_trigger_id
+from streamlit.elements.widgets.chat import ChatInputSerde, ChatInputValue
 from streamlit.errors import (
     StreamlitWidgetAlreadyInstantiatedError,
     UnserializableSessionStateError,
@@ -74,6 +75,7 @@ from streamlit.runtime.state.session_state import (
     SessionStateStatProvider,
     Value,
     WStates,
+    _CallbackRerunVotes,
     _is_stale_widget,
     _sanitize_url_array,
 )
@@ -495,6 +497,163 @@ class WStateTests(unittest.TestCase):
             # Verify no warning was logged
             mock_logger.warning.assert_not_called()
 
+    def test_fragment_callback_rerun_does_not_warn(self):
+        """st.rerun() from a fragment callback displays nothing, so it must not warn."""
+        with patch("streamlit.delta_generator.logger.get_logger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            def script():
+                import streamlit as st
+
+                @st.fragment
+                def frag():
+                    def cb():
+                        st.rerun()
+
+                    st.button("go", on_click=cb)
+
+                frag()
+
+            at = AppTest.from_function(script).run()
+            at.button[0].click().run()
+
+            mock_logger.warning.assert_not_called()
+
+    def test_fragment_callback_switch_page_does_not_warn(self):
+        """st.switch_page() from a fragment callback must not warn about its yield point."""
+        with patch("streamlit.delta_generator.logger.get_logger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            def script():
+                import streamlit as st
+
+                def other():
+                    st.text("other page")
+
+                def home():
+                    @st.fragment
+                    def frag():
+                        def go():
+                            st.switch_page(
+                                st.Page(other, title="Other", url_path="other")
+                            )
+
+                        st.button("go", on_click=go)
+
+                    frag()
+
+                st.navigation(
+                    [
+                        st.Page(home, title="Home", url_path="home", default=True),
+                        st.Page(other, title="Other", url_path="other"),
+                    ]
+                ).run()
+
+            at = AppTest.from_function(script).run()
+            at.button[0].click().run()
+            assert [text.value for text in at.text] == ["other page"]
+
+            mock_logger.warning.assert_not_called()
+
+    def test_fragment_callback_stop_does_not_warn(self):
+        """st.stop() from a fragment callback must not warn about its yield point."""
+        with patch("streamlit.delta_generator.logger.get_logger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            def script():
+                import streamlit as st
+
+                @st.fragment
+                def frag():
+                    def cb():
+                        st.stop()
+
+                    st.button("go", on_click=cb)
+                    st.text("after")
+
+                frag()
+
+            at = AppTest.from_function(script).run()
+            at.button[0].click().run()
+            assert [text.value for text in at.text] == []
+            assert len(at.exception) == 0
+
+            mock_logger.warning.assert_not_called()
+
+    def test_fragment_callback_element_before_switch_page_still_warns(self):
+        """A real element write still warns when the callback then calls st.switch_page()."""
+        with patch("streamlit.delta_generator.logger.get_logger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            def script():
+                import streamlit as st
+
+                def other():
+                    st.text("other page")
+
+                def home():
+                    @st.fragment
+                    def frag():
+                        def go():
+                            st.write("from callback")
+                            st.switch_page(
+                                st.Page(other, title="Other", url_path="other")
+                            )
+
+                        st.button("go", on_click=go)
+
+                    frag()
+
+                st.navigation(
+                    [
+                        st.Page(home, title="Home", url_path="home", default=True),
+                        st.Page(other, title="Other", url_path="other"),
+                    ]
+                ).run()
+
+            at = AppTest.from_function(script).run()
+            at.button[0].click().run()
+
+            mock_logger.warning.assert_called_once()
+            warning_msg = mock_logger.warning.call_args[0]
+            assert any(
+                "callback that displays one or more elements" in msg
+                for msg in warning_msg
+            )
+
+    def test_fragment_callback_element_before_rerun_still_warns(self):
+        """A real element write in a fragment callback still warns, even if it then reruns."""
+        with patch("streamlit.delta_generator.logger.get_logger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            def script():
+                import streamlit as st
+
+                @st.fragment
+                def frag():
+                    def cb():
+                        st.write("from callback")
+                        st.rerun()
+
+                    st.button("go", on_click=cb)
+
+                frag()
+
+            at = AppTest.from_function(script).run()
+            at.button[0].click().run()
+
+            mock_logger.warning.assert_called()
+            warning_msg = mock_logger.warning.call_args[0]
+            assert any(
+                "callback that displays one or more elements" in msg
+                for msg in warning_msg
+            )
+
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class SessionStateUpdateTest(DeltaGeneratorTestCase):
@@ -642,6 +801,123 @@ def test_callback_rerun_resets_triggers() -> None:
     assert at.session_state["clicks"] == 2
 
 
+def test_body_level_rerun_keeps_widget_values() -> None:
+    """Widgets after a body-level st.rerun() must keep the values set this run.
+
+    ``st.rerun()`` stops the script before later widgets register, so
+    ``widget_ids_this_run`` is incomplete. Dropping those ids would re-seed
+    them from defaults on the follow-up run (GitHub issue #3533).
+    """
+
+    def script():
+        import streamlit as st
+
+        st.radio("Select1", ["Egg", "Spam", "Bacon", "Sausage"], key="select1")
+        if st.button("Rerun"):
+            st.rerun()
+        st.radio("Select2", ["Egg", "Spam", "Bacon", "Sausage"], key="select2")
+        st.radio("Select3", ["Egg", "Spam", "Bacon", "Sausage"], key="select3")
+        st.toggle("Toggle after rerun", key="toggle_after")
+
+    at = AppTest.from_function(script).run()
+    at.radio(key="select1").set_value("Spam").run()
+    at.radio(key="select2").set_value("Bacon").run()
+    at.radio(key="select3").set_value("Sausage").run()
+    at.toggle(key="toggle_after").set_value(True).run()
+
+    at.button[0].click().run()
+
+    assert at.radio(key="select1").value == "Spam"
+    assert at.radio(key="select2").value == "Bacon"
+    assert at.radio(key="select3").value == "Sausage"
+    assert at.toggle(key="toggle_after").value is True
+    assert at.session_state["select1"] == "Spam"
+    assert at.session_state["select2"] == "Bacon"
+    assert at.session_state["select3"] == "Sausage"
+    assert at.session_state["toggle_after"] is True
+
+
+def test_body_level_rerun_resets_triggers() -> None:
+    """A body-level st.rerun() from a button must not loop.
+
+    ``st.rerun()`` counts as a script completion so triggers reset (see
+    ``exec_func_with_error_handling``). The follow-up body belongs to a new
+    interaction and must see the button as False.
+    """
+
+    def script():
+        import streamlit as st
+
+        st.session_state["body_runs"] = st.session_state.get("body_runs", 0) + 1
+        clicked = st.button("Rerun")
+        st.session_state["body_saw_click"] = clicked
+        if clicked:
+            st.rerun()
+
+    at = AppTest.from_function(script).run()
+    assert at.session_state["body_runs"] == 1
+
+    at.button[0].click().run()
+    # Click runs the body once, then st.rerun() runs it again.
+    assert at.session_state["body_runs"] == 3
+    assert at.session_state["body_saw_click"] is False
+
+    # The trigger is not stuck: a second click still advances the body.
+    at.button[0].click().run()
+    assert at.session_state["body_runs"] == 5
+
+
+def test_st_rerun_inside_fragment_keeps_widget_values() -> None:
+    """A widget after st.rerun() inside a fragment must keep its value.
+
+    Same incomplete ``widget_ids_this_run`` as the body-level case; the
+    rerun originates inside a fragment (GitHub issue #11266).
+    """
+
+    def script():
+        import streamlit as st
+
+        @st.fragment
+        def my_fragment():
+            if st.button("Rerun"):
+                st.rerun()
+            st.text_input("t", value="foo", key="t")
+
+        my_fragment()
+
+    at = AppTest.from_function(script).run()
+    at.text_input(key="t").input("bar").run()
+    assert at.text_input(key="t").value == "bar"
+
+    at.button[0].click().run()
+    assert at.text_input(key="t").value == "bar"
+    assert at.session_state["t"] == "bar"
+
+
+def test_follow_up_completed_run_drops_unrendered_widgets() -> None:
+    """A widget hidden on the follow-up completed run is still dropped.
+
+    The interrupted ``st.rerun()`` defers stale cleanup; the next run that
+    completes must still remove widgets that were not re-registered.
+    """
+
+    def script():
+        import streamlit as st
+
+        if not st.session_state.get("hide"):
+            st.text_input("hidden", key="hidden")
+            if st.button("Rerun"):
+                st.session_state["hide"] = True
+                st.rerun()
+
+    at = AppTest.from_function(script).run()
+    at.text_input(key="hidden").input("keep?").run()
+    assert at.session_state["hidden"] == "keep?"
+
+    at.button[0].click().run()
+    assert "hidden" not in at.session_state
+
+
 def test_callback_rerun_does_not_abort_other_callbacks() -> None:
     """One callback's st.rerun() must not silently kill the others in the interaction.
 
@@ -729,7 +1005,7 @@ def test_callback_switch_page_wins_over_a_competing_callback_rerun() -> None:
 
     assert len(at.exception) == 0
     assert [text.value for text in at.text] == ["other page"]
-    assert at.query_params == {"utm_source": ["home"]}
+    assert at.query_params == {"utm_source": "home"}
 
 
 def _state_with_unregistered_widgets() -> SessionState:
@@ -830,7 +1106,7 @@ def test_rerun_exception_requeues_and_restores_run_location() -> None:
 
     assert ThreadState.get().in_fragment_callback is False
     # Rerun is re-queued rather than swallowed.
-    mock_ctx.script_requests.request_rerun.assert_called_once()
+    mock_ctx.script_requests.request_rerun_batch.assert_called_once()
 
 
 def test_on_change_callback_rerun_is_requeued() -> None:
@@ -855,8 +1131,8 @@ def test_on_change_callback_rerun_is_requeued() -> None:
     ss._new_widget_state.set_from_value(wid, 1)
 
     mock_ctx = MagicMock()
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
@@ -893,7 +1169,7 @@ def test_normal_callback_return_queues_no_rerun() -> None:
     ):
         ss._call_callbacks()
 
-    mock_ctx.script_requests.request_rerun.assert_not_called()
+    mock_ctx.script_requests.request_rerun_batch.assert_not_called()
 
 
 def test_plain_rerun_plus_normal_callback_queues_one_rerun() -> None:
@@ -932,7 +1208,7 @@ def test_plain_rerun_plus_normal_callback_queues_one_rerun() -> None:
 
     # Only the re-queued rerun from the explicit st.rerun() call. No extra forced
     # rerun because neither callback requested a targeted rerun — no conflict.
-    assert mock_ctx.script_requests.request_rerun.call_count == 1
+    mock_ctx.script_requests.request_rerun_batch.assert_called_once()
 
 
 def test_fragment_widget_callback_rerun_is_requeued() -> None:
@@ -958,8 +1234,8 @@ def test_fragment_widget_callback_rerun_is_requeued() -> None:
     ss._new_widget_state.set_from_value(wid, 1)
 
     mock_ctx = MagicMock()
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
@@ -1014,8 +1290,8 @@ def _call_callbacks_in_main_script(ss: SessionState) -> list[RerunData]:
     # fragment interaction.
     mock_ctx.fragment_ids_this_run = None
     mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
@@ -1029,10 +1305,10 @@ def _call_callbacks_in_main_script(ss: SessionState) -> list[RerunData]:
 
 
 def _raise_targeted_rerun() -> None:
-    """Raise what a targeted rerun at another fragment sends.
+    """Simulate ``st.rerun("<key>")`` from a main-script widget callback.
 
-    Stands in for ``st.rerun(scope="<key>")``, per
-    specs/2026-06-23-event-scoped-fragment-reruns/product-spec.md.
+    ``is_fragment_scoped_rerun=True`` tells the runner to preempt the current
+    run and execute the targeted fragment immediately.
     """
     raise RerunException(
         RerunData(
@@ -1041,6 +1317,38 @@ def _raise_targeted_rerun() -> None:
             is_fragment_scoped_rerun=True,
         )
     )
+
+
+def _raise_fragment_origin_targeted_rerun() -> None:
+    """Simulate ``st.rerun("<key>")`` from a fragment widget callback.
+
+    ``is_fragment_scoped_rerun=True`` — keyed targets always preempt the
+    interaction's default rerun, regardless of where the widget lives.
+    """
+    raise RerunException(
+        RerunData(
+            page_script_hash=_CURRENT_PAGE_HASH,
+            fragment_id_queue=["other-frag"],
+            is_fragment_scoped_rerun=True,
+        )
+    )
+
+
+def test_contextless_callback_dispatch_does_not_raise() -> None:
+    """A contextless callback dispatch cannot queue full-app escalation."""
+    normal_callback = MagicMock()
+    ss = _state_with_changed_widgets(
+        [("target", _raise_targeted_rerun), ("normal", normal_callback)]
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=None,
+    ):
+        ss._call_callbacks()
+
+    normal_callback.assert_called_once_with()
 
 
 def test_changed_widget_without_callback_does_not_escalate() -> None:
@@ -1062,6 +1370,41 @@ def test_changed_widget_without_callback_does_not_escalate() -> None:
     assert requeue_calls[0].fragment_id_queue == ["other-frag"]
 
 
+def test_fragment_origin_target_with_callback_less_change_does_not_escalate() -> None:
+    """A callback-less widget change does not escalate a fragment-origin targeted rerun.
+
+    When the interaction originates inside a fragment, a keyed targeted
+    rerun replaces the default fragment-scoped rerun.  A callback-less
+    widget change should NOT trigger ``_request_full_app_rerun``.
+    """
+
+    requeue_calls: list[RerunData] = []
+
+    ss = _state_with_changed_widgets(
+        [("field", None), ("submit", _raise_fragment_origin_targeted_rerun)]
+    )
+
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["enclosing-frag"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    # Only the composing targeted re-queue; no full-app escalation.
+    assert len(requeue_calls) == 1
+    targeted = requeue_calls[0]
+    assert targeted.fragment_id_queue == ["other-frag"]
+    assert targeted.is_fragment_scoped_rerun is True
+
+
 def test_changed_widgets_without_callbacks_queue_no_rerun() -> None:
     """Callback-less widget changes alone do not queue any extra rerun.
 
@@ -1072,6 +1415,673 @@ def test_changed_widgets_without_callbacks_queue_no_rerun() -> None:
     ss = _state_with_changed_widgets([("field", None), ("other_field", None)])
 
     assert _call_callbacks_in_main_script(ss) == []
+
+
+def test_forced_full_app_rerun_carries_only_replay_trigger_states() -> None:
+    """Only ephemeral triggers are replayed by a forced full-app rerun.
+
+    Non-trigger state already contains callback mutations, so replaying fresh browser
+    values could overwrite them.
+
+    Escalation requires a callback that explicitly wants the default (returns normally)
+    alongside a targeted rerun.
+    """
+
+    requeue_calls: list[RerunData] = []
+
+    ss = SessionState()
+    # targeted_btn uses trigger_value (a button); normal_btn uses int_value (non-trigger)
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="targeted_btn",
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="trigger_value",
+            callback=_raise_targeted_rerun,
+        )
+    )
+    ss._old_state["targeted_btn"] = False
+    ss._new_widget_state.set_from_value("targeted_btn", True)
+
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="normal_btn",
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="int_value",
+            callback=lambda: None,
+        )
+    )
+    ss._old_state["normal_btn"] = 0
+    ss._new_widget_state.set_from_value("normal_btn", 1)
+
+    # Simulate on_script_will_rerun stashing the proto.
+    proto_states = WidgetStatesProto()
+    trigger_ws = proto_states.widgets.add()
+    trigger_ws.id = "targeted_btn"
+    trigger_ws.trigger_value = True
+    nontrigger_ws = proto_states.widgets.add()
+    nontrigger_ws.id = "normal_btn"
+    nontrigger_ws.int_value = 1
+    file_chat_ws = proto_states.widgets.add()
+    file_chat_ws.id = "file_chat"
+    file_chat_ws.chat_input_value.data = ""
+    file_chat_ws.chat_input_value.file_uploader_state.uploaded_file_info.add().file_id = "file"
+    ss._current_interaction_widget_states = proto_states
+
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    assert len(requeue_calls) == 2
+    forced = requeue_calls[-1]
+    assert not forced.fragment_id_queue
+    assert not forced.is_fragment_scoped_rerun
+    assert forced.widget_states is None
+    assert forced.replay_trigger_states is None
+    replay_carrier = requeue_calls[0]
+    assert replay_carrier.replay_trigger_states is not None
+    assert [state.id for state in replay_carrier.replay_trigger_states.widgets] == [
+        "targeted_btn",
+        "file_chat",
+    ]
+    assert replay_carrier.replay_trigger_states.widgets[0].trigger_value is True
+
+
+def test_callback_session_state_mutation_survives_escalation_replay() -> None:
+    """Escalation does not overwrite callback mutations with stale browser state.
+
+    A text input callback normalizes its value while a submit callback targets a
+    fragment. The full-app rerun replays only the submit trigger, not the original
+    unnormalized input from the browser.
+    """
+
+    requeue_calls: list[RerunData] = []
+
+    ss = SessionState()
+
+    # text_input widget: callback mutates session state
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="text_input_wid",
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="string_value",
+            callback=lambda: ss.__setitem__("name", "stripped"),
+        )
+    )
+    ss._old_state["text_input_wid"] = "old"
+    ss._new_widget_state.set_from_value("text_input_wid", "  not stripped  ")
+
+    # submit button: targets a fragment
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="submit_btn_wid",
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="trigger_value",
+            callback=_raise_targeted_rerun,
+        )
+    )
+    ss._old_state["submit_btn_wid"] = False
+    ss._new_widget_state.set_from_value("submit_btn_wid", True)
+
+    # Proto that the frontend sent (before callbacks ran)
+    proto_states = WidgetStatesProto()
+    ws_text = proto_states.widgets.add()
+    ws_text.id = "text_input_wid"
+    ws_text.string_value = "  not stripped  "
+    ws_submit = proto_states.widgets.add()
+    ws_submit.id = "submit_btn_wid"
+    ws_submit.trigger_value = True
+    ss._current_interaction_widget_states = proto_states
+
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    mock_ctx.query_string = ""
+    mock_ctx.cached_message_hashes = frozenset()
+    mock_ctx.context_info = None
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
+    )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    # The escalated rerun must NOT include the text_input's string_value.
+    assert len(requeue_calls) == 2
+    forced = requeue_calls[-1]
+    assert forced.widget_states is None
+    assert forced.replay_trigger_states is None
+    replay_carrier = requeue_calls[0]
+    assert replay_carrier.replay_trigger_states is not None
+    forwarded_ids = [w.id for w in replay_carrier.replay_trigger_states.widgets]
+    assert "submit_btn_wid" in forwarded_ids
+    assert "text_input_wid" not in forwarded_ids
+
+    # Verify the callback's mutation is in session state.
+    assert ss["name"] == "stripped"
+
+
+def test_replay_only_state_applies_values_without_callbacks() -> None:
+    """Consumed replay triggers remain visible without dispatching callbacks again."""
+    ss = SessionState()
+    trigger_wid = "submit_btn"
+    meta = WidgetMetadata(
+        id=trigger_wid,
+        deserializer=lambda v: v,
+        serializer=lambda v: v,
+        value_type="trigger_value",
+        callback=lambda: (_ for _ in ()).throw(AssertionError("should not fire")),
+    )
+    ss._set_widget_metadata(meta)
+
+    proto_states = WidgetStatesProto()
+    ws = proto_states.widgets.add()
+    ws.id = trigger_wid
+    ws.trigger_value = True
+
+    ss.on_script_will_rerun(None, replay_trigger_states=proto_states)
+
+    assert ss[trigger_wid] is True
+    assert ss._current_interaction_widget_states is None
+
+
+def test_fresh_callbacks_run_before_replay_overlay() -> None:
+    """Fresh input dispatches once while replay input remains body-visible."""
+    calls: list[str] = []
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+    ss = SessionState()
+    for wid in ("fresh", "replay"):
+        ss._set_widget_metadata(
+            WidgetMetadata(
+                id=wid,
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type="trigger_value",
+                callback=lambda wid=wid: calls.append(wid),
+            )
+        )
+        ss._old_state[wid] = False
+
+    fresh = WidgetStatesProto()
+    fresh.widgets.add(id="fresh", trigger_value=True)
+    replay = WidgetStatesProto()
+    replay.widgets.add(id="replay", trigger_value=True)
+
+    ss.on_script_will_rerun(fresh, replay_trigger_states=replay)
+
+    assert calls == ["fresh"]
+    assert ss["fresh"] is True
+    assert ss["replay"] is True
+
+
+def test_active_fresh_trigger_wins_over_replay_with_same_id() -> None:
+    """An active fresh trigger takes precedence over replay for the same widget."""
+    calls: list[str] = []
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+    ss = SessionState()
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="trigger",
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="string_trigger_value",
+            callback=lambda: calls.append("fresh"),
+        )
+    )
+    ss._old_state["trigger"] = None
+    fresh = WidgetStatesProto()
+    fresh.widgets.add(id="trigger").string_trigger_value.data = "new"
+    replay = WidgetStatesProto()
+    replay.widgets.add(id="trigger").string_trigger_value.data = "old"
+
+    ss.on_script_will_rerun(fresh, replay_trigger_states=replay)
+
+    assert calls == ["fresh"]
+    assert ss["trigger"] == "new"
+
+
+def test_active_fresh_chat_wins_over_hydrated_replay_with_same_id() -> None:
+    """Fresh chat input is not overwritten by an older hydrated replay value."""
+    calls: list[str] = []
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+    ss = SessionState()
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="chat",
+            deserializer=lambda value: value.data,
+            serializer=lambda value: ChatInputValueProto(data=value),
+            value_type="chat_input_value",
+            callback=lambda: calls.append("fresh"),
+        )
+    )
+    ss._old_state["chat"] = None
+    fresh = WidgetStatesProto()
+    fresh.widgets.add(id="chat").chat_input_value.data = "new"
+    replay = WidgetStatesProto()
+    replay.widgets.add(id="chat").chat_input_value.data = "old"
+
+    ss.on_script_will_rerun(
+        fresh,
+        replay_trigger_states=replay,
+        replay_trigger_values={"chat": "hydrated-old"},
+    )
+
+    assert calls == ["fresh"]
+    assert ss["chat"] == "new"
+
+
+def test_session_state_value_precedes_serialized_chat_proto() -> None:
+    """A session-state value wins over a still-serialized chat proto.
+
+    The read returns the proto's text without running its deserializer. A
+    value written through session state is returned instead, and the proto
+    stays serialized.
+    """
+    ss = SessionState()
+    ss._key_id_mapper["prompt"] = "chat"
+    proto = WidgetStateProto(id="chat")
+    proto.chat_input_value.data = "from-proto"
+    ss._new_widget_state.states["chat"] = Serialized(proto)
+
+    assert ss.get_widget_value("chat") == "from-proto"
+
+    ss._new_session_state["prompt"] = "from-session"
+
+    assert ss.get_widget_value("chat") == "from-session"
+    assert isinstance(ss._new_widget_state.states["chat"], Serialized)
+
+
+def test_get_widget_value_reads_unfired_chat_proto_as_none() -> None:
+    """A chat proto without data reads as None, not ``""``, and stays serialized."""
+    ss = SessionState()
+    proto = WidgetStateProto(id="chat")
+    proto.chat_input_value.SetInParent()
+    ss._new_widget_state.states["chat"] = Serialized(proto)
+
+    assert ss.get_widget_value("chat") is None
+    assert isinstance(ss._new_widget_state.states["chat"], Serialized)
+
+
+def test_get_widget_value_falls_back_to_previous_run() -> None:
+    """The previous run's value is returned when this run has not stored one."""
+    ss = SessionState()
+    ss._key_id_mapper["prompt"] = "chat"
+    ss._old_state["chat"] = "previous"
+
+    assert ss.get_widget_value("chat") == "previous"
+
+    with pytest.raises(KeyError):
+        ss.get_widget_value("missing")
+
+
+def test_get_widget_id_from_key_returns_the_registered_id() -> None:
+    """A user key maps to the element ID it last registered under, else None."""
+    ss = SessionState()
+    ss._set_key_widget_mapping("$$ID-old-prompt", "prompt")
+    ss._set_key_widget_mapping("$$ID-new-prompt", "prompt")
+
+    assert ss.get_widget_id_from_key("prompt") == "$$ID-new-prompt"
+    assert ss.get_widget_id_from_key("$$ID-new-prompt") is None
+    assert ss.get_widget_id_from_key("missing") is None
+
+
+def test_callback_mutation_survives_replay_overlay() -> None:
+    """A replay overlay does not overwrite mutations made by fresh callbacks."""
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+    ss = SessionState()
+    ss["result"] = "before"
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="fresh",
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="trigger_value",
+            callback=lambda: ss.__setitem__("result", "after"),
+        )
+    )
+    ss._old_state["fresh"] = False
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="replay",
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="trigger_value",
+            callback=lambda: (_ for _ in ()).throw(
+                AssertionError("replay callback should not run")
+            ),
+        )
+    )
+    ss._old_state["replay"] = False
+    fresh = WidgetStatesProto()
+    fresh.widgets.add(id="fresh", trigger_value=True)
+    replay = WidgetStatesProto()
+    replay.widgets.add(id="replay", trigger_value=True)
+
+    ss.on_script_will_rerun(fresh, replay_trigger_states=replay)
+
+    assert ss["result"] == "after"
+    assert ss["replay"] is True
+
+
+def test_preempting_callback_batch_carries_incoming_replay_state() -> None:
+    """A second callback preemption forwards replay state from the interrupted run."""
+    ss = _state_with_changed_widgets([("target", _raise_targeted_rerun)])
+    replay = WidgetStatesProto()
+    replay.widgets.add(id="already-processed", trigger_value=True)
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["source"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks(incoming_replay_trigger_states=replay)
+
+    mock_ctx.script_requests.request_rerun.assert_not_called()
+    mock_ctx.script_requests.request_rerun_batch.assert_called_once()
+    batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
+    assert batch[0].replay_trigger_states == replay
+
+
+def test_preempting_callback_batch_carries_hydrated_chat_replay() -> None:
+    """A second callback preemption forwards a hydrated chat replay value."""
+    ss = _state_with_changed_widgets([("target", _raise_targeted_rerun)])
+    replay = WidgetStatesProto()
+    replay.widgets.add(id="chat").chat_input_value.data = ""
+    hydrated_chat = object()
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["source"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks(
+            incoming_replay_trigger_states=replay,
+            incoming_replay_trigger_values={"chat": hydrated_chat},
+        )
+
+    batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
+    assert batch[0].replay_trigger_states == replay
+    assert batch[0].replay_trigger_values == {"chat": hydrated_chat}
+
+
+def test_targeted_callback_batch_replays_current_interaction_trigger() -> None:
+    """A targeted callback rerun carries the current interaction trigger."""
+    ss = _state_with_changed_widgets([("target", _raise_targeted_rerun)])
+    interaction = WidgetStatesProto()
+    interaction.widgets.add(id="submit", trigger_value=True)
+    ss._current_interaction_widget_states = interaction
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["source"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
+    assert batch[0].replay_trigger_states == interaction
+
+
+def test_targeted_chat_replay_preserves_hydrated_uploaded_files() -> None:
+    """A targeted callback rerun restores chat files without deserializing twice."""
+    file_rec = UploadedFileRec("file", "payload.txt", "text/plain", b"contents")
+    uploaded_file = UploadedFile(
+        file_rec,
+        FileURLsProto(file_id="file", delete_url="delete", upload_url="upload"),
+    )
+    audio_rec = UploadedFileRec("audio", "recording.wav", "audio/wav", b"audio")
+    uploaded_audio = UploadedFile(
+        audio_rec,
+        FileURLsProto(file_id="audio", delete_url="delete", upload_url="upload"),
+    )
+    chat_value = ChatInputValue(
+        text="",
+        files=[uploaded_file],
+        audio=uploaded_audio,
+        _include_files=True,
+        _include_audio=True,
+    )
+
+    ss = SessionState()
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="chat",
+            deserializer=lambda _: (_ for _ in ()).throw(
+                AssertionError("hydrated replay must not deserialize again")
+            ),
+            serializer=lambda value: ChatInputValueProto(data=value.text),
+            value_type="chat_input_value",
+            callback=_raise_targeted_rerun,
+        )
+    )
+    ss._old_state["chat"] = None
+    ss._new_widget_state.set_from_value("chat", chat_value)
+    interaction = WidgetStatesProto()
+    interaction_chat = interaction.widgets.add(id="chat").chat_input_value
+    interaction_chat.data = ""
+    interaction_chat.file_uploader_state.uploaded_file_info.add().file_id = "file"
+    ss._current_interaction_widget_states = interaction
+
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["source"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
+    rerun_data = batch[0]
+    assert rerun_data.replay_trigger_values == {"chat": chat_value}
+
+    ss.on_script_will_rerun(
+        None,
+        replay_trigger_states=rerun_data.replay_trigger_states,
+        replay_trigger_values=rerun_data.replay_trigger_values,
+    )
+
+    replayed_value = ss._new_widget_state["chat"]
+    assert replayed_value is chat_value
+    assert replayed_value.files[0].name == "payload.txt"
+    assert replayed_value.files[0].getvalue() == b"contents"
+    assert replayed_value.audio is uploaded_audio
+    assert replayed_value.audio.getvalue() == b"audio"
+
+
+class TargetedChatAttachmentReplayIntegrationTest(DeltaGeneratorTestCase):
+    def test_targeted_chat_attachment_replay_survives_deserialization_and_request_queue(
+        self,
+    ) -> None:
+        """An attachment-only chat value survives targeted replay as a real object."""
+        ctx = self.script_run_ctx
+        session_state = ctx.session_state._state
+        script_requests = ctx.script_requests
+        assert script_requests is not None
+
+        widget_id = "chat-widget"
+        user_key = "replay_chat"
+        file_id = "replay-file"
+        file_bytes = b"replayed contents"
+        ctx.uploaded_file_mgr.add_file(
+            session_id=ctx.session_id,
+            file=UploadedFileRec(
+                file_id,
+                "replay.txt",
+                "text/plain",
+                file_bytes,
+            ),
+        )
+        ctx.fragment_storage.register(
+            "result-fragment-id",
+            lambda: None,
+            target_key="chat-result",
+        )
+        ctx.fragment_ids_this_run = ["source-fragment-id"]
+
+        callback_count = 0
+
+        def rerun_result_fragment() -> None:
+            nonlocal callback_count
+            callback_count += 1
+            st.rerun("chat-result")
+
+        serde = ChatInputSerde(accept_files=True, accept_audio=False)
+        session_state.register_widget(
+            WidgetMetadata(
+                id=widget_id,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                value_type="chat_input_value",
+                callback=rerun_result_fragment,
+                fragment_id="source-fragment-id",
+            ),
+            user_key=user_key,
+        )
+
+        fresh_states = WidgetStatesProto()
+        fresh_chat = fresh_states.widgets.add(id=widget_id).chat_input_value
+        fresh_chat.data = ""
+        file_info = fresh_chat.file_uploader_state.uploaded_file_info.add()
+        file_info.file_id = file_id
+        file_info.file_urls.file_id = file_id
+        file_info.file_urls.upload_url = "upload"
+        file_info.file_urls.delete_url = "delete"
+        assert fresh_chat.HasField("data")
+
+        session_state.on_script_will_rerun(fresh_states)
+
+        assert callback_count == 1
+        assert ctx.uploaded_file_mgr.get_files(ctx.session_id, [file_id]) == []
+
+        request = script_requests.on_scriptrunner_yield()
+        assert request is not None
+        assert request.type is ScriptRequestType.RERUN
+        assert request.rerun_data.replay_trigger_states is not None
+        hydrated_value = request.rerun_data.replay_trigger_values[widget_id]
+        assert isinstance(hydrated_value, ChatInputValue)
+
+        session_state.on_script_will_rerun(
+            request.rerun_data.widget_states,
+            replay_trigger_states=request.rerun_data.replay_trigger_states,
+            replay_trigger_values=request.rerun_data.replay_trigger_values,
+        )
+
+        assert callback_count == 1
+        replayed_value = session_state[user_key]
+        assert replayed_value is hydrated_value
+        assert replayed_value.text == ""
+        assert len(replayed_value.files) == 1
+        assert replayed_value.files[0].name == "replay.txt"
+        assert replayed_value.files[0].type == "text/plain"
+        assert replayed_value.files[0].getvalue() == file_bytes
+
+
+def test_app_wide_escalation_preserves_hydrated_chat_through_request_queue() -> None:
+    """A later full-app batch item does not discard the chat replay payload."""
+    hydrated_chat = object()
+    ss = SessionState()
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="chat",
+            deserializer=lambda _: (_ for _ in ()).throw(
+                AssertionError("hydrated replay must not deserialize again")
+            ),
+            serializer=lambda value: value,
+            value_type="chat_input_value",
+            callback=_raise_targeted_rerun,
+        )
+    )
+    ss._old_state["chat"] = None
+    ss._new_widget_state.set_from_value("chat", hydrated_chat)
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="normal",
+            deserializer=lambda value: value,
+            serializer=lambda value: value,
+            value_type="int_value",
+            callback=lambda: None,
+        )
+    )
+    ss._old_state["normal"] = 0
+    ss._new_widget_state.set_from_value("normal", 1)
+    interaction = WidgetStatesProto()
+    interaction.widgets.add(id="chat").chat_input_value.data = ""
+    ss._current_interaction_widget_states = interaction
+
+    script_requests = ScriptRequests()
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    mock_ctx.script_requests = script_requests
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+
+    request = script_requests.on_scriptrunner_yield()
+    assert request is not None
+    assert request.rerun_data.fragment_id_queue == []
+    assert request.rerun_data.replay_trigger_values == {"chat": hydrated_chat}
+
+
+def test_targeted_preemption_combines_incoming_and_current_replay_triggers() -> None:
+    """Targeted preemption combines incoming and current replay triggers."""
+    ss = _state_with_changed_widgets([("target", _raise_targeted_rerun)])
+    incoming_replay = WidgetStatesProto()
+    incoming_replay.widgets.add(id="already-processed", trigger_value=True)
+    current_interaction = WidgetStatesProto()
+    current_interaction.widgets.add(id="submit", trigger_value=True)
+    ss._current_interaction_widget_states = current_interaction
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["source"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks(incoming_replay_trigger_states=incoming_replay)
+
+    batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
+    replay = batch[0].replay_trigger_states
+    assert replay is not None
+    assert [(state.id, state.trigger_value) for state in replay.widgets] == [
+        ("already-processed", True),
+        ("submit", True),
+    ]
 
 
 def test_disabled_widget_change_does_not_force_app_wide_rerun() -> None:
@@ -1127,8 +2137,8 @@ def test_main_script_interaction_escalates_targeted_rerun_to_full_app() -> None:
     # Main-script interaction; see _call_callbacks_in_main_script for why this is pinned.
     mock_ctx.fragment_ids_this_run = None
     mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
@@ -1179,8 +2189,8 @@ def test_fragment_interaction_does_not_escalate_targeted_rerun() -> None:
 
     mock_ctx = MagicMock()
     mock_ctx.fragment_ids_this_run = ["frag-1"]
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
@@ -1232,8 +2242,8 @@ def test_callbacks_all_targeted_do_not_force_full_app_rerun() -> None:
     # force" result then comes from no callback voting for the default, not from the
     # fragment gate suppressing it.
     mock_ctx.fragment_ids_this_run = None
-    mock_ctx.script_requests.request_rerun.side_effect = lambda d: requeue_calls.append(
-        d
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
@@ -1879,7 +2889,9 @@ class SessionStateMethodTests(unittest.TestCase):
                     {"widget_id": "widget_id"}
                 )
                 self.session_state["widget_id"] = "blah"
-            assert "`st.session_state.widget_id` cannot be modified" in str(e.value)
+            message = str(e.value)
+            assert "`st.session_state['widget_id']` cannot be modified" in message
+            assert "before creating the widget" in message
 
     def test_setitem_disallows_setting_created_form(self):
         mock_ctx = MagicMock()
@@ -1892,7 +2904,9 @@ class SessionStateMethodTests(unittest.TestCase):
         ):
             with pytest.raises(StreamlitWidgetAlreadyInstantiatedError) as e:
                 self.session_state["form_id"] = "blah"
-            assert "`st.session_state.form_id` cannot be modified" in str(e.value)
+            message = str(e.value)
+            assert "`st.session_state['form_id']` cannot be modified" in message
+            assert "before creating the widget" in message
 
     def test_reset_state_value(self):
         """Test that reset_state_value correctly sets a new state value.
@@ -2326,6 +3340,41 @@ def test_per_key_callbacks_only_fire_for_changed_keys() -> None:
     assert calls == ["b"]
 
 
+@pytest.mark.parametrize(
+    ("old_value", "new_value", "expected_calls"),
+    [
+        pytest.param(None, {"value": {"a": 1}}, ["a"], id="no_previous_value"),
+        pytest.param({"a": 1, "b": 2}, "not-a-mapping", ["a", "b"], id="non_dict_new"),
+    ],
+)
+def test_json_change_callbacks_treat_non_dict_values_as_empty(
+    old_value: Any, new_value: Any, expected_calls: list[str]
+) -> None:
+    """A non-dict JSON value counts as empty, so every key on the other side fires."""
+    calls: list[str] = []
+    ss = SessionState()
+    wid = "w-json"
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id=wid,
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="json_value",
+            callbacks={
+                "a": lambda: calls.append("a"),
+                "b": lambda: calls.append("b"),
+                "c": lambda: calls.append("c"),
+            },
+        )
+    )
+    ss._old_state[wid] = old_value
+    ss._new_widget_state.set_from_value(wid, new_value)
+
+    ss._call_callbacks()
+
+    assert sorted(calls) == expected_calls
+
+
 def test_json_trigger_aggregator_routes_to_named_callback() -> None:
     """Test that JSON trigger values are routed to the correct named callback.
 
@@ -2361,6 +3410,82 @@ def test_json_trigger_aggregator_routes_to_named_callback() -> None:
 
     ss._call_callbacks()
     assert called == ["submit"]
+
+
+def test_json_trigger_aggregator_dispatches_each_event_in_a_list() -> None:
+    """A list payload runs each named callback in order and skips other entries."""
+    called: list[str] = []
+    ss = SessionState()
+    wid = "w-trig"
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id=wid,
+            deserializer=lambda s: json.loads(s) if s else None,
+            serializer=lambda v: v,
+            value_type="json_trigger_value",
+            callbacks={
+                "click": lambda: called.append("click"),
+                "submit": lambda: called.append("submit"),
+            },
+        )
+    )
+    ws = WidgetStateProto(id=wid)
+    ws.json_trigger_value = json.dumps(
+        [{"event": "submit"}, "not-an-event", {"event": "unknown"}, {"event": "click"}]
+    )
+    ss._new_widget_state.set_widget_from_proto(ws)
+
+    ss._call_callbacks()
+
+    assert called == ["submit", "click"]
+
+
+def test_json_trigger_ignores_payload_whose_deserializer_raises_key_error() -> None:
+    """A trigger payload that fails to deserialize with KeyError runs no callback."""
+    called: list[str] = []
+
+    def failing_deserializer(value: str | None) -> Any:
+        if value is None:
+            return None
+        raise KeyError("event")
+
+    ss = SessionState()
+    wid = "w-trig"
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id=wid,
+            deserializer=failing_deserializer,
+            serializer=lambda v: v,
+            value_type="json_trigger_value",
+            callbacks={"submit": lambda: called.append("submit")},
+        )
+    )
+    ws = WidgetStateProto(id=wid)
+    ws.json_trigger_value = json.dumps({"event": "submit"})
+    ss._new_widget_state.set_widget_from_proto(ws)
+
+    ss._call_callbacks()
+
+    assert called == []
+
+
+def test_trigger_dispatch_ignores_widget_without_state() -> None:
+    """Trigger dispatch runs no callback for a widget that has no stored state."""
+    called: list[str] = []
+    ss = SessionState()
+    metadata = WidgetMetadata(
+        id="w-trig",
+        deserializer=lambda s: json.loads(s) if s else None,
+        serializer=lambda v: v,
+        value_type="json_trigger_value",
+        callbacks={"submit": lambda: called.append("submit")},
+    )
+
+    # _call_callbacks only dispatches widgets that have state, so this guards
+    # against inconsistent internal state.
+    ss._dispatch_trigger_callbacks(_CallbackRerunVotes(), "w-trig", metadata, (), {})
+
+    assert called == []
 
 
 def _dummy_serializer(x):
@@ -2580,6 +3705,82 @@ class MockScriptRunCtx:
 
     fragment_ids_this_run: list[str] | None = None
     page_script_hash: str = "page_1_hash"
+    is_history_navigation: bool = False
+
+
+class OmitQueryBoundWidgetStatesTest(DeltaGeneratorTestCase):
+    """Bound widgets are dropped from incoming proto state so the URL can restore them."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+
+    def test_omit_query_bound_widget_states(self) -> None:
+        """Drop bound widget proto states and keep unbound ones."""
+        widget_states = WidgetStatesProto()
+        bound = widget_states.widgets.add()
+        bound.id = "bound_widget"
+        unbound = widget_states.widgets.add()
+        unbound.id = "plain_widget"
+
+        self.session_state._query_param_bound_widget_ids.add("bound_widget")
+
+        filtered = self.session_state._omit_query_bound_widget_states(widget_states)
+
+        assert [widget.id for widget in filtered.widgets] == ["plain_widget"]
+
+    def test_omit_query_bound_widget_states_without_bindings_keeps_input(
+        self,
+    ) -> None:
+        """Without bound widgets, the incoming proto state is returned unchanged."""
+        widget_states = WidgetStatesProto()
+        widget_states.widgets.add().id = "plain_widget"
+
+        filtered = self.session_state._omit_query_bound_widget_states(widget_states)
+
+        assert filtered is widget_states
+
+    def test_on_script_will_rerun_omits_bound_widgets_on_history_navigation(
+        self,
+    ) -> None:
+        """History navigation drops bound widget proto state and keeps unbound values."""
+        widget_states = WidgetStatesProto()
+        bound = widget_states.widgets.add()
+        bound.id = "bound_widget"
+        bound.string_value = "stale"
+        unbound = widget_states.widgets.add()
+        unbound.id = "plain_widget"
+        unbound.string_value = "keep"
+
+        bound_callback = MagicMock()
+        self.session_state._query_param_bound_widget_ids.add("bound_widget")
+        self.session_state._set_widget_metadata(
+            WidgetMetadata(
+                id="bound_widget",
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type="string_value",
+                callback=bound_callback,
+            )
+        )
+        self.session_state._set_widget_metadata(
+            WidgetMetadata(
+                id="plain_widget",
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type="string_value",
+            )
+        )
+        self.session_state._old_state["bound_widget"] = "previous"
+        self.session_state._old_state["plain_widget"] = "previous"
+
+        self.session_state.on_script_will_rerun(
+            widget_states, is_history_navigation=True
+        )
+
+        assert "bound_widget" not in self.session_state._new_widget_state
+        assert self.session_state._new_widget_state["plain_widget"] == "keep"
+        bound_callback.assert_not_called()
 
 
 class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
@@ -2651,6 +3852,172 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
         assert (
             self.session_state._new_widget_state["$$ID-hash-my_widget"] == "user_value"
         )
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(is_history_navigation=True),
+    )
+    def test_url_seeds_widget_on_history_navigation(self, mock_ctx: MagicMock) -> None:
+        """Browser history navigation restores bound widgets from the URL."""
+        self.session_state._old_state["$$ID-hash-my_widget"] = "stale_value"
+        self.session_state._query_param_bound_widget_ids.add("$$ID-hash-my_widget")
+        self.query_params.set_initial_query_params("my_widget=url_value")
+
+        self.session_state._new_widget_state.set_from_value(
+            "$$ID-hash-my_widget", "stale_value"
+        )
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is True
+        assert (
+            self.session_state._new_widget_state["$$ID-hash-my_widget"] == "url_value"
+        )
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(is_history_navigation=True),
+    )
+    def test_history_navigation_restores_default_when_param_missing(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Browser back to a URL without the param restores the widget default."""
+        self.session_state._old_state["$$ID-hash-my_widget"] = "stale_value"
+        self.session_state._query_param_bound_widget_ids.add("$$ID-hash-my_widget")
+        self.query_params.set_initial_query_params("")
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["$$ID-hash-my_widget"] == "default"
+        assert self.session_state._new_session_state["my_widget"] == "default"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(is_history_navigation=True),
+    )
+    def test_history_navigation_restores_default_when_param_equals_default(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Browser back restores the default when the URL param equals the default."""
+        self.session_state._old_state["$$ID-hash-my_widget"] = "stale_value"
+        self.session_state._query_param_bound_widget_ids.add("$$ID-hash-my_widget")
+        self.query_params.set_initial_query_params("my_widget=default")
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["$$ID-hash-my_widget"] == "default"
+        assert self.session_state._new_session_state["my_widget"] == "default"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(is_history_navigation=True),
+    )
+    def test_history_navigation_url_wins_over_code_set_session_state(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Browser history navigation prefers the URL over code-assigned values."""
+        self.session_state._old_state["$$ID-hash-my_widget"] = "old_value"
+        self.session_state._new_session_state["my_widget"] = "code_value"
+        self.session_state._query_param_bound_widget_ids.add("$$ID-hash-my_widget")
+        self.query_params.set_initial_query_params("my_widget=url_value")
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is True
+        assert (
+            self.session_state._new_widget_state["$$ID-hash-my_widget"] == "url_value"
+        )
+        assert self.session_state._new_session_state["my_widget"] == "url_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(is_history_navigation=True),
+    )
+    def test_history_navigation_missing_param_wins_over_code_set_session_state(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Missing URL param on history navigation restores the default over code."""
+        self.session_state._old_state["$$ID-hash-my_widget"] = "old_value"
+        self.session_state._new_session_state["my_widget"] = "code_value"
+        self.session_state._query_param_bound_widget_ids.add("$$ID-hash-my_widget")
+        self.query_params.set_initial_query_params("")
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["$$ID-hash-my_widget"] == "default"
+        assert self.session_state._new_session_state["my_widget"] == "default"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(is_history_navigation=True),
+    )
+    def test_history_navigation_discards_preserved_widget_state(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """History navigation drops preserved widget state before URL seeding."""
+        self.session_state._query_param_bound_widget_ids.add("$$ID-hash-my_widget")
+        self.session_state._new_widget_state.set_from_value(
+            "$$ID-hash-my_widget", "preserved_value"
+        )
+        self.query_params.set_initial_query_params("my_widget=url_value")
+
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is True
+        assert (
+            self.session_state._new_widget_state["$$ID-hash-my_widget"] == "url_value"
+        )
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(is_history_navigation=True),
+    )
+    def test_history_navigation_restores_default_for_invalid_option(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Invalid URL options restore the default on history navigation."""
+        self.session_state._old_state["$$ID-hash-my_widget"] = "stale_value"
+        self.session_state._query_param_bound_widget_ids.add("$$ID-hash-my_widget")
+        self.query_params.set_initial_query_params("my_widget=invalid")
+
+        metadata = _create_test_widget_metadata(
+            "$$ID-hash-my_widget",
+            formatted_options=["alpha", "beta"],
+        )
+
+        seeded = self.session_state._handle_query_param_binding(
+            metadata, "my_widget", "$$ID-hash-my_widget"
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["$$ID-hash-my_widget"] == "default"
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -3728,10 +5095,12 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
     ) -> None:
         """On normal same-page rerun with param already present, value_changed
         should be False (no restore needed)."""
+        widget_id = "$$ID-hash-my_widget"
         self.session_state._old_state["my_widget"] = "custom_value"
-        self.session_state._set_key_widget_mapping("$$ID-hash-my_widget", "my_widget")
+        self.session_state._set_key_widget_mapping(widget_id, "my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
         self.query_params.set_with_no_forward_msg("my_widget", "custom_value")
-        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+        metadata = _create_test_widget_metadata(widget_id)
 
         result = self.session_state.register_widget(metadata, user_key="my_widget")
 
@@ -3761,19 +5130,20 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(),
     )
-    def test_value_changed_false_for_non_persisted_remount(
+    def test_value_changed_true_when_widget_first_mounts_with_prior_run_session_state(
         self, mock_ctx: MagicMock
     ) -> None:
-        """A plain (persist_state=None) widget does not signal value_changed
-        on remount, so the restore behavior is specific to persisted widgets."""
+        """A previous-run user-key value (setdefault / assignment while the
+        widget was unregistered) must set value_changed so the frontend adopts
+        it instead of the widget default. See issues #17093 and #9082."""
         widget_id = "$$ID-hash-my_widget"
         self.session_state._old_state["my_widget"] = "custom_value"
-        self.session_state._set_key_widget_mapping(widget_id, "my_widget")
         metadata = _create_persist_state_metadata(widget_id, None)
 
         result = self.session_state.register_widget(metadata, user_key="my_widget")
 
-        assert result.value_changed is False
+        assert result.value == "custom_value"
+        assert result.value_changed is True
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -3814,6 +5184,71 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
         result = self.session_state.register_widget(metadata, user_key="my_widget")
 
         assert result.value == "custom_value"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_prior_run_user_key_survives_non_persisted_unmount(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A user key written before first registration stays in old state after
+        a persist_state=None unmount. Remount adopts that original value, not
+        the last widget edit or the element default."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, None)
+
+        self.session_state._old_state["my_widget"] = "custom_value"
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "edited_value")
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(frozenset())
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_false_after_non_persisted_unmount(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A persist_state=None widget that was registered then hidden resets
+        to the default on remount. Cleanup drops the widget id; no independent
+        user-key value remains, so the frontend is not told to restore."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, None)
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(frozenset())
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "default"
+        assert result.value_changed is False
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_same_run_user_key_assignment_still_sets_value_changed(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A same-run session_state write immediately before the widget still
+        sets value_changed, whether or not persist_state is set."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, None)
+        self.session_state._new_session_state["my_widget"] = "same_run_value"
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "same_run_value"
         assert result.value_changed is True
 
 
@@ -3878,6 +5313,7 @@ class ConditionalRemountBoundBehaviorTest(DeltaGeneratorTestCase):
 
         remounted = self.session_state.register_widget(metadata, user_key="my_widget")
         assert remounted.value == "default"
+        assert remounted.value_changed is False
         assert "my_widget" not in self.query_params._query_params
 
 
@@ -4010,6 +5446,33 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
 
         assert seeded is False
         assert "tags" not in self.query_params._query_params
+
+    def test_seed_widget_clears_all_filtered_options_with_non_empty_default(
+        self,
+    ) -> None:
+        """All-invalid URL options clear the param instead of seeding an empty list."""
+        self.query_params._query_params["tags"] = ["InvalidA", "InvalidB"]
+
+        def filter_deserializer(values: list[str] | None) -> list[str]:
+            if values is None:
+                return ["Apple"]
+            return [v for v in values if v in {"Apple", "Banana"}]
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            deserializer=filter_deserializer,
+            serializer=lambda x: x,
+        )
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "tags", "widget_1", ["InvalidA", "InvalidB"]
+        )
+
+        assert seeded is False
+        assert "tags" not in self.query_params._query_params
+        assert "widget_1" not in self.session_state._new_widget_state
+        assert "tags" not in self.session_state._new_session_state
 
     def test_seed_widget_with_empty_url_and_clearable_true(self) -> None:
         """Test that empty URL values matching the default are cleared, even for clearable widgets."""
@@ -4881,9 +6344,10 @@ class DisabledWidgetAppTest(unittest.TestCase):
         at = AppTest.from_function(script).run()
         assert at.checkbox[0].value is False
 
-        # Simulate the frontend sending a value for the disabled widget, as a
-        # stale UI or a forged BackMsg would.
-        at.checkbox[0].set_value(True).run()
+        # Bypass AppTest's disabled-widget guard so we can send a forged
+        # frontend value and assert the server still discards it.
+        at.checkbox[0]._value = True
+        at.run()
 
         assert at.checkbox[0].value is False
         assert "callback_ran" not in at.session_state
@@ -4921,8 +6385,10 @@ class DisabledWidgetAppTest(unittest.TestCase):
 
         at = AppTest.from_function(script).run()
 
-        # Simulate the frontend reporting a click for the disabled button.
-        at.button[0].click().run()
+        # Bypass AppTest's disabled-widget guard so we can send a forged
+        # frontend click and assert the server still discards it.
+        at.button[0]._value = True
+        at.run()
 
         assert at.button[0].value is False
         assert "clicked" not in at.session_state

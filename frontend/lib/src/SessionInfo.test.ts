@@ -21,7 +21,9 @@ import { SessionInfo } from "./SessionInfo"
 
 it("Throws an error when used before initialization", () => {
   const sessionInfo = new SessionInfo()
-  expect(() => sessionInfo.current).toThrow()
+  expect(() => sessionInfo.current).toThrow(
+    "Tried to use SessionInfo before it was initialized"
+  )
 })
 
 describe("SessionInfo.setCurrent", () => {

@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import patch
+
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.commands.echo import _get_indent, _get_initial_indent
+from streamlit.commands.echo import _LOGGER, _get_indent, _get_initial_indent
+from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -195,6 +199,42 @@ class MultiDecorated:
 
         element = self.get_delta_from_queue(0).new_element
         assert echo_str == element.code.code_text
+
+    @parameterized.expand(
+        [
+            (FileNotFoundError, "missing.py"),
+            (PermissionError, "denied.py"),
+        ]
+    )
+    def test_echo_unreadable_source_file_warns_and_logs(self, error_cls, err_text):
+        """If the source file cannot be opened, echo still runs the block, shows a
+        warning, and logs it with a stack trace.
+        """
+        with patch(
+            "streamlit.source_util.open_python_file",
+            side_effect=error_cls(err_text),
+        ):
+            with self.assertLogs(_LOGGER) as logs:
+                with st.echo():
+                    st.write("Hello")
+
+        assert f"Unable to display code. {err_text}" in logs.records[0].getMessage()
+        assert logs.records[0].stack_info is not None
+
+        warning_el = self.get_delta_from_queue(0).new_element.alert
+        assert warning_el.format == AlertProto.WARNING
+        assert f"Unable to display code. {err_text}" in warning_el.body
+        assert self.get_delta_from_queue(1).new_element.markdown.body == "Hello"
+        assert not any(
+            delta.new_element.WhichOneof("type") == "code"
+            for delta in self.get_all_deltas_from_queue()
+        )
+
+    def test_echo_propagates_file_not_found_from_block(self):
+        """FileNotFoundError raised inside the echoed block is not swallowed."""
+        with pytest.raises(FileNotFoundError, match="from the block"):
+            with st.echo():
+                raise FileNotFoundError("from the block")
 
 
 class EchoUtilsTest(DeltaGeneratorTestCase):

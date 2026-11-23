@@ -24,11 +24,14 @@ import { createRoot } from "react-dom/client"
 import { HelmetProvider } from "react-helmet-async"
 
 import ThemedApp from "./ThemedApp"
+import { preloadIconFont } from "./util/preloadIconFont"
 
 if (process.env.NODE_ENV === "development") {
   // By default, loglevel only shows warnings and errors.
   log.setLevel(log.levels.DEBUG)
 }
+
+preloadIconFont()
 
 const rootDomNode = document.getElementById("root")
 

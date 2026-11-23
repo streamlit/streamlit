@@ -24,6 +24,7 @@ from shared.data_mocks import (
     LIST_TYPES_DF,
     NUMBER_TYPES_DF,
     PERIOD_TYPES_DF,
+    PYARROW_TABLE_TYPES,
     SPECIAL_TYPES_DF,
     UNSUPPORTED_TYPES_DF,
 )
@@ -56,3 +57,6 @@ st.dataframe(PERIOD_TYPES_DF, width="stretch", hide_index=True)
 
 st.subheader("Unsupported types (string fallback)")
 st.dataframe(UNSUPPORTED_TYPES_DF, width="stretch", hide_index=True)
+
+st.subheader("pyarrow.Table types")
+st.dataframe(PYARROW_TABLE_TYPES, width="stretch", hide_index=True)

@@ -23,13 +23,13 @@ import altair as alt
 import pandas as pd
 import pytest
 
+from streamlit import dataframe_util
 from streamlit.elements.lib import built_in_chart_utils as chart_utils
-from streamlit.elements.lib.built_in_chart_utils import (
-    StreamlitColorLengthError,
-    StreamlitColumnNotFoundError,
-    StreamlitInvalidColorError,
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
 
 
 @pytest.mark.parametrize(
@@ -108,15 +108,19 @@ def test_parse_x_column_with_none_returns_none() -> None:
 def test_parse_x_column_raises_for_unknown_column() -> None:
     """``_parse_x_column`` raises when the column is not in the DataFrame."""
     df = pd.DataFrame({"a": [1]})
-    with pytest.raises(StreamlitColumnNotFoundError):
+    with pytest.raises(StreamlitAPIException, match="does not have a column") as exc:
         chart_utils._parse_x_column(df, "missing")
+    assert exc.value.error_id == "chart-column-not-found"
 
 
 def test_parse_x_column_raises_for_invalid_type() -> None:
-    """``_parse_x_column`` raises StreamlitAPIException for non-str inputs."""
+    """``_parse_x_column`` raises StreamlitInvalidParameterTypeError for non-str inputs."""
     df = pd.DataFrame({"a": [1]})
-    with pytest.raises(StreamlitAPIException, match="x parameter"):
+    with pytest.raises(
+        StreamlitInvalidParameterTypeError, match=r"Invalid `x` type"
+    ) as exc:
         chart_utils._parse_x_column(df, 123)  # type: ignore[arg-type]
+    assert exc.value.exec_kwargs["expected_types"] == "str, None"
 
 
 @pytest.mark.parametrize("sort_from_user", [True, False])
@@ -135,8 +139,9 @@ def test_parse_sort_column_strips_minus_prefix() -> None:
 def test_parse_sort_column_raises_when_missing() -> None:
     """A sort column not in the DataFrame raises."""
     df = pd.DataFrame({"name": [1]})
-    with pytest.raises(StreamlitColumnNotFoundError):
+    with pytest.raises(StreamlitAPIException, match="does not have a column") as exc:
         chart_utils._parse_sort_column(df, "missing")
+    assert exc.value.error_id == "chart-column-not-found"
 
 
 @pytest.mark.parametrize(
@@ -178,10 +183,11 @@ def test_parse_y_columns(
 
 
 def test_parse_y_columns_raises_for_unknown() -> None:
-    """An unknown y column raises ``StreamlitColumnNotFoundError``."""
+    """An unknown y column raises a tagged StreamlitAPIException."""
     df = pd.DataFrame({"a": [1]})
-    with pytest.raises(StreamlitColumnNotFoundError):
+    with pytest.raises(StreamlitAPIException, match="does not have a column") as exc:
         chart_utils._parse_y_columns(df, "missing", None)
+    assert exc.value.error_id == "chart-column-not-found"
 
 
 def test_drop_unused_columns_dedupes_and_filters_none() -> None:
@@ -261,9 +267,10 @@ def test_get_size_encoding_scatter(
 
 
 def test_get_size_encoding_invalid_size_value_raises() -> None:
-    """Non-numeric size_value should raise StreamlitAPIException."""
-    with pytest.raises(StreamlitAPIException, match="valid size"):
+    """Non-numeric size_value should raise StreamlitValueError."""
+    with pytest.raises(StreamlitValueError, match=r"a column name, a number") as exc:
         chart_utils._get_size_encoding(chart_utils.ChartType.SCATTER, None, "huge", {})
+    assert "huge" in str(exc.value)
 
 
 def test_get_size_encoding_returns_none_for_non_scatter() -> None:
@@ -333,6 +340,45 @@ def test_melt_data_raises_on_too_many_mixed_types() -> None:
     )
     with pytest.raises(StreamlitAPIException, match="too many values"):
         chart_utils._melt_data(df, ["x"], ["ints", "strs"], "value", "color")
+
+
+def test_melt_data_leaves_trial_conversion_to_the_serialization() -> None:
+    """Melting skips the trial Arrow conversion, which runs on every chart render.
+
+    A column of lists with inconsistent nesting levels is only detectable by a
+    trial conversion, so melting leaves it untouched and the Arrow serialization
+    stringifies it on its retry instead.
+    """
+    df = pd.DataFrame(
+        {
+            # An id column, so the mixed-type guard on the melted values
+            # does not apply to it:
+            "x": [[1, 2], [[1, 2], [3, 4]]],
+            "a": [1.0, 2.0],
+            "b": [3.0, 4.0],
+        }
+    )
+
+    melted_df = chart_utils._melt_data(df, ["x"], ["a", "b"], "value", "color")
+
+    # The column is left as-is, so no trial conversion was paid for:
+    assert melted_df["x"].tolist() == [
+        [1, 2],
+        [[1, 2], [3, 4]],
+        [1, 2],
+        [[1, 2], [3, 4]],
+    ]
+
+    # Serializing the melted dataframe still recovers and stringifies it:
+    reconstructed_df = dataframe_util.convert_arrow_bytes_to_pandas_df(
+        dataframe_util.convert_anything_to_arrow_bytes(melted_df)
+    )
+    assert reconstructed_df["x"].tolist() == [
+        "[1, 2]",
+        "[[1, 2], [3, 4]]",
+        "[1, 2]",
+        "[[1, 2], [3, 4]]",
+    ]
 
 
 def test_convert_col_names_to_str_in_place_stringifies_columns() -> None:
@@ -439,7 +485,7 @@ def test_get_color_encoding_single_color_yields_color_value(color_value: Any) ->
 def test_get_color_encoding_builtin_name_with_multiple_y_raises() -> None:
     """A single color string with multiple y columns raises a length error."""
     df = pd.DataFrame({"y1": [1], "y2": [2]})
-    with pytest.raises(StreamlitColorLengthError):
+    with pytest.raises(StreamlitAPIException, match="must have the same") as exc:
         chart_utils._get_color_encoding(
             df=df,
             color_value="primary",
@@ -448,12 +494,13 @@ def test_get_color_encoding_builtin_name_with_multiple_y_raises() -> None:
             color_from_user="primary",
             alias_to_original={},
         )
+    assert exc.value.error_id == "chart-color-length-mismatch"
 
 
 def test_get_color_encoding_invalid_color_raises() -> None:
-    """Non-color, non-iterable color values raise StreamlitInvalidColorError."""
+    """Non-color, non-iterable color values raise a tagged StreamlitAPIException."""
     df = pd.DataFrame({"y1": [1]})
-    with pytest.raises(StreamlitInvalidColorError):
+    with pytest.raises(StreamlitAPIException, match="valid color argument") as exc:
         chart_utils._get_color_encoding(
             df=df,
             color_value=123,
@@ -462,3 +509,4 @@ def test_get_color_encoding_invalid_color_raises() -> None:
             color_from_user=123,
             alias_to_original={},
         )
+    assert exc.value.error_id == "chart-invalid-color"

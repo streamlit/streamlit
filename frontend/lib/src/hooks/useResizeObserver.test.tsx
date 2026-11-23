@@ -15,9 +15,9 @@
  */
 
 import {
-  DependencyList,
-  MutableRefObject,
-  ReactElement,
+  type DependencyList,
+  type MutableRefObject,
+  type ReactElement,
   useCallback,
 } from "react"
 
@@ -25,18 +25,22 @@ import { act, screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
-import { DOMRectKeys, useResizeObserver } from "./useResizeObserver"
+import { type DOMRectKeys, useResizeObserver } from "./useResizeObserver"
 
 const mockDisconnect = vi.fn()
 const mockObserve = vi.fn()
 let resizeCallback: ((entries: ResizeObserverEntry[]) => void) | null = null
+
+// Stable empty list so the default is not a new `[]` each render
+// (`@eslint-react/no-unstable-default-props`).
+const EMPTY_DEPENDENCIES: DependencyList = []
 
 // Helper component that uses the hook and displays values
 function TestComponent({
   properties,
   throttleMs,
   dimensionsRef,
-  dependencies = [],
+  dependencies = EMPTY_DEPENDENCIES,
   mounted = true,
 }: {
   properties: DOMRectKeys[]

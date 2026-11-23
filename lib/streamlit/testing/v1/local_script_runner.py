@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import asyncio
 import os
 import time
 import types
@@ -28,16 +29,21 @@ from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.testing.v1.element_tree import ElementTree, parse_tree_from_messages
 
 if TYPE_CHECKING:
+    from streamlit.proto.ClientState_pb2 import ContextInfo
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
     from streamlit.runtime.pages_manager import PagesManager
-    from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
+    from streamlit.runtime.scriptrunner_utils.run_descriptor import RunDescriptor
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        ScriptRunContext,
+        UserInfoType,
+    )
     from streamlit.runtime.state.safe_session_state import SafeSessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 
 
 class LocalScriptRunner(ScriptRunner):
-    """Subclasses ScriptRunner to provide some testing features."""
+    """AppTest adapter that captures events and owns each run's event loop."""
 
     def __init__(
         self,
@@ -46,29 +52,69 @@ class LocalScriptRunner(ScriptRunner):
         pages_manager: PagesManager,
         args: Any = None,
         kwargs: Any = None,
+        fragment_storage: MemoryFragmentStorage | None = None,
+        user_info: UserInfoType | None = None,
+        fragment_id: str = "",
+        previous_msgs: list[ForwardMsg] | None = None,
     ) -> None:
-        """Initializes the ScriptRunner for the given script_path."""
+        """Initializes the ScriptRunner for the given script_path.
+
+        With a ``fragment_id``, the run reruns only that fragment. Each run
+        starts from the element deltas in ``previous_msgs``, so a fragment run
+        keeps the elements outside the fragment like the browser does.
+        """
 
         if not os.path.isfile(script_path):
             raise FileNotFoundError(f"File not found at {script_path}")
 
         self.forward_msg_queue = ForwardMsgQueue()
+        self.fragment_id = fragment_id
+        # Start from the previous run's deltas so a fragment run keeps the
+        # elements outside the fragment. The SCRIPT_STARTED handler below
+        # drops the rerunning fragments' deltas, or all of them on a full run.
+        # Toasts are skipped because the browser shows each toast only once.
+        self.forward_msg_queue._queue = [
+            msg
+            for msg in previous_msgs or []
+            if msg.HasField("delta")
+            and msg.delta.new_element.WhichOneof("type") != "toast"
+        ]
         self.script_path = script_path
         self.session_state = session_state
         self.args = args if args is not None else ()
         self.kwargs = kwargs if kwargs is not None else {}
+        self._owned_event_loop = asyncio.new_event_loop()
 
-        super().__init__(
-            session_id="test session id",
-            main_script_path=script_path,
-            session_state=self.session_state._state,
-            uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
-            script_cache=ScriptCache(),
-            initial_rerun_data=RerunData(),
-            user_info={"email": "test@example.com"},
-            fragment_storage=MemoryFragmentStorage(),
-            pages_manager=pages_manager,
-        )
+        try:
+            super().__init__(
+                session_id="test session id",
+                main_script_path=script_path,
+                session_state=self.session_state._state,
+                uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
+                script_cache=ScriptCache(),
+                # run() requests a rerun that merges with this initial
+                # request. Without the fragment id here, the merged request
+                # reruns the whole app.
+                initial_rerun_data=RerunData(fragment_id=fragment_id or None),
+                # Keep an empty dict. st.logout() writes {} back to
+                # AppTest.user, and a truthiness check would replace that
+                # with the default test user.
+                user_info=(
+                    user_info
+                    if user_info is not None
+                    else {"email": "test@example.com"}
+                ),
+                fragment_storage=(
+                    fragment_storage
+                    if fragment_storage is not None
+                    else MemoryFragmentStorage()
+                ),
+                pages_manager=pages_manager,
+                event_loop=self._owned_event_loop,
+            )
+        except Exception:
+            self._owned_event_loop.close()
+            raise
 
         # Accumulates all ScriptRunnerEvents emitted by us.
         self.events: list[ScriptRunnerEvent] = []
@@ -91,10 +137,26 @@ class LocalScriptRunner(ScriptRunner):
                 # mirrors AppSession._clear_queue: fragment_ids_this_run is
                 # forwarded so that a fragment-scoped rerun preserves deltas
                 # belonging to elements outside the running fragment(s).
+                fragment_ids_this_run = kwargs.get("fragment_ids_this_run")
                 self.forward_msg_queue.clear(
                     retain_lifecycle_msgs=True,
-                    fragment_ids_this_run=kwargs.get("fragment_ids_this_run"),
+                    fragment_ids_this_run=fragment_ids_this_run,
                 )
+                if fragment_ids_this_run:
+                    # Also drop deltas from fragments nested in a rerunning
+                    # fragment. The clear above keeps them because they carry
+                    # the nested fragment's id, but the ancestor redraws
+                    # whatever it still renders, as the browser does.
+                    self.forward_msg_queue._queue = [
+                        msg
+                        for msg in self.forward_msg_queue._queue
+                        if not (
+                            msg.delta.fragment_id
+                            and self._fragment_storage.has_ancestor_in(
+                                msg.delta.fragment_id, fragment_ids_this_run
+                            )
+                        )
+                    ]
 
             # Send ENQUEUE_FORWARD_MSGs to our queue
             if event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
@@ -125,6 +187,18 @@ class LocalScriptRunner(ScriptRunner):
         """Wait for the script thread to finish, if it is running."""
         if self._script_thread is not None:
             self._script_thread.join()
+        self._close_owned_event_loop()
+
+    def _run_script_thread(self) -> None:
+        try:
+            super()._run_script_thread()
+        finally:
+            self._close_owned_event_loop()
+
+    def _close_owned_event_loop(self) -> None:
+        """Close the test-owned loop after the script thread releases it."""
+        if not self._owned_event_loop.is_closed():
+            self._owned_event_loop.close()
 
     def forward_msgs(self) -> list[ForwardMsg]:
         """Return all messages in our ForwardMsgQueue."""
@@ -136,6 +210,7 @@ class LocalScriptRunner(ScriptRunner):
         query_params: dict[str, Any] | None = None,
         timeout: float = 3,
         page_hash: str = "",
+        context_info: ContextInfo | None = None,
     ) -> ElementTree:
         """Run the script, and parse the output messages for querying
         and interaction.
@@ -151,34 +226,63 @@ class LocalScriptRunner(ScriptRunner):
             widget_states=widget_state,
             query_string=query_string,
             page_script_hash=page_hash,
+            context_info=context_info,
+            fragment_id=self.fragment_id or None,
         )
         self.request_rerun(rerun_data)
-        if not self._script_thread:
-            self.start()
-        require_widgets_deltas(self, timeout)
+        try:
+            if not self._script_thread:
+                self.start()
+            require_widgets_deltas(self, timeout)
+        finally:
+            # SHUTDOWN is emitted before the script thread returns. Joining
+            # ensures AppTest never observes completion before loop cleanup.
+            self.join()
 
         return parse_tree_from_messages(self.forward_msgs())
+
+    def ran_only_fragments(self) -> bool:
+        """Return True if the final script run, after any st.rerun(), ran only
+        fragments and skipped the main script.
+        """
+        started = [
+            data
+            for event, data in zip(self.events, self.event_data, strict=True)
+            if event == ScriptRunnerEvent.SCRIPT_STARTED
+        ]
+        return bool(started) and started[-1].get("fragment_ids_this_run") is not None
 
     def script_stopped(self) -> bool:
         return any(e == ScriptRunnerEvent.SHUTDOWN for e in self.events)
 
     def _on_script_finished(
-        self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
+        self,
+        ctx: ScriptRunContext,
+        event: ScriptRunnerEvent,
+        premature_stop: bool,
+        run_descriptor: RunDescriptor,
     ) -> None:
+        # Do not drop unseen widgets when the script stopped for a rerun
+        # (later widgets never registered). Keep this gate in sync with
+        # ScriptRunner._on_script_finished.
         if not premature_stop:
             self._session_state.on_script_finished(
                 ctx.shared.widget_ids_this_run.snapshot(),
-                remove_stale_widgets=ctx.has_script_started,
+                remove_stale_widgets=(
+                    ctx.has_script_started
+                    and event != ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
+                ),
             )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
-        self.on_event.send(self, event=event)
+        self.on_event.send(self, event=event, run_descriptor=run_descriptor)
 
-        # Remove orphaned files now that the script has run and files in use
-        # are marked as active. Skipped for a run that never reached its body, which
-        # re-registered nothing and would look like everything is orphaned.
-        if ctx.has_script_started:
+        # Skip orphan cleanup when:
+        # - The body never ran (nothing was re-registered, so everything
+        #   would look orphaned)
+        # - No Runtime exists (get_instance() would raise)
+        if ctx.has_script_started and runtime.exists():
             runtime.get_instance().media_file_mgr.remove_orphaned_files()
 
     def _new_module(self, name: str) -> types.ModuleType:

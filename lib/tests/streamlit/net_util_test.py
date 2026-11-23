@@ -16,25 +16,35 @@ from __future__ import annotations
 
 import socket
 import unittest
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
+import pytest
 import requests
 import requests_mock
 
 from streamlit import net_util
 
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+
+@pytest.fixture(autouse=True)
+def _clear_external_ip_cache() -> Iterator[None]:
+    """Run each test with an empty external IP cache."""
+    net_util.get_external_ip.cache_clear()
+    yield
+    net_util.get_external_ip.cache_clear()
+
 
 class UtilTest(unittest.TestCase):
-    def setUp(self):
-        net_util._external_ip = None
-
     def test_get_external_ip(self):
         # Test success
         with requests_mock.mock() as m:
             m.get(net_util._AWS_CHECK_IP, text="1.2.3.4")
             assert net_util.get_external_ip() == "1.2.3.4"
 
-        net_util._external_ip = None
+        net_util.get_external_ip.cache_clear()
 
         # Test failure
         with requests_mock.mock() as m:
@@ -69,14 +79,9 @@ class UtilTest(unittest.TestCase):
             m.get(net_util._AWS_CHECK_IP, text=response_text)
             assert None is net_util.get_external_ip()
 
-        net_util._external_ip = None
-
 
 def test_get_external_ip_uses_short_timeout(monkeypatch) -> None:
     """Verify get_external_ip uses 1s timeout for both HTTP and HTTPS calls."""
-    # Reset cache to force new request
-    monkeypatch.setattr(net_util, "_external_ip", None)
-
     mock_get = MagicMock()
     mock_response = MagicMock()
     mock_response.text = "1.2.3.4"
@@ -96,9 +101,6 @@ def test_get_external_ip_uses_short_timeout(monkeypatch) -> None:
 
 def test_get_external_ip_https_fallback_uses_short_timeout(monkeypatch) -> None:
     """Verify HTTPS fallback in get_external_ip also uses 1s timeout."""
-    # Reset cache to force new request
-    monkeypatch.setattr(net_util, "_external_ip", None)
-
     mock_get = MagicMock()
 
     def side_effect(url: str, timeout: float = 5) -> MagicMock:
@@ -129,6 +131,18 @@ def test_get_external_ip_https_fallback_uses_short_timeout(monkeypatch) -> None:
     assert second_call_kwargs.get("timeout") == 1, (
         f"HTTPS fallback: Expected timeout=1, got {second_call_kwargs.get('timeout')}"
     )
+
+
+def test_get_external_ip_caches_failed_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify a failed lookup is not retried on later calls."""
+    mock_get = MagicMock(side_effect=requests.exceptions.ConnectTimeout())
+    monkeypatch.setattr("requests.get", mock_get)
+
+    assert net_util.get_external_ip() is None
+    assert net_util.get_external_ip() is None
+
+    # One HTTP attempt and one HTTPS fallback, from the first call only.
+    assert mock_get.call_count == 2
 
 
 def test_looks_like_an_ip_address_ipv6() -> None:

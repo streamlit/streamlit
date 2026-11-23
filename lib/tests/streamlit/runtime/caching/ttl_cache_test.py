@@ -388,21 +388,56 @@ def test_properties_expose_configuration() -> None:
     cache: TTLCache[str, int] = TTLCache(maxsize=5, ttl=42, timer=clock)
 
     assert cache.maxsize == 5
+    assert cache.max_total_size is None
     assert cache.ttl == 42
     assert cache.timer is clock
 
 
+def test_total_size_configuration_requires_limit_and_size_function() -> None:
+    """Size tracking requires both its independent limit and measurement function."""
+    with pytest.raises(ValueError, match="must be provided together"):
+        TTLCache[str, bytes](maxsize=5, ttl=42, max_total_size=10)
+    with pytest.raises(ValueError, match="must be provided together"):
+        TTLCache[str, bytes](maxsize=5, ttl=42, getsizeof=len)
+
+
 def test_currsize_reflects_non_expired_entries() -> None:
-    """``currsize`` counts only entries that have not expired."""
+    """``currsize`` counts only live entries without reaping expired entries."""
     clock = _FakeClock()
     cache: TTLCache[str, int] = TTLCache(maxsize=10, ttl=10, timer=clock)
 
     cache["a"] = 1
+    clock.now = 5
     cache["b"] = 2
     assert cache.currsize == 2
+    assert cache.curr_total_size is None
+    assert cache._sizes is None
 
-    clock.now = 10
-    assert cache.currsize == 0
+    clock.now = 12
+    assert cache.currsize == 1
+    assert set(cache._data) == {"a", "b"}
+
+
+def test_curr_total_size_reflects_live_entries_without_reaping() -> None:
+    """Size properties exclude expired entries without removing them."""
+    clock = _FakeClock()
+    cache = TTLCache[str, bytes](
+        maxsize=10,
+        max_total_size=100,
+        ttl=10,
+        timer=clock,
+        getsizeof=len,
+    )
+
+    cache["a"] = b"aa"
+    clock.now = 5
+    cache["b"] = b"bbb"
+
+    clock.now = 12
+    assert cache.currsize == 1
+    assert cache.curr_total_size == 3
+    assert set(cache._data) == {"a", "b"}
+    assert cache._curr_total_size == 5
 
 
 def test_contains_does_not_affect_eviction_order() -> None:
@@ -471,3 +506,189 @@ def test_get_and_pop_return_default_for_expired_keys() -> None:
     # pop() without a default raises for an expired entry.
     with pytest.raises(KeyError):
         cache.pop("a")
+
+
+def test_byte_sizing_evicts_lru_and_tracks_current_size() -> None:
+    """Byte sizing evicts the LRU entry and maintains the current size."""
+    cache = TTLCache[str, bytes](
+        maxsize=math.inf,
+        max_total_size=6,
+        ttl=100,
+        timer=_FakeClock(),
+        getsizeof=len,
+    )
+    cache["a"] = b"aa"
+    cache["b"] = b"bbb"
+    assert cache.currsize == 2
+    assert cache.curr_total_size == 5
+    assert repr(cache) == (
+        "TTLCache(maxsize=inf, ttl=100, currsize=2, "
+        "max_total_size=6, curr_total_size=5)"
+    )
+
+    assert cache["a"] == b"aa"
+    cache["c"] = b"cc"
+
+    assert "b" not in cache
+    assert set(cache) == {"a", "c"}
+    assert cache.currsize == 2
+    assert cache.curr_total_size == 4
+
+
+def test_byte_sizing_and_count_limit_are_both_enforced() -> None:
+    """Byte and entry-count limits are enforced together."""
+    cache = TTLCache[str, bytes](
+        maxsize=2,
+        max_total_size=3,
+        ttl=100,
+        timer=_FakeClock(),
+        getsizeof=len,
+    )
+    cache["a"] = b"a"
+    cache["b"] = b"b"
+    cache["c"] = b"c"
+
+    assert set(cache) == {"b", "c"}
+    assert cache.currsize == 2
+    assert cache.curr_total_size == 2
+
+    # Replacing an existing key doesn't exceed the entry limit, but its larger
+    # value exceeds the byte limit and therefore evicts the other LRU entry.
+    cache["c"] = b"ccc"
+
+    assert set(cache) == {"c"}
+    assert cache["c"] == b"ccc"
+    assert cache.currsize == 1
+    assert cache.curr_total_size == 3
+
+
+def test_byte_sizing_retains_one_oversized_entry() -> None:
+    """A lone value larger than the byte limit remains cached."""
+    cache = TTLCache[str, bytes](
+        maxsize=math.inf,
+        max_total_size=3,
+        ttl=100,
+        timer=_FakeClock(),
+        getsizeof=len,
+    )
+    cache["small"] = b"aa"
+    cache["large"] = b"oversized"
+
+    assert list(cache.items()) == [("large", b"oversized")]
+    assert cache.currsize == 1
+    assert cache.curr_total_size == len(b"oversized")
+
+
+def test_byte_size_is_updated_by_all_removal_paths() -> None:
+    """Every removal path updates byte size and invokes the callback."""
+    clock = _FakeClock()
+    removed: list[str] = []
+    cache = TTLCache[str, bytes](
+        maxsize=math.inf,
+        max_total_size=100,
+        ttl=10,
+        timer=clock,
+        getsizeof=len,
+        on_remove=lambda key, _value: removed.append(key),
+    )
+    cache["a"] = b"aaaa"
+    cache["b"] = b"bb"
+    cache["a"] = b"a"
+    assert cache.currsize == 2
+    assert cache.curr_total_size == 3
+    assert removed == ["a"]
+
+    assert cache.pop("b") == b"bb"
+    assert cache.currsize == 1
+    assert cache.curr_total_size == 1
+    clock.now = 10
+    assert cache.currsize == 0
+    assert cache.curr_total_size == 0
+    assert removed == ["a", "b"]
+    assert "a" in cache._data
+    assert cache._curr_total_size == 1
+    assert cache.expire() == [("a", b"a")]
+    assert cache._curr_total_size == 0
+    assert removed == ["a", "b", "a"]
+
+    cache["c"] = b"ccc"
+    del cache["c"]
+    cache["d"] = b"dddd"
+    cache.clear()
+    assert cache.currsize == 0
+    assert cache.curr_total_size == 0
+    assert removed[-2:] == ["c", "d"]
+
+
+def _recording_cache(
+    *,
+    clock: _FakeClock,
+    maxsize: float = math.inf,
+    ttl: float = math.inf,
+    max_total_size: float | None = None,
+) -> tuple[TTLCache[str, bytes], list[tuple[str, int]]]:
+    evictions: list[tuple[str, int]] = []
+    cache: TTLCache[str, bytes] = TTLCache(
+        maxsize=maxsize,
+        ttl=ttl,
+        timer=clock,
+        max_total_size=max_total_size,
+        getsizeof=None if max_total_size is None else len,
+        on_evict=lambda reason, count: evictions.append((reason, count)),
+    )
+    return cache, evictions
+
+
+def test_on_evict_reports_expired_entries_when_reaped() -> None:
+    """Expired entries are reported once, as a batch, when they are reaped."""
+    clock = _FakeClock()
+    cache, evictions = _recording_cache(clock=clock, ttl=10)
+    cache["a"] = b"a"
+    cache["b"] = b"b"
+
+    clock.now = 11
+    assert "a" not in cache
+    # Reads treat expired entries as absent without reaping them.
+    assert evictions == []
+
+    cache["c"] = b"c"
+    assert evictions == [("ttl", 2)]
+
+
+def test_on_evict_reports_max_entries_evictions() -> None:
+    """Each least-recently-used entry dropped to honor maxsize is reported."""
+    cache, evictions = _recording_cache(clock=_FakeClock(), maxsize=2)
+    cache["a"] = b"a"
+    cache["b"] = b"b"
+    cache["a"] = b"A"
+    assert evictions == []
+
+    cache["c"] = b"c"
+    assert evictions == [("max_entries", 1)]
+    assert list(cache) == ["a", "c"]
+
+
+def test_on_evict_reports_max_size_evictions() -> None:
+    """Entries dropped to honor max_total_size are reported as max_size."""
+    cache, evictions = _recording_cache(clock=_FakeClock(), max_total_size=4)
+    cache["a"] = b"aa"
+    cache["b"] = b"bb"
+    cache["c"] = b"cccc"
+
+    assert evictions == [("max_size", 1), ("max_size", 1)]
+    assert list(cache) == ["c"]
+
+
+def test_on_evict_ignores_explicit_removals() -> None:
+    """del, pop, popitem, and clear are explicit and are not reported."""
+    cache, evictions = _recording_cache(clock=_FakeClock())
+    for key in "abcd":
+        cache[key] = key.encode()
+
+    del cache["a"]
+    cache.pop("b")
+    cache.popitem()
+    cache.clear()
+
+    assert evictions == []
+    assert len(cache) == 0

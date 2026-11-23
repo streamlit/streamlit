@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, ReactNode } from "react"
+import { memo, type ReactElement, type ReactNode } from "react"
 
 import UploadedFileChips from "~lib/components/shared/UploadedFile/UploadedFileChips"
-import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
+import type { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 
 import { StyledUploadedFiles } from "./styled-components"
 

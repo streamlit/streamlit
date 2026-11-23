@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { BooleanCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { type BooleanCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { Bool, Field } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"

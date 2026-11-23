@@ -122,7 +122,7 @@ def test_color_picker_in_fragment(app: Page):
     color_block_element = app.get_by_test_id("stColorPickerBlock")
     color_block_element.evaluate("el => el.scrollIntoView({ block: 'center' })")
     color_block_element.click()
-    app.get_by_test_id("stColorPickerPopover").locator("input").fill("0xFFFFFF")
+    app.get_by_test_id("stColorPickerPopover").locator("input").fill("#ffffff")
     color_block_element.click()
     wait_for_app_run(app)
 

@@ -16,7 +16,7 @@
 
 import { useEffect, useMemo } from "react"
 
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 import {
   Article,
   Code,
@@ -199,7 +199,7 @@ export function useImagePreview(
 
   useEffect(() => {
     return () => {
-      if (previewUrl) {
+      if (previewUrl !== null) {
         URL.revokeObjectURL(previewUrl)
       }
     }

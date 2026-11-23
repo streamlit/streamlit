@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -64,3 +62,25 @@ pie title Pets
     assert_type(mermaid_chart("graph TD\n    A --> B", width="stretch"), DeltaGenerator)
     assert_type(mermaid_chart("graph TD\n    A --> B", width="content"), DeltaGenerator)
     assert_type(mermaid_chart("graph TD\n    A --> B", width=100), DeltaGenerator)
+
+    # =====================================================================
+    # Test alt parameter
+    # =====================================================================
+
+    assert_type(
+        mermaid_chart("graph TD\n    A --> B", alt="Decision flow"),
+        DeltaGenerator,
+    )
+    assert_type(mermaid_chart("graph TD\n    A --> B", alt=None), DeltaGenerator)
+
+    assert_type(
+        mermaid_chart(
+            "graph TD\n    A --> B",
+            width="content",
+            alt="Decision flow",
+        ),
+        DeltaGenerator,
+    )
+
+    # Invalid alt value (static typing accepts only str or None; runtime coercion is tested separately)
+    mermaid_chart("graph TD\n    A --> B", alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

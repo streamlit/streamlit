@@ -16,9 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
-
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Literal, Self
 
 from streamlit.delta_generator import DeltaGenerator
 
@@ -38,9 +36,9 @@ class ExpanderContainer(DeltaGenerator):
     Attributes
     ----------
     open : bool or None
-        Whether the expander is open. This is ``True`` if the expander is open
-        and ``False`` if it's collapsed, or ``None`` if state tracking isn't
-        enabled.
+        Whether the expander is open. This is ``True`` if the expander is open,
+        ``False`` if it's collapsed, or ``None`` if the expander doesn't track
+        state (``on_change="ignore"`` without ``bind="query-params"``).
 
     Examples
     --------
@@ -102,9 +100,9 @@ class ExpanderContainer(DeltaGenerator):
         Returns
         -------
         bool or None
-            ``True`` if expanded, ``False`` if collapsed, or ``None`` if
-            state tracking is not enabled (``on_change`` was not set or
-            set to ``"ignore"``).
+            ``True`` if expanded, ``False`` if collapsed, or ``None`` if the
+            expander doesn't track state (``on_change="ignore"`` without
+            ``bind="query-params"``).
         """
         return self._open
 
@@ -112,7 +110,7 @@ class ExpanderContainer(DeltaGenerator):
     def open(self, value: bool | None) -> None:
         self._open = value
 
-    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[invalid-method-override]
+    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[incompatible-method-override]
         super().__enter__()
         return self
 

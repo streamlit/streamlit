@@ -136,8 +136,8 @@ st.plotly_chart(
 
 if st.button("Create some elements to unmount component"):
     for _ in range(3):
-        # The sleep here is needed, because it won't unmount the
-        # component if this is too fast.
+        # The sleep lets the browser render each element on its own, so the
+        # component below is displaced (and kept mounted) before it is re-emitted.
         time.sleep(1)
         st.write("Another element")
 

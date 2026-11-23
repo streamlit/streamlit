@@ -21,9 +21,9 @@ interface UseOverlayDismissalOptions {
   isOpen: boolean
   /** Called when a dismissal gesture is detected (outside click, Escape, or Tab). */
   onClose: () => void
-  /** floating-ui's refs.setFloating — the hook creates and merges its own panelRef. */
+  /** useFloatingOverlay setFloating callback. Merged with this hook's panelRef. */
   floatingSetFn: (node: HTMLElement | null) => void
-  /** floating-ui's refs.setReference — optional; the hook creates and merges its own referenceRef. */
+  /** useFloatingOverlay setReference callback. Optional; merged with this hook's referenceRef. */
   referenceSetFn?: (node: HTMLElement | null) => void
   /**
    * CSS selectors whose containing elements are excluded from outside-click
@@ -121,9 +121,12 @@ export function useOverlayDismissal({
 
     const handlePointerDown = (e: PointerEvent): void => {
       const target = e.target as Element
-      if (panelRef.current?.contains(target)) return
-      if (referenceRef.current?.contains(target)) return
-      if (excludeSelectorsRef.current?.some(sel => target.closest(sel))) return
+      if (panelRef.current?.contains(target) === true) return
+      if (referenceRef.current?.contains(target) === true) return
+      if (
+        excludeSelectorsRef.current?.some(sel => target.closest(sel)) === true
+      )
+        return
       onClose()
     }
 
@@ -136,7 +139,10 @@ export function useOverlayDismissal({
       // handling close itself instead of also dismissing this outer one.
       if (isEscape && excludeEscape) {
         const target = e.target as Element
-        if (excludeSelectorsRef.current?.some(sel => target.closest(sel)))
+        if (
+          excludeSelectorsRef.current?.some(sel => target.closest(sel)) ===
+          true
+        )
           return
       }
       // stopPropagation and preventDefault only for Escape — Tab must

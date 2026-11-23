@@ -17,7 +17,7 @@ from __future__ import annotations
 import inspect
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 from streamlit import config
 from streamlit.components.v1.custom_component import CustomComponent
@@ -48,6 +48,28 @@ def _get_module_name(caller_frame: FrameType) -> str:
         module_name, _ = os.path.splitext(filename)
 
     return module_name
+
+
+# Require ``path`` or ``url``. Each overload makes one of them required, so a
+# call with neither is a type error. A ``str | None`` value still type-checks,
+# because it may be a string at runtime; explicit ``None`` matches that
+# overload too. At runtime a bare call raises unless the hidden
+# ``server.customComponentBaseUrlPath`` option supplies a url.
+@overload
+def declare_component(
+    name: str,
+    path: str | Path | None = ...,
+    *,
+    url: str | None,
+) -> CustomComponent: ...
+
+
+@overload
+def declare_component(
+    name: str,
+    path: str | Path | None,
+    url: str | None = ...,
+) -> CustomComponent: ...
 
 
 def declare_component(

@@ -42,7 +42,7 @@ def highlight_first(value: float) -> str:
 
 
 df = pd.DataFrame(np.arange(0, 100, 1).reshape(10, 10))
-st.dataframe(df.style.map(highlight_first))  # type: ignore[arg-type] # ty: ignore[no-matching-overload]
+st.dataframe(df.style.map(highlight_first))  # type: ignore[arg-type] # ty: ignore[invalid-argument-type]
 
 st.header("Pandas Styler: Background and font styling")
 
@@ -64,7 +64,7 @@ def highlight_max(s: pd.Series | pd.DataFrame, style: str) -> Any:
 
 
 # Passing style values w/ all color formats to test css-style-string parsing robustness.
-styled_df = df.style.map(color_negative).map(fade_near_zero)  # type: ignore[arg-type] # ty: ignore[no-matching-overload]
+styled_df = df.style.map(color_negative).map(fade_near_zero)  # type: ignore[arg-type] # ty: ignore[invalid-argument-type]
 
 styled_df.apply(
     lambda s: highlight_max(
