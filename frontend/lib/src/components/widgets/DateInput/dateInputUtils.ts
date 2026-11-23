@@ -16,8 +16,10 @@
 
 import {
   CalendarDate,
+  type DateValue,
   getLocalTimeZone,
   parseDate,
+  toCalendarDate,
   today,
 } from "@internationalized/date"
 import type { DateSegment as IDateSegment } from "react-stately"
@@ -238,7 +240,7 @@ export function getIsoWeekday(date: CalendarDate): number {
  */
 export function createIsDateUnavailable(
   element: DateInputProto
-): ((date: CalendarDate) => boolean) | null {
+): ((date: DateValue) => boolean) | null {
   const mode = element.availabilityMode
   if (
     mode === DateInputProto.AvailabilityMode.NONE ||
@@ -251,9 +253,13 @@ export function createIsDateUnavailable(
   const exactDates = new Set(element.availableDates ?? [])
   const weekdays = new Set(element.availableWeekdays ?? [])
 
-  return (date: CalendarDate): boolean => {
-    const iso = calendarDateToIso(date)
-    const matches = exactDates.has(iso) || weekdays.has(getIsoWeekday(date))
+  // React Aria types the prop as `(DateValue) => boolean`; convert so we can
+  // reuse CalendarDate helpers for ISO and weekday checks.
+  return (date: DateValue): boolean => {
+    const calendarDate = toCalendarDate(date)
+    const iso = calendarDateToIso(calendarDate)
+    const matches =
+      exactDates.has(iso) || weekdays.has(getIsoWeekday(calendarDate))
     if (mode === DateInputProto.AvailabilityMode.ALLOW) {
       return !matches
     }
@@ -266,7 +272,7 @@ export function validateDate(
   date: CalendarDate | null,
   minDate: CalendarDate,
   maxDate: CalendarDate | undefined,
-  isDateUnavailable?: ((date: CalendarDate) => boolean) | null
+  isDateUnavailable?: ((date: DateValue) => boolean) | null
 ): DateValidationErrorType {
   if (!date) return null
   // Bounds take precedence over availability when both apply.

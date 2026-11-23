@@ -441,7 +441,7 @@ def _normalize_date_filter(
         raise StreamlitAPIException(
             f"The `{param_name}` parameter does not accept generators. "
             "Pass a list, tuple, set, Series, Index, or NumPy array instead.",
-            error_id="date_input_filter_generator",
+            error_id="date-input-filter-generator",
         )
 
     if _is_rejected_dataframe(raw):
@@ -449,7 +449,7 @@ def _normalize_date_filter(
             f"The `{param_name}` parameter does not accept DataFrames. "
             "Pass a column as a Series, Index, or NumPy array instead "
             '(for example `df["date"]` or `df["date"].unique()`).',
-            error_id="date_input_filter_dataframe",
+            error_id="date-input-filter-dataframe",
         )
 
     if isinstance(raw, (str, date, datetime)):
@@ -492,7 +492,7 @@ def _parse_date_availability(
         if normalized is None:
             raise StreamlitAPIException(
                 "Failed to normalize `enabled_dates`.",
-                error_id="date_input_filter_normalize",
+                error_id="date-input-filter-normalize",
             )
         exact, weekdays, id_exact, id_weekdays = normalized
         return _DateAvailability(
@@ -509,7 +509,7 @@ def _parse_date_availability(
         if normalized is None:
             raise StreamlitAPIException(
                 "Failed to normalize `disabled_dates`.",
-                error_id="date_input_filter_normalize",
+                error_id="date-input-filter-normalize",
             )
         exact, weekdays, id_exact, id_weekdays = normalized
         return _DateAvailability(
@@ -567,7 +567,7 @@ def _raise_unavailable_value_error(value: date) -> None:
         f"The `value` {value} is not selectable with the current "
         "`enabled_dates` / `disabled_dates` configuration. "
         'Pass `value="today"` to snap to a selectable date instead of raising.',
-        error_id="date_input_value_unavailable",
+        error_id="date-input-value-unavailable",
     )
 
 
@@ -2723,14 +2723,25 @@ class TimeWidgetsMixin:
             parsed = parse_date_deterministic_for_id(value)
 
         availability = _parse_date_availability(enabled_dates, disabled_dates)
-        availability_id = (
+        # Hash under the public param names so ComputeElementIdTests stays in
+        # sync with the signature. Only one side is ever non-None.
+        availability_payload = (
             None
             if availability is None
             else {
-                "param": availability.param_name,
                 "dates": availability.id_exact_entries,
                 "weekdays": availability.id_weekdays,
             }
+        )
+        enabled_dates_id = (
+            availability_payload
+            if availability is not None and availability.param_name == "enabled_dates"
+            else None
+        )
+        disabled_dates_id = (
+            availability_payload
+            if availability is not None and availability.param_name == "disabled_dates"
+            else None
         )
 
         element_id = compute_and_register_element_id(
@@ -2752,7 +2763,8 @@ class TimeWidgetsMixin:
             format=format,
             width=width,
             required=required,
-            availability=availability_id,
+            enabled_dates=enabled_dates_id,
+            disabled_dates=disabled_dates_id,
         )
         _validate_date_format(format)
 
@@ -2788,7 +2800,7 @@ class TimeWidgetsMixin:
             raise StreamlitAPIException(
                 "`enabled_dates` and `disabled_dates` are not yet supported with "
                 "range `st.date_input` values. Pass a single date for `value`.",
-                error_id="date_input_availability_range_unsupported",
+                error_id="date-input-availability-range-unsupported",
             )
 
         parsed_values = _apply_availability_to_parsed_values(

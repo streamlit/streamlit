@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { CalendarDate } from "@internationalized/date"
+import {
+  CalendarDate,
+  type DateValue,
+  toCalendarDate,
+} from "@internationalized/date"
 import type { DateSegment as IDateSegment } from "react-stately"
 
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
@@ -805,8 +809,8 @@ describe("createIsDateUnavailable", () => {
 describe("validateDate with availability", () => {
   const minDate = new CalendarDate(2020, 1, 1)
   const maxDate = new CalendarDate(2030, 12, 31)
-  const weekendsUnavailable = (d: CalendarDate): boolean => {
-    const day = getIsoWeekday(d)
+  const weekendsUnavailable = (d: DateValue): boolean => {
+    const day = getIsoWeekday(toCalendarDate(d))
     return day === 6 || day === 7
   }
 

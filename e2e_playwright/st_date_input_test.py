@@ -40,7 +40,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATE_INPUTS = 35
+NUM_DATE_INPUTS = 36
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):

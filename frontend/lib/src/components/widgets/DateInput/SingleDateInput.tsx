@@ -32,7 +32,7 @@ import {
 import { CalendarToday, ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { FloatingPortal } from "@floating-ui/react"
-import type { CalendarDate } from "@internationalized/date"
+import type { CalendarDate, DateValue } from "@internationalized/date"
 import {
   CalendarGridBody,
   CalendarGridHeader,
@@ -137,7 +137,7 @@ interface SingleDateInputProps {
    * have changed if segment edits were never committed). */
   formResetKey: number
   /** When set, dates matching the predicate cannot be selected. */
-  isDateUnavailable?: ((date: CalendarDate) => boolean) | null
+  isDateUnavailable?: ((date: DateValue) => boolean) | null
 }
 
 /** True when close/blur should notify the parent, including a full clear
