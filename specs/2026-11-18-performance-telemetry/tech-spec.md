@@ -3,13 +3,13 @@ author: sfc-gh-lwilby
 created: 2026-11-23
 ---
 
-# Performance telemetry: recording and attribution
+# Performance telemetry
 
 ## Summary
 
-The [product spec](product-spec.md) defines what each performance telemetry addition reports and how its numbers fit together. This tech spec defines the server-side machinery that makes them fit: where each time is recorded, how a span that another reported time already covers is detected on every thread a run uses, how parallel fragments get their own breakdown, and how recording stays cheap and can't break the app.
+The [product spec](product-spec.md) defines what each performance telemetry addition reports and how its numbers fit together. This tech spec defines how each one is recorded.
 
-Cache usage and the parallel fragment breakdown are built on this design. Later server-side additions, such as query time, CPU time and per-function cache stats, reuse it instead of adding their own bookkeeping. The [telemetry reference](../../.claude/skills/understanding-streamlit-architecture/references/telemetry.md) has the rules every new field follows; this spec doesn't repeat them.
+Most of it is a shared foundation on the server: where each time is recorded, how a span that another reported time already covers is detected on every thread a run uses, how parallel fragments get their own breakdown, and how recording stays cheap and can't break the app. Cache usage and the parallel fragment breakdown are built directly on it. Query time, CPU time and per-function cache stats reuse it. Rerun reason and data size are recorded where the value is already known and don't overlap other times. Render timing is measured in the browser and joined to the run's page profile. The [telemetry reference](../../.claude/skills/understanding-streamlit-architecture/references/telemetry.md) has the rules every new field follows; this spec doesn't repeat them.
 
 ## Problem
 
@@ -42,8 +42,11 @@ Before this design, only command tracking answered that question, and only on on
 - **Usage stats can be off.** With `browser.gatherUsageStats = false`, per-call work must stop at a cheap check.
 - **The profile is built once, on the script thread**, at the end of the run, while threads the script doesn't join can still be running.
 - **Existing fields keep their meaning.** `commands` and `cache_usage` cover the whole run, including parallel fragments.
+- **Additions land separately.** Each addition is its own change, so each must work without the others, and they share proto field numbers and the per-fragment entry.
 
 ## Proposal
+
+The first sections, from [Where the state lives](#where-the-state-lives) to [Cost](#cost), describe the shared foundation, using cache usage and the parallel fragment breakdown. Each later addition then has its own section, followed by the [field numbers](#field-numbers) they share.
 
 ### Where the state lives
 
@@ -99,11 +102,11 @@ Each thread records into its own `ThreadCacheStats`, which `RunCacheStats.curren
 - A call finishing on another thread while the profile is built can be partly included, because its fields are updated one at a time.
 - Where the builder reads two related values, it reads them in the order that makes a race miss time rather than count it twice. For example, it reads a thread's totals before its open overlap group (see [Async calls on one event loop](#async-calls-on-one-event-loop)), so a group that closes in between is missed.
 
-Later additions that record per call, such as query time and per-function cache stats, add their counters to the same per-thread record rather than registering a second `threading.local`. Parallel fragment runs then separate them too, through the swap described in [Recording a fragment run](#recording-a-fragment-run).
+Later additions that record per call follow the same pattern with their own per-thread record and registry, such as `RunQueryStats` for query time (see [Query time](#query-time)). Each registry has a `recording_into()` that a parallel fragment run uses to swap in its own record, as described in [Recording a fragment run](#recording-a-fragment-run).
 
 ### Covered spans
 
-Command and cache times follow one rule: **a span counts toward the innermost listed command or recorded cached call that contains it, and the outer ones leave it out.** A cached call made inside a listed command isn't recorded, because the command's time covers it. A listed command inside a cached function is left out of the cached call's times, because the command reports it. Times that can't leave an overlap out, such as query time, report the overlapping part separately instead (see [Applying the design to later additions](#applying-the-design-to-later-additions)).
+Command and cache times follow one rule: **a span counts toward the innermost listed command or recorded cached call that contains it, and the outer ones leave it out.** A cached call made inside a listed command isn't recorded, because the command's time covers it. A listed command inside a cached function is left out of the cached call's times, because the command reports it. Times that can't leave an overlap out, such as query time, report the overlapping part separately instead (see [Query time](#query-time)).
 
 The code checks five scopes to decide where a span's time goes:
 
@@ -232,7 +235,7 @@ Only full runs have parallel fragments. A fragment rerun runs its fragments inli
 - A fragment's user code time is its `exec_time` minus its `command_time`, `cache_compute_time`, `cache_wait_time` and `cache_overhead_time`.
 - The main script's user code time is `exec_time − prep_time − wait_time`, minus the top-level command time less the fragments' command time, minus the top-level cache time less the fragments' cache time. The fragments' times include the overflow entry.
 
-Later per-fragment fields, such as query time and CPU time, are recorded through the same `ParallelFragmentRun` and the same worker-thread rule.
+Query time and CPU time add per-fragment fields through the same `ParallelFragmentRun` and the same worker-thread rule (see [Query time](#query-time) and [CPU time](#cpu-time)).
 
 ### Building the profile
 
@@ -249,6 +252,8 @@ Following `$44 Contain Failures`, each hook that runs inside or around user code
 | `_record_command_time` | After a command returns or raises `RerunException` | The command's time is missing from some destinations. |
 | `recording_run()` in `_run_parallel_fragment` | Around each parallel fragment | The fragment runs without an entry. |
 | `_recording_parallel_fragment_wait` | In a `finally` around `join()` and `drain()`, possibly while the script's error propagates | `wait_time` misses that wait. |
+| Query hooks | Around each driver execute call, and in each Snowpark notification | The query is missing from the totals. Its result or error is unchanged. |
+| CPU clock reads | At the start and end of the run, around listed commands and around each parallel fragment | The CPU fields are left unset. |
 
 Unit tests inject a failure into each hook and check that the caller sees the same result or error as without telemetry.
 
@@ -261,18 +266,147 @@ Following `$52 Pay Only for What You Use`:
 - **Locks** are taken once per thread per run to register its stats, once per parallel fragment run, and on a miss once to end its compute scope. An attached thread also takes the scope's lock for each listed command it runs during the computation.
 - **Payload.** `parallel_fragment_usage` is sent only by runs with parallel fragments, and adds at most about 4 KB (see the product spec).
 
-### Applying the design to later additions
+### Query time
 
-Each addition settles its own fields when it lands. The design fixes how they're attributed:
+#### Where queries are caught
 
-| Addition | Measured on | Attribution |
+Each client library is hooked where Streamlit already creates or manages its objects. Nothing is imported unless the app already uses the library, and no hook is installed while usage stats are off.
+
+| Source | Hook | Installed |
 |---|---|---|
-| Query time | The thread that runs the query | Inside a listed command first (`time_in_commands`). Otherwise inside a cached call (`time_in_cache`), with the same test that `_record_command_time` uses: a recorded call open on the thread, or an active `CacheComputeScope` from the attaching thread. Added to the worker's `ParallelFragmentRun`. Counted in the per-thread record. |
-| CPU time | Each thread, with `time.thread_time()` at boundaries already being timed | The script thread from the start of the run to the profile build; listed commands on the script thread, in `gather_metrics`; each fragment from `recording_run()` entry to exit on its worker. Process CPU time from the start of the run. |
-| Per-function cache stats | `CacheCallTimer.finish()` | The same skip rules as `cache_usage`, kept in the per-thread record by function ID and capped when the profile is built. |
-| Data size, rerun reason | Where the value is already known: message serialization, and the rerun request at run start | Neither overlaps other reported times, so neither uses the covered-span scopes. Neither is split per fragment. |
+| Snowflake connector | Cursors from `SnowflakeConnection.query()` and `.cursor()` are created as a `SnowflakeCursor` subclass that times `execute`, which also covers `executemany`, `execute_async` and `describe`. | When the connection creates the cursor |
+| SQLAlchemy | Cursor execute events on the `Engine` class, so every engine is covered, including the one behind `SQLConnection`. | When a `SQLConnection` connects, or when a run starts after the app has imported SQLAlchemy |
+| Snowpark | A `QueryListener` on sessions from `SnowflakeConnection.session()` and on the active session. Snowpark notifies it on the thread that ran the query, after the query finishes and without its duration, so Snowpark queries are counted but not timed. Needs Snowpark 1.26 or later. | When a connection connects or a run starts |
 
-Using the same test as command time for query time keeps the subtraction consistent. While a sync cached call is open, its thread runs a query only from inside the computation or from a `hash_funcs` function. While an async cached call awaits, another task's query on the same thread counts as inside it, just as that call's compute time includes it.
+The SQLAlchemy and Snowpark hooks are process-wide, so each recorded query finds its run through the calling thread's `ScriptRunContext`. A query on a thread without a run that gathers usage stats isn't recorded. A timed query's time covers only the driver's execute call, so fetching the results isn't included, and an async query's time covers only submitting it.
+
+#### Recording and attribution
+
+Queries are recorded the same way as cached calls. `RunQueryStats` in `SharedRunState` keeps a `ThreadQueryStats` per thread, which only that thread writes, and `reset()` replaces it at the start of each run. `RunParallelFragmentStats.recording_run()` also swaps in the fragment run's own `ThreadQueryStats` with `RunQueryStats.recording_into()`, so `ParallelFragmentRun` entries report `query_time`, `query_time_in_cache` and `query_time_in_commands`, summed across sources.
+
+When a query starts, it's placed in at most one of the overlapping parts:
+
+```python
+if thread_state.in_listed_command:
+    return True, False  # inside a command
+# in_cached_function covers the computing thread, and in_cache_compute the
+# threads it attaches with add_script_run_ctx.
+return False, in_cached_function.get() or thread_state.in_cache_compute
+```
+
+- **Inside a command** wins, because the command's time contains the query, and a cached call made inside a command isn't recorded.
+- **Inside a cached call** means inside a cached function's computation. `in_cached_function` is a ContextVar, so in async code it's set only for the task that's computing. Threads attached during the computation count through the shared `CacheComputeScope` (see [Attached threads during a computation](#attached-threads-during-a-computation)).
+
+So `time − time_in_cache − time_in_commands` is query time that's otherwise part of user code, and subtracting `time_in_cache` from cache compute time leaves the cached functions' other work.
+
+#### Query IDs
+
+The run keeps the first 50 Snowflake query IDs it receives, under one lock in `RunQueryStats`, in two lists that share the limit: `query_ids` and `query_ids_in_cache`. The second list holds queries inside cached calls, whose results later runs and sessions can reuse.
+
+#### Failures and cost
+
+A hook that fails logs at debug level and never changes a query's result or error. Recording adds about 1 µs per timed query and about 0.7 µs per Snowpark query. A SQLAlchemy query adds about 5 µs, about half of it SQLAlchemy's own event dispatch, which any listener pays. A Snowflake query takes tens of milliseconds or more.
+
+### CPU time
+
+#### Clocks and span
+
+CPU time is read with `time.thread_time()` for a thread and `time.process_time()` for the process. Every CPU field covers the run from the end of prep until the profile is built, the span of `exec_time − prep_time`, so that user code CPU time lines up with user code wall time:
+
+```
+user code CPU = script_cpu_time + parallel_fragment_cpu_time − command_cpu_time
+```
+
+| Field | Measures |
+|---|---|
+| `script_cpu_time` | The script thread |
+| `command_cpu_time` | Listed commands, summed over the threads that ran them |
+| `parallel_fragment_cpu_time` | All parallel fragment runs, including the overflow |
+| `process_cpu_time` | The whole process |
+| `ParallelFragmentRun.cpu_time` | One parallel fragment run, on its worker thread |
+
+All the run fields are `optional`, so a run that only waits reports a real 0. They're set together, or all left unset where the platform has no per-thread CPU clock or reading it raises.
+
+#### Attribution
+
+- **Commands.** `gather_metrics` reads the thread's clock around each command and adds the difference only if `SharedRunState.track_command()` kept the command. Commands past the tracking limits, and commands that raise anything other than a rerun request, have no listed time, so their CPU time counts as user code, matching wall time. Nested commands count toward the outer command.
+- **Parallel fragments.** `recording_run()` reads the worker's clock when the fragment starts and when it ends, and stores the difference in the fragment's `ParallelFragmentRun`. `parallel_fragment_cpu_time` is the sum over all runs. The time is stored before the coordinator counts the worker as finished, so it's complete once `join()` or `drain()` returns. A parallel fragment nested in another has its own run on its own worker. A fragment without `parallel=True` counts toward the thread that runs it.
+- **Fragment reruns** run on the script thread, so their CPU time is in `script_cpu_time` and `parallel_fragment_cpu_time` is 0.
+- **Attached threads** are only in `process_cpu_time`, except for their listed commands. Process CPU time also includes library thread pools, such as NumPy, Polars and DuckDB, the server itself and, on a shared server, other sessions.
+
+A fragment's CPU time is compared with its `exec_time` to split its time into computing and waiting. Its commands' CPU time isn't split out per fragment.
+
+#### Platforms and cost
+
+On Windows, CPU clocks advance in steps of about 15.6 ms, so short spans often read 0 and only aggregates are meaningful. A listed command adds about 0.4 µs (two clock reads and a locked add), and a run about 1.5 µs. No clock is read while usage stats are off. Waiting for the GIL counts as waiting, not CPU time.
+
+### Per-function cache stats
+
+Per-function stats are recorded in `CacheCallTimer.finish()`, with the same rules as `cache_usage`, so a nested call never counts twice. They follow the foundation:
+
+- **Per-thread counters** keyed by function, in the thread's cache stats, combined when the profile is built. A parallel fragment's calls are in its own stats through the existing swap.
+- **A random ID per function and server process**, created when the function's `FunctionCacheMetrics` entry is created in the process-wide registry, so it's stable for the life of the process and reveals nothing about the function.
+- **A cap per run**, applied when the profile is built.
+
+How the ID is stored, the cap, and which functions are kept past it are still open (see [Open questions](#open-questions)).
+
+### Rerun reason
+
+Rerun reason has no overlap with other times, so it uses none of the covered-span machinery. It's recorded in three steps:
+
+1. **When a rerun is requested.** Each requester sets a reason on `RerunData`: `st.rerun()`, a file change, a fragment's `run_every` timer, or a request from the browser, which counts as a manual rerun.
+2. **When requests are coalesced.** `ScriptRequests` merges requests that arrive before the run starts. `RerunReason.combine` keeps the reason that comes first in the product spec's order.
+3. **When the run starts.** The script runner replaces the reason with a higher-precedence one if one applies: `initial_load` if the session has no current page yet, `navigation` if the page changes, and `query_params_change` if the incoming query string differs from the session's query params. Comparing against the session's own params means a query param the script itself wrote doesn't count as a change. Then, if `_call_callbacks` finds a changed widget, the run becomes `widget_interaction` unless a higher-precedence reason already applies. Runs with no reason, such as `AppTest` reruns, report `unknown`.
+
+`rerun_element_type` comes from the changed widgets' metadata. `register_widget` takes a required keyword-only `element_type`, the same literal each widget uses for its element ID, so only Streamlit's fixed element type names are sent. Custom components report `component_instance` (v1) or `bidi_component` (v2), never the component's name. `register_widget` is internal but re-exported from `streamlit.runtime.state`, so a third-party caller that doesn't pass `element_type` gets a `TypeError`.
+
+`_call_callbacks` already visits every changed widget, so the added work per run is collecting their metadata and one query param comparison, which runs only while usage stats are on.
+
+### Data size
+
+Data size is recorded where messages are already serialized. `ScriptRunContext.enqueue` calls `populate_hash_if_needed`, which serializes every message except references and `initialize` to compute its hash, so the message's size is known there, on the thread that enqueued it. Counting there costs a few additions per message and needs no second serialization pass.
+
+Messages are enqueued from the script thread, parallel fragment workers and attached threads, so the counts follow the per-thread pattern of the foundation. They're totals for the run, not split per fragment. Arrow bytes and rows are counted where dataframes and charts are marshalled, which already knows them. The browser counts bytes and messages received, and messages served from its message cache, because only the browser knows which references it resolved locally.
+
+What's counted when a message is sent as a reference to a copy the browser has cached, and whether compressed sizes are available, are still open (see [Open questions](#open-questions)).
+
+### Render timing
+
+Render timing is measured only in the browser and sent as its own `renderTiming` event, because fully loaded happens after the `PageProfile` message arrives. Holding back the `pageProfile` event instead would lose it whenever a slow page is closed while loading, which is the case that matters most.
+
+#### Joining to the run
+
+A per-page-load `run_index`, 0 for the first run, is set on both the `pageProfile` and `renderTiming` events of a run. Analysis joins them on `sessionId` and `run_index`. A run that never receives its `PageProfile` message sends no `renderTiming` event, because there's nothing to join it to. `renderTiming` is sent with `fetch(..., { keepalive: true })`, so it still goes out while the page is being hidden or closed.
+
+#### Measuring a run
+
+- **Start.** Milestones are measured from navigation start for the first run, and from when the browser sent the rerun request for later runs.
+- **Elements.** A per-run `RenderTimingTracker` registers each new or changed element through `ElementContainer`. A probe inside the element's `Suspense` boundary marks when its code has loaded, and elements that draw or load asynchronously, such as charts, the dataframe grid, images, video and iframes, report when they finish through two small hooks.
+- **Visibility.** A per-run `IntersectionObserver` decides which elements count toward fully loaded. Hidden content, such as collapsed expanders, unselected tabs, closed popovers and a collapsed sidebar, never intersects the viewport. Elements pushed out of view stop counting, and elements scrolled into view start.
+- **Completion.** A run is fully loaded once its script has finished and every visible element is ready, after two more frames without changes, so late layout shifts are included.
+- **After the script.** Code loading and media loading are each the union of the matching intervals of visible elements, clipped to the time from script finished to fully loaded, so ten images loading in parallel count once.
+- **Exclusions.** A run is sent early with `was_hidden` if the page is hidden, or `was_superseded` if another rerun starts first. A run not fully loaded 30 seconds after its script finished is sent with `timed_out` and the number of elements still loading.
+
+Only Navigation Timing, `requestAnimationFrame`, `IntersectionObserver` and the Page Visibility API are used. Largest Contentful Paint and Element Timing aren't, because some browsers lack them and they ignore canvas, which the dataframe grid and several chart libraries draw into.
+
+#### Cost
+
+Apps served from localhost, loopback addresses, `0.0.0.0` or private-network IPs create no tracker, and neither do apps with usage stats off. They pay one context read and no-op effects per element. With a tracker, each new or changed element adds a context provider, an empty probe and a few `performance.now()` calls, about 7 µs per element on a first load. No element re-renders for render timing, and observers and timers exist only while a run is measured.
+
+### Field numbers
+
+Each addition lands on its own, so field numbers are assigned here and don't depend on the order they land in:
+
+| Addition | `PageProfile` | `MetricsEvent` |
+|---|---|---|
+| Cache usage, server uptime | 16, 17 | 50, 51 |
+| CPU time | 18–21 | 52–55 |
+| Parallel fragment breakdown | 22 | 56 |
+| Query time | 23 | 57 |
+| Rerun reason | 24, 25 | 58, 59 |
+| Render timing (`run_index`, `render_timing`) | None, browser only | 60, 61 |
+
+In `ParallelFragmentRun`, 1–6 hold the foundation's times, 7–9 query time and 10 CPU time. Per-function cache stats and data size take the next free numbers when they're designed.
 
 ### Known limitations
 
@@ -280,6 +414,8 @@ Using the same test as command time for query time keeps the subtraction consist
 - **Threads a fragment attaches** count toward the main script and usually overlap `wait_time`.
 - **Unfinished work.** Cached calls still running when the profile is built are left out, and a thread the script doesn't join can be partly included.
 - **Scaling covers cache times only.** Overlapping async calls are scaled, but other times measured during them, such as query time inside cached calls, aren't.
+- **Queries the cache's time contains but `time_in_cache` doesn't.** A query from a `hash_funcs` function is in the cache's overhead time, and another async task's query while a cached call awaits is in that call's wall-clock time. Neither runs inside a computation, so both count as query time outside cached calls, and subtracting both can count them twice. Both are rare.
+- **Unrecorded query paths and Snowpark times.** The paths the product spec lists as not recorded stay in user code, and Snowpark queries are counted but not timed.
 - **Profiles of interrupted runs are usually dropped.** A run cut short by a rerun request enqueues its profile, but the next run clears the forward message queue when it starts, and `AppSession._clear_queue` doesn't keep `page_profile` messages. This affects every field and is fixed separately.
 
 ## Alternatives considered
@@ -312,7 +448,21 @@ Top-level `commands` and `cache_usage` could leave out the fragments, so no subt
 
 Clearing would keep the same objects across runs, but a cached call or fragment still running from the previous run would then add its times to the new run. Replacing the objects keeps late work in its own run.
 
+### One per-thread record for every addition
+
+Cache, query and later per-call counters could share one per-thread object and one registry, so a parallel fragment run swaps a single record. Separate registries cost one more lock per thread per run each, but keep each addition in its own module, so it can land, change or be removed without touching the others.
+
+### Classify queries with the command-time test
+
+A query could count as inside a cached call whenever a recorded call is open on its thread, which is the test `_record_command_time` uses. That would also cover the two rare cases in [Known limitations](#known-limitations). But the product spec defines `time_in_cache` as queries during a computation, and a recorded call is also open while it hashes, waits and replays elements. The computation flags match that definition.
+
+### Report parallel fragment CPU time only in aggregate
+
+A single `parallel_fragment_cpu_time` needs no change to the per-fragment entries. It can't show whether the fragment that held up the run was computing or waiting, which is what the per-fragment breakdown is for. The aggregate is kept as well, because it's what the user code CPU formula needs.
+
 ## Open questions
 
 1. **Guarding `start_call`.** `start_call` runs before every cached call and isn't wrapped in a guard. Its checks are attribute reads and a thread-local lookup, and the lookup registers the thread under a lock once per run. A guard would cost little and would let a failure there fall back to a metrics-only timer.
 2. **Attached threads in fragment entries.** Whether analysis needs a fragment's attached threads in its entry, which would need the locking described in [Alternatives considered](#count-a-fragments-attached-threads-toward-the-fragment).
+3. **Per-function cache stats.** Where the random ID is stored, the cap per run, and which functions are kept past it: for example, the ones with the most cache time in the run.
+4. **Data size for cached messages.** Whether a message sent as a reference to the browser's cached copy counts its full size, its reference's size or both, and whether compressed sizes are available without extra work.
