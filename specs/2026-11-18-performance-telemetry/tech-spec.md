@@ -117,7 +117,7 @@ class FragmentThreadState:  # ThreadState: one per thread, copied to attached th
     parallel_fragment_run: ParallelFragmentRun | None  # the copy shares the same object
 ```
 
-`ScriptRunContext.reset()` calls `SharedRunState.reset()` at the start of each run, before any parallel fragment worker starts. `reset()` replaces `cache_stats`, `query_stats` and `parallel_fragments` with new objects rather than clearing them, the same way it replaces the tracked command list. Work still running from the previous run, such as a cached call on a thread the script didn't join, holds direct references to that run's objects and finishes into them. Calls that start after the reset find the new objects through `ctx.shared`.
+At the start of each run, `SharedRunState.reset()` replaces `cache_stats`, `query_stats` and `parallel_fragments` with new objects instead of clearing them. Work still running from the previous run, such as a cached call on a thread the script didn't join, keeps its references to the old objects, so its times never leak into the new run.
 
 ### Per-thread totals without locks
 
