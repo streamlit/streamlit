@@ -22,7 +22,13 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements.widgets.time_widgets import DateInputSerde, _DateInputValues
+from streamlit.elements.widgets.time_widgets import (
+    DateInputSerde,
+    _DateInputValues,
+    _normalize_date_filter,
+    _parse_date_availability,
+    _resolve_today_to_selectable,
+)
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidMinMaxError,
@@ -1340,15 +1346,9 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
             def now(cls, tz: Any = None) -> datetime:
                 return datetime(2024, 3, 9, 12, 0, 0)  # Saturday
 
-        with (
-            patch(
-                "streamlit.elements.widgets.time_widgets.datetime",
-                FixedDateTime,
-            ),
-            patch(
-                "streamlit.elements.lib.date_input_availability.datetime",
-                FixedDateTime,
-            ),
+        with patch(
+            "streamlit.elements.widgets.time_widgets.datetime",
+            FixedDateTime,
         ):
             result = st.date_input(
                 "day",
@@ -1368,11 +1368,7 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
 
     def test_today_in_filter_keeps_symbolic_id_token(self) -> None:
         """\"today\" is hashed as the literal token, not the resolved ISO date."""
-        from streamlit.elements.lib.date_input_availability import (
-            normalize_date_filter,
-        )
-
-        normalized = normalize_date_filter(["today", "monday"], "enabled_dates")
+        normalized = _normalize_date_filter(["today", "monday"], "enabled_dates")
         assert normalized is not None
         exact_dates, _weekdays, id_exact, id_weekdays = normalized
         assert id_exact == ("today",)
@@ -1410,17 +1406,13 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
             st.date_input("day", disabled_dates=["not-a-weekday-or-date"])
 
     def test_serde_unavailable_date_reverts_to_default(self) -> None:
-        from streamlit.elements.lib.date_input_availability import (
-            parse_date_availability,
-        )
-
         values = _DateInputValues(
             value=(date(2024, 3, 8),),
             is_range=False,
             min=date(2024, 1, 1),
             max=date(2024, 12, 31),
         )
-        availability = parse_date_availability(
+        availability = _parse_date_availability(
             enabled_dates=None,
             disabled_dates=["saturday", "sunday"],
         )
@@ -1430,16 +1422,11 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
 
 
 def test_resolve_today_snaps_forward() -> None:
-    from streamlit.elements.lib.date_input_availability import (
-        parse_date_availability,
-        resolve_today_to_selectable,
-    )
-
-    availability = parse_date_availability(
+    availability = _parse_date_availability(
         enabled_dates=None,
         disabled_dates=["saturday", "sunday"],
     )
-    assert resolve_today_to_selectable(
+    assert _resolve_today_to_selectable(
         date(2024, 3, 9),
         date(2024, 1, 1),
         date(2024, 12, 31),
@@ -1448,16 +1435,11 @@ def test_resolve_today_snaps_forward() -> None:
 
 
 def test_resolve_today_snaps_backward_when_forward_exhausted() -> None:
-    from streamlit.elements.lib.date_input_availability import (
-        parse_date_availability,
-        resolve_today_to_selectable,
-    )
-
-    availability = parse_date_availability(
+    availability = _parse_date_availability(
         enabled_dates=None,
         disabled_dates=[date(2024, 3, 10)],
     )
-    assert resolve_today_to_selectable(
+    assert _resolve_today_to_selectable(
         date(2024, 3, 10),
         date(2024, 3, 1),
         date(2024, 3, 10),
@@ -1466,14 +1448,9 @@ def test_resolve_today_snaps_backward_when_forward_exhausted() -> None:
 
 
 def test_resolve_today_returns_none_when_empty_window() -> None:
-    from streamlit.elements.lib.date_input_availability import (
-        parse_date_availability,
-        resolve_today_to_selectable,
-    )
-
-    availability = parse_date_availability(enabled_dates=[], disabled_dates=None)
+    availability = _parse_date_availability(enabled_dates=[], disabled_dates=None)
     assert (
-        resolve_today_to_selectable(
+        _resolve_today_to_selectable(
             date(2024, 3, 9),
             date(2024, 3, 1),
             date(2024, 3, 31),
