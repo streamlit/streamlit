@@ -434,6 +434,38 @@ def test_number_cell_editing_preserves_leading_decimal(app: Page) -> None:
     expect_prefixed_markdown(app, "Edited DF:", "0.07", exact_match=False)
 
 
+def test_number_cell_editing_rejects_unparsable_input(app: Page) -> None:
+    """Test that unparsable number input is marked invalid and not committed.
+
+    Regression test for streamlit/streamlit#18071: the number overlay editor
+    silently dropped rejected characters, so "1,23" committed 123 and "1a2"
+    committed 12.
+    """
+    cell_editor = _get_editor(app, "cell_editor")
+    expect_canvas_to_be_visible(cell_editor)
+
+    for typed_text in ["1,23", "1a2"]:
+        click_on_cell(cell_editor, 1, 0, double_click=True, column_width="medium")
+        cell_overlay = get_open_cell_overlay(app)
+        cell_overlay.click()
+        cell_overlay.press("ControlOrMeta+A")
+        input_field = cell_overlay.locator(".gdg-input")
+        input_field.press_sequentially(typed_text, delay=50)
+
+        expect(input_field).to_have_value(typed_text)
+        expect(app.get_by_test_id("portal").locator(".gdg-invalid")).to_be_visible()
+
+        input_field.press("Enter")
+        expect(cell_overlay).not_to_be_visible()
+
+        # Reopening the cell shows the stored value, which must be unchanged.
+        click_on_cell(cell_editor, 1, 0, double_click=True, column_width="medium")
+        cell_overlay = get_open_cell_overlay(app)
+        expect(cell_overlay.locator(".gdg-input")).to_have_value("1231231.41")
+        cell_overlay.press("Escape")
+        expect(cell_overlay).not_to_be_visible()
+
+
 @pytest.mark.performance
 def test_number_cell_editing_performance(
     app: Page, assert_snapshot: ImageCompareFunction

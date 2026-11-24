@@ -1,3 +1,17 @@
+diff --git a/dist/cjs/cells/number-cell.js b/dist/cjs/cells/number-cell.js
+index 35194ff4c743f8905da1d4579550b90ac4231484..372caf18b2f73e01711481a2dbaf91cf4e6c5602 100644
+--- a/dist/cjs/cells/number-cell.js
++++ b/dist/cjs/cells/number-cell.js
+@@ -29,7 +29,8 @@ export const numberCellRenderer = {
+         return (React.createElement(React.Suspense, { fallback: null },
+             React.createElement(NumberOverlayEditor, { highlight: isHighlighted, disabled: value.readonly === true, value: value.data, fixedDecimals: value.fixedDecimals, allowNegative: value.allowNegative, thousandSeparator: value.thousandSeparator, decimalSeparator: value.decimalSeparator, validatedSelection: validatedSelection, onChange: x => onChange({
+                     ...value,
+-                    data: Number.isNaN(x.floatValue ?? 0) ? 0 : x.floatValue,
++                    // Rejected text keeps NaN so validation marks it invalid.
++                    data: x.isRejected === true ? Number.NaN : Number.isNaN(x.floatValue ?? 0) ? 0 : x.floatValue,
+                 }) })));
+     },
+     onPaste: (toPaste, cell, details) => {
 diff --git a/dist/cjs/internal/data-grid-overlay-editor/data-grid-overlay-editor.js b/dist/cjs/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
 index face64122d35e884020eeabc6d96514141fc18d1..1e71f5198f0685882e1282cc2abd606d6d64a68b 100644
 --- a/dist/cjs/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
@@ -17,73 +31,131 @@ index face64122d35e884020eeabc6d96514141fc18d1..1e71f5198f0685882e1282cc2abd606d
          if (event.key === "Escape") {
              event.stopPropagation();
 diff --git a/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-editor.js b/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-editor.js
+index 91d575f11f9228cb52a299e9ab37541842e5fe5e..8eacc360228b26491cedfc2602b966bcd5ff2599 100644
 --- a/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-editor.js
 +++ b/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-editor.js
-@@ -13,6 +13,22 @@ function getThousandSeprator() {
+@@ -1,6 +1,6 @@
+ import * as React from "react";
+ import { NumberOverlayEditorStyle } from "./number-overlay-editor-style.js";
+-import { NumericFormat } from "react-number-format";
++import { NumberFormatBase, useNumericFormat } from "react-number-format";
+ function getDecimalSeparator() {
+     const numberWithDecimalSeparator = 1.1;
+     const result = Intl.NumberFormat()
+@@ -11,20 +11,93 @@ function getDecimalSeparator() {
+ function getThousandSeprator() {
+     return getDecimalSeparator() === "." ? "," : ".";
+ }
++function escapeRegExp(text) {
++    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
++}
++// Whether the text has characters that react-number-format would drop, which
++// would commit a different number (e.g. "1,23" -> 123, "1a2" -> 12, "1.5" -> 15
++// without decimals). Such text is shown as typed and marked invalid instead.
++// Decimals beyond decimalScale are still truncated visibly while typing.
++// See streamlit/streamlit#18071.
++function hasRejectedInput(inputValue, changeMeta, options) {
++    const { allowNegative, decimalScale, decimalSeparator, thousandSeparator } = options;
++    let text = inputValue;
++    const typedRange = changeMeta?.to;
++    if (typedRange !== undefined && typedRange.end - typedRange.start === 1) {
++        const typedChar = text[typedRange.start];
++        if (decimalScale !== 0 && (typedChar === "." || typedChar === decimalSeparator)) {
++            // A typed "." is the decimal separator in every locale. Typed next to
++            // the existing separator, the caret skips over it instead.
++            const isRepeat = text[typedRange.start - 1] === decimalSeparator;
++            text = text.slice(0, typedRange.start) + (isRepeat ? "" : decimalSeparator) + text.slice(typedRange.end);
++        }
++    }
++    if (allowNegative !== false) {
++        // Typing "-" anywhere toggles the sign.
++        text = text.replace(/-/g, "");
++    }
++    const grouping = thousandSeparator === true ? "," : thousandSeparator;
++    const digit = grouping ? `(?:\\d|${escapeRegExp(grouping)})` : "\\d";
++    const fraction = decimalScale === 0 ? "" : `(?:${escapeRegExp(decimalSeparator)}\\d*)?`;
++    return !new RegExp(`^${digit}*${fraction}$`).test(text.trim());
++}
  const NumberOverlayEditor = p => {
 -    const { value, onChange, disabled, highlight, validatedSelection, fixedDecimals, allowNegative, thousandSeparator, decimalSeparator, } = p;
 +    const { value: cellValue, onChange, disabled, highlight, validatedSelection, fixedDecimals, allowNegative, thousandSeparator, decimalSeparator, } = p;
      const inputRef = React.useRef();
 +    const [value, setValue] = React.useState(() => Object.is(cellValue, -0) ? "-" : cellValue ?? "");
++    const [isRejected, setIsRejected] = React.useState(false);
 +    const lastEmittedFloatValueRef = React.useRef(cellValue);
++    // The rejected text being shown, read by react-number-format's formatting
++    // callbacks below so they leave that text unchanged.
++    const rejectedTextRef = React.useRef(undefined);
 +    React.useLayoutEffect(() => {
 +        // Keep typed text when Glide re-renders with the same parsed float.
 +        // Replace it when validation or another update sends a different number.
 +        // See streamlit/streamlit#16909.
 +        if (!Object.is(cellValue, lastEmittedFloatValueRef.current)) {
 +            lastEmittedFloatValueRef.current = cellValue;
++            rejectedTextRef.current = undefined;
++            setIsRejected(false);
 +            setValue(Object.is(cellValue, -0) ? "-" : cellValue ?? "");
 +        }
 +    }, [cellValue]);
 +    const handleValueChange = React.useCallback(nextValue => {
-+        lastEmittedFloatValueRef.current = nextValue.floatValue;
++        const nextIsRejected = nextValue.value === rejectedTextRef.current;
++        // NaN keeps rejected text from being committed: validation fails on it.
++        const floatValue = nextIsRejected ? Number.NaN : nextValue.floatValue;
++        lastEmittedFloatValueRef.current = floatValue;
++        setIsRejected(nextIsRejected);
 +        setValue(nextValue.value);
-+        onChange(nextValue);
++        onChange({ ...nextValue, floatValue, isRejected: nextIsRejected });
 +    }, [onChange]);
      React.useLayoutEffect(() => {
          if (validatedSelection !== undefined) {
              const range = typeof validatedSelection === "number" ? [validatedSelection, null] : validatedSelection;
-@@ -24,5 +40,5 @@ const NumberOverlayEditor = p => {
-             // decimalScale={3}
-             // prefix={"$"}
+             inputRef.current?.setSelectionRange(range[0], range[1]);
+         }
+     }, [validatedSelection]);
++    const resolvedDecimalSeparator = decimalSeparator ?? getDecimalSeparator();
++    const resolvedThousandSeparator = thousandSeparator ?? getThousandSeprator();
++    const numericFormatProps = useNumericFormat({ autoFocus: true, getInputRef: inputRef, className: "gdg-input", onFocus: (e) => e.target.setSelectionRange(highlight ? 0 : e.target.value.length, e.target.value.length), disabled: disabled === true, decimalScale: fixedDecimals, allowNegative: allowNegative, thousandSeparator: resolvedThousandSeparator, decimalSeparator: resolvedDecimalSeparator, value: Object.is(value, -0) ? "-" : value ?? "", onValueChange: handleValueChange });
++    const { format, removeFormatting, isValidInputCharacter, onBlur } = numericFormatProps;
+     return (React.createElement(NumberOverlayEditorStyle, null,
+-        React.createElement(NumericFormat, { autoFocus: true, getInputRef: inputRef, className: "gdg-input", onFocus: (e) => e.target.setSelectionRange(highlight ? 0 : e.target.value.length, e.target.value.length), disabled: disabled === true, decimalScale: fixedDecimals, allowNegative: allowNegative, thousandSeparator: thousandSeparator ?? getThousandSeprator(), decimalSeparator: decimalSeparator ?? getDecimalSeparator(), value: Object.is(value, -0) ? "-" : value ?? "", 
+-            // decimalScale={3}
+-            // prefix={"$"}
 -            onValueChange: onChange })));
-+            onValueChange: handleValueChange })));
++        React.createElement(NumberFormatBase, { ...numericFormatProps,
++            // useNumericFormat formats its value with its own removeFormatting,
++            // which strips rejected text, so pass that text through directly.
++            value: isRejected ? value : numericFormatProps.value, removeFormatting: (inputValue, changeMeta) => {
++                if (inputValue === rejectedTextRef.current ||
++                    hasRejectedInput(inputValue, changeMeta, { allowNegative, decimalScale: fixedDecimals, decimalSeparator: resolvedDecimalSeparator, thousandSeparator: resolvedThousandSeparator })) {
++                    rejectedTextRef.current = inputValue;
++                    return inputValue;
++                }
++                rejectedTextRef.current = undefined;
++                return removeFormatting(inputValue, changeMeta);
++            }, format: numStr => numStr === rejectedTextRef.current ? numStr : format(numStr), isValidInputCharacter: char => rejectedTextRef.current !== undefined || isValidInputCharacter(char), onBlur: e => {
++                // Blurring would otherwise clean up the rejected text.
++                if (rejectedTextRef.current === undefined) {
++                    onBlur(e);
++                }
++            } })));
  };
  export default NumberOverlayEditor;
-diff --git a/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js b/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js
---- a/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js
-+++ b/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js
-@@ -13,6 +13,22 @@ function getThousandSeprator() {
- const NumberOverlayEditor = p => {
--    const { value, onChange, disabled, highlight, validatedSelection, fixedDecimals, allowNegative, thousandSeparator, decimalSeparator, } = p;
-+    const { value: cellValue, onChange, disabled, highlight, validatedSelection, fixedDecimals, allowNegative, thousandSeparator, decimalSeparator, } = p;
-     const inputRef = React.useRef();
-+    const [value, setValue] = React.useState(() => Object.is(cellValue, -0) ? "-" : cellValue ?? "");
-+    const lastEmittedFloatValueRef = React.useRef(cellValue);
-+    React.useLayoutEffect(() => {
-+        // Keep typed text when Glide re-renders with the same parsed float.
-+        // Replace it when validation or another update sends a different number.
-+        // See streamlit/streamlit#16909.
-+        if (!Object.is(cellValue, lastEmittedFloatValueRef.current)) {
-+            lastEmittedFloatValueRef.current = cellValue;
-+            setValue(Object.is(cellValue, -0) ? "-" : cellValue ?? "");
-+        }
-+    }, [cellValue]);
-+    const handleValueChange = React.useCallback(nextValue => {
-+        lastEmittedFloatValueRef.current = nextValue.floatValue;
-+        setValue(nextValue.value);
-+        onChange(nextValue);
-+    }, [onChange]);
-     React.useLayoutEffect(() => {
-         if (validatedSelection !== undefined) {
-             const range = typeof validatedSelection === "number" ? [validatedSelection, null] : validatedSelection;
-@@ -24,5 +40,5 @@ const NumberOverlayEditor = p => {
-             // decimalScale={3}
-             // prefix={"$"}
--            onValueChange: onChange })));
-+            onValueChange: handleValueChange })));
- };
- export default NumberOverlayEditor;
+ //# sourceMappingURL=number-overlay-editor.js.map
+\ No newline at end of file
+diff --git a/dist/esm/cells/number-cell.js b/dist/esm/cells/number-cell.js
+index 35194ff4c743f8905da1d4579550b90ac4231484..372caf18b2f73e01711481a2dbaf91cf4e6c5602 100644
+--- a/dist/esm/cells/number-cell.js
++++ b/dist/esm/cells/number-cell.js
+@@ -29,7 +29,8 @@ export const numberCellRenderer = {
+         return (React.createElement(React.Suspense, { fallback: null },
+             React.createElement(NumberOverlayEditor, { highlight: isHighlighted, disabled: value.readonly === true, value: value.data, fixedDecimals: value.fixedDecimals, allowNegative: value.allowNegative, thousandSeparator: value.thousandSeparator, decimalSeparator: value.decimalSeparator, validatedSelection: validatedSelection, onChange: x => onChange({
+                     ...value,
+-                    data: Number.isNaN(x.floatValue ?? 0) ? 0 : x.floatValue,
++                    // Rejected text keeps NaN so validation marks it invalid.
++                    data: x.isRejected === true ? Number.NaN : Number.isNaN(x.floatValue ?? 0) ? 0 : x.floatValue,
+                 }) })));
+     },
+     onPaste: (toPaste, cell, details) => {
 diff --git a/dist/esm/internal/data-grid-overlay-editor/data-grid-overlay-editor.js b/dist/esm/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
 index face64122d35e884020eeabc6d96514141fc18d1..1e71f5198f0685882e1282cc2abd606d6d64a68b 100644
 --- a/dist/esm/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
@@ -102,3 +174,115 @@ index face64122d35e884020eeabc6d96514141fc18d1..1e71f5198f0685882e1282cc2abd606d
          let save = false;
          if (event.key === "Escape") {
              event.stopPropagation();
+diff --git a/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js b/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js
+index 91d575f11f9228cb52a299e9ab37541842e5fe5e..8eacc360228b26491cedfc2602b966bcd5ff2599 100644
+--- a/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js
++++ b/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js
+@@ -1,6 +1,6 @@
+ import * as React from "react";
+ import { NumberOverlayEditorStyle } from "./number-overlay-editor-style.js";
+-import { NumericFormat } from "react-number-format";
++import { NumberFormatBase, useNumericFormat } from "react-number-format";
+ function getDecimalSeparator() {
+     const numberWithDecimalSeparator = 1.1;
+     const result = Intl.NumberFormat()
+@@ -11,20 +11,93 @@ function getDecimalSeparator() {
+ function getThousandSeprator() {
+     return getDecimalSeparator() === "." ? "," : ".";
+ }
++function escapeRegExp(text) {
++    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
++}
++// Whether the text has characters that react-number-format would drop, which
++// would commit a different number (e.g. "1,23" -> 123, "1a2" -> 12, "1.5" -> 15
++// without decimals). Such text is shown as typed and marked invalid instead.
++// Decimals beyond decimalScale are still truncated visibly while typing.
++// See streamlit/streamlit#18071.
++function hasRejectedInput(inputValue, changeMeta, options) {
++    const { allowNegative, decimalScale, decimalSeparator, thousandSeparator } = options;
++    let text = inputValue;
++    const typedRange = changeMeta?.to;
++    if (typedRange !== undefined && typedRange.end - typedRange.start === 1) {
++        const typedChar = text[typedRange.start];
++        if (decimalScale !== 0 && (typedChar === "." || typedChar === decimalSeparator)) {
++            // A typed "." is the decimal separator in every locale. Typed next to
++            // the existing separator, the caret skips over it instead.
++            const isRepeat = text[typedRange.start - 1] === decimalSeparator;
++            text = text.slice(0, typedRange.start) + (isRepeat ? "" : decimalSeparator) + text.slice(typedRange.end);
++        }
++    }
++    if (allowNegative !== false) {
++        // Typing "-" anywhere toggles the sign.
++        text = text.replace(/-/g, "");
++    }
++    const grouping = thousandSeparator === true ? "," : thousandSeparator;
++    const digit = grouping ? `(?:\\d|${escapeRegExp(grouping)})` : "\\d";
++    const fraction = decimalScale === 0 ? "" : `(?:${escapeRegExp(decimalSeparator)}\\d*)?`;
++    return !new RegExp(`^${digit}*${fraction}$`).test(text.trim());
++}
+ const NumberOverlayEditor = p => {
+-    const { value, onChange, disabled, highlight, validatedSelection, fixedDecimals, allowNegative, thousandSeparator, decimalSeparator, } = p;
++    const { value: cellValue, onChange, disabled, highlight, validatedSelection, fixedDecimals, allowNegative, thousandSeparator, decimalSeparator, } = p;
+     const inputRef = React.useRef();
++    const [value, setValue] = React.useState(() => Object.is(cellValue, -0) ? "-" : cellValue ?? "");
++    const [isRejected, setIsRejected] = React.useState(false);
++    const lastEmittedFloatValueRef = React.useRef(cellValue);
++    // The rejected text being shown, read by react-number-format's formatting
++    // callbacks below so they leave that text unchanged.
++    const rejectedTextRef = React.useRef(undefined);
++    React.useLayoutEffect(() => {
++        // Keep typed text when Glide re-renders with the same parsed float.
++        // Replace it when validation or another update sends a different number.
++        // See streamlit/streamlit#16909.
++        if (!Object.is(cellValue, lastEmittedFloatValueRef.current)) {
++            lastEmittedFloatValueRef.current = cellValue;
++            rejectedTextRef.current = undefined;
++            setIsRejected(false);
++            setValue(Object.is(cellValue, -0) ? "-" : cellValue ?? "");
++        }
++    }, [cellValue]);
++    const handleValueChange = React.useCallback(nextValue => {
++        const nextIsRejected = nextValue.value === rejectedTextRef.current;
++        // NaN keeps rejected text from being committed: validation fails on it.
++        const floatValue = nextIsRejected ? Number.NaN : nextValue.floatValue;
++        lastEmittedFloatValueRef.current = floatValue;
++        setIsRejected(nextIsRejected);
++        setValue(nextValue.value);
++        onChange({ ...nextValue, floatValue, isRejected: nextIsRejected });
++    }, [onChange]);
+     React.useLayoutEffect(() => {
+         if (validatedSelection !== undefined) {
+             const range = typeof validatedSelection === "number" ? [validatedSelection, null] : validatedSelection;
+             inputRef.current?.setSelectionRange(range[0], range[1]);
+         }
+     }, [validatedSelection]);
++    const resolvedDecimalSeparator = decimalSeparator ?? getDecimalSeparator();
++    const resolvedThousandSeparator = thousandSeparator ?? getThousandSeprator();
++    const numericFormatProps = useNumericFormat({ autoFocus: true, getInputRef: inputRef, className: "gdg-input", onFocus: (e) => e.target.setSelectionRange(highlight ? 0 : e.target.value.length, e.target.value.length), disabled: disabled === true, decimalScale: fixedDecimals, allowNegative: allowNegative, thousandSeparator: resolvedThousandSeparator, decimalSeparator: resolvedDecimalSeparator, value: Object.is(value, -0) ? "-" : value ?? "", onValueChange: handleValueChange });
++    const { format, removeFormatting, isValidInputCharacter, onBlur } = numericFormatProps;
+     return (React.createElement(NumberOverlayEditorStyle, null,
+-        React.createElement(NumericFormat, { autoFocus: true, getInputRef: inputRef, className: "gdg-input", onFocus: (e) => e.target.setSelectionRange(highlight ? 0 : e.target.value.length, e.target.value.length), disabled: disabled === true, decimalScale: fixedDecimals, allowNegative: allowNegative, thousandSeparator: thousandSeparator ?? getThousandSeprator(), decimalSeparator: decimalSeparator ?? getDecimalSeparator(), value: Object.is(value, -0) ? "-" : value ?? "", 
+-            // decimalScale={3}
+-            // prefix={"$"}
+-            onValueChange: onChange })));
++        React.createElement(NumberFormatBase, { ...numericFormatProps,
++            // useNumericFormat formats its value with its own removeFormatting,
++            // which strips rejected text, so pass that text through directly.
++            value: isRejected ? value : numericFormatProps.value, removeFormatting: (inputValue, changeMeta) => {
++                if (inputValue === rejectedTextRef.current ||
++                    hasRejectedInput(inputValue, changeMeta, { allowNegative, decimalScale: fixedDecimals, decimalSeparator: resolvedDecimalSeparator, thousandSeparator: resolvedThousandSeparator })) {
++                    rejectedTextRef.current = inputValue;
++                    return inputValue;
++                }
++                rejectedTextRef.current = undefined;
++                return removeFormatting(inputValue, changeMeta);
++            }, format: numStr => numStr === rejectedTextRef.current ? numStr : format(numStr), isValidInputCharacter: char => rejectedTextRef.current !== undefined || isValidInputCharacter(char), onBlur: e => {
++                // Blurring would otherwise clean up the rejected text.
++                if (rejectedTextRef.current === undefined) {
++                    onBlur(e);
++                }
++            } })));
+ };
+ export default NumberOverlayEditor;
+ //# sourceMappingURL=number-overlay-editor.js.map
+\ No newline at end of file
