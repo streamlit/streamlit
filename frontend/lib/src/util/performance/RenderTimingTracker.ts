@@ -16,8 +16,6 @@
 
 import type { RenderTiming } from "@streamlit/protobuf"
 
-import { getLoadingScreenType, LoadingScreenType } from "~lib/util/utils"
-
 /** Asynchronous work an element can wait on before it is fully drawn. */
 export type ElementLoadKind = "draw" | "media"
 
@@ -42,12 +40,6 @@ const NON_CONTENT_ELEMENT_TYPES = new Set([
   "space",
   "spinner",
 ])
-
-const LOADING_SCREEN_NAMES: Record<LoadingScreenType, string> = {
-  [LoadingScreenType.NONE]: "none",
-  [LoadingScreenType.V1]: "v1",
-  [LoadingScreenType.V2]: "v2",
-}
 
 /** The browser APIs the tracker depends on, replaceable in tests. */
 export interface RenderTimingEnvironment {
@@ -269,8 +261,6 @@ export class RenderTimingTracker {
 
   private readonly onReport: (report: RenderTimingReport) => void
 
-  private readonly loadingScreen: string
-
   private appShellReadyAt?: number
 
   private wasHiddenBeforeFirstRun: boolean
@@ -289,7 +279,6 @@ export class RenderTimingTracker {
   constructor({ onReport, environment }: RenderTimingTrackerOptions) {
     this.env = { ...DEFAULT_ENVIRONMENT, ...environment }
     this.onReport = onReport
-    this.loadingScreen = LOADING_SCREEN_NAMES[getLoadingScreenType()]
     this.wasHiddenBeforeFirstRun = this.env.isPageHidden()
     // The first run is measured from navigation start, so watch for the page
     // being hidden from now on.
@@ -650,19 +639,18 @@ export class RenderTimingTracker {
     const firstContentAt =
       contentReadyTimes.length > 0 ? Math.min(...contentReadyTimes) : undefined
 
-    const getLoadingMs = (kind: ElementLoadKind): number =>
-      Math.round(
-        getUnionLength(
-          visible.flatMap(record => [
-            ...record.loadIntervals.filter(load => load.kind === kind),
-            ...Array.from(record.pendingLoads.values())
-              .filter(load => load.kind === kind)
-              .map(load => ({ start: load.start, end: gapEnd })),
-          ]),
-          scriptFinishedAt,
-          gapEnd
-        )
+    const mediaLoadingMs = Math.round(
+      getUnionLength(
+        visible.flatMap(record => [
+          ...record.loadIntervals.filter(load => load.kind === "media"),
+          ...Array.from(record.pendingLoads.values())
+            .filter(load => load.kind === "media")
+            .map(load => ({ start: load.start, end: gapEnd })),
+        ]),
+        scriptFinishedAt,
+        gapEnd
       )
+    )
     const codeLoadingMs = Math.round(
       getUnionLength(
         visible.map(record => ({
@@ -692,12 +680,10 @@ export class RenderTimingTracker {
       scriptFinishedMs: toRunTime(scriptFinishedAt),
       fullyLoadedMs: toRunTime(fullyLoadedAt),
       codeLoadingMs,
-      drawingMs: getLoadingMs("draw"),
-      mediaLoadingMs: getLoadingMs("media"),
+      mediaLoadingMs,
       visibleElements: visible.length,
       viewportWidthBucket: getBucket(width, VIEWPORT_WIDTH_BUCKETS),
       viewportHeightBucket: getBucket(height, VIEWPORT_HEIGHT_BUCKETS),
-      loadingScreen: this.loadingScreen,
       wasHidden: run.wasHidden,
       wasSuperseded: run.wasSuperseded,
       timedOut: reason === "timedOut",

@@ -551,7 +551,7 @@ describe("RenderTimingTracker", () => {
   })
 
   describe("post-script split", () => {
-    it("splits the gap into code loading, drawing and media loading", async () => {
+    it("splits the gap into code loading and media loading, leaving drawing out", async () => {
       tracker.runStarted(RUN_ID)
       browser.time = 500
       const chart = commitElement({ isContentLoaded: false })
@@ -579,9 +579,9 @@ describe("RenderTimingTracker", () => {
         scriptFinishedMs: 500,
         fullyLoadedMs: 1150,
         codeLoadingMs: 200,
-        drawingMs: 400,
         mediaLoadingMs: 400,
       })
+      expect(reports[0].renderTiming).not.toHaveProperty("drawingMs")
     })
 
     it("only counts work after the script finished", async () => {
@@ -589,13 +589,13 @@ describe("RenderTimingTracker", () => {
       const { handle, target } = commitElement()
       browser.observer.report(target, true)
       browser.time = 100
-      handle.setLoading("chart", "draw", true)
+      handle.setLoading("image", "media", true)
       await finishScript(400)
       browser.time = 500
-      handle.setLoading("chart", "draw", false)
+      handle.setLoading("image", "media", false)
       browser.paintUntilIdle()
 
-      expect(reports[0].renderTiming.drawingMs).toBe(100)
+      expect(reports[0].renderTiming.mediaLoadingMs).toBe(100)
     })
 
     it("treats an element that starts new work after painting as not ready", async () => {
@@ -615,10 +615,7 @@ describe("RenderTimingTracker", () => {
       browser.paint(650)
       browser.paintUntilIdle()
 
-      expect(reports[0].renderTiming).toMatchObject({
-        fullyLoadedMs: 650,
-        drawingMs: 400,
-      })
+      expect(reports[0].renderTiming.fullyLoadedMs).toBe(650)
     })
 
     it("applies work that started before the element registered", async () => {
@@ -645,7 +642,7 @@ describe("RenderTimingTracker", () => {
     it("reports a run hidden while loading as soon as it's hidden", async () => {
       tracker.runStarted(RUN_ID)
       const { handle, target } = commitElement()
-      handle.setLoading("chart", "draw", true)
+      handle.setLoading("image", "media", true)
       browser.observer.report(target, true)
       await finishScript(100)
       browser.time = 200
@@ -654,7 +651,7 @@ describe("RenderTimingTracker", () => {
       expect(reports).toHaveLength(1)
       expect(reports[0].renderTiming).toMatchObject({
         wasHidden: true,
-        drawingMs: 100,
+        mediaLoadingMs: 100,
       })
       expect(reports[0].renderTiming.fullyLoadedMs).toBeUndefined()
     })
@@ -760,7 +757,7 @@ describe("RenderTimingTracker", () => {
       tracker.runStarted(RUN_ID)
       const ready = commitElement()
       const stuck = commitElement()
-      stuck.handle.setLoading("chart", "draw", true)
+      stuck.handle.setLoading("image", "media", true)
       browser.observer.report(ready.target, true)
       browser.observer.report(stuck.target, true)
       browser.paint(50)
@@ -776,7 +773,7 @@ describe("RenderTimingTracker", () => {
       expect(reports[0].renderTiming).toMatchObject({
         timedOut: true,
         timedOutElements: 1,
-        drawingMs: RENDER_TIMING_TIMEOUT_MS,
+        mediaLoadingMs: RENDER_TIMING_TIMEOUT_MS,
         firstContentMs: 50,
       })
       expect(reports[0].renderTiming.fullyLoadedMs).toBeUndefined()
@@ -843,14 +840,6 @@ describe("RenderTimingTracker", () => {
       await flushMicrotasks()
       browser.paintUntilIdle()
       expect(reports).toHaveLength(0)
-    })
-
-    it("reports the loading screen mode", async () => {
-      tracker.runStarted(RUN_ID)
-      await finishScript(10)
-      browser.paintUntilIdle()
-
-      expect(reports[0].renderTiming.loadingScreen).toBe("v2")
     })
   })
 })

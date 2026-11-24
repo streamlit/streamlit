@@ -470,9 +470,8 @@ describe("metrics helpers", () => {
       renderTiming: {
         scriptFinishedMs: 120,
         fullyLoadedMs: 300,
-        drawingMs: 180,
+        mediaLoadingMs: 180,
         visibleElements: 4,
-        loadingScreen: "v2",
         wasSuperseded: false,
       },
     })
@@ -485,9 +484,8 @@ describe("metrics helpers", () => {
       renderTiming: {
         scriptFinishedMs: "120",
         fullyLoadedMs: "300",
-        drawingMs: "180",
+        mediaLoadingMs: "180",
         visibleElements: 4,
-        loadingScreen: "v2",
       },
     })
   })

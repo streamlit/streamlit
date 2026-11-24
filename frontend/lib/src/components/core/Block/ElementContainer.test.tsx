@@ -510,10 +510,7 @@ describe("ElementContainer", () => {
       )
       paintUntilIdle()
 
-      expect(reports[0].renderTiming).toMatchObject({
-        drawingMs: 200,
-        fullyLoadedMs: 300,
-      })
+      expect(reports[0].renderTiming.fullyLoadedMs).toBe(300)
       tracker.dispose()
     })
   })
