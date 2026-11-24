@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextvars
 import sys
 import threading
@@ -41,8 +42,8 @@ from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.cache_run_stats import RunCacheTotals
 from streamlit.runtime.scriptrunner_utils.query_run_stats import (
     MAX_QUERY_IDS,
-    QueryStats,
     QueryTotals,
+    ThreadQueryStats,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
@@ -250,7 +251,7 @@ def snowpark(monkeypatch: pytest.MonkeyPatch) -> Iterator[types.ModuleType]:
 
 
 def _run_totals(run_stats: RunStats, source: QuerySource) -> QueryTotals:
-    return QueryStats.combine(
+    return ThreadQueryStats.combine(
         stats.query for stats in run_stats.all_thread_stats()
     ).totals_for(source)
 
@@ -260,7 +261,7 @@ def _totals(ctx: ScriptRunContext, source: QuerySource) -> QueryTotals:
 
 
 def _all_queries(ctx: ScriptRunContext) -> QueryTotals:
-    return QueryStats.combine(
+    return ThreadQueryStats.combine(
         stats.query for stats in ctx.shared.stats.all_thread_stats()
     ).combined()
 
@@ -461,6 +462,71 @@ def test_query_in_cached_function_counts_in_time_in_cache(
     assert totals.time_in_commands == 0
     assert ctx.shared.query_ids.query_ids_in_cache() == ["01b2-query-1"]
     assert ctx.shared.query_ids.query_ids() == []
+
+
+def test_query_in_hash_funcs_counts_in_time_in_cache(
+    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
+) -> None:
+    """A query from a hash_funcs function is in the cached call's overhead time,
+    on a miss and on a hit.
+    """
+    cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
+
+    class Key:
+        pass
+
+    def hash_key(_key: Key) -> str:
+        cursor.execute("SELECT 1")
+        return "key"
+
+    @st.cache_data(show_spinner=False, hash_funcs={Key: hash_key})
+    def load(key: Key) -> str:
+        return "rows"
+
+    load(Key())
+    load(Key())
+
+    totals = _totals(ctx, "snowflake_connector")
+    assert totals.queries == 2
+    assert _overlap_counts(totals) == (2, 0)
+    assert totals.time_in_cache == totals.time == pytest.approx(1.0)
+    assert ctx.shared.query_ids.query_ids() == []
+
+
+def test_other_tasks_query_while_an_async_cached_call_awaits_counts_in_cache(
+    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
+) -> None:
+    """Another task's query while an async cached call awaits is in that call's
+    time, and a query after the call finishes isn't.
+    """
+    cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
+    events: dict[str, asyncio.Event] = {}
+
+    @st.cache_data(show_spinner=False)
+    async def load() -> str:
+        events["started"].set()
+        await events["queried"].wait()
+        return "rows"
+
+    async def query_meanwhile() -> None:
+        await events["started"].wait()
+        cursor.execute("SELECT 1")
+        events["queried"].set()
+
+    async def main() -> None:
+        events["started"] = asyncio.Event()
+        events["queried"] = asyncio.Event()
+        await asyncio.gather(load(), query_meanwhile())
+        cursor.execute("SELECT 2")
+
+    asyncio.run(main())
+
+    totals = _totals(ctx, "snowflake_connector")
+    assert totals.queries == 2
+    assert _overlap_counts(totals) == (1, 0)
+    assert totals.time_in_cache == pytest.approx(0.5)
+    assert ctx.shared.query_ids.query_ids_in_cache() == ["01b2-query-1"]
+    assert ctx.shared.query_ids.query_ids() == ["01b2-query-2"]
 
 
 def test_queries_on_a_thread_a_cached_function_attaches_are_its_own(

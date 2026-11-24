@@ -14,11 +14,11 @@
 
 """Per-run database query totals reported in the page profile.
 
-Each thread records its queries in the ``QueryStats`` of its own
+Each thread records its queries in the ``ThreadQueryStats`` of its own
 ``ThreadRunStats`` (see ``run_stats.py``), written only by that thread, so
 concurrent queries (for example from parallel fragments) never contend on a
 lock for their counts. The totals are combined when the run's page profile is
-built. The run's first Snowflake query IDs are kept in ``RunQueryIds``.
+built. The run's first Snowflake query IDs are kept in ``QueryIds``.
 """
 
 from __future__ import annotations
@@ -64,7 +64,7 @@ class QueryTotals:
         self.time_in_commands += other.time_in_commands
 
 
-class QueryStats:
+class ThreadQueryStats:
     """Query totals for each query source, recorded by one thread or combined
     across threads.
     """
@@ -80,7 +80,7 @@ class QueryStats:
         totals: QueryTotals = getattr(self, source)
         return totals
 
-    def add(self, other: QueryStats) -> None:
+    def add(self, other: ThreadQueryStats) -> None:
         """Add each source's totals from ``other`` to these."""
         self.snowflake_connector.add(other.snowflake_connector)
         self.sqlalchemy.add(other.sqlalchemy)
@@ -95,7 +95,7 @@ class QueryStats:
         return combined
 
     @classmethod
-    def combine(cls, threads: Iterable[QueryStats]) -> QueryStats:
+    def combine(cls, threads: Iterable[ThreadQueryStats]) -> ThreadQueryStats:
         """Return the totals of ``threads`` added together."""
         totals = cls()
         for stats in threads:
@@ -103,7 +103,7 @@ class QueryStats:
         return totals
 
 
-class RunQueryIds:
+class QueryIds:
     """The first ``MAX_QUERY_IDS`` Snowflake query IDs of one script run."""
 
     def __init__(self) -> None:
@@ -114,7 +114,7 @@ class RunQueryIds:
 
     def add(self, query_id: str, *, in_cache: bool) -> None:
         """Keep ``query_id`` if the run has fewer than ``MAX_QUERY_IDS``, in the
-        list for queries inside cached functions if ``in_cache``.
+        list for queries inside recorded cached calls if ``in_cache``.
         """
         with self._lock:
             if len(self._query_ids) + len(self._query_ids_in_cache) < MAX_QUERY_IDS:
@@ -124,11 +124,13 @@ class RunQueryIds:
                     self._query_ids.append(query_id)
 
     def query_ids(self) -> list[str]:
-        """Return the kept IDs of queries that weren't inside cached functions."""
+        """Return the kept IDs of queries that weren't inside recorded cached
+        calls.
+        """
         with self._lock:
             return list(self._query_ids)
 
     def query_ids_in_cache(self) -> list[str]:
-        """Return the kept IDs of queries inside cached functions."""
+        """Return the kept IDs of queries inside recorded cached calls."""
         with self._lock:
             return list(self._query_ids_in_cache)

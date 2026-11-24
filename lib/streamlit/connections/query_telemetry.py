@@ -48,8 +48,8 @@ error.
 
 A query that overlaps other recorded times is counted, with its time, in
 ``queries_in_commands`` if it runs inside a listed command, or else in
-``queries_in_cache`` if it runs inside a cached function's computation on the
-same thread. Its query ID goes to ``query_ids_in_cache`` in the second case.
+``queries_in_cache`` if it runs on a thread while a recorded cached call is
+open there. Its query ID goes to ``query_ids_in_cache`` in the second case.
 Threads a cached function attaches with ``add_script_run_ctx`` record their
 queries as their own, like their cached calls and commands. A parallel
 fragment's queries on its worker thread also count toward the fragment's own
@@ -70,7 +70,6 @@ from streamlit.logger import get_logger
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
     get_script_run_ctx,
-    in_cached_function,
 )
 
 if TYPE_CHECKING:
@@ -81,10 +80,11 @@ if TYPE_CHECKING:
     from snowflake.snowpark.session import Session  # type: ignore[import]
 
     from streamlit.runtime.scriptrunner_utils.query_run_stats import (
+        QueryIds,
         QuerySource,
         QueryTotals,
-        RunQueryIds,
     )
+    from streamlit.runtime.scriptrunner_utils.run_stats import ThreadRunStats
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
         ScriptRunContext,
     )
@@ -112,7 +112,7 @@ class QueryTimer:
     def __init__(
         self,
         totals: QueryTotals,
-        query_ids: RunQueryIds,
+        query_ids: QueryIds,
         *,
         in_command: bool,
         in_cache: bool,
@@ -152,7 +152,7 @@ class QueryTimer:
 
 def _count_query(
     totals: QueryTotals,
-    query_ids: RunQueryIds,
+    query_ids: QueryIds,
     *,
     failed: bool,
     is_async: bool,
@@ -176,13 +176,15 @@ def _count_query(
         query_ids.add(query_id, in_cache=in_cache)
 
 
-def _overlapping_times() -> tuple[bool, bool]:
+def _overlapping_times(thread_stats: ThreadRunStats) -> tuple[bool, bool]:
     """Return whether a query on the calling thread is inside a listed command,
-    and if it isn't, whether it's inside a cached function's computation.
+    and if it isn't, whether it's inside a recorded cached call.
 
     A cached call's times leave out the listed commands it runs, while a
     command's time includes everything it runs, so a query inside both counts
-    toward the command.
+    toward the command. A recorded call's times include everything on the
+    thread while it's open: its computation, the cache's own work such as a
+    ``hash_funcs`` function, and in async code, other tasks while it awaits.
     """
     try:
         in_listed_command = ThreadState.get().in_listed_command
@@ -191,7 +193,7 @@ def _overlapping_times() -> tuple[bool, bool]:
         in_listed_command = False
     if in_listed_command:
         return True, False
-    return False, in_cached_function.get()
+    return False, thread_stats.cache.is_in_call
 
 
 def _recording_run_ctx() -> ScriptRunContext | None:
@@ -211,9 +213,10 @@ def start_query(source: QuerySource) -> QueryTimer | None:
     ctx = _recording_run_ctx()
     if ctx is None:
         return None
-    in_command, in_cache = _overlapping_times()
     shared = ctx.shared
-    totals = shared.stats.current_thread_stats().query.totals_for(source)
+    thread_stats = shared.stats.current_thread_stats()
+    in_command, in_cache = _overlapping_times(thread_stats)
+    totals = thread_stats.query.totals_for(source)
     return QueryTimer(
         totals, shared.query_ids, in_command=in_command, in_cache=in_cache
     )
@@ -232,10 +235,11 @@ def record_untimed_query(
     ctx = _recording_run_ctx()
     if ctx is None:
         return
-    in_command, in_cache = _overlapping_times()
     shared = ctx.shared
+    thread_stats = shared.stats.current_thread_stats()
+    in_command, in_cache = _overlapping_times(thread_stats)
     _count_query(
-        shared.stats.current_thread_stats().query.totals_for(source),
+        thread_stats.query.totals_for(source),
         shared.query_ids,
         failed=failed,
         is_async=False,

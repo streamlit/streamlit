@@ -41,8 +41,8 @@ from streamlit.runtime.agent import usage as agent_usage
 from streamlit.runtime.scriptrunner_utils.cache_run_stats import RunCacheTotals
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.runtime.scriptrunner_utils.query_run_stats import (
-    QueryStats,
     QueryTotals,
+    ThreadQueryStats,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     FragmentThreadState,
@@ -852,7 +852,7 @@ def _fill_cache_usage(
 def _fill_query_usage(page_profile: PageProfile, ctx: ScriptRunContext) -> None:
     """Copy the run's query totals and query IDs onto the profile."""
     shared = ctx.shared
-    query_stats = QueryStats.combine(
+    query_stats = ThreadQueryStats.combine(
         stats.query for stats in shared.stats.all_thread_stats()
     )
     query_usage = page_profile.query_usage

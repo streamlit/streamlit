@@ -105,8 +105,8 @@ message QueryUsage {
 
 // Recorded queries from one source, with times in microseconds. A query that
 // overlaps other recorded times is counted in queries_in_commands if it ran
-// inside a listed command, or else in queries_in_cache if it ran inside a
-// cached function's computation, never in both, so that
+// inside a listed command, or else in queries_in_cache if it ran while a
+// recorded cached call was open on its thread, never in both, so that
 // time - time_in_cache - time_in_commands is the query time that's otherwise
 // part of user code.
 message QuerySourceUsage {
@@ -121,9 +121,12 @@ message QuerySourceUsage {
   // Queries that only look up the shape of a result, such as the ones Snowpark
   // runs to work out a DataFrame's columns.
   int64 describe_queries = 4;
-  // Queries inside a cached function's computation, on the thread computing
-  // it. Threads it attaches with add_script_run_ctx record their queries as
-  // their own, so their time is also in the cached call's compute_time.
+  // Queries while a recorded cached call was open on the same thread: mostly
+  // the cached function's computation, but also the cache's own work, such as
+  // a hash_funcs function, and in async code, other tasks' queries while the
+  // call awaits. Threads a cached function attaches with add_script_run_ctx
+  // record their queries as their own, so their time is also in the cached
+  // call's compute_time.
   int64 queries_in_cache = 5;
   // Queries inside a listed command.
   int64 queries_in_commands = 6;
@@ -132,7 +135,7 @@ message QuerySourceUsage {
   // afterwards isn't included.
   int64 time = 7;
   // Time of the queries in queries_in_cache, which cache_usage already counts
-  // in compute_time.
+  // in its compute, wait or overhead time.
   int64 time_in_cache = 8;
   // Time of the queries in queries_in_commands, which those commands' times
   // already count. For example, a lazy DataFrame passed to st.dataframe runs
@@ -240,7 +243,7 @@ message ParallelFragmentRun {
   int64 cache_compute_time = 4;
   int64 cache_wait_time = 5;
   int64 cache_overhead_time = 6;
-  // The run's query time and its parts inside cached functions and listed
+  // The run's query time and its parts inside recorded cached calls and listed
   // commands, as defined in QuerySourceUsage, summed across query sources.
   int64 query_time = 7;
   int64 query_time_in_cache = 8;

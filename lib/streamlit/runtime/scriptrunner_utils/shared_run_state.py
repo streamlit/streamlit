@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 from streamlit.runtime.scriptrunner_utils.parallel_fragment_stats import (
     ParallelFragmentUsageStats,
 )
-from streamlit.runtime.scriptrunner_utils.query_run_stats import RunQueryIds
+from streamlit.runtime.scriptrunner_utils.query_run_stats import QueryIds
 from streamlit.runtime.scriptrunner_utils.run_stats import RunStats
 from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 
@@ -57,7 +57,7 @@ class SharedRunState:
         # query or parallel fragment still running from the previous run
         # finishes into that run's totals.
         self.stats = RunStats()
-        self.query_ids = RunQueryIds()
+        self.query_ids = QueryIds()
         self.parallel_fragments = ParallelFragmentUsageStats(self.stats)
 
     def reset(self) -> None:
@@ -79,7 +79,7 @@ class SharedRunState:
             self._tracked_commands_counter = collections.Counter()
 
         self.stats = RunStats()
-        self.query_ids = RunQueryIds()
+        self.query_ids = QueryIds()
         self.parallel_fragments = ParallelFragmentUsageStats(self.stats)
 
     @property

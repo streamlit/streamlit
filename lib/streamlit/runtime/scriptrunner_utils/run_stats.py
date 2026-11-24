@@ -27,7 +27,7 @@ import threading
 from typing import TYPE_CHECKING
 
 from streamlit.runtime.scriptrunner_utils.cache_run_stats import ThreadCacheStats
-from streamlit.runtime.scriptrunner_utils.query_run_stats import QueryStats
+from streamlit.runtime.scriptrunner_utils.query_run_stats import ThreadQueryStats
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -45,7 +45,7 @@ class ThreadRunStats:
         # reports it only for parallel fragment runs.
         self.command_time = 0.0
         self.cache = ThreadCacheStats()
-        self.query = QueryStats()
+        self.query = ThreadQueryStats()
 
 
 class RunStats:
