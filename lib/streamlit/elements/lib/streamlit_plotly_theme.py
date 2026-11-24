@@ -63,8 +63,8 @@ INCREASING: Final = "#000032"
 DECREASING: Final = "#000033"
 TOTAL: Final = "#000034"
 
-GRAY_70: Final = "#000036"
-GRAY_90: Final = "#000037"
+FADED_TEXT_70: Final = "#000036"
+BODY_TEXT: Final = "#000037"
 BG_COLOR: Final = "#000038"
 FADED_TEXT_05: Final = "#000039"
 BG_MIX: Final = "#000040"
@@ -140,7 +140,7 @@ def configure_streamlit_plotly_theme() -> None:
                     # getStreamlitInjectedTextfontColors in
                     # frontend/lib/src/components/elements/PlotlyChart/CustomTheme.tsx.
                     go.layout.template.data.Sankey(
-                        textfont=go.sankey.Textfont(color=GRAY_70)
+                        textfont=go.sankey.Textfont(color=FADED_TEXT_70)
                     )
                 ],
                 scatter=[
@@ -152,11 +152,11 @@ def configure_streamlit_plotly_theme() -> None:
                     go.layout.template.data.Table(
                         cells=go.table.Cells(
                             fill=go.table.cells.Fill(color=BG_COLOR),
-                            font=go.table.cells.Font(color=GRAY_90),
+                            font=go.table.cells.Font(color=BODY_TEXT),
                             line=go.table.cells.Line(color=FADED_TEXT_05),
                         ),
                         header=go.table.Header(
-                            font=go.table.header.Font(color=GRAY_70),
+                            font=go.table.header.Font(color=FADED_TEXT_70),
                             line=go.table.header.Line(color=FADED_TEXT_05),
                             fill=go.table.header.Fill(color=BG_MIX),
                         ),
@@ -174,7 +174,9 @@ def configure_streamlit_plotly_theme() -> None:
                             marker=go.waterfall.totals.Marker(color=TOTAL)
                         ),
                         connector=go.waterfall.Connector(
-                            line=go.waterfall.connector.Line(color=GRAY_70, width=2)
+                            line=go.waterfall.connector.Line(
+                                color=FADED_TEXT_70, width=2
+                            )
                         ),
                     )
                 ],

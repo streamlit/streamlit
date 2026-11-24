@@ -20,9 +20,6 @@ import { getLogger } from "loglevel"
 import {
   getBlue80,
   getDecreasingRed,
-  getGray30,
-  getGray70,
-  getGray90,
   getIncreasingGreen,
 } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
@@ -58,10 +55,14 @@ export function applyStreamlitThemeTemplateLayout(
   theme: EmotionTheme
 ): void {
   const { genericFonts, colors, fontSizes } = theme
+  // Secondary text and lines derive from the theme's text color so charts
+  // follow a custom `textColor`, like other secondary text in the app.
+  const secondaryTextColor = colors.fadedText70
+  const lineColor = colors.fadedText05
 
   const streamlitTheme = {
     font: {
-      color: getGray70(theme),
+      color: secondaryTextColor,
       family: genericFonts.bodyFont,
       size: convertRemToPx(fontSizes.twoSm),
       weight: theme.fontWeights.normal,
@@ -84,7 +85,7 @@ export function applyStreamlitThemeTemplateLayout(
       title: {
         font: {
           size: convertRemToPx(fontSizes.twoSm),
-          color: getGray70(theme),
+          color: secondaryTextColor,
         },
         side: "top",
       },
@@ -93,56 +94,56 @@ export function applyStreamlitThemeTemplateLayout(
       borderwidth: 0,
       font: {
         size: convertRemToPx(fontSizes.twoSm),
-        color: getGray90(theme),
+        color: colors.bodyText,
       },
     },
     paper_bgcolor: colors.bgColor,
     plot_bgcolor: colors.bgColor,
     yaxis: {
       ticklabelposition: "outside",
-      zerolinecolor: getGray30(theme),
+      zerolinecolor: lineColor,
       title: {
         font: {
-          color: getGray70(theme),
+          color: secondaryTextColor,
           size: convertRemToPx(fontSizes.sm),
         },
         standoff: convertRemToPx(theme.spacing.twoXL),
       },
-      tickcolor: getGray30(theme),
+      tickcolor: lineColor,
       tickfont: {
-        color: getGray70(theme),
+        color: secondaryTextColor,
         size: convertRemToPx(fontSizes.twoSm),
       },
-      gridcolor: getGray30(theme),
+      gridcolor: lineColor,
       minor: {
-        gridcolor: getGray30(theme),
+        gridcolor: lineColor,
       },
       automargin: true,
     },
     xaxis: {
-      zerolinecolor: getGray30(theme),
-      gridcolor: getGray30(theme),
+      zerolinecolor: lineColor,
+      gridcolor: lineColor,
       showgrid: false,
       tickfont: {
-        color: getGray70(theme),
+        color: secondaryTextColor,
         size: convertRemToPx(fontSizes.twoSm),
       },
-      tickcolor: getGray30(theme),
+      tickcolor: lineColor,
       title: {
         font: {
-          color: getGray70(theme),
+          color: secondaryTextColor,
           size: convertRemToPx(fontSizes.sm),
         },
         standoff: convertRemToPx(theme.spacing.xl),
       },
       minor: {
-        gridcolor: getGray30(theme),
+        gridcolor: lineColor,
       },
       zeroline: false,
       automargin: true,
       rangeselector: {
         bgcolor: colors.bgColor,
-        bordercolor: getGray30(theme),
+        bordercolor: lineColor,
         // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
         borderwidth: 1,
         x: 0,
@@ -157,7 +158,7 @@ export function applyStreamlitThemeTemplateLayout(
       bgcolor: colors.bgColor,
       bordercolor: colors.borderColor,
       font: {
-        color: getGray70(theme),
+        color: secondaryTextColor,
         family: genericFonts.bodyFont,
         size: convertRemToPx(fontSizes.twoSm),
       },
@@ -173,19 +174,20 @@ export function applyStreamlitThemeTemplateLayout(
         y: 0.5745,
         title: {
           font: {
-            color: getGray70(theme),
+            color: secondaryTextColor,
             size: convertRemToPx(fontSizes.sm),
           },
         },
         tickfont: {
-          color: getGray70(theme),
+          color: secondaryTextColor,
           size: convertRemToPx(fontSizes.twoSm),
         },
       },
     },
-    // specifically for the ternary graph
+    // Ternary plots use the secondary text color for grid and axis lines,
+    // keeping them stronger than the faint cartesian gridlines.
     ternary: {
-      gridcolor: getGray70(theme),
+      gridcolor: secondaryTextColor,
       bgcolor: colors.bgColor,
       title: {
         font: {
@@ -193,26 +195,26 @@ export function applyStreamlitThemeTemplateLayout(
           size: convertRemToPx(fontSizes.sm),
         },
       },
-      color: getGray70(theme),
+      color: secondaryTextColor,
       aaxis: {
-        gridcolor: getGray70(theme),
-        linecolor: getGray70(theme),
+        gridcolor: secondaryTextColor,
+        linecolor: secondaryTextColor,
         tickfont: {
           family: genericFonts.bodyFont,
           size: convertRemToPx(fontSizes.twoSm),
         },
       },
       baxis: {
-        linecolor: getGray70(theme),
-        gridcolor: getGray70(theme),
+        linecolor: secondaryTextColor,
+        gridcolor: secondaryTextColor,
         tickfont: {
           family: genericFonts.bodyFont,
           size: convertRemToPx(fontSizes.twoSm),
         },
       },
       caxis: {
-        linecolor: getGray70(theme),
-        gridcolor: getGray70(theme),
+        linecolor: secondaryTextColor,
+        gridcolor: secondaryTextColor,
         tickfont: {
           family: genericFonts.bodyFont,
           size: convertRemToPx(fontSizes.twoSm),
@@ -384,9 +386,8 @@ function replaceGOSpecificColors(
   const DECREASING = "#000033"
   const TOTAL = "#000034"
 
-  const GRAY_30 = "#000035"
-  const GRAY_70 = "#000036"
-  const GRAY_90 = "#000037"
+  const FADED_TEXT_70 = "#000036"
+  const BODY_TEXT = "#000037"
   const BG_COLOR = "#000038"
   const FADED_TEXT_05 = "#000039"
   const BG_MIX = "#000040"
@@ -396,9 +397,8 @@ function replaceGOSpecificColors(
     spec = spec.replaceAll(DECREASING, getDecreasingRed(theme))
     spec = spec.replaceAll(TOTAL, getBlue80(theme))
 
-    spec = spec.replaceAll(GRAY_30, getGray30(theme))
-    spec = spec.replaceAll(GRAY_70, getGray70(theme))
-    spec = spec.replaceAll(GRAY_90, getGray90(theme))
+    spec = spec.replaceAll(FADED_TEXT_70, theme.colors.fadedText70)
+    spec = spec.replaceAll(BODY_TEXT, theme.colors.bodyText)
 
     spec = spec.replaceAll(BG_COLOR, theme.colors.bgColor)
     spec = spec.replaceAll(FADED_TEXT_05, theme.colors.fadedText05)
@@ -411,9 +411,8 @@ function replaceGOSpecificColors(
     spec = spec.replaceAll(DECREASING, "#FF4136")
     spec = spec.replaceAll(TOTAL, "#4499FF")
 
-    spec = spec.replaceAll(GRAY_30, "#B2B5BE")
-    spec = spec.replaceAll(GRAY_70, "#2a3f5f")
-    spec = spec.replaceAll(GRAY_90, "#2a3f5f")
+    spec = spec.replaceAll(FADED_TEXT_70, "#2a3f5f")
+    spec = spec.replaceAll(BODY_TEXT, "#2a3f5f")
 
     spec = spec.replaceAll(BG_COLOR, "#EBF0F8")
     spec = spec.replaceAll(FADED_TEXT_05, "white")
@@ -497,7 +496,7 @@ function getStreamlitInjectedTextfontColors(
 ): ReadonlyMap<string, string> {
   return new Map([
     ["icicle", "white"],
-    ["sankey", getGray70(theme)],
+    ["sankey", theme.colors.fadedText70],
   ])
 }
 

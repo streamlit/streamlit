@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
+import { transparentize } from "color2k"
 import { getLogger } from "loglevel"
 import { vi } from "vitest"
 
 import { mockTheme } from "~lib/mocks/mockTheme"
-import { getGray70 } from "~lib/theme/getColors"
+import { createEmotionColors } from "~lib/theme/getColors"
 
 import {
   applyStreamlitTheme,
@@ -54,6 +55,27 @@ describe("PlotlyChart CustomTheme", () => {
           }),
         })
       )
+    })
+
+    it("derives text and line colors from the theme text color", () => {
+      const customTextTheme = {
+        ...theme,
+        colors: createEmotionColors({ ...theme.colors, bodyText: "#D6246E" }),
+      }
+      const layout = {}
+      applyStreamlitThemeTemplateLayout(layout, customTextTheme)
+
+      const fadedText70 = transparentize("#D6246E", 0.3)
+      expect(layout).toMatchObject({
+        font: { color: fadedText70 },
+        legend: { font: { color: "#D6246E" } },
+        yaxis: {
+          tickfont: { color: fadedText70 },
+          gridcolor: transparentize("#D6246E", 0.9),
+        },
+        xaxis: { title: { font: { color: fadedText70 } } },
+        coloraxis: { colorbar: { tickfont: { color: fadedText70 } } },
+      })
     })
   })
 
@@ -103,10 +125,23 @@ describe("PlotlyChart CustomTheme", () => {
       expect(result).not.toContain("#000032")
     })
 
+    it("maps text placeholders to theme text colors", () => {
+      const spec = JSON.stringify({
+        sankey: { textfont: { color: "#000036" } },
+        cells: { font: { color: "#000037" } },
+      })
+      const result = JSON.parse(
+        replaceTemporaryColors(spec, theme, "streamlit")
+      )
+
+      expect(result.sankey.textfont.color).toBe(theme.colors.fadedText70)
+      expect(result.cells.font.color).toBe(theme.colors.bodyText)
+    })
+
     it("maps graph-object placeholders to Plotly defaults when theme is empty", () => {
       // A dark app theme must not leak into theme=None placeholders; they should
       // resolve to Plotly defaults that stay readable on white paper:
-      // - #000036 GRAY_70 (Sankey text) -> #2a3f5f
+      // - #000036 FADED_TEXT_70 (Sankey text, table headers, waterfall connectors) -> #2a3f5f
       // - #000038 BG_COLOR (table cells) -> #EBF0F8
       // - #000034 TOTAL (waterfall totals) -> #4499FF
       const darkAppTheme = {
@@ -234,7 +269,7 @@ describe("PlotlyChart CustomTheme", () => {
           template: {
             layout: {},
             data: {
-              sankey: [{ textfont: { color: getGray70(theme) } }],
+              sankey: [{ textfont: { color: theme.colors.fadedText70 } }],
             },
           },
         },
@@ -280,7 +315,7 @@ describe("PlotlyChart CustomTheme", () => {
           template: {
             layout: {},
             data: {
-              sankey: [{ textfont: { color: getGray70(theme) } }],
+              sankey: [{ textfont: { color: theme.colors.fadedText70 } }],
             },
           },
         },
@@ -291,7 +326,7 @@ describe("PlotlyChart CustomTheme", () => {
       // Without a user-provided layout.font, the theme's Sankey textfont color
       // must still be respected so charts pick up the Streamlit theme colors.
       expect(spec.layout.template.data.sankey[0].textfont.color).toBe(
-        getGray70(theme)
+        theme.colors.fadedText70
       )
     })
 
@@ -299,7 +334,7 @@ describe("PlotlyChart CustomTheme", () => {
       // Streamlit does not inject `textfont.family` on any trace type, so
       // `layout.font.family` inherits via Plotly's normal cascade; the
       // frontend does not need to touch the template.
-      const sankeyColor = getGray70(theme)
+      const sankeyColor = theme.colors.fadedText70
       const spec = {
         layout: {
           font: { family: "Times New Roman" },
@@ -324,7 +359,7 @@ describe("PlotlyChart CustomTheme", () => {
       // trace with a `textfont.color` that differs from Streamlit's injected
       // default. In that case the user's color must win — matching Plotly's
       // standard template precedence and `fig.show()`. Only Streamlit's own
-      // injected default (getGray70(theme)) is scrubbed.
+      // injected default (theme.colors.fadedText70) is scrubbed.
       const spec = {
         layout: {
           font: { color: "red" },
@@ -386,7 +421,7 @@ describe("PlotlyChart CustomTheme", () => {
               ],
               // Streamlit-owned trace with the injected default color — this
               // one should still be scrubbed.
-              sankey: [{ textfont: { color: getGray70(theme) } }],
+              sankey: [{ textfont: { color: theme.colors.fadedText70 } }],
             },
           },
         },
