@@ -121,7 +121,7 @@ Query time can overlap time that's already reported, so each source also reports
 
 The rest, `time − time_in_cache − time_in_commands`, is query time that's otherwise part of user code. Subtracting `time_in_cache` from cache time leaves the cache's other work. The counts include Snowpark queries, which aren't timed (see below). Each parallel fragment's entry reports its query time and the two parts in the same way. Queries on other threads the app attaches are added into the run's totals, like command and cache times.
 
-Only counts and times are sent. No SQL text, parameters, object names, rows, connection details or query IDs are sent (see [Out of scope](#out-of-scope)).
+Only counts and times are sent. No SQL text, parameters, object names, rows or connection details are sent.
 
 Instrumentation is installed only when usage stats are on, and never changes a query's result or error. Recording adds about 1 µs per query for the Snowflake connector and about 5 µs for SQLAlchemy, mostly SQLAlchemy's own event dispatch. Working out whether a query is inside a cached call or a command adds well under 0.1 µs. A Snowflake query takes tens of milliseconds or more.
 
@@ -174,7 +174,6 @@ Each addition documents its fields and attribution rules in `PageProfile.proto` 
 - **Exporting these numbers to a developer's own observability backend**, for example with OpenTelemetry. That's a separate spec, which would reuse the same per-run totals.
 - **A developer-only trace of a single load** with per-call spans and per-element render times. That's also a separate spec.
 - **Per-call and per-element timings in usage stats.** These would break the fixed-size rule. Fixed per-element costs are covered by performance suite benchmarks.
-- **Snowflake query IDs.** They would link a run to each of its queries in the account's query history, which would give the warehouse's compile, queue and execution time and the only time available for Snowpark queries. They aren't anonymous, so whether to send them, for example only for accounts that opt in, is decided separately.
 - **Changes to existing fields** or to the meaning of the server metrics at `/_stcore/metrics`.
 
 ## Checklist
