@@ -197,7 +197,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
         | Iterable[tuple[str, str | Iterable[str]]],
     ) -> None:
         """
-        Replace all query parameters with a mapping or an iterable of pairs.
+        Replace the unbound query parameters with a mapping or an iterable of pairs.
 
         This method primarily exists for advanced users who want to control
         multiple query parameters in a single update. To set individual query
