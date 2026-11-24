@@ -1448,8 +1448,8 @@ class DataEditorMixin:
         try:
             arrow_table = pa.Table.from_pandas(data_df)
         except arrow_conversion_errors as ex:
-            # This fallback is expected and can run on every rerun, so the
-            # traceback is only logged at debug level to avoid flooding the logs.
+            # Log the traceback only at debug level because this expected
+            # fallback can run on every rerun.
             _LOGGER.info(
                 "The dataframe is not Arrow-compatible, so Arrow-incompatible "
                 "columns are converted to read-only strings in the data editor. "

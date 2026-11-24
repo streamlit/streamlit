@@ -967,11 +967,11 @@ def convert_pandas_df_to_arrow_table(
     try:
         return pa.Table.from_pandas(df, preserve_index=preserve_index)
     except arrow_conversion_errors as ex:
-        # This fallback is expected and can run on every rerun, so the traceback
-        # is only logged at debug level to avoid flooding the logs.
+        # Log the traceback only at debug level because this expected fallback can
+        # run on every rerun.
         _LOGGER.info(
-            "The dataframe is not Arrow-compatible, so Arrow-incompatible columns "
-            "are converted to strings or lists before display. Conversion error: %s",
+            "Converting Arrow-incompatible dataframe columns to strings or lists. "
+            "Conversion error: %s",
             ex,
             exc_info=_LOGGER.isEnabledFor(logging.DEBUG),
         )

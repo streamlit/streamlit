@@ -1653,6 +1653,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         ]
         assert len(retry_records) == 1
         assert retry_records[0].levelname == "INFO"
+        assert "too large to convert" in retry_records[0].getMessage()
         assert bool(retry_records[0].exc_info) is expect_traceback
 
     def test_disables_incompatible_columns_under_flattened_multiindex_name(
