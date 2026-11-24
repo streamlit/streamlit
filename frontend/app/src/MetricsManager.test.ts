@@ -459,17 +459,13 @@ describe("metrics helpers", () => {
     expect(withoutUsage).not.toHaveProperty("parallelFragmentUsage")
   })
 
-  it("buildEventProto forwards dataSize and receivedMessages through toJSON - pageProfile", async () => {
+  it("buildEventProto forwards arrowBytes and receivedMessages through toJSON - pageProfile", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
 
     const withData = mm
       .buildEventProto("pageProfile", {
-        ...decodedPageProfile({
-          dataSize: {
-            arrowBytes: 5_000,
-          },
-        }),
+        ...decodedPageProfile({ arrowBytes: 5_000 }),
         receivedMessages: {
           bytes: 6_000,
           cachedMessages: 1,
@@ -477,21 +473,18 @@ describe("metrics helpers", () => {
         },
       })
       .toJSON()
-    // The server always sets dataSize, so a run without data sends an empty
-    // object, while a profile from an older server sends none.
     const withoutData = mm
-      .buildEventProto("pageProfile", decodedPageProfile({ dataSize: {} }))
+      .buildEventProto("pageProfile", decodedPageProfile({ arrowBytes: 0 }))
       .toJSON()
 
-    expect(withData.dataSize).toStrictEqual({
-      arrowBytes: "5000",
-    })
+    expect(withData.arrowBytes).toBe("5000")
     expect(withData.receivedMessages).toStrictEqual({
       bytes: "6000",
       cachedMessages: "1",
       cachedBytes: "3000",
     })
-    expect(withoutData.dataSize).toStrictEqual({})
+    // The field is optional, so a run without data still sends 0.
+    expect(withoutData.arrowBytes).toBe("0")
     expect(withoutData).not.toHaveProperty("receivedMessages")
   })
 

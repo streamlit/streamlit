@@ -1983,8 +1983,8 @@ def _arrow_rows(payload: bytes) -> int:
     return pa.ipc.open_stream(payload).read_all().num_rows
 
 
-class PageProfileDataSizeTest(DeltaGeneratorTestCase):
-    """``data_size`` reports the Arrow payloads that the run's elements sent."""
+class PageProfileArrowBytesTest(DeltaGeneratorTestCase):
+    """``arrow_bytes`` reports the Arrow payloads that the run's elements sent."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -1993,8 +1993,10 @@ class PageProfileDataSizeTest(DeltaGeneratorTestCase):
         ctx.reset()
         ctx.gather_usage_stats = True
 
-    def _data_size(self) -> Any:
-        return metrics_util.create_page_profile_message([], 0, 0).page_profile.data_size
+    def _arrow_bytes(self) -> int:
+        return metrics_util.create_page_profile_message(
+            [], 0, 0
+        ).page_profile.arrow_bytes
 
     def test_reports_arrow_bytes_across_elements(self) -> None:
         """Dataframes, data editors, tables and charts all count, each payload
@@ -2007,8 +2009,7 @@ class PageProfileDataSizeTest(DeltaGeneratorTestCase):
 
         payloads = _arrow_payloads(self.get_all_deltas_from_queue())
         assert len(payloads) == 4
-        data_size = self._data_size()
-        assert data_size.arrow_bytes == sum(len(payload) for payload in payloads)
+        assert self._arrow_bytes() == sum(len(payload) for payload in payloads)
 
     def test_a_new_run_counts_only_its_own_payloads(self) -> None:
         ctx = get_script_run_ctx()
@@ -2018,15 +2019,15 @@ class PageProfileDataSizeTest(DeltaGeneratorTestCase):
         st.dataframe(pd.DataFrame({"a": range(3)}))
 
         payloads = _arrow_payloads(self.get_all_deltas_from_queue())
-        assert self._data_size().arrow_bytes == len(payloads[-1])
+        assert self._arrow_bytes() == len(payloads[-1])
 
-    def test_reports_zeros_for_a_run_without_data(self) -> None:
+    def test_reports_zero_for_a_run_without_data(self) -> None:
         st.markdown("No data here")
 
         msg = metrics_util.create_page_profile_message([], 0, 0)
 
-        assert msg.page_profile.HasField("data_size")
-        assert msg.page_profile.data_size.arrow_bytes == 0
+        assert msg.page_profile.HasField("arrow_bytes")
+        assert msg.page_profile.arrow_bytes == 0
 
     def test_counts_nothing_while_usage_stats_are_off(self) -> None:
         ctx = get_script_run_ctx()
@@ -2049,7 +2050,7 @@ class PageProfileDataSizeTest(DeltaGeneratorTestCase):
         thread.join()
 
         (payload,) = _arrow_payloads(self.get_all_deltas_from_queue())
-        assert self._data_size().arrow_bytes == len(payload)
+        assert self._arrow_bytes() == len(payload)
 
     def test_ignores_payloads_serialized_outside_a_script_run(self) -> None:
         """Payloads serialized on a thread without a ``ScriptRunContext``, such
@@ -2065,7 +2066,7 @@ class PageProfileDataSizeTest(DeltaGeneratorTestCase):
             thread.start()
             thread.join()
 
-        assert self._data_size().arrow_bytes == 0
+        assert self._arrow_bytes() == 0
         # The missing context is expected, not a recording failure.
         logger_mock.debug.assert_not_called()
 
@@ -2081,4 +2082,4 @@ class PageProfileDataSizeTest(DeltaGeneratorTestCase):
 
         (payload,) = _arrow_payloads(self.get_all_deltas_from_queue())
         assert _arrow_rows(payload) == 10
-        assert self._data_size().arrow_bytes == 0
+        assert self._arrow_bytes() == 0

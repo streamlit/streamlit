@@ -94,8 +94,8 @@ message MetricsEvent {
   ParallelFragmentUsage parallel_fragment_usage = 56;
   // 57-61 are held for planned query-time, rerun-reason and render-timing
   // fields.
-  // Same as PageProfile.data_size.
-  DataSize data_size = 62;
+  // Same as PageProfile.arrow_bytes.
+  optional int64 arrow_bytes = 62;
   // Set by the browser.
   ReceivedMessages received_messages = 63;
 

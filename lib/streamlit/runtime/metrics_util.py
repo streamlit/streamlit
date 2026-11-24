@@ -845,13 +845,6 @@ def _fill_cache_usage(
     _copy_cache_totals(totals, page_profile.cache_usage)
 
 
-def _fill_data_size(page_profile: PageProfile, ctx: ScriptRunContext) -> None:
-    """Copy the run's Arrow payload total onto the profile."""
-    page_profile.data_size.arrow_bytes = sum(
-        stats.arrow_bytes for stats in ctx.shared.stats.all_thread_stats()
-    )
-
-
 def _set_parallel_fragment_run_times(
     entry: ParallelFragmentRun,
     exec_time: float,
@@ -977,10 +970,11 @@ def create_page_profile_message(
 
     if server_uptime_seconds is not None:
         page_profile.server_uptime_seconds = server_uptime_seconds
-    page_profile.data_size.SetInParent()
     if ctx is not None:
         now = time.perf_counter()
-        _fill_data_size(page_profile, ctx)
+        page_profile.arrow_bytes = sum(
+            stats.arrow_bytes for stats in ctx.shared.stats.all_thread_stats()
+        )
         _fill_cache_usage(page_profile, ctx, now)
         if run_start is not None:
             _fill_parallel_fragment_usage(page_profile, ctx, run_start, now)

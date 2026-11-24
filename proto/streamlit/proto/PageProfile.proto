@@ -63,15 +63,10 @@ message PageProfile {
   // Parallel fragments that ran during this script run. Unset when none ran.
   ParallelFragmentUsage parallel_fragment_usage = 22;
   // 23-25 are held for planned query-time and rerun-reason fields.
-  // Arrow data serialized during this script run. Always set, so a run
-  // without data reports zeros.
-  DataSize data_size = 26;
-}
-
-// Arrow payloads serialized during one script run, for dataframes, tables,
-// charts and similar elements. Sizes are in bytes.
-message DataSize {
-  int64 arrow_bytes = 1;
+  // Bytes of the Arrow payloads serialized during this script run, for
+  // dataframes, tables, charts and similar elements. Optional, so that 0 is
+  // still sent.
+  optional int64 arrow_bytes = 26;
 }
 
 // Cache activity during one script run: counts, and times in microseconds.

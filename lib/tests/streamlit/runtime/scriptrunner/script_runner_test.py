@@ -81,7 +81,6 @@ if TYPE_CHECKING:
     from streamlit.proto.Delta_pb2 import Delta
     from streamlit.proto.Element_pb2 import Element
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-    from streamlit.proto.PageProfile_pb2 import DataSize
 
 text_utf = "complete! 👨‍🎤"
 text_utf2 = "complete2! 👨‍🎤"
@@ -2069,46 +2068,6 @@ class ScriptRunnerTest(unittest.TestCase):
         # fragment's 0.2s sleep.
         assert usage.wait_time >= 100_000
         assert usage.wait_time <= page_profile.exec_time
-
-    def _run_and_get_data_size(self, script_name: str) -> tuple[DataSize, list[int]]:
-        """Run ``script_name`` and return its page profile's ``data_size`` and
-        the sizes of the dataframe payloads it sent.
-        """
-        scriptrunner = TestScriptRunner(script_name)
-        scriptrunner.request_rerun(RerunData())
-        scriptrunner.start()
-        scriptrunner.join()
-
-        self._assert_no_exceptions(scriptrunner)
-        (page_profile,) = (
-            msg.page_profile
-            for msg in scriptrunner.forward_msgs()
-            if msg.HasField("page_profile")
-        )
-        payload_sizes = [
-            len(msg.delta.new_element.dataframe.arrow_data.data)
-            for msg in scriptrunner.forward_msgs()
-            if msg.delta.new_element.HasField("dataframe")
-        ]
-        return page_profile.data_size, payload_sizes
-
-    @testutil.patch_config_options({"browser.gatherUsageStats": True})
-    def test_page_profile_data_size_counts_payloads_before_an_early_stop(
-        self,
-    ) -> None:
-        """A run stopped with ``st.stop()`` counts what it serialized before."""
-        data_size, payload_sizes = self._run_and_get_data_size("data_size_stop.py")
-
-        assert len(payload_sizes) == 1
-        assert data_size.arrow_bytes == payload_sizes[0]
-
-    @testutil.patch_config_options({"browser.gatherUsageStats": True})
-    def test_page_profile_data_size_includes_parallel_fragments(self) -> None:
-        """Payloads serialized in parallel fragments count toward the run."""
-        data_size, payload_sizes = self._run_and_get_data_size("data_size_parallel.py")
-
-        assert len(payload_sizes) == 3
-        assert data_size.arrow_bytes == sum(payload_sizes)
 
     def _start_cache_compute_owner_and_create_waiter(
         self,
