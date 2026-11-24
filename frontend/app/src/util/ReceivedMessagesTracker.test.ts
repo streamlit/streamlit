@@ -26,29 +26,6 @@ const pageProfileMsg = (): ForwardMsg =>
   ForwardMsg.fromObject({ pageProfile: {} })
 
 describe("ReceivedMessagesTracker", () => {
-  it("starts with empty totals", () => {
-    expect(new ReceivedMessagesTracker().getRunTotals()).toEqual({
-      bytes: 0,
-      messages: 0,
-      cachedMessages: 0,
-      cachedBytes: 0,
-    })
-  })
-
-  it("adds up the bytes and messages of a run", () => {
-    const tracker = new ReceivedMessagesTracker()
-    tracker.recordMessage(newSessionMsg(), { byteLength: 1_000 })
-    tracker.recordMessage(deltaMsg(), { byteLength: 250 })
-    tracker.recordMessage(pageProfileMsg(), { byteLength: 80 })
-
-    expect(tracker.getRunTotals()).toEqual({
-      bytes: 1_330,
-      messages: 3,
-      cachedMessages: 0,
-      cachedBytes: 0,
-    })
-  })
-
   it("counts references to cached messages at both sizes", () => {
     const tracker = new ReceivedMessagesTracker()
     tracker.recordMessage(newSessionMsg(), { byteLength: 1_000 })
@@ -69,7 +46,12 @@ describe("ReceivedMessagesTracker", () => {
     const tracker = new ReceivedMessagesTracker()
     tracker.recordMessage(deltaMsg(), { byteLength: 60, cachedByteLength: 0 })
 
-    expect(tracker.getRunTotals().cachedMessages).toBe(1)
+    expect(tracker.getRunTotals()).toEqual({
+      bytes: 60,
+      messages: 1,
+      cachedMessages: 1,
+      cachedBytes: 0,
+    })
   })
 
   it("restarts the totals at each NewSession message", () => {

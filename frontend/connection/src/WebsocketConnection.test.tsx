@@ -1608,18 +1608,20 @@ describe("WebsocketConnection", () => {
     )
 
     const firstMsg = ForwardMsg.fromObject({ hash: "msg-0" })
-    const secondMsg = ForwardMsg.fromObject({ hash: "msg-1" })
+    const secondMsg = ForwardMsg.fromObject({ hash: "msg-1-is-longer" })
     const encode = (msg: ForwardMsg): ArrayBuffer => {
       const bytes = ForwardMsg.encode(msg).finish()
       const copy = new Uint8Array(bytes.byteLength)
       copy.set(bytes)
       return copy.buffer
     }
+    const firstFrame = encode(firstMsg)
+    const secondFrame = encode(secondMsg)
 
     // @ts-expect-error - private handleMessage for test
-    const firstHandle = client.handleMessage(encode(firstMsg))
+    const firstHandle = client.handleMessage(firstFrame)
     // @ts-expect-error - private handleMessage for test
-    const secondHandle = client.handleMessage(encode(secondMsg))
+    const secondHandle = client.handleMessage(secondFrame)
 
     secondPayload.resolve(secondMsg)
     await secondHandle
@@ -1632,7 +1634,12 @@ describe("WebsocketConnection", () => {
 
     expect(onMessage.mock.calls.map(call => call[0].hash)).toEqual([
       "msg-0",
-      "msg-1",
+      "msg-1-is-longer",
+    ])
+    // Each message keeps its own size while it waits in the queue.
+    expect(onMessage.mock.calls.map(call => call[1])).toEqual([
+      { byteLength: firstFrame.byteLength },
+      { byteLength: secondFrame.byteLength },
     ])
     // @ts-expect-error - private messageQueue for test
     expect(client.messageQueue.size).toBe(0)

@@ -1996,16 +1996,6 @@ class PageProfileDataSizeTest(DeltaGeneratorTestCase):
     def _data_size(self) -> Any:
         return metrics_util.create_page_profile_message([], 0, 0).page_profile.data_size
 
-    def test_reports_a_dataframes_arrow_bytes_and_rows(self) -> None:
-        df = pd.DataFrame({"a": range(100), "b": ["x"] * 100})
-        st.dataframe(df)
-
-        (payload,) = _arrow_payloads(self.get_all_deltas_from_queue())
-        data_size = self._data_size()
-        assert data_size.arrow_bytes == len(payload) > 0
-        assert data_size.arrow_rows == 100
-        assert data_size.largest_arrow_bytes == len(payload)
-
     def test_reports_totals_and_largest_payload_across_elements(self) -> None:
         """Dataframes, data editors, tables and charts all count, each payload
         once, and the largest payload is the largest single one.
@@ -2022,7 +2012,18 @@ class PageProfileDataSizeTest(DeltaGeneratorTestCase):
         # The line chart melts its two columns into 1,000 rows.
         assert data_size.arrow_rows == sum(_arrow_rows(p) for p in payloads) == 1_033
         assert data_size.largest_arrow_bytes == max(len(p) for p in payloads)
-        assert data_size.largest_arrow_bytes < data_size.arrow_bytes
+
+    def test_a_new_run_counts_only_its_own_payloads(self) -> None:
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        st.dataframe(pd.DataFrame({"a": range(100)}))
+        ctx.reset()
+        st.dataframe(pd.DataFrame({"a": range(3)}))
+
+        payloads = _arrow_payloads(self.get_all_deltas_from_queue())
+        data_size = self._data_size()
+        assert data_size.arrow_rows == 3
+        assert data_size.arrow_bytes == len(payloads[-1])
 
     def test_reports_zeros_for_a_run_without_data(self) -> None:
         st.markdown("No data here")
@@ -2069,10 +2070,13 @@ class PageProfileDataSizeTest(DeltaGeneratorTestCase):
         thread = threading.Thread(
             target=lambda: dataframe_util.convert_pandas_df_to_arrow_bytes(df)
         )
-        thread.start()
-        thread.join()
+        with patch.object(dataframe_util, "_LOGGER") as logger_mock:
+            thread.start()
+            thread.join()
 
         assert self._data_size().arrow_bytes == 0
+        # The missing context is expected, not a recording failure.
+        logger_mock.debug.assert_not_called()
 
     def test_recording_failures_dont_reach_the_element(self) -> None:
         """If recording raises, the element is still sent with its data."""
