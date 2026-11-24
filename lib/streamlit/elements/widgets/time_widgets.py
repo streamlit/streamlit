@@ -604,8 +604,16 @@ def _step_calendar_date(value: date, days: int) -> date | None:
 def _raise_unavailable_value_error(
     value: date,
     param_name: Literal["enabled_dates", "disabled_dates"],
+    *,
+    is_range: bool = False,
 ) -> NoReturn:
     """Raise when an explicit ``value`` is blocked by availability."""
+    if is_range:
+        raise StreamlitAPIException(
+            f"The `value` {value} is not selectable because of `{param_name}`. "
+            "Pass a range whose start and end are both selectable.",
+            error_id="date-input-value-unavailable",
+        )
     raise StreamlitAPIException(
         f"The `value` {value} is not selectable because of `{param_name}`. "
         'Pass a selectable date, or pass `value="today"` to snap to a '
@@ -643,7 +651,11 @@ def _apply_availability_to_parsed_values(
         if not _is_date_selectable(
             entry, parsed_values.min, parsed_values.max, availability
         ):
-            _raise_unavailable_value_error(entry, availability.param_name)
+            _raise_unavailable_value_error(
+                entry,
+                availability.param_name,
+                is_range=parsed_values.is_range,
+            )
 
     return parsed_values
 
@@ -2529,14 +2541,16 @@ class TimeWidgetsMixin:
             unavailable. An empty collection makes every date unavailable;
             pass ``value=None`` (or an empty range) in that case.
 
-            For a range ``value``, availability applies to the endpoints only
-            (and to the start of a partial range). A range may cross
-            unavailable interior days. Quick-select presets snap an
-            unavailable start forward and end back within the min/max window,
-            or are dropped when no valid snap exists. A weekday name always
-            means the same day of the week, whatever the user's locale or
-            first day of the week. If a keyed widget's current value becomes
-            unavailable, Streamlit resets it to the widget's default.
+            For a range ``value``, only the start and end dates must be
+            selectable (or just the start of a partial range); the range may
+            span unavailable days. Range quick-select presets shrink to the
+            nearest selectable start and end within ``min_value`` and
+            ``max_value``, and presets with no selectable range are hidden.
+
+            A weekday name always means the same day of the week, whatever the
+            user's locale or first day of the week. If a keyed widget's current
+            value becomes unavailable, Streamlit resets it to the widget's
+            default.
 
         disabled_dates : date, datetime, str, list-like of these, or None
             Dates and weekdays that are not selectable between ``min_value``
@@ -2875,8 +2889,9 @@ class TimeWidgetsMixin:
                 if availability is not None:
                     # Keep the snapped today value as the reset target. A
                     # stored date that is still selectable is returned from
-                    # widget state. Carry range mode so an OOB or unavailable
-                    # stored range does not collapse to a single-date control.
+                    # widget state. Carry range mode so an out-of-bounds or
+                    # unavailable stored range does not collapse to a
+                    # single-date control.
                     if stored_is_range:
                         parsed_values = replace(parsed_values, is_range=True)
                 else:

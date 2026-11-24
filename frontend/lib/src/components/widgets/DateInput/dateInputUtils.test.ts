@@ -593,7 +593,7 @@ describe("getQuickSelectPresets", () => {
   })
 })
 
-describe("snapQuickSelectPreset", () => {
+describe("quick-select availability snapping", () => {
   const minDate = new CalendarDate(2020, 1, 1)
   const maxDate = new CalendarDate(2024, 12, 31)
   const weekendsUnavailable = (date: DateValue): boolean => {
@@ -679,6 +679,25 @@ describe("snapQuickSelectPreset", () => {
         weekendsUnavailable
       )
     ).toEqual(new CalendarDate(2024, 3, 8))
+  })
+
+  it("findAvailable helpers return null when nothing is selectable", () => {
+    expect(
+      findAvailableOnOrAfter(
+        new CalendarDate(2024, 3, 9),
+        minDate,
+        maxDate,
+        () => true
+      )
+    ).toBeNull()
+    expect(
+      findAvailableOnOrBefore(
+        new CalendarDate(2024, 3, 10),
+        minDate,
+        maxDate,
+        () => true
+      )
+    ).toBeNull()
   })
 })
 

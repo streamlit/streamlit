@@ -448,16 +448,17 @@ function RangeDateInput({
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
   // today() inside getQuickSelectPresets is intentionally not a dep — the
   // component remounts on each script rerun, so stale-day is not possible.
-  const quickSelectPresets = useMemo(
-    () =>
-      filterQuickSelectPresets(
-        getQuickSelectPresets(),
-        minDate,
-        maxDate,
-        isDateUnavailable
-      ),
-    [minDate, maxDate, isDateUnavailable]
-  )
+  const quickSelectPresets = useMemo(() => {
+    if (!enableQuickSelect) {
+      return []
+    }
+    return filterQuickSelectPresets(
+      getQuickSelectPresets(),
+      minDate,
+      maxDate,
+      isDateUnavailable
+    )
+  }, [enableQuickSelect, minDate, maxDate, isDateUnavailable])
   const quickSelectRef = useRef<HTMLDivElement>(null)
 
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -1252,7 +1253,8 @@ function RangeDateInput({
     (presetId: string): void => {
       const preset = quickSelectPresets.find(p => p.id === presetId)
       if (!preset) return
-      // Revalidate so a stale preset cannot bypass availability.
+      // Presets are already snapped; re-check at commit so quick select can
+      // never commit an unavailable endpoint.
       if (hasUnavailableEndpoint([preset.start, preset.end])) {
         validateBothFields(preset.start, preset.end)
         return
@@ -1340,15 +1342,12 @@ function RangeDateInput({
 
         if (parsed.kind === "date") {
           setDisplay(parsed.date)
-          const next = compact([
-            isStartField ? parsed.date : displayStartRef.current,
-            isStartField ? displayEndRef.current : parsed.date,
-          ])
-          if (hasUnavailableEndpoint(next)) {
-            validateBothFields(next[0] ?? null, next[1] ?? null)
-            return
-          }
-          emitRangeSelection(next)
+          emitRangeSelection(
+            compact([
+              isStartField ? parsed.date : displayStartRef.current,
+              isStartField ? displayEndRef.current : parsed.date,
+            ])
+          )
           return
         }
 
@@ -1360,15 +1359,12 @@ function RangeDateInput({
         const newDate = applyPartialSegmentToDate(base, parsed)
         if (!newDate) return
         setDisplay(newDate)
-        const next = compact([
-          isStartField ? newDate : displayStartRef.current,
-          isStartField ? displayEndRef.current : newDate,
-        ])
-        if (hasUnavailableEndpoint(next)) {
-          validateBothFields(next[0] ?? null, next[1] ?? null)
-          return
-        }
-        emitRangeSelection(next)
+        emitRangeSelection(
+          compact([
+            isStartField ? newDate : displayStartRef.current,
+            isStartField ? displayEndRef.current : newDate,
+          ])
+        )
       },
     [
       disabled,
@@ -1641,7 +1637,13 @@ function RangeDateInput({
                 onFocusChange={onFocusChange}
               >
                 <AnchorDateWatcher
-                  seedAnchor={displayEnd === null ? displayStart : null}
+                  seedAnchor={
+                    displayEnd === null &&
+                    displayStart !== null &&
+                    !hasUnavailableEndpoint([displayStart])
+                      ? displayStart
+                      : null
+                  }
                   onAnchorSelect={handleAnchorSelect}
                 />
                 <CalendarPopoverHeader />

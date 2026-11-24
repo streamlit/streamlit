@@ -1372,7 +1372,7 @@ def test_unavailable_range_calendar_picker_rendering(
     date_input.get_by_test_id("stDateInputCalendarButton").click()
     calendar = themed_app.get_by_test_id("stDateInputCalendar")
     expect(calendar).to_be_visible()
-    # Fri→Mon selection with Sat/Sun unavailable — band should not fill weekends.
+    # The Friday-to-Monday selection's highlight band skips the unavailable weekend.
     expect(
         calendar.get_by_role("button", name=re.compile(r"Saturday, March 9"))
     ).to_have_attribute("data-unavailable", "true")

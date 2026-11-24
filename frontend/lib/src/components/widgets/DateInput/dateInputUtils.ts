@@ -233,7 +233,7 @@ function isOutsideMinMax(
   )
 }
 
-/** Nearest selectable date at or after ``from``, within min/max. */
+/** Nearest selectable date at or after `from`, within min/max. */
 export function findAvailableOnOrAfter(
   from: CalendarDate,
   minDate: CalendarDate,
@@ -259,7 +259,7 @@ export function findAvailableOnOrAfter(
   return null
 }
 
-/** Nearest selectable date at or before ``from``, within min/max. */
+/** Nearest selectable date at or before `from`, within min/max. */
 export function findAvailableOnOrBefore(
   from: CalendarDate,
   minDate: CalendarDate,
@@ -310,26 +310,31 @@ export function snapQuickSelectPreset(
     return null
   }
 
+  // Bound walks to the preset window: any start after `end` (or end before
+  // `start`) is dropped by the compare check below anyway.
   const snappedStart = findAvailableOnOrAfter(
     start,
     minDate,
-    maxDate,
+    end,
     isDateUnavailable
   )
+  if (!snappedStart) {
+    return null
+  }
   const snappedEnd = findAvailableOnOrBefore(
     end,
-    minDate,
+    snappedStart,
     maxDate,
     isDateUnavailable
   )
-  if (!snappedStart || !snappedEnd || snappedStart.compare(snappedEnd) > 0) {
+  if (!snappedEnd || snappedStart.compare(snappedEnd) > 0) {
     return null
   }
 
   return { ...preset, start: snappedStart, end: snappedEnd }
 }
 
-/** Apply min/max clamping and availability snapping to every preset. */
+/** Clamps and snaps every preset to selectable dates, dropping presets that have no selectable range. */
 export function filterQuickSelectPresets(
   presets: QuickSelectPreset[],
   minDate: CalendarDate,

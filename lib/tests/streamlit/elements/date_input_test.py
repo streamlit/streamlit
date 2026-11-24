@@ -1296,10 +1296,13 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         assert list(c.filter_weekdays) == [6, 7]
 
     def test_range_unavailable_start_raises(self) -> None:
-        """An unavailable range start raises naming enabled/disabled_dates."""
+        """An unavailable range start raises, and the message names ``disabled_dates``."""
         with pytest.raises(
             StreamlitAPIException,
-            match=r"not selectable because of `disabled_dates`",
+            match=(
+                r"not selectable because of `disabled_dates`\. "
+                r"Pass a range whose start and end are both selectable\."
+            ),
         ):
             st.date_input(
                 "period",
@@ -1308,8 +1311,11 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
             )
 
     def test_range_unavailable_end_raises(self) -> None:
-        """An unavailable range end raises."""
-        with pytest.raises(StreamlitAPIException, match="not selectable"):
+        """An unavailable range end raises with a range-aware remedy."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"Pass a range whose start and end are both selectable\.",
+        ):
             st.date_input(
                 "period",
                 value=(date(2026, 8, 24), date(2026, 8, 29)),  # Mon-Sat
@@ -1723,7 +1729,7 @@ class DateInputKeyedTodayBoundsTest(DeltaGeneratorTestCase):
     def test_keyed_default_today_preserves_range_mode_when_bounds_change(
         self,
     ) -> None:
-        """OOB stored range with value='today' must not collapse to single-date."""
+        """Out-of-bounds stored range with value='today' must not collapse to single-date."""
 
         class FixedDateTime(datetime):
             @classmethod
