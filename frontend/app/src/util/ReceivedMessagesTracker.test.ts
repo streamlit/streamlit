@@ -37,7 +37,6 @@ describe("ReceivedMessagesTracker", () => {
 
     const totals = tracker.getRunTotals()
     expect(totals.bytes).toBe(1_360)
-    expect(totals.messages).toBe(3)
     expect(totals.cachedMessages).toBe(1)
     expect(totals.cachedBytes).toBe(50_000)
   })
@@ -49,7 +48,6 @@ describe("ReceivedMessagesTracker", () => {
 
     expect(tracker.getRunTotals()).toEqual({
       bytes: 60,
-      messages: 2,
       cachedMessages: 1,
       cachedBytes: 0,
     })
@@ -66,7 +64,6 @@ describe("ReceivedMessagesTracker", () => {
 
     expect(tracker.getRunTotals()).toEqual({
       bytes: 0,
-      messages: 0,
       cachedMessages: 0,
       cachedBytes: 0,
     })
@@ -79,7 +76,7 @@ describe("ReceivedMessagesTracker", () => {
     const tracker = new ReceivedMessagesTracker()
     tracker.recordMessage(deltaMsg(), { byteLength: 60 })
 
-    expect(tracker.getRunTotals().messages).toBe(0)
+    expect(tracker.getRunTotals().bytes).toBe(0)
   })
 
   it("restarts the totals at each NewSession message", () => {
@@ -98,20 +95,17 @@ describe("ReceivedMessagesTracker", () => {
 
     expect(tracker.getRunTotals()).toEqual({
       bytes: 1_000,
-      messages: 2,
       cachedMessages: 0,
       cachedBytes: 0,
     })
   })
 
-  it("counts messages without a size as 0 bytes", () => {
+  it("counts a message without a size as 0 bytes", () => {
     const tracker = new ReceivedMessagesTracker()
     tracker.recordMessage(newSessionMsg())
     tracker.recordMessage(deltaMsg(), { byteLength: 10 })
 
-    const totals = tracker.getRunTotals()
-    expect(totals.messages).toBe(2)
-    expect(totals.bytes).toBe(10)
+    expect(tracker.getRunTotals().bytes).toBe(10)
   })
 
   it("returns a copy of the totals", () => {

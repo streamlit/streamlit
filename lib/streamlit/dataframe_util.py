@@ -915,11 +915,11 @@ def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
     writer.write_table(table)
     writer.close()
     arrow_bytes = cast("bytes", sink.getvalue().to_pybytes())
-    _record_arrow_payload(len(arrow_bytes), table.num_rows)
+    _record_arrow_payload(len(arrow_bytes))
     return arrow_bytes
 
 
-def _record_arrow_payload(num_bytes: int, num_rows: int) -> None:
+def _record_arrow_payload(num_bytes: int) -> None:
     """Add a serialized Arrow payload to the current run's page profile.
 
     ``convert_arrow_table_to_arrow_bytes`` serializes every Arrow payload sent to
@@ -934,9 +934,7 @@ def _record_arrow_payload(num_bytes: int, num_rows: int) -> None:
         ctx = get_script_run_ctx(suppress_warning=True)
         if ctx is None or not ctx.gather_usage_stats:
             return
-        ctx.shared.stats.current_thread_stats().data_size.record_arrow_payload(
-            num_bytes, num_rows
-        )
+        ctx.shared.stats.current_thread_stats().arrow_bytes += num_bytes
     except Exception:
         # Telemetry must never break serializing the payload.
         _LOGGER.debug("Failed to record Arrow payload size", exc_info=True)

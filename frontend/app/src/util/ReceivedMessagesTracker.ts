@@ -20,7 +20,6 @@ import type { ForwardMsg } from "@streamlit/protobuf"
 /** Totals reported as MetricsEvent.received_messages. */
 interface ReceivedMessagesTotals {
   bytes: number
-  messages: number
   cachedMessages: number
   cachedBytes: number
 }
@@ -47,7 +46,6 @@ export class ReceivedMessagesTracker {
       return
     }
 
-    this.totals.messages += 1
     this.totals.bytes += size?.byteLength ?? 0
     if (size?.cachedByteLength !== undefined) {
       this.totals.cachedMessages += 1
@@ -62,5 +60,5 @@ export class ReceivedMessagesTracker {
 }
 
 function emptyTotals(): ReceivedMessagesTotals {
-  return { bytes: 0, messages: 0, cachedMessages: 0, cachedBytes: 0 }
+  return { bytes: 0, cachedMessages: 0, cachedBytes: 0 }
 }

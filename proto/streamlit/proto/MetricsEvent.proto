@@ -107,11 +107,10 @@ message MetricsEvent {
 message ReceivedMessages {
   // A reference to a cached message counts at the reference's size.
   int64 bytes = 1;
-  int64 messages = 2;
   // Messages sent as references to messages the browser had cached, and the
   // total size of the cached messages.
-  int64 cached_messages = 3;
-  int64 cached_bytes = 4;
+  int64 cached_messages = 2;
+  int64 cached_bytes = 3;
 }
 
 message BrowserInfo {

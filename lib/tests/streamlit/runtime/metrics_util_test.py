@@ -1996,9 +1996,9 @@ class PageProfileDataSizeTest(DeltaGeneratorTestCase):
     def _data_size(self) -> Any:
         return metrics_util.create_page_profile_message([], 0, 0).page_profile.data_size
 
-    def test_reports_totals_and_largest_payload_across_elements(self) -> None:
+    def test_reports_arrow_bytes_across_elements(self) -> None:
         """Dataframes, data editors, tables and charts all count, each payload
-        once, and the largest payload is the largest single one.
+        once.
         """
         st.dataframe(pd.DataFrame({"a": range(10)}))
         st.data_editor(pd.DataFrame({"a": range(20), "b": range(20)}))
@@ -2009,9 +2009,6 @@ class PageProfileDataSizeTest(DeltaGeneratorTestCase):
         assert len(payloads) == 4
         data_size = self._data_size()
         assert data_size.arrow_bytes == sum(len(payload) for payload in payloads)
-        # The line chart melts its two columns into 1,000 rows.
-        assert data_size.arrow_rows == sum(_arrow_rows(p) for p in payloads) == 1_033
-        assert data_size.largest_arrow_bytes == max(len(p) for p in payloads)
 
     def test_a_new_run_counts_only_its_own_payloads(self) -> None:
         ctx = get_script_run_ctx()
@@ -2021,9 +2018,7 @@ class PageProfileDataSizeTest(DeltaGeneratorTestCase):
         st.dataframe(pd.DataFrame({"a": range(3)}))
 
         payloads = _arrow_payloads(self.get_all_deltas_from_queue())
-        data_size = self._data_size()
-        assert data_size.arrow_rows == 3
-        assert data_size.arrow_bytes == len(payloads[-1])
+        assert self._data_size().arrow_bytes == len(payloads[-1])
 
     def test_reports_zeros_for_a_run_without_data(self) -> None:
         st.markdown("No data here")
@@ -2032,8 +2027,6 @@ class PageProfileDataSizeTest(DeltaGeneratorTestCase):
 
         assert msg.page_profile.HasField("data_size")
         assert msg.page_profile.data_size.arrow_bytes == 0
-        assert msg.page_profile.data_size.arrow_rows == 0
-        assert msg.page_profile.data_size.largest_arrow_bytes == 0
 
     def test_counts_nothing_while_usage_stats_are_off(self) -> None:
         ctx = get_script_run_ctx()
@@ -2043,7 +2036,7 @@ class PageProfileDataSizeTest(DeltaGeneratorTestCase):
         st.dataframe(pd.DataFrame({"a": range(10)}))
 
         stats = ctx.shared.stats.all_thread_stats()
-        assert all(thread.data_size.arrow_bytes == 0 for thread in stats)
+        assert all(thread.arrow_bytes == 0 for thread in stats)
 
     def test_counts_payloads_from_attached_threads_toward_the_run(self) -> None:
         """A thread attached with ``add_script_run_ctx`` records into its own
@@ -2056,9 +2049,7 @@ class PageProfileDataSizeTest(DeltaGeneratorTestCase):
         thread.join()
 
         (payload,) = _arrow_payloads(self.get_all_deltas_from_queue())
-        data_size = self._data_size()
-        assert data_size.arrow_bytes == len(payload)
-        assert data_size.arrow_rows == 50
+        assert self._data_size().arrow_bytes == len(payload)
 
     def test_ignores_payloads_serialized_outside_a_script_run(self) -> None:
         """Payloads serialized on a thread without a ``ScriptRunContext``, such
@@ -2082,8 +2073,8 @@ class PageProfileDataSizeTest(DeltaGeneratorTestCase):
         """If recording raises, the element is still sent with its data."""
         df = pd.DataFrame({"a": range(10)})
         with patch(
-            "streamlit.runtime.scriptrunner_utils.data_size_run_stats."
-            "ThreadDataSizeStats.record_arrow_payload",
+            "streamlit.runtime.scriptrunner_utils.run_stats.RunStats."
+            "current_thread_stats",
             side_effect=RuntimeError("boom"),
         ):
             st.dataframe(df)

@@ -39,9 +39,6 @@ from streamlit.proto.PageProfile_pb2 import (
 )
 from streamlit.runtime.agent import usage as agent_usage
 from streamlit.runtime.scriptrunner_utils.cache_run_stats import RunCacheTotals
-from streamlit.runtime.scriptrunner_utils.data_size_run_stats import (
-    ThreadDataSizeStats,
-)
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     FragmentThreadState,
@@ -849,14 +846,10 @@ def _fill_cache_usage(
 
 
 def _fill_data_size(page_profile: PageProfile, ctx: ScriptRunContext) -> None:
-    """Copy the run's Arrow payload totals onto the profile."""
-    totals = ThreadDataSizeStats.combine(
-        stats.data_size for stats in ctx.shared.stats.all_thread_stats()
+    """Copy the run's Arrow payload total onto the profile."""
+    page_profile.data_size.arrow_bytes = sum(
+        stats.arrow_bytes for stats in ctx.shared.stats.all_thread_stats()
     )
-    data_size = page_profile.data_size
-    data_size.arrow_bytes = totals.arrow_bytes
-    data_size.arrow_rows = totals.arrow_rows
-    data_size.largest_arrow_bytes = totals.largest_arrow_bytes
 
 
 def _set_parallel_fragment_run_times(

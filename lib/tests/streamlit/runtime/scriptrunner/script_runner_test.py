@@ -2100,8 +2100,6 @@ class ScriptRunnerTest(unittest.TestCase):
         data_size, payload_sizes = self._run_and_get_data_size("data_size_stop.py")
 
         assert len(payload_sizes) == 1
-        assert data_size.arrow_rows == 5
-        assert data_size.arrow_bytes == data_size.largest_arrow_bytes
         assert data_size.arrow_bytes == payload_sizes[0]
 
     @testutil.patch_config_options({"browser.gatherUsageStats": True})
@@ -2110,9 +2108,7 @@ class ScriptRunnerTest(unittest.TestCase):
         data_size, payload_sizes = self._run_and_get_data_size("data_size_parallel.py")
 
         assert len(payload_sizes) == 3
-        assert data_size.arrow_rows == 35
         assert data_size.arrow_bytes == sum(payload_sizes)
-        assert data_size.largest_arrow_bytes == max(payload_sizes)
 
     def _start_cache_compute_owner_and_create_waiter(
         self,

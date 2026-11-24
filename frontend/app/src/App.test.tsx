@@ -783,7 +783,6 @@ describe("App", () => {
       expect.objectContaining({
         receivedMessages: {
           bytes: 2_100,
-          messages: 3,
           cachedMessages: 1,
           cachedBytes: 30_000,
         },
@@ -805,7 +804,6 @@ describe("App", () => {
       expect.objectContaining({
         receivedMessages: {
           bytes: 1_550,
-          messages: 2,
           cachedMessages: 0,
           cachedBytes: 0,
         },

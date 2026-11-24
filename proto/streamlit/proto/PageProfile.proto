@@ -72,11 +72,6 @@ message PageProfile {
 // charts and similar elements. Sizes are in bytes.
 message DataSize {
   int64 arrow_bytes = 1;
-  // Rows summed across payloads, so an element that sends several payloads
-  // can count rows more than once.
-  int64 arrow_rows = 2;
-  // Size of the largest single payload.
-  int64 largest_arrow_bytes = 3;
 }
 
 // Cache activity during one script run: counts, and times in microseconds.

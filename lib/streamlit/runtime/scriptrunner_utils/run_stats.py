@@ -27,9 +27,6 @@ import threading
 from typing import TYPE_CHECKING
 
 from streamlit.runtime.scriptrunner_utils.cache_run_stats import ThreadCacheStats
-from streamlit.runtime.scriptrunner_utils.data_size_run_stats import (
-    ThreadDataSizeStats,
-)
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -40,14 +37,15 @@ class ThreadRunStats:
     worker thread, during one script run.
     """
 
-    __slots__ = ("cache", "command_time", "data_size")
+    __slots__ = ("arrow_bytes", "cache", "command_time")
 
     def __init__(self) -> None:
         # Time of listed commands that ran on this thread. The page profile
         # reports it only for parallel fragment runs.
         self.command_time = 0.0
         self.cache = ThreadCacheStats()
-        self.data_size = ThreadDataSizeStats()
+        # Size of the Arrow payloads this thread serialized.
+        self.arrow_bytes = 0
 
 
 class RunStats:
