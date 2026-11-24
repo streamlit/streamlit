@@ -401,13 +401,12 @@ Rerun reason has no overlap with other times, so it uses none of the covered-spa
 
 ### Data size
 
-Data size is recorded where messages are already serialized. `ScriptRunContext.enqueue` calls `populate_hash_if_needed`, which serializes every message except references and `initialize` to compute its hash, so the message's size is known there, on the thread that enqueued it. Counting there costs a few additions per message and needs no second serialization pass.
+Each count is measured where it's already known, so none needs a second serialization pass:
 
-Each count is measured where it's already known:
-
-- **Message bytes** are counted at enqueue, in the enqueuing thread's `ThreadRunStats`. They're run totals, not split per fragment.
-- **Arrow bytes and rows** are counted where dataframes and charts are marshalled.
+- **Arrow bytes and rows** are counted where dataframes and charts are serialized, in the serializing thread's `ThreadRunStats`.
 - **Bytes and messages received, and messages served from the browser's cache,** are counted in the browser, because only the browser knows which references it resolved locally.
+
+The server doesn't count message bytes (see [Count message bytes on the server](#count-message-bytes-on-the-server)).
 
 What's counted when a message is sent as a reference to a copy the browser has cached, and whether compressed sizes are available, are still open (see [Open questions](#open-questions)).
 
@@ -505,6 +504,10 @@ Queries could count as inside a cached call only during the cached function's co
 ### Report parallel fragment CPU time only in aggregate
 
 A single `parallel_fragment_cpu_time` needs no change to the per-fragment entries. It can't show whether the fragment that held up the run was computing or waiting, which is what the per-fragment breakdown is for. The aggregate is kept as well, because it's what the user code CPU formula needs.
+
+### Count message bytes on the server
+
+`ScriptRunContext.enqueue` calls `populate_hash_if_needed`, which serializes every message except references and `initialize` to compute its hash. The server could add each message's size to the enqueuing thread's `ThreadRunStats` there for a few additions per message. That would answer the same question as the browser's received bytes, how much data a run sends, but from what the server queued rather than what arrived: it would include messages cleared from the queue when a rerun starts. The browser's count is the more direct measure, so the server doesn't keep a second one.
 
 ## Open questions
 
