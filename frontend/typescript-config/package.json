@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",
-    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/jest-dom": "^8.0.0",
     "typescript": "^6.0.3",
     "typescript-v7": "npm:typescript@7.0.2"
   },
