@@ -1158,15 +1158,22 @@ def _run_parallel_fragment(
     if coordinator is None:  # pragma: no cover - defensive
         return
 
-    try:
-        wrapped_fragment()
-    except RerunException as e:
-        coordinator.request_rerun(e)
-    except StopException:
-        coordinator.request_stop()
-    except FragmentHandledException:
-        # This exception indicates fragment-level handling already occurred.
-        # Intentionally swallow it at the worker boundary.
-        return
-    except Exception:  # pragma: no cover - defensive
-        _LOGGER.exception("Uncaught exception in parallel fragment worker")
+    with contextlib.ExitStack() as stack:
+        if ctx.gather_usage_stats:
+            try:
+                stack.enter_context(ctx.shared.parallel_fragments.recording_run())
+            except Exception as ex:
+                # Telemetry must never stop the fragment from running.
+                _LOGGER.debug("Failed to record a parallel fragment run", exc_info=ex)
+        try:
+            wrapped_fragment()
+        except RerunException as e:
+            coordinator.request_rerun(e)
+        except StopException:
+            coordinator.request_stop()
+        except FragmentHandledException:
+            # This exception indicates fragment-level handling already occurred.
+            # Intentionally swallow it at the worker boundary.
+            return
+        except Exception:  # pragma: no cover - defensive
+            _LOGGER.exception("Uncaught exception in parallel fragment worker")

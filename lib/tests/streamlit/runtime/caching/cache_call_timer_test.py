@@ -22,6 +22,7 @@ import pickle
 import threading
 import time
 import timeit
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
@@ -30,7 +31,11 @@ import pytest
 import streamlit as st
 from streamlit.connections import BaseConnection
 from streamlit.runtime import Runtime, metrics_util
-from streamlit.runtime.caching import cache_background_refresh, cache_metrics
+from streamlit.runtime.caching import (
+    cache_background_refresh,
+    cache_call_timer,
+    cache_metrics,
+)
 from streamlit.runtime.caching.cache_metrics import (
     CACHE_COMPUTE_DURATION_FAMILY,
     CACHE_LOOKUPS_FAMILY,
@@ -43,11 +48,15 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 )
 from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
 from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.cache_run_stats import RunCacheTotals
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
 from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    get_script_run_ctx,
+)
 from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
 )
@@ -58,6 +67,7 @@ if TYPE_CHECKING:
 
     from streamlit.runtime.scriptrunner import ScriptRunContext
     from streamlit.runtime.scriptrunner_utils.cache_run_stats import CacheTotals
+    from streamlit.runtime.scriptrunner_utils.run_stats import RunStats
 
 CACHE_DECORATORS: list[tuple[str, Any]] = [
     ("cache_data", st.cache_data),
@@ -108,9 +118,19 @@ def clock(monkeypatch: pytest.MonkeyPatch) -> FakeClock:
     return fake
 
 
+def _run_cache_totals(run_stats: RunStats) -> RunCacheTotals:
+    return RunCacheTotals.combine(
+        (stats.cache for stats in run_stats.all_thread_stats()), time.perf_counter()
+    )
+
+
 def _cache_totals_for(ctx: ScriptRunContext, cache_name: str) -> CacheTotals:
-    cache_data, cache_resource = ctx.shared.cache_stats.totals()
-    return cache_data if cache_name == "cache_data" else cache_resource
+    totals = _run_cache_totals(ctx.shared.stats)
+    return totals.cache_data if cache_name == "cache_data" else totals.cache_resource
+
+
+def _cache_time(totals: CacheTotals) -> float:
+    return totals.compute_time + totals.wait_time + totals.overhead_time
 
 
 def _server_counts(func: Any) -> tuple[int, int, int, int]:
@@ -254,9 +274,12 @@ def test_waiter_on_compute_lock_counts_as_hit(
     assert _server_counts(load) == (1, 1, 1, 1)
 
 
-def test_async_waiter_counts_as_hit(ctx: ScriptRunContext) -> None:
+def test_async_waiter_counts_as_hit_and_reports_the_overlap(
+    ctx: ScriptRunContext,
+) -> None:
     """Concurrent same-key async callers on one event loop split into one miss and
-    one waiting hit.
+    one waiting hit, and their summed times minus the overlap never exceed the
+    time they ran.
     """
 
     @st.cache_data(show_spinner=False)
@@ -267,13 +290,126 @@ def test_async_waiter_counts_as_hit(ctx: ScriptRunContext) -> None:
     async def main() -> list[int]:
         return await asyncio.gather(load(), load())
 
+    start = time.perf_counter()
     assert asyncio.run(main()) == [1, 1]
+    elapsed = time.perf_counter() - start
 
-    totals = _cache_totals_for(ctx, "cache_data")
+    run_totals = _run_cache_totals(ctx.shared.stats)
+    totals = run_totals.cache_data
     assert (totals.calls, totals.hits, totals.misses, totals.waits) == (2, 1, 1, 1)
     assert totals.wait_time > 0
     assert totals.compute_time > 0
+    # Compute (0.1s) plus the waiter's wait (0.1s) is about twice the elapsed
+    # time, and the overlap reports the excess.
+    assert run_totals.async_overlap_time > 0
+    assert _cache_time(totals) - run_totals.async_overlap_time <= elapsed
     assert _server_counts(load) == (1, 1, 1, 1)
+
+
+def test_serial_call_after_overlapping_async_calls_adds_no_overlap(
+    ctx: ScriptRunContext, clock: FakeClock
+) -> None:
+    """Only the overlapping async calls report overlap; all calls keep their
+    recorded times.
+    """
+
+    @st.cache_data(show_spinner=False)
+    async def load(x: int) -> int:
+        await asyncio.sleep(0)
+        clock.advance(1.0)
+        return x
+
+    @st.cache_resource(show_spinner=False)
+    def load_resource() -> int:
+        clock.advance(2.0)
+        return 1
+
+    async def main() -> list[int]:
+        return await asyncio.gather(load(1), load(2))
+
+    # Both calls start at once, finish 1s and 2s later, and record 3s in 2s.
+    assert asyncio.run(main()) == [1, 2]
+    assert load_resource() == 1
+
+    run_totals = _run_cache_totals(ctx.shared.stats)
+    data = run_totals.cache_data
+    assert (data.calls, data.misses) == (2, 2)
+    assert data.compute_time == pytest.approx(3.0)
+    assert run_totals.cache_resource.compute_time == pytest.approx(2.0)
+    assert run_totals.async_overlap_time == pytest.approx(1.0)
+
+
+def test_call_started_while_another_async_call_waits_is_recorded(
+    ctx: ScriptRunContext,
+) -> None:
+    """A waiting async call yields the event loop, so a call another task starts
+    meanwhile isn't nested inside it and is recorded.
+    """
+
+    @st.cache_data(show_spinner=False)
+    async def load() -> int:
+        await asyncio.sleep(0.01)
+        return 1
+
+    @st.cache_resource(show_spinner=False)
+    async def other() -> int:
+        return 2
+
+    async def main() -> list[int]:
+        # The first load computes, the second waits for it, and other starts
+        # during that wait.
+        return await asyncio.gather(load(), load(), other())
+
+    assert asyncio.run(main()) == [1, 1, 2]
+
+    data = _cache_totals_for(ctx, "cache_data")
+    assert (data.calls, data.misses, data.waits) == (2, 1, 1)
+    assert _cache_totals_for(ctx, "cache_resource").calls == 1
+
+
+@pytest.mark.parametrize(("cache_name", "cache_decorator"), CACHE_DECORATORS)
+def test_async_cache_code_never_yields_the_event_loop(
+    ctx: ScriptRunContext, cache_name: str, cache_decorator: Any
+) -> None:
+    """A call that starts while another call on the thread runs cache code is
+    treated as nested, which is only right if cache code never awaits. Another
+    task checks, at every point where the event loop runs it, that no open call
+    is in cache code.
+    """
+    stats = ctx.shared.stats.current_thread_stats().cache
+    seen: list[tuple[bool, bool]] = []
+
+    @cache_decorator(show_spinner=False)
+    async def load(x: int) -> int:
+        await asyncio.sleep(0)
+        if x < 0:
+            raise ValueError("boom")
+        return x
+
+    async def observe(done: asyncio.Event) -> None:
+        while not done.is_set():
+            seen.append((stats.is_in_call, stats.is_in_cache_code))
+            await asyncio.sleep(0)
+
+    async def main() -> list[Any]:
+        done = asyncio.Event()
+        observer = asyncio.create_task(observe(done))
+        # A miss and a caller waiting for it, a hit, and a miss that raises.
+        results: list[Any] = await asyncio.gather(load(1), load(1))
+        results.append(await load(1))
+        results.append(
+            (await asyncio.gather(load(-1), return_exceptions=True))[0].args[0]
+        )
+        done.set()
+        await observer
+        return results
+
+    assert asyncio.run(main()) == [1, 1, 1, "boom"]
+    totals = _cache_totals_for(ctx, cache_name)
+    assert (totals.calls, totals.hits, totals.misses, totals.waits) == (4, 2, 2, 1)
+    # The observer ran while calls were open, but never during cache code.
+    assert any(in_call for in_call, _ in seen)
+    assert not any(in_cache_code for _, in_cache_code in seen)
 
 
 def test_async_waiter_that_retries_after_owner_fails_is_a_miss(
@@ -550,6 +686,185 @@ def test_nested_cached_calls_count_only_the_outermost(
     assert _server_counts(outer) == (0, 1, 1, 0)
 
 
+def _start_attached_by_parent(target: Callable[[], object]) -> None:
+    thread = add_script_run_ctx(threading.Thread(target=target))
+    thread.start()
+    thread.join(5)
+
+
+def _start_attaching_itself(target: Callable[[], object]) -> None:
+    ctx = get_script_run_ctx()
+
+    def work() -> None:
+        add_script_run_ctx(ctx=ctx)
+        target()
+
+    with ThreadPoolExecutor(1) as executor:
+        executor.submit(work).result(5)
+
+
+@pytest.mark.parametrize(
+    "start_thread",
+    [_start_attached_by_parent, _start_attaching_itself],
+    ids=["attached by the cached function", "attaching itself"],
+)
+def test_threads_attached_inside_a_cached_function_record_their_own_calls(
+    ctx: ScriptRunContext, clock: FakeClock, start_thread: Callable
+) -> None:
+    """Threads that a cached function attaches with add_script_run_ctx work as
+    usual, and record their cached calls and listed commands as their own, so
+    the outer call's compute time also contains them.
+    """
+
+    @metrics_util.gather_metrics("worker_command")
+    def worker_command() -> None:
+        clock.advance(3.0)
+
+    @st.cache_resource(show_spinner=False)
+    def inner() -> int:
+        clock.advance(1.0)
+        return 1
+
+    def worker() -> None:
+        inner()
+        worker_command()
+
+    @st.cache_data(show_spinner=False)
+    def outer() -> int:
+        clock.advance(0.5)
+        start_thread(worker)
+        return 1
+
+    assert outer() == 1
+
+    assert _command_names(ctx).count("external:tests:worker_command") == 1
+    data = _cache_totals_for(ctx, "cache_data")
+    assert (data.calls, data.misses) == (1, 1)
+    assert data.compute_time == pytest.approx(4.5)
+    resource = _cache_totals_for(ctx, "cache_resource")
+    assert (resource.calls, resource.misses) == (1, 1)
+    assert resource.compute_time == pytest.approx(1.0)
+    assert _server_counts(inner) == (0, 1, 1, 0)
+
+
+def test_threads_attached_inside_an_async_cached_function_record_their_own_calls(
+    ctx: ScriptRunContext, clock: FakeClock
+) -> None:
+    """An async cached function can attach threads too, and their cached calls
+    are recorded as their own.
+    """
+
+    @st.cache_resource(show_spinner=False)
+    def inner() -> int:
+        clock.advance(1.0)
+        return 1
+
+    @st.cache_data(show_spinner=False)
+    async def load() -> int:
+        clock.advance(0.5)
+        _start_attached_by_parent(inner)
+        return 1
+
+    assert asyncio.run(load()) == 1
+
+    assert _cache_totals_for(ctx, "cache_data").compute_time == pytest.approx(1.5)
+    assert _cache_totals_for(ctx, "cache_resource").calls == 1
+
+
+def test_cached_calls_from_hash_funcs_are_not_recorded(
+    ctx: ScriptRunContext, clock: FakeClock
+) -> None:
+    """A cached call made while another call hashes its arguments is part of
+    that call's overhead.
+    """
+
+    class Key:
+        pass
+
+    @st.cache_resource(show_spinner=False)
+    def key_hash() -> int:
+        clock.advance(1.0)
+        return 1
+
+    @st.cache_data(show_spinner=False, hash_funcs={Key: lambda _key: key_hash()})
+    def load(key: Key) -> int:
+        return 1 if isinstance(key, Key) else 0
+
+    assert load(Key()) == 1
+
+    data = _cache_totals_for(ctx, "cache_data")
+    assert (data.calls, data.misses) == (1, 1)
+    assert data.overhead_time == pytest.approx(1.0)
+    assert _cache_totals_for(ctx, "cache_resource").calls == 0
+    assert _server_counts(key_hash) == (0, 1, 1, 0)
+
+
+@pytest.mark.usefixtures("ctx")
+@pytest.mark.parametrize(
+    "failing_step",
+    [
+        "streamlit.runtime.scriptrunner_utils.cache_run_stats.ThreadCacheStats.open_call",
+        "streamlit.runtime.scriptrunner_utils.cache_run_stats.ThreadCacheStats.leave_cache_code",
+        "streamlit.runtime.scriptrunner_utils.cache_run_stats.ThreadCacheStats.enter_cache_code",
+        "streamlit.runtime.caching.cache_call_timer.CacheCallTimer._add_to_run_totals",
+        "streamlit.runtime.scriptrunner_utils.cache_run_stats.ThreadCacheStats.close_call",
+    ],
+    ids=[
+        "opening the call",
+        "leaving cache code",
+        "entering cache code",
+        "adding to totals",
+        "closing the call",
+    ],
+)
+@pytest.mark.parametrize("raises", [False, True], ids=["returns", "raises"])
+def test_telemetry_errors_dont_reach_the_cached_function_caller(
+    failing_step: str, raises: bool
+) -> None:
+    """A telemetry failure leaves the cached function's result or error
+    unchanged.
+    """
+
+    @st.cache_data(show_spinner=False)
+    def load() -> int:
+        if raises:
+            raise ValueError("user error")
+        return 1
+
+    with patch(failing_step, side_effect=RuntimeError("bug")) as step:
+        if raises:
+            with pytest.raises(ValueError, match="user error"):
+                load()
+        else:
+            assert load() == 1
+
+    step.assert_called_once()
+
+
+def test_failure_adding_a_call_still_records_later_calls(
+    ctx: ScriptRunContext,
+) -> None:
+    """A call that fails to add to the totals is still closed, so the thread
+    doesn't stay in cache code and skip its later calls.
+    """
+
+    @st.cache_data(show_spinner=False)
+    def load(x: int) -> int:
+        return x
+
+    with patch.object(
+        cache_call_timer.CacheCallTimer,
+        "_add_to_run_totals",
+        side_effect=RuntimeError("bug"),
+    ):
+        assert load(1) == 1
+
+    stats = ctx.shared.stats.current_thread_stats().cache
+    assert (stats.is_in_call, stats.is_in_cache_code) == (False, False)
+    assert load(2) == 2
+    assert _cache_totals_for(ctx, "cache_data").calls == 1
+
+
 def test_parallel_worker_calls_are_added_to_the_run(ctx: ScriptRunContext) -> None:
     """Calls from parallel fragment workers count toward the run, per thread."""
 
@@ -575,7 +890,7 @@ def test_parallel_worker_calls_are_added_to_the_run(ctx: ScriptRunContext) -> No
     totals = _cache_totals_for(ctx, "cache_data")
     assert (totals.calls, totals.hits, totals.misses) == (20, 16, 4)
     # The main thread and each of the four workers keep their own totals.
-    assert len(ctx.shared.cache_stats._threads) == 5
+    assert len(ctx.shared.stats.all_thread_stats()) == 5
 
 
 def test_call_still_running_is_not_counted(ctx: ScriptRunContext) -> None:
@@ -597,7 +912,7 @@ def test_call_still_running_is_not_counted(ctx: ScriptRunContext) -> None:
 
     running = _cache_totals_for(ctx, "cache_data")
     assert (running.calls, running.hits, running.misses) == (0, 0, 0)
-    assert running.total_time == 0
+    assert _cache_time(running) == 0
 
     release.set()
     thread.join(5)
@@ -615,12 +930,13 @@ def test_calls_without_a_script_run_are_not_recorded(ctx: ScriptRunContext) -> N
     def load() -> int:
         return 1
 
+    threads_before = ctx.shared.stats.all_thread_stats()
     thread = threading.Thread(target=load)
     thread.start()
     thread.join(5)
 
     assert _cache_totals_for(ctx, "cache_data").calls == 0
-    assert ctx.shared.cache_stats._threads == []
+    assert ctx.shared.stats.all_thread_stats() == threads_before
 
 
 def test_call_without_thread_state_is_not_recorded(ctx: ScriptRunContext) -> None:
@@ -636,7 +952,7 @@ def test_call_without_thread_state_is_not_recorded(ctx: ScriptRunContext) -> Non
     # ScriptRunContext.
     assert contextvars.Context().run(load) == 1
 
-    assert ctx.shared.cache_stats._threads == []
+    assert _cache_totals_for(ctx, "cache_data").calls == 0
     assert _server_counts(load) == (0, 1, 1, 0)
 
 
@@ -651,7 +967,7 @@ def test_nothing_is_recorded_without_usage_stats(ctx: ScriptRunContext) -> None:
     load()
     load()
 
-    assert ctx.shared.cache_stats._threads == []
+    assert _cache_totals_for(ctx, "cache_data").calls == 0
     assert _server_counts(load) == (1, 1, 1, 0)
 
 
@@ -719,7 +1035,7 @@ def test_call_running_across_a_reset_finishes_into_the_previous_run(
         release.wait(5)
         return 1
 
-    previous_run = ctx.shared.cache_stats
+    previous_run = ctx.shared.stats
     thread = add_script_run_ctx(threading.Thread(target=load), ctx)
     thread.start()
     assert computing.wait(5)
@@ -727,6 +1043,45 @@ def test_call_running_across_a_reset_finishes_into_the_previous_run(
     release.set()
     thread.join(5)
 
-    previous_data, _ = previous_run.totals()
+    previous_data = _run_cache_totals(previous_run).cache_data
     assert (previous_data.calls, previous_data.misses) == (1, 1)
     assert _cache_totals_for(ctx, "cache_data").calls == 0
+
+
+def test_previous_and_new_run_record_into_their_own_totals_at_the_same_time(
+    ctx: ScriptRunContext, clock: FakeClock
+) -> None:
+    """A call left running from the previous run keeps adding to that run's
+    totals while the new run's calls add to the new run's.
+    """
+    computing = threading.Event()
+    release = threading.Event()
+
+    @st.cache_data(show_spinner=False)
+    def load_in_previous_run() -> int:
+        computing.set()
+        release.wait(5)
+        return 1
+
+    @st.cache_data(show_spinner=False)
+    def load_in_new_run() -> int:
+        clock.advance(1.0)
+        return 2
+
+    previous_run = ctx.shared.stats
+    thread = add_script_run_ctx(threading.Thread(target=load_in_previous_run), ctx)
+    thread.start()
+    assert computing.wait(5)
+    ctx.shared.reset()
+    load_in_new_run()
+    clock.advance(2.0)
+    release.set()
+    thread.join(5)
+    assert not thread.is_alive()
+
+    previous_data = _run_cache_totals(previous_run).cache_data
+    assert (previous_data.calls, previous_data.misses) == (1, 1)
+    assert previous_data.compute_time == pytest.approx(3.0)
+    new_data = _cache_totals_for(ctx, "cache_data")
+    assert (new_data.calls, new_data.misses) == (1, 1)
+    assert new_data.compute_time == pytest.approx(1.0)

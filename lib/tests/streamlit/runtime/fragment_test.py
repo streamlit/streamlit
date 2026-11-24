@@ -57,6 +57,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
+from streamlit.runtime.scriptrunner_utils.run_stats import ThreadRunStats
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
     ThreadState,
@@ -2174,6 +2175,67 @@ def test_run_parallel_fragment_handles_fragment_handled_exception() -> None:
 
     mock_coordinator.request_rerun.assert_not_called()
     mock_coordinator.request_stop.assert_not_called()
+
+
+@pytest.mark.parametrize("gather_usage_stats", [True, False])
+def test_run_parallel_fragment_records_its_own_run(gather_usage_stats: bool) -> None:
+    """A worker records its run only with usage stats on, into the run's own
+    stats rather than those the thread was recording into, such as a parent
+    fragment's.
+    """
+    mock_ctx = MagicMock()
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.gather_usage_stats = gather_usage_stats
+    parent_stats = ThreadRunStats()
+    stats_seen: list[ThreadRunStats] = []
+
+    def fragment() -> None:
+        stats_seen.append(mock_ctx.shared.stats.current_thread_stats())
+
+    with (
+        patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx),
+        patch("streamlit.delta_generator_singletons.context_dg_stack"),
+        mock_ctx.shared.stats.recording_into(parent_stats),
+    ):
+        ThreadState.initialize()
+        _run_parallel_fragment("test_id", fragment, [])
+        assert mock_ctx.shared.stats.current_thread_stats() is parent_stats
+
+    recorded = mock_ctx.shared.parallel_fragments.runs
+    if gather_usage_stats:
+        assert len(recorded) == 1
+        assert stats_seen == [recorded[0].stats]
+        assert recorded[0].end is not None
+    else:
+        assert recorded == ()
+        assert stats_seen == [parent_stats]
+
+
+def test_run_parallel_fragment_runs_when_recording_fails() -> None:
+    """A failure to start recording leaves the fragment running, unrecorded."""
+    mock_ctx = MagicMock()
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.gather_usage_stats = True
+    ran: list[bool] = []
+
+    def fragment() -> None:
+        ran.append(True)
+
+    with (
+        patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx),
+        patch("streamlit.delta_generator_singletons.context_dg_stack"),
+        patch.object(
+            mock_ctx.shared.parallel_fragments,
+            "recording_run",
+            side_effect=RuntimeError("bug"),
+        ),
+    ):
+        ThreadState.initialize()
+        _run_parallel_fragment("test_id", fragment, [])
+
+    assert ran == [True]
+    mock_ctx.parallel_coordinator.request_rerun.assert_not_called()
+    mock_ctx.parallel_coordinator.request_stop.assert_not_called()
 
 
 def test_nested_parallel_fragment_dispatches_from_worker() -> None:

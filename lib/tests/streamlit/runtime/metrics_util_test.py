@@ -20,6 +20,7 @@ import contextvars
 import inspect
 import sys
 import threading
+import time
 import unittest
 from collections import Counter
 from datetime import date, datetime
@@ -74,6 +75,10 @@ from tests.testutil import create_mock_script_run_ctx, create_pep649_function
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
     from pathlib import Path
+
+    from streamlit.runtime.scriptrunner_utils.parallel_fragment_stats import (
+        ParallelFragmentRunStats,
+    )
 
 MAC = "mac"
 UUID = "uuid"
@@ -895,6 +900,64 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
     assert ctx.shared.tracked_commands[0].time == metrics_util.to_microseconds(0.25)
 
 
+def test_listed_command_time_goes_to_the_threads_stats(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """The thread's stats, which in a parallel fragment are the fragment run's,
+    get the time of its listed commands only.
+    """
+    timer_calls = iter([0.0, 0.25, 1.0, 2.0, 3.0, 3.5])
+
+    @metrics_util.gather_metrics("cmd")
+    def cmd() -> None:
+        pass
+
+    @metrics_util.gather_metrics("other_cmd")
+    def other_cmd() -> None:
+        pass
+
+    with (
+        patch.object(metrics_util, "_MAX_TRACKED_PER_COMMAND", 1),
+        patch("timeit.default_timer", side_effect=lambda: next(timer_calls)),
+    ):
+        with tracking_ctx.shared.parallel_fragments.recording_run() as run:
+            cmd()
+            # Past the per-command limit, so not listed.
+            cmd()
+        other_cmd()
+
+    assert len(tracking_ctx.shared.tracked_commands) == 2
+    assert run.stats.command_time == 0.25
+    assert tracking_ctx.shared.stats.current_thread_stats().command_time == 0.5
+
+
+def test_command_time_errors_dont_reach_the_caller(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """A failure while recording a command's time leaves its result, or its
+    RerunException, unchanged.
+    """
+
+    @metrics_util.gather_metrics("cmd")
+    def cmd() -> int:
+        return 1
+
+    @metrics_util.gather_metrics("rerun_cmd")
+    def rerun_cmd() -> None:
+        raise RerunException(None)
+
+    with patch.object(
+        tracking_ctx.shared.stats,
+        "current_thread_stats",
+        side_effect=RuntimeError("bug"),
+    ) as record:
+        assert cmd() == 1
+        with pytest.raises(RerunException):
+            rerun_cmd()
+
+    assert record.call_count == 2
+
+
 def test_nested_commands_are_suppressed_in_the_same_context(
     tracking_ctx: ScriptRunContext,
 ) -> None:
@@ -1401,8 +1464,8 @@ def test_create_page_profile_message_reports_server_uptime() -> None:
 def test_create_page_profile_message_reports_cache_usage() -> None:
     """``cache_usage`` carries the run's totals per cache type, in microseconds."""
     ctx = create_mock_script_run_ctx()
-    stats = ctx.shared.cache_stats.current_thread_stats()
-    stats.open_call()
+    stats = ctx.shared.stats.current_thread_stats().cache
+    stats.open_call(0.0)
     stats.cache_data.calls = 3
     stats.cache_data.hits = 2
     stats.cache_data.misses = 1
@@ -1411,7 +1474,8 @@ def test_create_page_profile_message_reports_cache_usage() -> None:
     stats.cache_data.compute_time = 1.5
     stats.cache_data.wait_time = 0.25
     stats.cache_data.overhead_time = 0.001
-    stats.close_call()
+    stats.close_call(2.0, 1.751)
+    stats.async_overlap_time = 0.125
 
     with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
         msg = metrics_util.create_page_profile_message([], 0, 0)
@@ -1426,6 +1490,7 @@ def test_create_page_profile_message_reports_cache_usage() -> None:
     assert usage.cache_data.compute_time == 1_500_000
     assert usage.cache_data.wait_time == 250_000
     assert usage.cache_data.overhead_time == 1_000
+    assert usage.async_overlap_time == 125_000
 
 
 def test_create_page_profile_message_leaves_cache_usage_and_uptime_unset() -> None:
@@ -1439,6 +1504,128 @@ def test_create_page_profile_message_leaves_cache_usage_and_uptime_unset() -> No
 
     assert not msg.page_profile.HasField("cache_usage")
     assert not msg.page_profile.HasField("server_uptime_seconds")
+
+
+def _record_parallel_fragment_run(
+    ctx: ScriptRunContext,
+    *,
+    command_time: float = 0.0,
+    compute_time: float = 0.0,
+    wait_time: float = 0.0,
+    async_overlap_time: float = 0.0,
+) -> ParallelFragmentRunStats:
+    """Record a finished parallel fragment run with one cached call of each type."""
+    with ctx.shared.parallel_fragments.recording_run() as run:
+        thread_stats = ctx.shared.stats.current_thread_stats()
+        thread_stats.command_time = command_time
+        stats = thread_stats.cache
+        stats.async_overlap_time = async_overlap_time
+        stats.cache_data.calls = 1
+        stats.cache_data.compute_time = compute_time
+        stats.cache_data.overhead_time = 0.001
+        stats.cache_resource.calls = 1
+        stats.cache_resource.wait_time = wait_time
+        stats.cache_resource.overhead_time = 0.001
+    return run
+
+
+def test_create_page_profile_message_reports_parallel_fragments() -> None:
+    """Each parallel fragment run reports its own times, in microseconds."""
+    ctx = create_mock_script_run_ctx()
+    run_start = time.perf_counter()
+    first = _record_parallel_fragment_run(
+        ctx, command_time=0.25, compute_time=1.5, async_overlap_time=0.125
+    )
+    second = _record_parallel_fragment_run(ctx, wait_time=0.5)
+    ctx.shared.parallel_fragments.add_wait_time(0.75)
+
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
+        msg = metrics_util.create_page_profile_message([], 0, 0, run_start=run_start)
+
+    usage = msg.page_profile.parallel_fragment_usage
+    assert usage.run_count == 2
+    assert usage.wait_time == 750_000
+    assert not usage.HasField("overflow")
+    first_entry, second_entry = usage.runs
+    assert first_entry.start_time == metrics_util.to_microseconds(
+        first.start - run_start
+    )
+    assert second_entry.start_time >= first_entry.start_time
+    assert first_entry.exec_time == metrics_util.to_microseconds(
+        first.end - first.start
+    )
+    assert (first_entry.command_time, first_entry.cache_compute_time) == (
+        250_000,
+        1_500_000,
+    )
+    assert first_entry.cache_async_overlap_time == 125_000
+    assert second_entry.cache_wait_time == 500_000
+    assert second_entry.cache_async_overlap_time == 0
+    # Both cache types are combined.
+    assert second_entry.cache_overhead_time == 2_000
+    assert usage.cache_usage.cache_data.calls == 2
+    assert usage.cache_usage.cache_resource.calls == 2
+    assert usage.cache_usage.async_overlap_time == 125_000
+    assert msg.page_profile.cache_usage.cache_data.calls == 2
+    assert msg.page_profile.cache_usage.async_overlap_time == 125_000
+    assert second.end is not None
+
+
+def test_create_page_profile_message_adds_parallel_fragments_past_the_limit() -> None:
+    """Runs past the limit are added together into ``overflow``."""
+    ctx = create_mock_script_run_ctx()
+    run_start = time.perf_counter()
+    for command_time in (0.25, 0.5, 1.0):
+        _record_parallel_fragment_run(
+            ctx, command_time=command_time, async_overlap_time=command_time / 2
+        )
+
+    with (
+        patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx),
+        patch.object(metrics_util, "_MAX_PARALLEL_FRAGMENT_RUNS", 1),
+    ):
+        msg = metrics_util.create_page_profile_message([], 0, 0, run_start=run_start)
+
+    usage = msg.page_profile.parallel_fragment_usage
+    assert usage.run_count == 3
+    assert [entry.command_time for entry in usage.runs] == [250_000]
+    assert usage.overflow.command_time == 1_500_000
+    assert usage.overflow.cache_overhead_time == 4_000
+    assert usage.overflow.cache_async_overlap_time == 750_000
+    assert usage.overflow.start_time == 0
+    assert usage.cache_usage.cache_data.calls == 3
+
+
+def test_create_page_profile_message_reports_unfinished_parallel_fragment() -> None:
+    """A run still going when the profile is built counts up to then."""
+    ctx = create_mock_script_run_ctx()
+    run_start = time.perf_counter()
+    with (
+        ctx.shared.parallel_fragments.recording_run() as run,
+        patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx),
+    ):
+        msg = metrics_util.create_page_profile_message([], 0, 0, run_start=run_start)
+        built = time.perf_counter()
+
+    (entry,) = msg.page_profile.parallel_fragment_usage.runs
+    assert 0 < entry.exec_time <= metrics_util.to_microseconds(built - run.start)
+
+
+@pytest.mark.parametrize(
+    "run_start", [None, 0.0], ids=["without run_start", "without fragments"]
+)
+def test_create_page_profile_message_leaves_parallel_fragment_usage_unset(
+    run_start: float | None,
+) -> None:
+    """Unset when no parallel fragment ran, or without the run's start."""
+    ctx = create_mock_script_run_ctx()
+    if run_start is None:
+        _record_parallel_fragment_run(ctx)
+
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
+        msg = metrics_util.create_page_profile_message([], 0, 0, run_start=run_start)
+
+    assert not msg.page_profile.HasField("parallel_fragment_usage")
 
 
 def test_create_page_profile_message_sends_zero_uptime() -> None:
