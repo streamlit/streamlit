@@ -1364,6 +1364,30 @@ def test_unavailable_dates_calendar_picker_rendering(
     )
 
 
+def test_unavailable_range_calendar_picker_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Range calendar shows a selected span that gaps across unavailable weekends."""
+    date_input = get_element_by_key(themed_app, "weekdays_only_range")
+    date_input.get_by_test_id("stDateInputCalendarButton").click()
+    calendar = themed_app.get_by_test_id("stDateInputCalendar")
+    expect(calendar).to_be_visible()
+    # Fri→Mon selection with Sat/Sun unavailable — band should not fill weekends.
+    expect(
+        calendar.get_by_role("button", name=re.compile(r"Saturday, March 9"))
+    ).to_have_attribute("data-unavailable", "true")
+    expect(
+        calendar.get_by_role(
+            "button",
+            name=re.compile(r"Friday, March 8, 2024 selected"),
+        )
+    ).to_be_visible()
+    assert_snapshot(
+        calendar,
+        name="st_date_input-unavailable_range_calendar",
+    )
+
+
 def test_unavailable_weekend_not_selectable(app: Page):
     """Weekends marked unavailable cannot be selected from the calendar."""
     date_input = get_element_by_key(app, "weekdays_only")
