@@ -2780,16 +2780,25 @@ class TimeWidgetsMixin:
 
         availability = _parse_date_availability(enabled_dates, disabled_dates)
         # Hash the normalized filter, with "today" kept symbolic, under its
-        # public parameter name. At most one of the two is set.
-        availability_id_kwargs = (
-            {
-                availability.param_name: {
-                    "dates": availability.id_exact_entries,
-                    "weekdays": availability.id_weekdays,
-                }
+        # public parameter name. Always pass both kwargs (as None when unused)
+        # so ID computation stays aligned with the public signature.
+        availability_payload = (
+            None
+            if availability is None
+            else {
+                "dates": availability.id_exact_entries,
+                "weekdays": availability.id_weekdays,
             }
-            if availability is not None
-            else {}
+        )
+        enabled_dates_id = (
+            availability_payload
+            if availability is not None and availability.param_name == "enabled_dates"
+            else None
+        )
+        disabled_dates_id = (
+            availability_payload
+            if availability is not None and availability.param_name == "disabled_dates"
+            else None
         )
 
         element_id = compute_and_register_element_id(
@@ -2811,7 +2820,8 @@ class TimeWidgetsMixin:
             format=format,
             width=width,
             required=required,
-            **availability_id_kwargs,
+            enabled_dates=enabled_dates_id,
+            disabled_dates=disabled_dates_id,
         )
         _validate_date_format(format)
 
