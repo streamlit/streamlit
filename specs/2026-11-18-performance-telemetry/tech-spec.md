@@ -72,7 +72,7 @@ class ScriptRunContext:  # ctx: reset() at the start of each run
 
 class SharedRunState:  # ctx.shared: shared by all the run's threads
     stats: RunStats
-    parallel_fragments: RunParallelFragmentStats
+    parallel_fragments: ParallelFragmentUsageStats
     query_ids: QueryIds  # query time: the first 50, under a lock
 
 
@@ -107,7 +107,7 @@ class ThreadQueryStats:  # query time
     snowpark: QueryTotals
 
 
-class RunParallelFragmentStats:
+class ParallelFragmentUsageStats:
     _runs: list[ParallelFragmentRunStats]  # in the order the runs started
     wait_time: float  # the script thread waiting in join() or drain()
 
@@ -172,7 +172,7 @@ None of these scopes reach a thread that a cached function attaches with `add_sc
 
 #### Recording a fragment run
 
-When the run gathers usage stats, `_run_parallel_fragment` (`fragment.py`) wraps each fragment in `RunParallelFragmentStats.recording_run()` on its worker thread. `recording_run()` gives the fragment its own `ParallelFragmentRunStats` entry and points the worker's recording at it until the fragment ends:
+When the run gathers usage stats, `_run_parallel_fragment` (`fragment.py`) wraps each fragment in `ParallelFragmentUsageStats.recording_run()` on its worker thread. `recording_run()` gives the fragment its own `ParallelFragmentRunStats` entry and points the worker's recording at it until the fragment ends:
 
 ```python
 with self._lock:
