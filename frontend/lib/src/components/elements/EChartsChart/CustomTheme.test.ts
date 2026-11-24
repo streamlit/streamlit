@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-import { transparentize } from "color2k"
+import { parseToRgba, transparentize } from "color2k"
 import * as echarts from "echarts"
 import type { EChartsOption, EChartsType } from "echarts"
 
 import { mockTheme } from "~lib/mocks/mockTheme"
 import {
+  createEmotionColors,
   getDecreasingRed,
-  getGray30,
-  getGray70,
   getIncreasingGreen,
 } from "~lib/theme/getColors"
 import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
@@ -71,7 +70,22 @@ describe("buildStreamlitEChartsTheme", () => {
 
     const textStyle = echartsTheme.textStyle as Record<string, unknown>
     expect(textStyle.fontFamily).toBe(theme.genericFonts.bodyFont)
-    expect(textStyle.color).toBe(getGray70(theme))
+    expect(textStyle.color).toBe(theme.colors.fadedText70)
+  })
+
+  it("derives axis text and line colors from the theme text color", () => {
+    const customTextTheme = {
+      ...theme,
+      colors: createEmotionColors({ ...theme.colors, bodyText: "#D6246E" }),
+    }
+    const echartsTheme = buildStreamlitEChartsTheme(customTextTheme)
+
+    const fadedText70 = transparentize("#D6246E", 0.3)
+    expect(echartsTheme.categoryAxis).toMatchObject({
+      axisLabel: { color: fadedText70 },
+      nameTextStyle: { color: fadedText70 },
+      axisLine: { lineStyle: { color: transparentize("#D6246E", 0.9) } },
+    })
   })
 
   it("themes title, tooltip, legend, and axes", () => {
@@ -106,7 +120,7 @@ describe("buildStreamlitEChartsTheme", () => {
       Record<string, unknown>
     >
     const axisLabel = categoryAxis.axisLabel
-    expect(axisLabel.color).toBe(getGray70(theme))
+    expect(axisLabel.color).toBe(theme.colors.fadedText70)
     expect(axisLabel.margin).toBe(convertRemToPx(theme.spacing.sm))
     expect(axisLabel.textBorderColor).toBe(theme.colors.bgColor)
     expect(axisLabel.textBorderWidth).toBe(2)
@@ -155,8 +169,8 @@ describe("buildStreamlitEChartsTheme", () => {
       string,
       Record<string, unknown>
     >
-    expect(parallelAxis.axisLabel.color).toBe(getGray70(theme))
-    expect(parallelAxis.nameTextStyle.color).toBe(getGray70(theme))
+    expect(parallelAxis.axisLabel.color).toBe(theme.colors.fadedText70)
+    expect(parallelAxis.nameTextStyle.color).toBe(theme.colors.fadedText70)
   })
 
   it("themes the radar coordinate (rings, spokes, and names)", () => {
@@ -168,12 +182,18 @@ describe("buildStreamlitEChartsTheme", () => {
       splitArea: { areaStyle: { color: string[] } }
       axisName: { color: string }
     }
-    expect(radar.splitLine.lineStyle.color).toBe(getGray30(theme))
-    expect(radar.axisLine.lineStyle.color).toBe(getGray30(theme))
-    // Split-area rings are a themed pair (subtle in both light and dark).
-    expect(radar.splitArea.areaStyle.color).toHaveLength(2)
-    // Indicator names use the themed body text color.
-    expect(radar.axisName.color).toBe(getGray70(theme))
+    expect(radar.splitLine.lineStyle.color).toBe(theme.colors.fadedText05)
+    expect(radar.axisLine.lineStyle.color).toBe(theme.colors.fadedText05)
+    // Split-area rings are a faint but visible pair (non-zero alpha).
+    expect(radar.splitArea.areaStyle.color).toEqual([
+      transparentize(theme.colors.bodyText, 0.97),
+      transparentize(theme.colors.bodyText, 0.93),
+    ])
+    expect(
+      radar.splitArea.areaStyle.color.map(c => parseToRgba(c)[3])
+    ).toEqual([0.03, 0.07])
+    // Indicator names use the faded secondary text color.
+    expect(radar.axisName.color).toBe(theme.colors.fadedText70)
   })
 
   it("themes sankey links and seeds nodes from the sequential palette", () => {
@@ -182,7 +202,7 @@ describe("buildStreamlitEChartsTheme", () => {
     const sankey = echartsTheme.sankey as Record<string, unknown>
     expect(sankey.color).toEqual([...theme.colors.chartSequentialColors])
     const lineStyle = sankey.lineStyle as Record<string, unknown>
-    expect(lineStyle.color).toBe(getGray70(theme))
+    expect(lineStyle.color).toBe(theme.colors.fadedText70)
     expect(lineStyle.opacity).toBe(0.2)
   })
 
@@ -211,7 +231,9 @@ describe("buildStreamlitEChartsTheme", () => {
       itemStyle: { borderColor: string }
     }
     expect(treemap.breadcrumb.itemStyle.color).toBe(theme.colors.secondaryBg)
-    expect(treemap.breadcrumb.itemStyle.textStyle.color).toBe(getGray70(theme))
+    expect(treemap.breadcrumb.itemStyle.textStyle.color).toBe(
+      theme.colors.fadedText70
+    )
     // The parent-node header band otherwise renders as an opaque white slab.
     expect(treemap.itemStyle.borderColor).toBe(theme.colors.bgColor)
   })
@@ -223,10 +245,13 @@ describe("buildStreamlitEChartsTheme", () => {
       nameTextStyle: { color: string }
       splitArea: { areaStyle: { color: unknown[] } }
     }
-    expect(valueAxis.nameTextStyle.color).toBe(getGray70(theme))
+    expect(valueAxis.nameTextStyle.color).toBe(theme.colors.fadedText70)
     // ECharts' default split areas are opaque light gray, which covers the plot
-    // on a dark background, so they are replaced by a faint themed pair.
-    expect(valueAxis.splitArea.areaStyle.color).toHaveLength(2)
+    // on a dark background, so they are replaced by a faint but visible pair.
+    expect(valueAxis.splitArea.areaStyle.color).toEqual([
+      transparentize(theme.colors.bodyText, 0.97),
+      transparentize(theme.colors.bodyText, 0.93),
+    ])
   })
 
   it("hides overlapping labels on time, value, and log axes only", () => {
@@ -251,19 +276,19 @@ describe("buildStreamlitEChartsTheme", () => {
       label: { color: string }
       checkpointStyle: { color: string }
     }
-    expect(timeline.label.color).toBe(getGray70(theme))
+    expect(timeline.label.color).toBe(theme.colors.fadedText70)
     expect(timeline.checkpointStyle.color).toBe(theme.colors.primary)
 
     // The visualMap's range labels should match the themed axis labels.
     const visualMap = echartsTheme.visualMap as {
       textStyle: { color: string }
     }
-    expect(visualMap.textStyle.color).toBe(getGray70(theme))
+    expect(visualMap.textStyle.color).toBe(theme.colors.fadedText70)
 
     const calendar = echartsTheme.calendar as {
       dayLabel: { color: string }
     }
-    expect(calendar.dayLabel.color).toBe(getGray70(theme))
+    expect(calendar.dayLabel.color).toBe(theme.colors.fadedText70)
 
     // A boxplot's box is filled opaque white by default, which glares against a
     // dark app background.
@@ -317,7 +342,7 @@ describe("buildStreamlitEChartsTheme", () => {
       }
       // These labels sit on the app background, so they use the plain themed
       // label style instead of ECharts' fixed grays or an on-fill halo.
-      expect(series.label.color).toBe(getGray70(darkTheme.emotion))
+      expect(series.label.color).toBe(darkTheme.emotion.colors.fadedText70)
       expect(series.label.textBorderWidth).toBeUndefined()
     }
   )
@@ -382,7 +407,9 @@ describe("buildStreamlitEChartsTheme", () => {
       markArea: { itemStyle: { color: string } }
     }
 
-    expect(echartsTheme.markLine.itemStyle.color).toBe(getGray70(emotionTheme))
+    expect(echartsTheme.markLine.itemStyle.color).toBe(
+      emotionTheme.colors.fadedText70
+    )
     // A faint body-text fill, so the label (the fill at full opacity) reads.
     expect(echartsTheme.markArea.itemStyle.color).toBe(
       transparentize(emotionTheme.colors.bodyText, 0.92)
@@ -409,7 +436,7 @@ describe("buildStreamlitEChartsTheme", () => {
 
     // Band names beside a themeRiver ignore the surrounding axis theming.
     const themeRiver = echartsTheme.themeRiver as { label: { color: string } }
-    expect(themeRiver.label.color).toBe(getGray70(theme))
+    expect(themeRiver.label.color).toBe(theme.colors.fadedText70)
 
     // Chord ribbons are too faint on a dark background at ECharts' default 0.2.
     const chord = echartsTheme.chord as {
@@ -425,19 +452,23 @@ describe("buildStreamlitEChartsTheme", () => {
       x: { label: { color: string }; itemStyle: { borderColor: string } }
       body: { itemStyle: { borderColor: string } }
     }
-    expect(matrix.x.label.color).toBe(getGray70(theme))
-    expect(matrix.body.itemStyle.borderColor).toBe(getGray30(theme))
+    expect(matrix.x.label.color).toBe(theme.colors.fadedText70)
+    expect(matrix.body.itemStyle.borderColor).toBe(theme.colors.fadedText05)
   })
 
   it("keeps the dataZoom preview visible against the app background", () => {
     const echartsTheme = buildStreamlitEChartsTheme(theme)
 
-    // The gridline gray is too faint here, since the slider sits outside the plot.
+    // The gridline color is too faint here, since the slider sits outside the plot.
     const dataZoom = echartsTheme.dataZoom as {
       dataBackground: { lineStyle: { color: string } }
     }
-    expect(dataZoom.dataBackground.lineStyle.color).toBe(getGray70(theme))
-    expect(dataZoom.dataBackground.lineStyle.color).not.toBe(getGray30(theme))
+    expect(dataZoom.dataBackground.lineStyle.color).toBe(
+      theme.colors.fadedText70
+    )
+    expect(dataZoom.dataBackground.lineStyle.color).not.toBe(
+      theme.colors.fadedText05
+    )
   })
 
   it("themes the toolbox hover state, not just its resting icons", () => {
@@ -453,7 +484,7 @@ describe("buildStreamlitEChartsTheme", () => {
         }
       }
     }
-    expect(toolbox.iconStyle.borderColor).toBe(getGray70(theme))
+    expect(toolbox.iconStyle.borderColor).toBe(theme.colors.fadedText70)
     // ECharts' hover state is a fixed light blue that is hard to read on a dark
     // background, for both the icon and the feature title it reveals.
     const hovered = toolbox.emphasis.iconStyle
@@ -508,12 +539,12 @@ describe("buildStreamlitEChartsTheme", () => {
     const gauge = echartsTheme.gauge as Record<string, Record<string, unknown>>
     // Name and value text use themed (theme-adapting) colors instead of the
     // fixed dark defaults that vanish on a dark background.
-    expect(gauge.title.color).toBe(getGray70(theme))
+    expect(gauge.title.color).toBe(theme.colors.fadedText70)
     expect(gauge.detail.color).toBe(theme.colors.bodyText)
-    // The background track is a themed gray, as an array of [stop, color]
+    // The background track is a faint text-derived color, as an array of [stop, color]
     // segments (so an explicit user color array replaces it wholesale).
     const axisLine = gauge.axisLine as Record<string, Record<string, unknown>>
-    expect(axisLine.lineStyle.color).toEqual([[1, getGray30(theme)]])
+    expect(axisLine.lineStyle.color).toEqual([[1, theme.colors.fadedText05]])
   })
 })
 
@@ -619,7 +650,11 @@ describe("Streamlit theme resolved by ECharts", () => {
       ],
     }).chart.renderToSVGString()
 
-    expect(neutral).toContain(`stroke="${getGray70(darkTheme.emotion)}"`)
+    // The SVG renderer splits the translucent theme color into rgb + opacity.
+    const [r, g, b, alpha] = parseToRgba(darkTheme.emotion.colors.fadedText70)
+    expect(neutral).toContain(
+      `stroke="rgb(${r},${g},${b})" stroke-opacity="${alpha}"`
+    )
     expect(neutral).not.toContain("#e45756")
     expect(colored).toContain('stroke="#e45756"')
     // ECharts' own alpha for a markArea in the series color.
@@ -652,7 +687,9 @@ describe("Streamlit theme resolved by ECharts", () => {
         ],
       })
 
-      expect(series(0).get(["label", "color"])).toBe(getGray70(emotionTheme))
+      expect(series(0).get(["label", "color"])).toBe(
+        emotionTheme.colors.fadedText70
+      )
       expect(series(0).get(["label", "textBorderWidth"])).toBeUndefined()
       expect(series(1).get(["label", "color"])).toBe(
         emotionTheme.colors.gray100
@@ -688,7 +725,7 @@ describe("Streamlit theme resolved by ECharts", () => {
         .get(["label", "color"])
     expect(itemLabelColor(0)).toBe(emotionTheme.colors.gray100)
     // Must NOT happen: the halo leaks onto the outside label of another item.
-    expect(itemLabelColor(1)).toBe(getGray70(emotionTheme))
+    expect(itemLabelColor(1)).toBe(emotionTheme.colors.fadedText70)
   })
 
   it("resolves the candlestick colors and dark line markers over ECharts' defaults", () => {

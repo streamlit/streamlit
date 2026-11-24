@@ -21,6 +21,7 @@ import styled, { type CSSObject } from "@emotion/styled"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
+import { translateGapWidth } from "~lib/components/core/Layout/gapWidth"
 import {
   STEP_CONNECTOR_BOTTOM_VAR,
   STEP_FOLLOWED_BY_STEP_SELECTOR,
@@ -34,6 +35,7 @@ import {
 } from "~lib/components/shared/printPageBreak"
 import { PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
 import { getBareEmbedOverlayToolbarPadding } from "~lib/components/shared/Toolbar/overlayToolbarSpacing"
+import { ISOLATED_COMPONENT_HOST_CLASS } from "~lib/components/widgets/BidiComponent/classNames"
 import { DATAFRAME_PRINT_TABLE_CLASS } from "~lib/components/widgets/DataFrame/printClassNames"
 import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
@@ -104,35 +106,6 @@ function printBlockGapMargins(
   }
 }
 
-export function translateGapWidth(
-  gap: streamlit.GapConfig.$Properties | undefined,
-  theme: EmotionTheme
-): string {
-  if (typeof gap?.pixelGap === "number") {
-    return `${gap.pixelGap}px`
-  }
-  switch (gap?.gapSize) {
-    case streamlit.GapSize.XXSMALL:
-      return theme.spacing.twoXS
-    case streamlit.GapSize.XSMALL:
-      return theme.spacing.sm
-    case streamlit.GapSize.SMALL:
-      return theme.spacing.lg
-    case streamlit.GapSize.MEDIUM:
-      return theme.spacing.threeXL
-    case streamlit.GapSize.LARGE:
-      return theme.spacing.fourXL
-    case streamlit.GapSize.XLARGE:
-      return theme.spacing.fiveXL
-    case streamlit.GapSize.XXLARGE:
-      return theme.spacing.sixXL
-    case streamlit.GapSize.NONE:
-      return theme.spacing.none
-    default:
-      return theme.spacing.lg
-  }
-}
-
 interface StyledElementContainerProps {
   isStale: boolean
   /** Whether this is a retained copy of a displaced prior-run element. */
@@ -163,14 +136,28 @@ export const StyledSpace = styled.div({
 })
 
 /**
- * A retained element stays mounted but leaves the layout, unless it holds
- * focus. Hiding a focused control would blur it (committing a dirty text
- * input) in Chromium and Firefox, and would strand focus in WebKit.
+ * A retained element stays mounted but leaves the layout unless hiding it
+ * would drop focus the user is actively using. Hiding a focused control blurs
+ * it (committing a dirty text input) in Chromium and Firefox, and strands
+ * focus in WebKit.
+ *
+ * The element stays visible when:
+ * - A light-DOM descendant matches `:focus-visible`. A focused text field
+ *   always does, including the input of a selectbox or multiselect after a
+ *   pick. Checkbox, radio, and slider inputs also do after a mouse press,
+ *   because React Aria focuses them from script. These widgets stay visible
+ *   until the run ends.
+ * - Focus is inside an isolated custom component. `:has()` can't see into
+ *   its shadow root, so any focus within its host keeps it visible.
+ *
+ * A widget focused by a click without matching `:focus-visible` hides once
+ * displaced.
  */
 const RETAINED_STYLES = {
-  "&:not(:focus-within)": {
-    display: "none",
-  },
+  [`&:not(:has(:focus-visible)):not(:has(.${ISOLATED_COMPONENT_HOST_CLASS}:focus-within))`]:
+    {
+      display: "none",
+    },
 }
 
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
@@ -286,6 +273,11 @@ interface StyledColumnProps {
   weight: number
   gap: streamlit.GapConfig.$Properties | undefined
   showBorder: boolean
+  /**
+   * Whether to draw a vertical line in the gap before this column. The first
+   * column of a row never draws one.
+   */
+  showDivider?: boolean
   verticalAlignment?: BlockProto.Column.VerticalAlignment
   /**
    * Whether the parent row allows wrapping/stacking. When true (default),
@@ -301,7 +293,15 @@ interface StyledColumnProps {
  * bordered column with a chart avoids page breaks on its own.
  */
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ theme, weight, gap, showBorder, verticalAlignment, $wrap = true }) => {
+  ({
+    theme,
+    weight,
+    gap,
+    showBorder,
+    showDivider = false,
+    verticalAlignment,
+    $wrap = true,
+  }) => {
     const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
@@ -309,6 +309,17 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       gapWidth === theme.spacing.none
         ? `${percentage}%`
         : `calc(${percentage}% - ${gapWidth})`
+    // Centers the line in the gap to this column's left: half the gap plus
+    // half the line's width. An absolutely positioned line is offset from the
+    // padding box, so a bordered column moves it out by its border width on
+    // every side to span the full card height.
+    const { borderWidth } = theme.sizes
+    // `theme.spacing.none` is the unitless "0", which is not a length in calc().
+    const halfGap = gapWidth === theme.spacing.none ? "0px" : `${gapWidth} / 2`
+    const dividerOffset = `calc(-1 * (${halfGap} + ${borderWidth} / 2${
+      showBorder ? ` + ${borderWidth}` : ""
+    }))`
+    const dividerVerticalOffset = showBorder ? `calc(-1 * ${borderWidth})` : 0
 
     // Columns don't shift themselves for vertical alignment: the row stretches
     // each column (so bordered columns match), and ContainerContentsWrapper
@@ -318,10 +329,29 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       // e.g. if it overflows to next row.
       width,
       flex: `1 1 ${width}`,
+      ...(showDivider && {
+        position: "relative",
+        "&:not(:first-of-type)::before": {
+          content: '""',
+          position: "absolute",
+          top: dividerVerticalOffset,
+          bottom: dividerVerticalOffset,
+          left: dividerOffset,
+          // A border, unlike a background, stays visible in forced-colors mode.
+          width: 0,
+          borderLeft: `${borderWidth} solid ${theme.colors.borderColor}`,
+          pointerEvents: "none",
+        },
+      }),
       ...($wrap
         ? {
             [`@media (max-width: ${theme.breakpoints.columns})`]: {
               minWidth: `calc(100% - ${theme.spacing.twoXL})`,
+              ...(showDivider && {
+                "&:not(:first-of-type)::before": {
+                  display: "none",
+                },
+              }),
             },
           }
         : {
@@ -564,6 +594,10 @@ export const StyledFlexContainerBlock =
                   display: "block",
                   width: "100%",
                   minWidth: 0,
+                  // Stacked columns have no side-by-side gap to divide.
+                  "&:not(:first-of-type)::before": {
+                    display: "none",
+                  },
                   ...(gapWidth &&
                     gapWidth !== theme.spacing.none && {
                       "&:not(:last-of-type)": {

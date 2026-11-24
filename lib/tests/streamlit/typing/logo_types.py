@@ -46,10 +46,16 @@ if TYPE_CHECKING:
     assert_type(logo(numpy_image), None)
     assert_type(logo(pil_image), None)
 
-    # size accepts "small", "medium", or "large"
+    # size accepts "small", "medium", "large", or a pixel int
     assert_type(logo("logo.png", size="small"), None)
     assert_type(logo("logo.png", size="medium"), None)
     assert_type(logo("logo.png", size="large"), None)
+    assert_type(logo("logo.png", size=40), None)
+
+    # icon_size accepts the same values as size, plus None
+    assert_type(logo("logo.png", icon_size="small"), None)
+    assert_type(logo("logo.png", icon_size=24), None)
+    assert_type(logo("logo.png", icon_size=None), None)
 
     # link accepts str or None
     assert_type(logo("logo.png", link="https://streamlit.io"), None)
@@ -73,6 +79,7 @@ if TYPE_CHECKING:
             size="large",
             link="https://streamlit.io",
             icon_image="icon.png",
+            icon_size="small",
         ),
         None,
     )
@@ -93,11 +100,11 @@ if TYPE_CHECKING:
     # image is not optional
     logo(None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
-    # Invalid size value (not "small", "medium", or "large")
+    # Invalid size value (not "small", "medium", "large", or int)
     logo("logo.png", size="xlarge")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     logo("logo.png", size="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-    logo("logo.png", size=24)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     logo("logo.png", size=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    logo("logo.png", icon_size="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Passing keyword-only parameters as positional
     logo("logo.png", "medium")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

@@ -726,10 +726,30 @@ class AppSessionTest(unittest.TestCase):
         session.register_file_watchers()
         assert session._local_sources_watcher
 
+    @patch("streamlit.runtime.app_session.config.on_config_parsed")
+    @patch(
+        "streamlit.runtime.app_session.secrets_singleton.file_change_listener.connect"
+    )
     @patch_config_options({"server.fileWatcherType": "none"})
-    def test_no_local_sources_watcher_if_file_watching_disabled(self):
+    def test_register_file_watchers_noop_if_file_watching_disabled(
+        self,
+        patched_secrets_connect: MagicMock,
+        patched_on_config_parsed: MagicMock,
+    ) -> None:
+        """register_file_watchers does nothing when file watching is disabled.
+
+        Covers both construction and the disconnect/register sequence that a
+        reconnect runs.
+        """
         session = _create_test_session()
-        assert not session._local_sources_watcher
+        assert session._local_sources_watcher is None
+
+        session.disconnect_file_watchers()
+        session.register_file_watchers()
+
+        assert session._local_sources_watcher is None
+        patched_on_config_parsed.assert_not_called()
+        patched_secrets_connect.assert_not_called()
 
     @patch(
         "streamlit.runtime.app_session.secrets_singleton.file_change_listener.disconnect"

@@ -22,6 +22,11 @@ import { Logo as LogoProto } from "@streamlit/protobuf"
 
 import LogoComponent from "./LogoComponent"
 
+/** Expected CSS for a pixel height capped to the header row
+ * (headerHeight - 2 * spacing.twoXS). */
+const cappedLogoHeight = (requestedHeight: string): string =>
+  `min(${requestedHeight}, calc(3.75rem - 2 * 0.25rem))`
+
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {
   const actual = await vi.importActual("@streamlit/utils")
@@ -355,6 +360,164 @@ describe("LogoComponent", () => {
 
     logo = screen.getByTestId("stHeaderLogo")
     expect(logo).toHaveStyle("height: 2rem")
+  })
+
+  it("applies pixel size to the expanded logo", () => {
+    const pixelLogo = LogoProto.create({
+      image: "https://example.com/logo.png",
+      sizePx: 40,
+    })
+
+    render(
+      <LogoComponent
+        {...getProps({
+          appLogo: pixelLogo,
+          dataTestId: "stSidebarLogo",
+          collapsed: false,
+        })}
+      />
+    )
+
+    expect(screen.getByTestId("stSidebarLogo")).toHaveStyle(
+      `height: ${cappedLogoHeight("40px")}`
+    )
+  })
+
+  it("uses icon_size for the collapsed logo when set", () => {
+    const mixedSizeLogo = LogoProto.create({
+      image: "https://example.com/logo.png",
+      iconImage: "https://example.com/icon.png",
+      sizePx: 40,
+      iconSize: "small",
+    })
+
+    render(
+      <LogoComponent
+        {...getProps({
+          appLogo: mixedSizeLogo,
+          dataTestId: "stHeaderLogo",
+          collapsed: true,
+        })}
+      />
+    )
+
+    const logo = screen.getByTestId("stHeaderLogo")
+    expect(logo).toHaveAttribute("src", "https://example.com/icon.png")
+    expect(logo).toHaveStyle("height: 1.25rem")
+  })
+
+  it("does not apply icon_size to the expanded sidebar logo", () => {
+    const mixedSizeLogo = LogoProto.create({
+      image: "https://example.com/logo.png",
+      iconImage: "https://example.com/icon.png",
+      sizePx: 40,
+      iconSize: "small",
+    })
+
+    render(
+      <LogoComponent
+        {...getProps({
+          appLogo: mixedSizeLogo,
+          dataTestId: "stSidebarLogo",
+          collapsed: false,
+        })}
+      />
+    )
+
+    const logo = screen.getByTestId("stSidebarLogo")
+    expect(logo).toHaveAttribute("src", "https://example.com/logo.png")
+    expect(logo).toHaveStyle(`height: ${cappedLogoHeight("40px")}`)
+    expect(logo).not.toHaveStyle("height: 1.25rem")
+  })
+
+  it("uses iconSizePx for the collapsed logo when set", () => {
+    const mixedSizeLogo = LogoProto.create({
+      image: "https://example.com/logo.png",
+      iconImage: "https://example.com/icon.png",
+      size: "large",
+      iconSizePx: 24,
+    })
+
+    render(
+      <LogoComponent
+        {...getProps({
+          appLogo: mixedSizeLogo,
+          dataTestId: "stHeaderLogo",
+          collapsed: true,
+        })}
+      />
+    )
+
+    expect(screen.getByTestId("stHeaderLogo")).toHaveStyle(
+      `height: ${cappedLogoHeight("24px")}`
+    )
+  })
+
+  it("falls back to size for the collapsed logo when icon_size is unset", () => {
+    const pixelLogo = LogoProto.create({
+      image: "https://example.com/logo.png",
+      sizePx: 40,
+    })
+
+    render(
+      <LogoComponent
+        {...getProps({
+          appLogo: pixelLogo,
+          dataTestId: "stHeaderLogo",
+          collapsed: true,
+        })}
+      />
+    )
+
+    expect(screen.getByTestId("stHeaderLogo")).toHaveStyle(
+      `height: ${cappedLogoHeight("40px")}`
+    )
+  })
+
+  it("caps icon logo fontSize at the header row height", () => {
+    const iconLogo = LogoProto.create({
+      image: ":material/home:",
+      imageType: LogoProto.ImageType.ICON,
+      sizePx: 80,
+    })
+
+    render(
+      <LogoComponent
+        {...getProps({
+          appLogo: iconLogo,
+          dataTestId: "stSidebarLogo",
+          collapsed: false,
+        })}
+      />
+    )
+
+    const logo = screen.getByTestId("stSidebarLogo")
+    const cappedHeight = cappedLogoHeight("80px")
+    expect(logo).toHaveStyle(`height: ${cappedHeight}`)
+    expect(logo).toHaveStyle(`font-size: ${cappedHeight}`)
+  })
+
+  it("caps a collapsed emoji header logo set by iconSizePx", () => {
+    const emojiLogo = LogoProto.create({
+      image: "🚀",
+      imageType: LogoProto.ImageType.EMOJI,
+      iconSizePx: 80,
+    })
+
+    render(
+      <LogoComponent
+        {...getProps({
+          appLogo: emojiLogo,
+          dataTestId: "stHeaderLogo",
+          collapsed: true,
+        })}
+      />
+    )
+
+    const logo = screen.getByTestId("stHeaderLogo")
+    const cappedHeight = cappedLogoHeight("80px")
+    expect(logo).toHaveStyle(`height: ${cappedHeight}`)
+    expect(logo).toHaveStyle(`font-size: ${cappedHeight}`)
   })
 
   describe("icon and emoji logos", () => {

@@ -57,6 +57,7 @@ import {
   StyledSidebar,
   StyledSidebarContent,
   StyledSidebarHeaderContainer,
+  StyledSidebarLogoSlot,
   StyledSidebarUserContent,
 } from "./styled-components"
 import {
@@ -247,13 +248,15 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
 
     return (
-      <LogoComponent
-        appLogo={appLogo}
-        endpoints={endpoints}
-        collapsed={isCollapsed}
-        componentName="Sidebar Logo"
-        dataTestId="stSidebarLogo"
-      />
+      <StyledSidebarLogoSlot>
+        <LogoComponent
+          appLogo={appLogo}
+          endpoints={endpoints}
+          collapsed={isCollapsed}
+          componentName="Sidebar Logo"
+          dataTestId="stSidebarLogo"
+        />
+      </StyledSidebarLogoSlot>
     )
   }
 

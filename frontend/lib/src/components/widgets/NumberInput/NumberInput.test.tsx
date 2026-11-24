@@ -656,11 +656,8 @@ describe("NumberInput widget", () => {
         props.widgetMgr.submitForm("form", undefined)
       })
 
-      // The displayed value should reset to the default value.
-      // Note: The formatValue function correctly applies "%0.3f" to produce "5.500",
-      // but HTML <input type="number"> automatically normalizes values by removing
-      // trailing zeros, so "5.500" is displayed as "5.5". This is standard browser behavior.
-      expect(numberInput).toHaveDisplayValue("5.5")
+      // The displayed value should reset to the formatted default value.
+      expect(numberInput).toHaveDisplayValue("5.500")
     })
 
     it("resets dirty state and formatted value via onFormCleared callback", async () => {
@@ -699,9 +696,7 @@ describe("NumberInput widget", () => {
 
       // After form clear:
       // 1. Formatted value should reset to default.
-      // Note: formatValue correctly applies "%0.2f" format, but HTML <input type="number">
-      // normalizes "10.00" to "10" by removing trailing zeros. This is standard browser behavior.
-      expect(numberInput).toHaveDisplayValue("10")
+      expect(numberInput).toHaveDisplayValue("10.00")
 
       // 2. Verify that the default value was set in widgetMgr (dirty state was reset)
       expect(props.widgetMgr.setDoubleValue).toHaveBeenLastCalledWith(
@@ -715,8 +710,8 @@ describe("NumberInput widget", () => {
       await user.type(numberInput, "15.5")
       await user.tab()
 
-      // New value should be committed successfully. The browser normalizes "15.50" to "15.5".
-      expect(numberInput).toHaveDisplayValue("15.5")
+      // New value should be committed successfully and formatted with "%0.2f".
+      expect(numberInput).toHaveDisplayValue("15.50")
       expect(props.widgetMgr.setDoubleValue).toHaveBeenLastCalledWith(
         props.element.id,
         15.5,
@@ -1181,7 +1176,7 @@ describe("NumberInput widget", () => {
         await user.type(input, "25.1")
         await user.keyboard("{enter}")
 
-        expect(input).toHaveDisplayValue("25.1")
+        expect(input).toHaveDisplayValue("25.100")
       })
 
       it("formats null value after clearing", async () => {
@@ -1563,9 +1558,9 @@ describe("NumberInput widget", () => {
         },
         {
           description: "handles scientific notation input",
-          propsFactory: () => getFloatProps({ default: 10.0 }),
+          propsFactory: () => getFloatProps({ default: 10.0, max: 10000 }),
           inputValue: "1.5e3",
-          expected: "1500",
+          expected: "1500.00",
         },
       ])("$description", async ({ propsFactory, inputValue, expected }) => {
         const user = userEvent.setup()

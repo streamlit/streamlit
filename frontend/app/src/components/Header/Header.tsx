@@ -86,7 +86,9 @@ const Header = ({
           <StyledHeaderContent>
             <StyledHeaderLeftSection>
               {shouldShowLogo ? (
-                <StyledLogoContainer>{logoComponent}</StyledLogoContainer>
+                <StyledLogoContainer data-testid="stHeaderLogoContainer">
+                  {logoComponent}
+                </StyledLogoContainer>
               ) : null}
               {shouldShowExpandButton && (
                 <StyledOpenSidebarButton>

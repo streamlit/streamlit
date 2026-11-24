@@ -393,6 +393,18 @@ def _format_value_for_widget(format_func: Callable[[Any], str], value: Any) -> s
         raise
 
 
+def _button_group_option_label(option: ButtonGroupProto.Option) -> str:
+    """Rebuild the full ``format_func`` label that the frontend sends as the value.
+
+    The backend stores a leading icon in ``content_icon`` and still matches the
+    submitted value against this unsplit label. Keep this in step with
+    ``getOptionBaseContent`` in the frontend's ``ButtonGroup.tsx``.
+    """
+    if option.content_icon:
+        return f"{option.content_icon} {option.content}".strip()
+    return option.content
+
+
 @dataclass
 class InitialValue:
     """Used to represent the initial value of a widget."""
@@ -1586,6 +1598,11 @@ class Divider(Markdown):
         super().__init__(proto, root)
         self.type = "divider"
 
+    @property
+    def gap(self) -> GapValue:
+        """The ``gap`` argument passed to ``st.divider`` (``"medium"`` when omitted)."""
+        return _public_gap_value(self.proto.gap_config)
+
 
 @dataclass(repr=False)
 class Latex(Markdown):
@@ -1656,8 +1673,7 @@ class ButtonGroup(Widget, Generic[T]):
         super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "button_group"
-        # Store formatted content strings for value serialization
-        self.options = [opt.content for opt in proto.options]
+        self.options = [_button_group_option_label(opt) for opt in proto.options]
 
     @property
     def _is_single_select(self) -> bool:
@@ -1717,7 +1733,26 @@ class ButtonGroup(Widget, Generic[T]):
 
         For single-select mode, pass a single value or None to clear the selection.
         For multi-select mode, pass a list of values (use empty list to clear).
+        Each value can be a raw option, or its label from ``options`` when
+        ``format_func`` cannot format that label. Raises ``AppTestError`` if a
+        value matches no option.
         """
+        self._assert_can_interact()
+        if v is not None:
+            selected = [v] if self._is_single_select else cast("list[T]", v)
+            format_func = self.format_func
+            for option in selected:
+                if _format_value_for_widget(format_func, option) not in self.options:
+                    command = (
+                        "pills"
+                        if self.proto.style == ButtonGroupProto.Style.PILLS
+                        else "segmented_control"
+                    )
+                    key_part = f" (key={self.key!r})" if self.key else ""
+                    raise AppTestError(
+                        f"Cannot set {command}{key_part} to {option!r}. "
+                        f"It is not one of the options: {self.options}."
+                    )
         return super().set_value(v)
 
     def select(self, v: T) -> ButtonGroup[T]:
@@ -1892,7 +1927,7 @@ class AudioInput(Widget):
         # field reads as 0, which is not that signal.
         self.sample_rate = proto.sample_rate if proto.HasField("sample_rate") else None
 
-    def set_value(  # ty: ignore[invalid-method-override]
+    def set_value(  # ty: ignore[incompatible-method-override, lost-keyword-for-regular-parameter]
         self,
         file: tuple[str, bytes, str] | None,
     ) -> Self:
@@ -2117,7 +2152,7 @@ class CameraInput(Widget):
         # an omitted resolution and any other unmapped height are both None.
         self.resolution = _CAMERA_RESOLUTION_BY_HEIGHT.get(proto.resolution_height)
 
-    def set_value(  # ty: ignore[invalid-method-override]
+    def set_value(  # ty: ignore[incompatible-method-override, lost-keyword-for-regular-parameter]
         self,
         file: tuple[str, bytes, str] | None,
     ) -> Self:
@@ -2297,7 +2332,7 @@ class FileUploader(Widget):
         """Allowed file types for upload. (list of str)"""  # noqa: D400
         return list(self.proto.type)
 
-    def set_value(  # ty: ignore[invalid-method-override]
+    def set_value(  # ty: ignore[incompatible-method-override, lost-keyword-for-regular-parameter]
         self,
         files: (tuple[str, bytes, str] | Sequence[tuple[str, bytes, str]] | None),
     ) -> Self:
@@ -3238,10 +3273,16 @@ class DateTimeInput(Widget):
         from datetime import datetime
 
         def _parse_dt(value: str) -> datetime:
-            try:
-                return datetime.strptime(value, "%Y-%m-%dT%H:%M")
-            except ValueError:
-                return datetime.strptime(value, "%Y/%m/%d, %H:%M")
+            for fmt in (
+                "%Y-%m-%dT%H:%M:%S",
+                "%Y-%m-%dT%H:%M",
+                "%Y/%m/%d, %H:%M",
+            ):
+                try:
+                    return datetime.strptime(value, fmt)
+                except ValueError:
+                    continue
+            raise ValueError(f"Unrecognized datetime wire format: {value!r}")
 
         ws = WidgetState()
         ws.id = self.id
@@ -3250,7 +3291,7 @@ class DateTimeInput(Widget):
         min_dt = _parse_dt(self.min)
         max_dt = _parse_dt(self.max)
 
-        serde = DateTimeInputSerde(value=None, min=min_dt, max=max_dt)
+        serde = DateTimeInputSerde(value=None, min=min_dt, max=max_dt, step=self.step)
         serialized_value = serde.serialize(self.value)
         if serialized_value is not None:
             ws.string_array_value.data[:] = serialized_value
@@ -3831,7 +3872,7 @@ def format_dict(d: dict[Any, Any]) -> str:
 
 @dataclass(repr=False)
 class SpecialBlock(Block):
-    """Base class for the sidebar and main body containers."""
+    """Base class for the root containers: main body, sidebar, event, and bottom."""
 
     def __init__(
         self,
@@ -3876,7 +3917,7 @@ class ChatMessage(Block):
 
 
 # Public gap names. None is the "no gap" value, matching GapSize.NONE.
-_GRID_GAP_SIZE_TO_PUBLIC: Final[dict[int, str | None]] = {
+_GAP_SIZE_TO_PUBLIC: Final[dict[int, str | None]] = {
     GapSize.NONE: None,
     GapSize.XXSMALL: "xxsmall",
     GapSize.XSMALL: "xsmall",
@@ -3887,17 +3928,17 @@ _GRID_GAP_SIZE_TO_PUBLIC: Final[dict[int, str | None]] = {
     GapSize.XXLARGE: "xxlarge",
 }
 
-GridGapValue: TypeAlias = str | int | None
+GapValue: TypeAlias = str | int | None
 GridSizeValue: TypeAlias = int | float | str
 
 
-def _public_gap_value(gap_config: Any) -> GridGapValue:
-    """Rebuild one ``st.grid`` gap argument from a ``GapConfig``."""
+def _public_gap_value(gap_config: Any) -> GapValue:
+    """Rebuild a public ``gap`` argument from a ``GapConfig``."""
     spec = gap_config.WhichOneof("gap_spec")
     if spec == "pixel_gap":
         return int(gap_config.pixel_gap)
     if spec == "gap_size":
-        return _GRID_GAP_SIZE_TO_PUBLIC.get(gap_config.gap_size, "small")
+        return _GAP_SIZE_TO_PUBLIC.get(gap_config.gap_size, "small")
     return "small"
 
 
@@ -3942,7 +3983,7 @@ class Grid(Block):
     border: bool
     row_height: int | str
     min_column_width: int | str
-    gap: GridGapValue | tuple[GridGapValue, GridGapValue]
+    gap: GapValue | tuple[GapValue, GapValue]
     vertical_alignment: str
     dense: bool
     width: GridSizeValue
@@ -3999,6 +4040,8 @@ class Column(Block):
     proto: BlockProto.Column = field(repr=False)
     weight: float
     gap: str | None
+    # Named show_divider because Block.divider already returns nested st.divider elements.
+    show_divider: bool
 
     # Mapping from GapSize enum to string
     _GAP_SIZE_TO_STRING: ClassVar[dict[int, str | None]] = {
@@ -4023,6 +4066,7 @@ class Column(Block):
         self.type = "column"
         self.weight = proto.weight
         self.gap = self._GAP_SIZE_TO_STRING.get(proto.gap_config.gap_size)
+        self.show_divider = proto.show_divider
 
 
 @dataclass(repr=False)
@@ -4279,6 +4323,12 @@ class ElementTree(Block):
         return s
 
     @property
+    def bottom(self) -> Block:
+        b = self[3]
+        assert isinstance(b, Block)
+        return b
+
+    @property
     def session_state(self) -> SafeSessionState:
         assert self._runner is not None
         # Widget internals need SafeSessionState; AppTest.session_state is the
@@ -4365,6 +4415,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
         0: SpecialBlock(type="main", root=root, proto=None),
         1: SpecialBlock(type="sidebar", root=root, proto=None),
         2: SpecialBlock(type="event", root=root, proto=None),
+        3: SpecialBlock(type="bottom", root=root, proto=None),
     }
 
     for msg in messages:

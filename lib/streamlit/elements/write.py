@@ -256,7 +256,7 @@ class WriteMixin:
             if type_util.is_type(chunk, "langchain_core.messages.ai.AIMessageChunk"):
                 # Try to convert LangChain message chunk to a string:
                 try:
-                    chunk = chunk.content or ""  # noqa: PLW2901 # type: ignore[possibly-unbound-attribute] # ty: ignore[unresolved-attribute]
+                    chunk = chunk.content or ""  # noqa: PLW2901 # type: ignore[possibly-unbound-attribute] # ty: ignore[missing-union-attribute]
                 except AttributeError as err:
                     raise StreamlitAPIException(
                         "Failed to parse the LangChain AIMessageChunk. "
@@ -280,7 +280,7 @@ class WriteMixin:
                 # Only add the streaming symbol on the second text chunk
                 # Use _markdown with unterminated_parsing=True to complete
                 # unclosed markdown syntax (e.g., **bold) during streaming.
-                stream_container._markdown(  # ty: ignore[unresolved-attribute]
+                stream_container._markdown(  # ty: ignore[missing-union-attribute]
                     streamed_response + ("" if first_text else cursor_str),
                     unterminated_parsing=True,
                 )

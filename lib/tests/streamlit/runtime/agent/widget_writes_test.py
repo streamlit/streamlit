@@ -588,6 +588,12 @@ class WidgetWritesTest(SnapshotCase):
                 _Refused("has an offset"),
             ),
             ("datetime_not_iso", "when", "tomorrow", _Refused("not an ISO 8601 date")),
+            (
+                "datetime_second_step",
+                "precise_moment",
+                "2026-01-02T10:15:42",
+                dt.datetime(2026, 1, 2, 10, 15, 42),
+            ),
             ("time_minute_step", "time", "10:15:42", dt.time(10, 15)),
             ("time_second_step", "precise", "10:15:42", dt.time(10, 15, 42)),
             ("time_offset", "time", "10:15+01:00", _Refused("has an offset")),
@@ -664,6 +670,12 @@ class WidgetWritesTest(SnapshotCase):
         """Dates and times are ISO text in any form, and offsets must match."""
         render_value_widgets()
         st.time_input("Precise", dt.time(9, 30, 15), step=30, key="precise")
+        st.datetime_input(
+            "Precise moment",
+            dt.datetime(2026, 1, 2, 9, 30, 15),
+            step=30,
+            key="precise_moment",
+        )
         st.slider(
             "Naive moment", value=dt.datetime(2026, 1, 2, 9, 30), key="naive_slider"
         )

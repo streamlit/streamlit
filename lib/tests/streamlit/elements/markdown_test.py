@@ -100,6 +100,18 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
         assert el.markdown.body == "some markdown"
         assert el.markdown.help == "help text"
 
+    def test_markdown_thematic_break_does_not_set_gap_config(self):
+        """``st.markdown("---")`` and ``st.write("---")`` do not set gap_config."""
+        st.markdown("---")
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "---"
+        assert not el.markdown.HasField("gap_config")
+
+        st.write("---")
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "---"
+        assert not el.markdown.HasField("gap_config")
+
     def test_st_markdown_wrap(self):
         """Test that wrap is True by default and can be set to False."""
         st.markdown("some markdown")

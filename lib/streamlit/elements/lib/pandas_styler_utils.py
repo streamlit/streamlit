@@ -47,7 +47,7 @@ def marshall_styler(proto: ArrowDataProto, styler: Styler, default_uuid: str) ->
     """
     import pandas as pd
 
-    styler_data_df: pd.DataFrame = styler.data  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+    styler_data_df: pd.DataFrame = styler.data  # type: ignore[attr-defined] # ty: ignore[missing-attribute]
     if styler_data_df.size > int(pd.options.styler.render.max_elements):
         raise StreamlitAPIException(
             f"The dataframe has `{styler_data_df.size}` cells, but the maximum number "
@@ -87,10 +87,10 @@ def _marshall_uuid(proto: ArrowDataProto, styler: Styler, default_uuid: str) -> 
         If pandas.Styler uuid is not provided, this value will be used.
 
     """
-    if styler.uuid is None:  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+    if styler.uuid is None:  # type: ignore[attr-defined] # ty: ignore[missing-attribute]
         styler.set_uuid(default_uuid)
 
-    proto.styler.uuid = str(styler.uuid)  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+    proto.styler.uuid = str(styler.uuid)  # type: ignore[attr-defined] # ty: ignore[missing-attribute]
 
 
 def _marshall_caption(proto: ArrowDataProto, styler: Styler) -> None:
@@ -105,8 +105,8 @@ def _marshall_caption(proto: ArrowDataProto, styler: Styler) -> None:
         Helps style a DataFrame or Series according to the data with HTML and CSS.
 
     """
-    if styler.caption is not None:  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
-        proto.styler.caption = styler.caption  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+    if styler.caption is not None:  # type: ignore[attr-defined] # ty: ignore[missing-attribute]
+        proto.styler.caption = styler.caption  # type: ignore[attr-defined] # ty: ignore[missing-attribute]
 
 
 def _marshall_styles(
@@ -137,7 +137,7 @@ def _marshall_styles(
             rule = _pandas_style_to_css(
                 "table_styles",
                 style,
-                styler.uuid,  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+                styler.uuid,  # type: ignore[attr-defined] # ty: ignore[missing-attribute]
                 separator=" ",
             )
             css_rules.append(rule)
@@ -149,7 +149,7 @@ def _marshall_styles(
             rule = _pandas_style_to_css(
                 "cell_style",
                 style,
-                styler.uuid,  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+                styler.uuid,  # type: ignore[attr-defined] # ty: ignore[missing-attribute]
                 separator="_",
             )
             css_rules.append(rule)

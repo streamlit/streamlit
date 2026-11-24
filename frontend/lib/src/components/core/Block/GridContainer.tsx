@@ -38,6 +38,7 @@ import {
   FlexContext,
   FlexContextProvider,
 } from "~lib/components/core/Layout/FlexContext"
+import { translateGapWidth } from "~lib/components/core/Layout/gapWidth"
 import { Direction } from "~lib/components/core/Layout/utils"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
@@ -71,7 +72,6 @@ import {
   StyledGridContainerBlock,
   StyledGridContentMeasure,
   StyledGridScrollBody,
-  translateGapWidth,
 } from "./styled-components"
 import {
   assignDividerColor,
@@ -95,7 +95,10 @@ interface GridCellProps {
   columnSpan?: number
   columnSpanAll: boolean
   rowSpan?: number
-  /** Hides the cell of a retained element unless it holds focus. */
+  /**
+   * Hides the cell of a retained element unless a descendant matches
+   * `:focus-visible` or focus is inside an isolated component.
+   */
   isRetained: boolean
   children: ReactNode
 }

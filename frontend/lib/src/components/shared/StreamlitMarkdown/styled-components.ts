@@ -42,9 +42,11 @@ interface StyledStreamlitMarkdownProps {
   boldLabel?: boolean
   isToast?: boolean
   truncate?: boolean
+  isDivider?: boolean
+  dividerGap?: string
 }
 
-function convertRemToEm(s: string): string {
+export function convertRemToEm(s: string): string {
   return s.replace(/rem$/, "em")
 }
 
@@ -206,6 +208,8 @@ export const StyledStreamlitMarkdown =
       boldLabel = false,
       isToast = false,
       truncate = false,
+      isDivider = false,
+      dividerGap,
     }) => {
       // All widget labels (isLabel=true) use the smaller font size (fontSizes.sm = 14px).
       // Normal markdown text (isLabel=false) stays at fontSizes.md (16px).
@@ -224,8 +228,14 @@ export const StyledStreamlitMarkdown =
             ? theme.fontSizes.sm
             : theme.fontSizes.md,
         fontWeight: inheritFont ? "inherit" : undefined,
-        marginBottom:
-          isLabel || isInHorizontalLayout ? "" : `-${theme.spacing.lg}`,
+        // Body markdown cancels its trailing paragraph margin with a negative
+        // bottom margin. A standalone divider has no paragraph, so it uses
+        // zero to keep the space above and below the rule equal.
+        marginBottom: isDivider
+          ? theme.spacing.none
+          : isLabel || isInHorizontalLayout
+            ? ""
+            : `-${theme.spacing.lg}`,
         opacity: isCaption ? theme.opacities.secondary : undefined,
         color: "inherit",
         // Always respect the width of the parent container:
@@ -367,9 +377,9 @@ export const StyledStreamlitMarkdown =
           fontWeight: theme.fontWeights.codeBold,
         },
 
-        // Handles the horizontal divider:
+        // st.divider(gap=) sets dividerGap; every other rule uses 2em.
         hr: {
-          margin: "2em 0",
+          margin: `${dividerGap ?? "2em"} 0`,
           padding: 0,
           // Reset Firefox's gray color:
           color: "inherit",

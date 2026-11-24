@@ -217,24 +217,6 @@ export function getMarkdownTextColors(
   }
 }
 
-export function getGray70(theme: EmotionTheme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.gray70
-    : theme.colors.gray30
-}
-
-export function getGray30(theme: EmotionTheme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.gray30
-    : theme.colors.gray85
-}
-
-export function getGray90(theme: EmotionTheme): string {
-  return hasLightBackgroundColor(theme)
-    ? theme.colors.gray90
-    : theme.colors.gray10
-}
-
 export function getBlue80(theme: EmotionTheme): string {
   return hasLightBackgroundColor(theme)
     ? theme.colors.blue80

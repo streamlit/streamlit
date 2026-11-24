@@ -18,10 +18,13 @@ import { memo, type ReactElement } from "react"
 
 import { Markdown as MarkdownProto } from "@streamlit/protobuf"
 
+import { translateGapWidth } from "~lib/components/core/Layout/gapWidth"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { convertRemToEm } from "~lib/components/shared/StreamlitMarkdown/styled-components"
 import { StyledLabelHelpWrapper } from "~lib/components/shared/TooltipIcon/styled-components"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 
 import { StyledMarkdownTitleTarget } from "./styled-components"
@@ -36,10 +39,33 @@ export interface MarkdownProps {
 // Does not match: :blue-badge[Label] text, :blue-badge[Label] :grey-badge[Label]
 const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
 
+// A markdown body that is only a thematic break of three or more `-`, `*`, or
+// `_`, optionally separated by spaces or tabs (e.g. `---` or `* * *`).
+const STANDALONE_HORIZONTAL_RULE_REGEX =
+  /^(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/
+
+/**
+ * True when the element renders only a horizontal rule: `st.divider()` or a
+ * markdown body that is just a thematic break (e.g. `st.write("---")`).
+ * `wrap=False` markdown is inline-only, so it never counts as a rule.
+ */
+function isStandaloneDivider(
+  element: MarkdownProto,
+  trimmedBody: string
+): boolean {
+  return (
+    element.elementType === MarkdownProto.Type.DIVIDER ||
+    (element.elementType === MarkdownProto.Type.NATIVE &&
+      element.wrap !== false &&
+      STANDALONE_HORIZONTAL_RULE_REGEX.test(trimmedBody))
+  )
+}
+
 /**
  * Functional element representing Markdown formatted text.
  */
 function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
+  const theme = useEmotionTheme()
   const {
     allowHtml,
     body,
@@ -51,15 +77,18 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
 
   const isCaption = elementType === MarkdownProto.Type.CAPTION
   const isLatex = elementType === MarkdownProto.Type.LATEX
-  const isDivider = elementType === MarkdownProto.Type.DIVIDER
-  // wrap=false ellipsizes. Latex and divider never truncate: clipping would
-  // hide formulas and horizontal rules.
-  const truncate = element.wrap === false && !isLatex && !isDivider
+  const trimmedBody = body.trim()
+  const isStandaloneRuleBody = isStandaloneDivider(element, trimmedBody)
+  // wrap=false ellipsizes. Latex and st.divider never truncate: clipping
+  // would hide formulas and horizontal rules. Native wrap=False markdown is
+  // never a standalone rule, so this is the DIVIDER element type only.
+  const isDividerElement = elementType === MarkdownProto.Type.DIVIDER
+  const truncate = element.wrap === false && !isLatex && !isDividerElement
 
   // Determine if the markdown is a single badge only
   const isSingleBadgeOnly =
     elementType === MarkdownProto.Type.NATIVE &&
-    SINGLE_BADGE_REGEX.test(body.trim())
+    SINGLE_BADGE_REGEX.test(trimmedBody)
 
   const { titleRef, labelTextRef } = useLabelTitleTooltip(truncate, body)
 
@@ -67,7 +96,16 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
   // clipped by truncation. Otherwise render the help icon as a sibling.
   const shouldInlineHelpDirective =
     Boolean(help) && !truncate && !isSingleBadgeOnly && !isLatex && !allowHtml
+  // Inline help appends `:help[]`, which turns `---` into a paragraph.
+  // A sibling help icon (`unsafe_allow_html`) leaves the rule intact.
+  const isDivider = isStandaloneRuleBody && !shouldInlineHelpDirective
   const source = shouldInlineHelpDirective ? `${body} :help[]` : body
+  // Use em so named gaps scale with the markdown font, like the default
+  // 2em rule margin.
+  const dividerGap =
+    isDividerElement && element.gapConfig
+      ? convertRemToEm(translateGapWidth(element.gapConfig, theme))
+      : undefined
 
   const streamlitMarkdown = (
     <StreamlitMarkdown
@@ -83,6 +121,8 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
       isLabel={truncate}
       truncate={truncate}
       inheritFont={truncate && !isCaption}
+      isDivider={isDivider}
+      dividerGap={dividerGap}
     />
   )
   // Title lives on this box (not the outer .stMarkdown) so a sibling help

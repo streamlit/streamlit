@@ -237,6 +237,18 @@ describe("parseMetricsDestinations", () => {
 })
 
 describe("metrics helpers", () => {
+  // Round-trips through the wire format and converts like
+  // App.handlePageProfileMsg, so field presence and int64 handling match a
+  // message from the server.
+  const decodedPageProfile = (
+    props: PageProfile.$Properties
+  ): ReturnType<typeof PageProfile.toObject> =>
+    PageProfile.toObject(
+      PageProfile.decode(
+        PageProfile.encode(PageProfile.create(props)).finish()
+      )
+    )
+
   const PAGE_PROFILE_DATA = {
     commands: [],
     execTime: 50,
@@ -340,17 +352,6 @@ describe("metrics helpers", () => {
   })
 
   it("buildEventProto forwards agentApiUsage through toJSON - pageProfile", async () => {
-    // Round-trips through the wire format and converts like
-    // App.handlePageProfileMsg, so field presence and int64 handling match a
-    // message from the server.
-    const decodedPageProfile = (
-      props: PageProfile.$Properties
-    ): ReturnType<typeof PageProfile.toObject> =>
-      PageProfile.toObject(
-        PageProfile.decode(
-          PageProfile.encode(PageProfile.create(props)).finish()
-        )
-      )
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
 
@@ -378,6 +379,54 @@ describe("metrics helpers", () => {
       sessions: "1",
     })
     expect(withoutUsage).not.toHaveProperty("agentApiUsage")
+  })
+
+  it("buildEventProto forwards cacheUsage and serverUptimeSeconds through toJSON - pageProfile", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    const withUsage = mm
+      .buildEventProto(
+        "pageProfile",
+        decodedPageProfile({
+          serverUptimeSeconds: 12,
+          cacheUsage: {
+            cacheData: {
+              calls: 3,
+              hits: 2,
+              misses: 1,
+              computeTime: 1500,
+              overheadTime: 40,
+            },
+          },
+        })
+      )
+      .toJSON()
+    const withoutUsage = mm
+      .buildEventProto("pageProfile", decodedPageProfile({ execTime: 5 }))
+      .toJSON()
+    const atServerStart = mm
+      .buildEventProto(
+        "pageProfile",
+        decodedPageProfile({ serverUptimeSeconds: 0 })
+      )
+      .toJSON()
+
+    // Unset cache types and zero values are left out.
+    expect(withUsage.cacheUsage).toStrictEqual({
+      cacheData: {
+        calls: "3",
+        hits: "2",
+        misses: "1",
+        computeTime: "1500",
+        overheadTime: "40",
+      },
+    })
+    expect(withUsage.serverUptimeSeconds).toBe("12")
+    expect(withoutUsage).not.toHaveProperty("cacheUsage")
+    expect(withoutUsage).not.toHaveProperty("serverUptimeSeconds")
+    // The field is optional, so an uptime of 0 is still sent.
+    expect(atServerStart.serverUptimeSeconds).toBe("0")
   })
 
   it("buildEventProto populates expected fields - menuClick", async () => {

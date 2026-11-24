@@ -268,6 +268,19 @@ export interface Props {
    * visible anchor link icon is not rendered.
    */
   hideAnchors?: boolean
+
+  /**
+   * Standalone horizontal rule (`st.divider` or a markdown body that is only
+   * a thematic break). Skips the body-markdown negative bottom margin so space
+   * above and below the rule stays equal.
+   */
+  isDivider?: boolean
+
+  /**
+   * CSS length for the space above and below a standalone divider's rule.
+   * Defaults to `2em`.
+   */
+  dividerGap?: string
 }
 
 /**
@@ -1552,6 +1565,8 @@ const StreamlitMarkdown: FC<Props> = ({
   truncate = false,
   unterminatedParsing,
   hideAnchors,
+  isDivider = false,
+  dividerGap,
 }) => {
   const isInDialog = useContext(IsDialogContext)
 
@@ -1565,6 +1580,8 @@ const StreamlitMarkdown: FC<Props> = ({
       boldLabel={boldLabel}
       isToast={isToast}
       truncate={truncate}
+      isDivider={isDivider}
+      dividerGap={dividerGap}
       style={style}
       className={truncate ? MARKDOWN_ELLIPSIS_CLASS : undefined}
       data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}

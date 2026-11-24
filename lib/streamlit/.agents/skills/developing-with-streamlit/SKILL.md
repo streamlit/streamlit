@@ -11,6 +11,8 @@ metadata:
 
 This is a **routing skill** that directs you to specialized references for Streamlit development.
 
+**Read the matching reference before you edit.** This file summarizes the references but doesn't replace them. Before changing code, read the reference that the [routing table](#reference-routing-table) lists for the task; for a slow app or a request to make an app faster, read `references/performance.md`. Read each reference in its own read, in full: no `head`, `limit`, or line range, and not combined with other files, because long combined output can be cut off.
+
 ## When to Use
 
 Invoke this skill when the user's request involves:
@@ -41,7 +43,7 @@ Invoke this skill when the user's request involves:
 - Set a descriptive `st.set_page_config(page_title=...)` when needed; on multipage apps prefer per-page `st.Page` titles over one flattening global `page_title`.
 - Never claim WCAG certification; prefer native `st.*`; do not CSS-patch known library gaps. When customizing theme or markdown colors, prefer checking contrast (see `references/accessibility.md`) — brand colors can still win when the user asks for them. Do not report the task done until the Step 4 accessibility gate passes.
 
-Apply these defaults unless the user's app or request clearly needs a different approach. They summarize the references but don't replace them: before you edit, also read the reference that the [routing table](#reference-routing-table) lists for the task (for a slow app, `references/performance.md`). For examples, read `references/best-practices.md`.
+Apply these defaults unless the user's app or request clearly needs a different approach. They summarize the references but don't replace them. For examples, read `references/best-practices.md`.
 - Do not use `use_container_width`; use `width="stretch"` or `width="content"` instead.
 - Prefer native Streamlit elements over recreating UI with custom HTML. This includes UI created with `st.html`, `st.markdown(..., unsafe_allow_html=True)`, or deprecated `st.components.v1.html`. Use custom HTML only when no native element provides the required UI or behavior.
 - When a native Streamlit command covers the need, use it instead of a third-party package or a new custom component (for example, `st.text_input(..., live=True)` instead of `streamlit-keyup`). See `references/third-party-components.md` for the full mapping and the cases that still need a package.
@@ -172,7 +174,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Rich text formatting** — Markdown in `st.markdown` and widget labels, colored text (`:red[...]`), badges, Material Symbols icons (`:material/icon_name:`), LaTeX math, and Mermaid diagrams | read `references/markdown.md` |
 | **Displaying text** — headings (`st.title`/`st.header`/`st.subheader`), `st.markdown`, `st.caption`, `st.code`, `st.text`, `st.badge`, and streaming text via `st.write_stream`; prefer explicit elements over `st.write`/magic | read `references/text-display.md` |
 | **Displaying media** — images, video, audio, and PDFs (`st.image`, `st.video`, `st.audio`, `st.pdf`) via the native viewers instead of raw HTML embeds; keyword-only `alt=` for accessible names | read `references/media-display.md` and `references/accessibility.md` |
-| **Chat, conversational, and agentic UIs** — `st.chat_message`, `st.chat_input`, streaming responses with `st.write_stream`, compact thinking expanders with `type="compact"`, chain-of-thought / tool-call timelines with `type="step"` (including nesting steps inside a compact expander), and building AI assistant interfaces | read `references/chat-ui.md` |
+| **Chat, conversational, and agentic UIs** — `st.chat_message`, `st.chat_input`, streaming responses with `st.write_stream`, compact thinking expanders with `type="compact"`, chain-of-thought / tool-call timelines with `type="step"` (including nesting steps inside a compact expander), suggestions and follow-ups, feedback, recent chats and multiple conversations, and building AI assistant interfaces | read `references/chat-ui.md` |
 | **Connecting to Snowflake** — `st.connection("snowflake")`, secrets configuration, querying data, and Snowflake-specific patterns | read `references/snowflake-connection.md` |
 | **Building or packaging a custom component, triggering events back to Python from JS/HTML, custom HTML/JS with event handling (CCv2), OR any UI element that doesn't exist as a native Streamlit widget** (e.g., drag-and-drop, custom interactive visualization, canvas drawing) | read `references/custom-components-v2.md` — **Prefer a native command when one covers the need. Never use `st.components.v1` for new components; always use `st.components.v2.component()`.** (`st.components.v1.html` and `st.components.v1.iframe` are deprecated in favor of `st.iframe`.) |
 | **Using or replacing a third-party community component** — prefer the native command when it covers the need (`streamlit-autorefresh`, `streamlit-aggrid`, `streamlit-folium`, `streamlit-option-menu`, cookie managers, `streamlit-searchbox`, `streamlit-echarts`, `streamlit-keyup`); keep `streamlit-bokeh` for an existing Bokeh figure; otherwise `streamlit-extras`, `streamlit-pivot-table`, and other packages Streamlit does not replace | read `references/third-party-components.md` |
@@ -203,7 +205,7 @@ For **building a dashboard**, read:
 3. `references/data-display.md`
 4. `references/theme.md` — when the user wants a branded or polished look, pair with a theme (`theme.base` for a shared brand file/URL; `dense-dashboard` or `bi-dashboard` when the app should keep the appearance toggle and use compact padding)
 
-For **an app that computes** (forecasts, what-if levers, simulations, pricing or risk models), start from the `compute-demand-simulator` template and read `references/performance.md` and `references/charts.md`. For **an app that acts** (review and approval queues, sign-offs, triage, approving what an AI agent proposes, writeback), start from the `act-review-queue` template and read `references/data-display.md` (editable tables) and `references/layouts.md` (dialogs and forms).
+For **a forecasting app** (forecasts, what-if levers, simulations, pricing or risk models), start from the `compute-demand-simulator` template and read `references/performance.md` and `references/charts.md`. For **a workflow app** (review and approval queues, sign-offs, triage, approving what an AI agent proposes, writeback), start from the `act-review-queue` template and read `references/data-display.md` (editable tables) and `references/layouts.md` (dialogs and forms). For **a chat or agent app** (AI assistants, chatbots, agents that show their steps), start from the `chat-analyst` template and read `references/chat-ui.md`.
 
 For **modernizing an existing app** (only when the user explicitly asks), if the app isn't on the latest Streamlit, first ask the user whether to upgrade the app's Streamlit requirement to the latest version, and if they agree, upgrade it ([environment-setup.md](references/environment-setup.md)). After the upgrade, re-read this skill and its references from the newly installed Streamlit, which can include newer features and guidance. Then analyze the whole app, not only the file in view, show the user a short plan that names the riskiest changes (such as moving to `st.navigation` or rewriting charts), and wait for them to confirm.
 1. **Best practices:** apply the [quick reference](#best-practices-quick-reference) and [best-practices.md](references/best-practices.md). Drop deprecated APIs, replace third-party components and custom HTML where a native command covers the same behavior ([third-party-components.md](references/third-party-components.md)), and fix copy and accessibility (sentence casing, Material Symbols, no empty labels).
@@ -227,8 +229,9 @@ When creating a **new dashboard or data app**, prefer starting from a template i
   - `dashboard-seattle-weather` — public dataset exploration
   - `dashboard-stock-peers` — financial peer analysis
   - `dashboard-background-report` — responsive page while a slow query loads in the background
-  - `compute-demand-simulator` — app that computes: what-if levers rerun a cached Monte Carlo forecast (copy the whole folder; it has a helper module)
-  - `act-review-queue` — app that acts: review queue with editable decisions, validation, and writeback (copy the whole folder; it has helper modules)
+  - `compute-demand-simulator` — forecasting app: what-if levers rerun a cached Monte Carlo forecast (copy the whole folder; it has a helper module)
+  - `act-review-queue` — workflow app: review queue with editable decisions, validation, and writeback (copy the whole folder; it has helper modules)
+  - `chat-analyst` — chat and agent app: tool-call steps, streamed answers with charts, feedback, and recent chats (copy the whole folder; it has a helper module)
 - If no template is a close match, start from scratch but borrow relevant patterns from the templates (e.g., caching with `@st.cache_data`, `filter_by_time_range()`, `st.set_page_config()`, chart utilities, layout structure)
 - When adapting a template, keep existing `alt=` and `page_title`; add `alt=` on every new chart/dataframe you introduce
 - When the user wants a branded or polished look, pair the dashboard with a theme from `assets/templates/themes/configs/` (`dense-dashboard`, or `bi-dashboard` for BI cards and KPIs, if the app should keep the appearance toggle and use compact padding), or point `theme.base` at an existing shared brand file or URL

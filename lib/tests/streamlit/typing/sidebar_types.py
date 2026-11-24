@@ -60,9 +60,9 @@ if TYPE_CHECKING:
         assert_type(expander.markdown("Inside"), DeltaGenerator)
 
     # Module-level commands and unknown names stay type errors on the sidebar.
-    st.sidebar.echo()  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
-    st.sidebar.logo("logo.png")  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
-    st.sidebar.login()  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
-    st.sidebar.logout()  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
-    st.sidebar.dialog("Settings")  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
-    st.sidebar.not_a_streamlit_command()  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+    st.sidebar.echo()  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
+    st.sidebar.logo("logo.png")  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
+    st.sidebar.login()  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
+    st.sidebar.logout()  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
+    st.sidebar.dialog("Settings")  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]
+    st.sidebar.not_a_streamlit_command()  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]

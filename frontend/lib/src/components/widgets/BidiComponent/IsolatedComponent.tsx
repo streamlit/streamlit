@@ -23,6 +23,7 @@ import { useHandleJsContent } from "~lib/components/widgets/BidiComponent/hooks/
 import { handleError } from "~lib/components/widgets/BidiComponent/utils/error"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
+import { ISOLATED_COMPONENT_HOST_CLASS } from "./classNames"
 import { StyledBidiComponentWrapper } from "./styled-components"
 
 /**
@@ -80,6 +81,7 @@ export const IsolatedComponent: FC = memo(() => {
   return (
     <StyledBidiComponentWrapper
       ref={containerRef}
+      className={ISOLATED_COMPONENT_HOST_CLASS}
       data-testid="stBidiComponentIsolated"
     />
   )

@@ -68,6 +68,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
         )
         assert columns_blocks[0].add_block.column.gap_config.gap_size == GapSize.SMALL
         assert not columns_blocks[0].add_block.column.show_border
+        assert not columns_blocks[0].add_block.column.show_divider
 
         # Check the weights are correct
         assert columns_blocks[0].add_block.column.weight == 1.0 / 3
@@ -352,6 +353,37 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert columns_blocks[0].add_block.column.show_border
         assert columns_blocks[1].add_block.column.show_border
         assert columns_blocks[2].add_block.column.show_border
+
+    def test_columns_with_divider(self):
+        """st.columns stores divider=True on every column proto."""
+        st.columns(3, divider=True)
+
+        columns_blocks = self.get_all_deltas_from_queue()[1:4]
+        assert columns_blocks[0].add_block.column.show_divider
+        assert columns_blocks[1].add_block.column.show_divider
+        assert columns_blocks[2].add_block.column.show_divider
+
+    def test_columns_divider_with_border(self):
+        """st.columns allows enabling border and divider together."""
+        st.columns(3, border=True, divider=True)
+
+        columns_blocks = self.get_all_deltas_from_queue()[1:4]
+        assert columns_blocks[0].add_block.column.show_border
+        assert columns_blocks[0].add_block.column.show_divider
+        assert columns_blocks[1].add_block.column.show_border
+        assert columns_blocks[1].add_block.column.show_divider
+
+    @parameterized.expand(
+        [
+            ("yes",),
+            (1,),
+            (None,),
+        ]
+    )
+    def test_columns_with_invalid_divider(self, invalid_divider):
+        """Non-bool divider raises a Streamlit type error, not protobuf's."""
+        with pytest.raises(StreamlitInvalidParameterTypeError, match="divider"):
+            st.columns(3, divider=invalid_divider)
 
     def test_width_config_pixel_width(self):
         """Test that width configuration works correctly"""

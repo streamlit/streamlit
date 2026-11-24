@@ -651,6 +651,7 @@ export const BlockNodeRenderer = (
           node.deltaBlock.column.verticalAlignment ?? undefined
         }
         showBorder={node.deltaBlock.column.showBorder ?? false}
+        showDivider={node.deltaBlock.column.showDivider ?? false}
         // Inherit parent row wrap; default true when FlexContext is absent.
         $wrap={flexContext?.wrap ?? true}
         className={[

@@ -1499,6 +1499,40 @@ describe("StreamlitMarkdown", () => {
     expect(container).not.toHaveStyle("white-space: nowrap")
   })
 
+  it("does not apply a negative bottom margin to a standalone divider", () => {
+    render(<StreamlitMarkdown source="---" allowHTML={false} isDivider />)
+    const marginBottom = Number.parseFloat(
+      getComputedStyle(screen.getByTestId("stMarkdownContainer")).marginBottom
+    )
+    expect(marginBottom).toBe(0)
+  })
+
+  it.each([
+    ["dividerGap 1rem", "1rem", "1rem"],
+    ["the 2em default", undefined, "2em"],
+  ])("applies %s as the hr margin", (_name, dividerGap, expected) => {
+    render(
+      <StreamlitMarkdown
+        source="---"
+        allowHTML={false}
+        isDivider
+        dividerGap={dividerGap}
+      />
+    )
+    const hr = screen.getByTestId("stMarkdownContainer").querySelector("hr")
+    expect(hr).not.toBeNull()
+    expect(getComputedStyle(hr as HTMLElement).marginTop).toBe(expected)
+    expect(getComputedStyle(hr as HTMLElement).marginBottom).toBe(expected)
+  })
+
+  it("applies a negative bottom margin to body markdown", () => {
+    render(<StreamlitMarkdown source="Hello" allowHTML={false} />)
+    const marginBottom = Number.parseFloat(
+      getComputedStyle(screen.getByTestId("stMarkdownContainer")).marginBottom
+    )
+    expect(marginBottom).toBeLessThan(0)
+  })
+
   it("does not stretch truncated widget labels to 100% width", () => {
     render(
       <StreamlitMarkdown

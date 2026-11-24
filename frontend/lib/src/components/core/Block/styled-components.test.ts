@@ -31,6 +31,7 @@ import {
   StyledColumn,
   StyledElementContainer,
   StyledFlexContainerBlock,
+  StyledGridCell,
   StyledLayoutWrapper,
 } from "./styled-components"
 
@@ -91,6 +92,10 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).toContain(".stVerticalBlock{display:block")
     expect(css).toContain("margin-bottom:1rem")
     expect(css).toContain(">.stColumn{display:block;width:100%;min-width:0")
+    // A stacked column has no side-by-side gap, so it draws no divider.
+    expect(css).toMatch(
+      />\.stColumn:not\(:first-of-type\)::before\{display:none/
+    )
   })
 
   it("emits a fit-content rule for stacked columns with an intrinsic-width chart", () => {
@@ -406,6 +411,58 @@ describe("StyledElementContainer print layout", () => {
   })
 })
 
+/**
+ * Matches the rule that hides a retained copy unless a descendant matches
+ * `:focus-visible` or focus is inside an isolated component's shadow root.
+ */
+const RETAINED_HIDE_RULE =
+  /:not\(:has\(:focus-visible\)\):not\(:has\(\.stBidiComponentIsolated:focus-within\)\)\{display:none;?\}/
+
+describe("retained element styles", () => {
+  it("hides a retained element container unless focus should keep it visible", () => {
+    const elementContainerProps = {
+      isStale: false,
+      width: "100%",
+      height: "auto",
+      elementType: "buttonGroup",
+      overflow: "visible",
+    }
+    const retained = cssOf(
+      render(
+        createElement(StyledElementContainer, {
+          ...elementContainerProps,
+          isRetained: true,
+        })
+      )
+    )
+    // A widget focused by the click that triggered the rerun only matches
+    // `:focus-within`, so that must not keep it visible.
+    expect(retained).toMatch(RETAINED_HIDE_RULE)
+    expect(retained).not.toContain(":not(:focus-within)")
+
+    const current = cssOf(
+      render(createElement(StyledElementContainer, elementContainerProps))
+    )
+    expect(current).not.toContain("display:none")
+  })
+
+  it("hides a retained grid cell unless focus should keep it visible", () => {
+    const cellProps = {
+      verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+      $showBorder: false,
+    }
+    const retained = cssOf(
+      render(
+        createElement(StyledGridCell, { ...cellProps, $isRetained: true })
+      )
+    )
+    expect(retained).toMatch(RETAINED_HIDE_RULE)
+
+    const current = cssOf(render(createElement(StyledGridCell, cellProps)))
+    expect(current).not.toContain("display:none")
+  })
+})
+
 describe("StyledColumn print layout", () => {
   it("gives a plain column no print rule of its own", () => {
     const css = cssOf(
@@ -439,6 +496,91 @@ describe("StyledColumn print layout", () => {
     expect(css).toMatch(
       /@media print\{[^}]*:has\(\.stPrintGraphic[^{]*:not\(:has\(\.stPrintFixedWidth[^{]*\{break-inside:avoid/
     )
+  })
+})
+
+describe("StyledColumn divider", () => {
+  it("draws a divider before every column except the first", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledColumn, {
+          weight: 0.5,
+          gap: undefined,
+          showBorder: false,
+          showDivider: true,
+        })
+      )
+    )
+
+    expect(css).toContain(":not(:first-of-type)::before")
+    expect(css).toMatch(/border-left:1px solid/)
+    expect(css).toContain("top:0")
+  })
+
+  it("draws no divider by default", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledColumn, {
+          weight: 0.5,
+          gap: undefined,
+          showBorder: false,
+          showDivider: false,
+        })
+      )
+    )
+
+    expect(css).not.toContain("::before")
+  })
+
+  it("centers the divider in the gap of a bordered column", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledColumn, {
+          weight: 0.5,
+          gap: undefined,
+          showBorder: true,
+          showDivider: true,
+        })
+      )
+    )
+
+    // The line is offset from the padding box, so it moves out by the
+    // column's own border and spans the border box.
+    expect(css).toMatch(/left:calc\(-1 \* \([^)]*\+ 1px\)\)/)
+    expect(css).toContain("top:calc(-1 * 1px)")
+  })
+
+  it("hides dividers when wrapping columns stack", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledColumn, {
+          weight: 0.5,
+          gap: undefined,
+          showBorder: false,
+          showDivider: true,
+          $wrap: true,
+        })
+      )
+    )
+
+    expect(css).toMatch(/@media \(max-width:[^)]+\)[\s\S]*display:none/)
+  })
+
+  it("keeps dividers when wrap is disabled", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledColumn, {
+          weight: 0.5,
+          gap: undefined,
+          showBorder: false,
+          showDivider: true,
+          $wrap: false,
+        })
+      )
+    )
+
+    expect(css).toContain(":not(:first-of-type)::before")
+    expect(css).not.toMatch(/@media \(max-width:[^)]+\)[\s\S]*display:none/)
   })
 })
 

@@ -106,6 +106,10 @@ message Block {
 
     optional streamlit.GapConfig gap_config = 5;
 
+    // Whether to draw a vertical line in the gap before this column. The
+    // frontend never draws one before the first column.
+    bool show_divider = 6;
+
     reserved 2;
   }
 

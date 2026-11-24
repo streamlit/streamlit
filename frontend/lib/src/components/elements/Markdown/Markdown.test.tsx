@@ -371,6 +371,219 @@ describe("Markdown wrap", () => {
     ).not.toBeInTheDocument()
   })
 
+  it.each([
+    {
+      name: "st.divider",
+      elementType: MarkdownProto.Type.DIVIDER,
+      body: "---",
+    },
+    {
+      name: "native ---",
+      elementType: MarkdownProto.Type.NATIVE,
+      body: "---",
+    },
+    {
+      name: "native ***",
+      elementType: MarkdownProto.Type.NATIVE,
+      body: "***",
+    },
+    {
+      name: "native ___",
+      elementType: MarkdownProto.Type.NATIVE,
+      body: "___",
+    },
+    {
+      name: "native _ _ _",
+      elementType: MarkdownProto.Type.NATIVE,
+      body: "_ _ _",
+    },
+    {
+      name: "native - - -",
+      elementType: MarkdownProto.Type.NATIVE,
+      body: "- - -",
+    },
+    {
+      name: "native * * *",
+      elementType: MarkdownProto.Type.NATIVE,
+      body: "* * *",
+    },
+  ])(
+    "keeps a zero bottom margin for a standalone $name",
+    ({ elementType, body }) => {
+      render(<Markdown {...getProps({ body, elementType })} />)
+
+      const marginBottom = Number.parseFloat(
+        getComputedStyle(screen.getByTestId("stMarkdownContainer"))
+          .marginBottom
+      )
+      expect(marginBottom).toBe(0)
+    }
+  )
+
+  it("treats a native rule with surrounding whitespace as a standalone divider", () => {
+    render(
+      <Markdown
+        {...getProps({
+          body: "\n---\n",
+          elementType: MarkdownProto.Type.NATIVE,
+        })}
+      />
+    )
+
+    const marginBottom = Number.parseFloat(
+      getComputedStyle(screen.getByTestId("stMarkdownContainer")).marginBottom
+    )
+    expect(marginBottom).toBe(0)
+  })
+
+  it("keeps wrap=false markdown inline-only, so a native rule is not a divider", () => {
+    render(
+      <Markdown
+        {...getProps({
+          body: "---",
+          elementType: MarkdownProto.Type.NATIVE,
+          wrap: false,
+        })}
+      />
+    )
+
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container.querySelector("hr")).toBeNull()
+    expect(container).toHaveStyle("white-space: nowrap")
+  })
+
+  it("keeps the negative bottom margin when inline help turns a rule into a paragraph", () => {
+    render(
+      <Markdown
+        {...getProps({
+          body: "---",
+          elementType: MarkdownProto.Type.NATIVE,
+          help: "Details",
+        })}
+      />
+    )
+
+    const marginBottom = Number.parseFloat(
+      getComputedStyle(screen.getByTestId("stMarkdownContainer")).marginBottom
+    )
+    expect(marginBottom).toBeLessThan(0)
+  })
+
+  it("keeps a zero bottom margin when help sits beside a rule because HTML is allowed", async () => {
+    render(
+      <Markdown
+        {...getProps({
+          body: "---",
+          elementType: MarkdownProto.Type.NATIVE,
+          help: "Details",
+          allowHtml: true,
+        })}
+      />
+    )
+
+    // The HTML plugin loads lazily, so wait for the rule to render.
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("stMarkdownContainer").querySelector("hr")
+      ).toBeTruthy()
+    })
+    const container = screen.getByTestId("stMarkdownContainer")
+    const marginBottom = Number.parseFloat(
+      getComputedStyle(container).marginBottom
+    )
+    expect(marginBottom).toBe(0)
+  })
+
+  it("keeps the negative bottom margin when a rule is part of a longer markdown body", () => {
+    render(
+      <Markdown
+        {...getProps({
+          body: "Above\n\n---\n\nBelow",
+          elementType: MarkdownProto.Type.NATIVE,
+        })}
+      />
+    )
+
+    const marginBottom = Number.parseFloat(
+      getComputedStyle(screen.getByTestId("stMarkdownContainer")).marginBottom
+    )
+    expect(marginBottom).toBeLessThan(0)
+  })
+
+  it.each([
+    {
+      name: "GapSize.MEDIUM",
+      gapConfig: { gapSize: streamlit.GapSize.MEDIUM },
+      expected: "2em",
+    },
+    {
+      name: "GapSize.LARGE",
+      gapConfig: { gapSize: streamlit.GapSize.LARGE },
+      expected: "4em",
+    },
+    {
+      name: "pixelGap 10",
+      gapConfig: { pixelGap: 10 },
+      expected: "10px",
+    },
+    {
+      name: "GapSize.NONE",
+      gapConfig: { gapSize: streamlit.GapSize.NONE },
+      expected: "0px",
+    },
+  ])(
+    "applies $name as the hr margin for st.divider",
+    ({ gapConfig, expected }) => {
+      render(
+        <Markdown
+          {...getProps({
+            body: "---",
+            elementType: MarkdownProto.Type.DIVIDER,
+            gapConfig,
+          })}
+        />
+      )
+
+      const hr = screen.getByTestId("stMarkdownContainer").querySelector("hr")
+      expect(hr).not.toBeNull()
+      expect(getComputedStyle(hr as HTMLElement).marginTop).toBe(expected)
+      expect(getComputedStyle(hr as HTMLElement).marginBottom).toBe(expected)
+    }
+  )
+
+  it("defaults the hr margin to 2em when gapConfig is absent", () => {
+    render(
+      <Markdown
+        {...getProps({
+          body: "---",
+          elementType: MarkdownProto.Type.DIVIDER,
+        })}
+      />
+    )
+
+    const hr = screen.getByTestId("stMarkdownContainer").querySelector("hr")
+    expect(hr).not.toBeNull()
+    expect(getComputedStyle(hr as HTMLElement).marginTop).toBe("2em")
+    expect(getComputedStyle(hr as HTMLElement).marginBottom).toBe("2em")
+  })
+
+  it("ignores gapConfig on a native markdown rule", () => {
+    render(
+      <Markdown
+        {...getProps({
+          body: "---",
+          elementType: MarkdownProto.Type.NATIVE,
+          gapConfig: { gapSize: streamlit.GapSize.LARGE },
+        })}
+      />
+    )
+
+    const hr = screen.getByTestId("stMarkdownContainer").querySelector("hr")
+    expect(hr).not.toBeNull()
+    expect(getComputedStyle(hr as HTMLElement).marginTop).toBe("2em")
+    expect(getComputedStyle(hr as HTMLElement).marginBottom).toBe("2em")
+  })
+
   it("does not truncate a badge when wrap is unset", () => {
     const props = getProps({
       body: ":blue-badge[Label]",

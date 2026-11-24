@@ -22,8 +22,6 @@ import { isNullOrUndefined } from "@streamlit/utils"
 
 import {
   getDecreasingRed,
-  getGray30,
-  getGray70,
   getIncreasingGreen,
   hasLightBackgroundColor,
 } from "~lib/theme/getColors"
@@ -191,8 +189,8 @@ function buildAxisDefaults(
   theme: EmotionTheme,
   fontSize: number
 ): Record<string, Record<string, unknown>> {
-  const axisLineColor = getGray30(theme)
-  const labelColor = getGray70(theme)
+  const axisLineColor = theme.colors.fadedText05
+  const labelColor = theme.colors.fadedText70
 
   return {
     axisLine: {
@@ -230,9 +228,11 @@ function buildAxisDefaults(
     // light gray, which covers the plot on a dark background.
     splitArea: {
       areaStyle: {
+        // Built from `bodyText` because `labelColor` is already translucent
+        // and `transparentize` would subtract from its alpha.
         color: [
-          transparentize(labelColor, 0.97),
-          transparentize(labelColor, 0.93),
+          transparentize(theme.colors.bodyText, 0.97),
+          transparentize(theme.colors.bodyText, 0.93),
         ],
       },
     },
@@ -373,8 +373,10 @@ export function buildStreamlitEChartsTheme(
   const { colors, genericFonts, fontSizes } = theme
   const bodyFontSize = convertRemToPx(fontSizes.twoSm)
   const treemapInsets = buildTreemapInsets(theme)
-  const labelColor = getGray70(theme)
-  const axisLineColor = getGray30(theme)
+  // Secondary text and lines derive from the theme's text color so charts
+  // follow a custom `textColor`, like other secondary text in the app.
+  const labelColor = theme.colors.fadedText70
+  const axisLineColor = theme.colors.fadedText05
   const axisDefaults = buildAxisDefaults(theme, bodyFontSize)
   // Hide colliding tick labels on time, value, and log axes. ECharts spaces
   // their ticks by the data range, not the chart width, so a narrow chart can
@@ -542,10 +544,12 @@ export function buildStreamlitEChartsTheme(
       splitArea: {
         areaStyle: {
           // Very faint, theme-derived alternating rings that stay subtle on
-          // both light and dark backgrounds.
+          // both light and dark backgrounds. Built from `bodyText` rather
+          // than the already-translucent `labelColor`, so `transparentize`
+          // doesn't zero out the alpha.
           color: [
-            transparentize(labelColor, 0.97),
-            transparentize(labelColor, 0.93),
+            transparentize(colors.bodyText, 0.97),
+            transparentize(colors.bodyText, 0.93),
           ],
         },
       },
@@ -557,7 +561,7 @@ export function buildStreamlitEChartsTheme(
     // the sequential (single-hue) palette so it reads as a clean gradient
     // instead of muddy interpolations between categorical hues, and theme the
     // link ribbons so they stay legible (ECharts' default gray is too faint in
-    // dark mode).
+    // dark mode). The ribbon `opacity` multiplies `labelColor`'s 0.7 alpha.
     sankey: {
       color: [...colors.chartSequentialColors],
       lineStyle: {
@@ -764,9 +768,9 @@ export function buildStreamlitEChartsTheme(
       borderColor: colors.borderColor,
       fillerColor: transparentize(colors.primary, 0.85),
       // The slider's mini series preview. It sits on the app background rather
-      // than inside the plot, so the faint gray used for gridlines leaves it
-      // almost invisible in dark mode. Opacity is set explicitly instead of
-      // baked into the color, because ECharts multiplies the two.
+      // than inside the plot, so the faint gridline color would leave it
+      // almost invisible in dark mode. ECharts multiplies `opacity` by the
+      // color's own alpha, so these combine with `labelColor`'s 0.7 alpha.
       dataBackground: {
         lineStyle: {
           color: labelColor,

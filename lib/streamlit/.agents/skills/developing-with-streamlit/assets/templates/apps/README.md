@@ -1,17 +1,18 @@
 # Streamlit App Templates
 
-This directory contains ready-to-use data app templates for Streamlit: apps that compute, apps that act, and dashboards. Each template demonstrates best practices with modern UI patterns, and draws its charts with `st.echarts_chart`, the recommended chart command.
+This directory contains ready-to-use data app templates for Streamlit: forecasting apps, workflow apps, chat and agent apps, and dashboards. Each template demonstrates best practices with modern UI patterns, and draws its charts with `st.echarts_chart`, the recommended chart command.
 
 ## Available Templates
 
-### Apps That Compute and Act
+### Forecasting, Workflow, and Agent Apps
 
-Simplified versions of the official [apps that compute](https://apps-that-compute-demo.streamlit.app/) and [apps that act](https://apps-that-act-demo.streamlit.app/) demos, with synthetic data:
+Simplified versions of the official [forecasting app](https://forecasting-app-demo.streamlit.app/), [workflow app](https://workflow-app-demo.streamlit.app/), and [agent app](https://agent-app-demo.streamlit.app/) demos, with synthetic data:
 
 | Template | Description | Key Features |
 |----------|-------------|--------------|
 | **compute-demand-simulator** | What-if demand and pricing simulator: every lever change reruns a Monte Carlo forecast | Sidebar levers bound to the URL with a reset callback, a cached simulation keyed by a frozen dataclass, `st.metric` cards vs. the plan with sparklines, ECharts fan chart (50% / 80% ranges) and tornado chart in parallel fragments with `st.skeleton`, scenarios saved from an `@st.dialog` form and loaded back with a `ButtonColumn`. `model.py` holds the simulation |
 | **act-review-queue** | Review queue for purchase orders an AI agent proposes | `st.data_editor` with editable quantity, decision, and note columns, drafts in Session State that survive filters, server-side validation before writeback through `st.connection` (SQLite via SQLAlchemy) with an audit log, bulk "accept low-risk", a review drawer (`@st.dialog(position="right")`) with the agent's reasoning as `st.status(type="step")` steps, URL-bound filters and live search. `store.py` holds the data access, `review.py` the drafts and drawer |
+| **chat-analyst** | Chat analyst that shows its steps while it answers questions about revenue | Conversations in Session State with recent chats in the sidebar (tertiary buttons with `wrap=False` in `st.container(gap=None)`), suggestion and follow-up `st.pills`, a "Thought for N seconds" `st.status(type="compact")` over `type="step"` tool calls with `:shimmer[...]` labels, `st.write_stream(cursor=...)`, an ECharts chart redrawn from history, `st.feedback` on every answer, and `st.chat_input(submit_mode="stop")` with a retry for stopped runs. `agent.py` holds the scripted agent to replace with your model |
 
 ### Public Demo Templates
 
@@ -59,7 +60,7 @@ Each template follows this structure:
 └── pyproject.toml      # Dependencies and metadata
 ```
 
-`compute-demand-simulator` adds `model.py` and ships a copy of `warm-editorial`, and `act-review-queue` adds `store.py` and `review.py`; copy the whole folder. `act-review-queue` creates `review_queue.db` in the working directory on first run.
+`compute-demand-simulator` adds `model.py` and ships a copy of `warm-editorial`, `act-review-queue` adds `store.py` and `review.py`, and `chat-analyst` adds `agent.py`; copy the whole folder. `act-review-queue` creates `review_queue.db` in the working directory on first run.
 
 `dashboard-metrics` also ships `.streamlit/config.toml` (a copy of `dense-dashboard`) and splits its code into `streamlit_app.py` (the page), `charts.py` (time filtering, alt text, and ECharts options), and `data.py` (synthetic data and cached loaders). `dashboard-revenue` ships a copy of `bi-dashboard` and splits its code into `streamlit_app.py` (the page), `components.py` (card headers, menus, and drawers), `charts.py`, and `data.py`.
 

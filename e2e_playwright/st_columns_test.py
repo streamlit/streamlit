@@ -421,11 +421,75 @@ def test_columns_wrap_true_still_stacks_at_narrow_viewport(app: Page):
     expect(columns).to_have_count(3)
 
     # wait_until guards against layout races right after viewport resize.
-    def _columns_are_stacked() -> bool:
-        first_box = columns.nth(0).bounding_box()
-        second_box = columns.nth(1).bounding_box()
-        if first_box is None or second_box is None:
-            return False
-        return second_box["y"] > first_box["y"] + first_box["height"] / 2
+    wait_until(app, lambda: _columns_are_stacked(columns))
 
-    wait_until(app, _columns_are_stacked)
+
+def _columns_are_stacked(columns: Locator) -> bool:
+    first_box = columns.nth(0).bounding_box()
+    second_box = columns.nth(1).bounding_box()
+    if first_box is None or second_box is None:
+        return False
+    return second_box["y"] > first_box["y"] + first_box["height"] / 2
+
+
+def _has_divider(column: Locator) -> bool:
+    """Whether the column draws a divider line before it.
+
+    A column without the pseudo-element reports `content: none`, and a
+    stacked column hides it with `display: none`.
+    """
+    return bool(
+        column.evaluate(
+            """el => {
+                const style = getComputedStyle(el, '::before');
+                return (
+                    style.content !== 'none' &&
+                    style.content !== 'normal' &&
+                    style.display !== 'none'
+                );
+            }"""
+        )
+    )
+
+
+def test_columns_with_divider(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Vertical lines sit between neighboring columns, never before the first."""
+    container = get_element_by_key(themed_app, "columns_divider")
+    column_group = container.get_by_test_id("stHorizontalBlock")
+    columns = column_group.get_by_test_id("stColumn")
+    expect(columns).to_have_count(3)
+    expect(columns.nth(1)).to_be_visible()
+    assert not _has_divider(columns.nth(0))
+    assert _has_divider(columns.nth(1))
+    assert_snapshot(column_group, name="st_columns-with_divider")
+
+
+def test_columns_divider_with_no_gap(app: Page, assert_snapshot: ImageCompareFunction):
+    """With gap=None, the divider still appears on the shared edge."""
+    container = get_element_by_key(app, "columns_divider_gap_none")
+    column_group = container.get_by_test_id("stHorizontalBlock")
+    expect(column_group.get_by_test_id("stColumn")).to_have_count(3)
+    assert_snapshot(column_group, name="st_columns-with_divider_gap_none")
+
+
+def test_columns_divider_with_border(app: Page, assert_snapshot: ImageCompareFunction):
+    """Border and divider can be enabled together."""
+    container = get_element_by_key(app, "columns_divider_and_border")
+    column_group = container.get_by_test_id("stHorizontalBlock")
+    columns = column_group.get_by_test_id("stColumn")
+    expect(columns).to_have_count(2)
+    assert _has_divider(columns.nth(1))
+    assert_snapshot(column_group, name="st_columns-with_divider_and_border")
+
+
+def test_columns_divider_hides_when_stacked(app: Page):
+    """Stacked columns do not keep leftover vertical divider lines."""
+    app.set_viewport_size({"width": 640, "height": 800})
+
+    container = get_element_by_key(app, "columns_divider_wrap")
+    column_group = container.get_by_test_id("stHorizontalBlock")
+    columns = column_group.get_by_test_id("stColumn")
+    expect(columns).to_have_count(3)
+
+    wait_until(app, lambda: _columns_are_stacked(columns))
+    assert not _has_divider(columns.nth(1))

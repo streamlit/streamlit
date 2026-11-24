@@ -124,7 +124,7 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
         width = self._layout_config.width if self._layout_config else None
         return width if isinstance(width, int) else "stretch"
 
-    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[invalid-method-override]
+    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[incompatible-method-override]
         """Replace the skeleton with a loading block that receives the content."""
         self._block_dg = open_loading_block(
             self._dg,

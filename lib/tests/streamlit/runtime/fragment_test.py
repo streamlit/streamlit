@@ -2549,12 +2549,16 @@ class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
         mock_ctx.parallel_coordinator = mock_coordinator
 
         captured_flag: bool | None = None
+        captured_listed: bool | None = None
 
         def capturing_fragment() -> None:
-            nonlocal captured_flag
+            nonlocal captured_flag, captured_listed
             captured_flag = ThreadState.get().command_tracking_deactivated
+            captured_listed = ThreadState.get().in_listed_command
 
-        ThreadState.initialize(command_tracking_deactivated=True)
+        ThreadState.initialize(
+            command_tracking_deactivated=True, in_listed_command=True
+        )
         worker_ctx = contextvars.copy_context()
         try:
             with (
@@ -2571,6 +2575,7 @@ class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
                 worker_ctx.run(run_worker)
 
             assert captured_flag is False
+            assert captured_listed is False
             assert ThreadState.get().command_tracking_deactivated is True
         finally:
             ThreadState.initialize()

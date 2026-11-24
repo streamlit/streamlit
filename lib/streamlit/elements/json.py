@@ -128,12 +128,12 @@ class JsonMixin:
 
         if is_custom_dict(body):
             is_user = isinstance(body, UserInfoProxy)
-            body = body.to_dict()  # ty: ignore[unresolved-attribute]
+            body = body.to_dict()  # ty: ignore[missing-attribute]
             if is_user and "tokens" in body:
                 body["tokens"] = dict.fromkeys(body["tokens"], "***")
 
         if is_namedtuple(body):
-            body = body._asdict()  # ty: ignore[unresolved-attribute]
+            body = body._asdict()  # ty: ignore[missing-attribute]
 
         if isinstance(
             body, (ChainMap, types.MappingProxyType, UserDict)

@@ -23,6 +23,12 @@ st.dataframe(df)
 - Handles reconnection
 - Works with st.secrets
 
+In Snowpark Container Services with no `[connections.snowflake]` secrets and no Snowflake
+connector configuration (`connections.toml`, `config.toml`, or `SNOWFLAKE_CONNECTIONS`),
+`st.connection("snowflake")` connects as the service using `SNOWFLAKE_ACCOUNT`,
+`SNOWFLAKE_HOST`, and the service token. Use `"snowflake-callers-rights"` to query as the
+viewer.
+
 ## Caller's rights connection (Streamlit in Snowflake only)
 
 > **Prerequisite:** This feature requires running your app inside Snowflake (Streamlit in Snowflake). It is not available for OSS Streamlit deployments.

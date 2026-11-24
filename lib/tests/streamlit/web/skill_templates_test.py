@@ -43,8 +43,8 @@ _APPS_DIR = (
 _TEMPLATES = sorted(path.name for path in _APPS_DIR.iterdir() if path.is_dir())
 # These templates import packages from the integration dependency group.
 _INTEGRATION_TEMPLATES = {"act-review-queue"}  # sqlalchemy, for st.connection
-# These templates draw charts only in a drawer that a table click opens.
-_NO_DEFAULT_CHART = {"act-review-queue", "dashboard-companies"}
+# These templates draw charts only after a table click or a chat message.
+_NO_DEFAULT_CHART = {"act-review-queue", "chat-analyst", "dashboard-companies"}
 
 
 def _param(template: str, *values: Any) -> Any:
@@ -167,3 +167,46 @@ def test_template_runs_with_alternate_state(
     """Templates also run with widget states that reach their other branches."""
     at = _run_template(template, state)
     _assert_renders_cleanly(at)
+
+
+def _stopped_chat() -> dict[str, Any]:
+    """A chat whose run was interrupted before the agent answered its question."""
+    return {
+        "chat_id": "c1",
+        "chats": {
+            "c1": [{"role": "user", "id": "m1", "content": "Why did sales drop?"}]
+        },
+    }
+
+
+@pytest.mark.usefixtures("isolated_template")
+# The isolated_template fixture reads the template name from this parameter.
+@pytest.mark.parametrize("template", ["chat-analyst"])
+def test_chat_analyst_answers_suggestions_and_retries(template: str) -> None:
+    """Suggestions and follow-ups get answers, and an interrupted question gets one on retry."""
+    picked = _run_template(
+        template,
+        {"chat_id": "c0", "suggestion_c0": ":material/trending_down: Why revenue fell"},
+    )
+    _assert_renders_cleanly(picked)
+    assert picked.echarts_chart, "the suggested analysis should draw its chart"
+
+    # Follow-up to "Why revenue fell". set_value takes the full option string,
+    # icon included; AppTest's listed options drop the icon, so they can't be
+    # used to look it up.
+    picked.pills[0].set_value(":material/leaderboard: Compare regions").run()
+    _assert_renders_cleanly(picked)
+    roles = [message["role"] for message in picked.session_state["chats"]["c0"]]
+    assert roles == ["user", "assistant"] * 2
+
+    interrupted = "This response was interrupted."
+    stopped = _run_template(template, _stopped_chat())
+    _assert_renders_cleanly(stopped)
+    assert interrupted in [caption.value for caption in stopped.caption]
+
+    retried = _run_template(template, {**_stopped_chat(), "retry": True})
+    _assert_renders_cleanly(retried)
+    # The retry answers the stored question without appending it again.
+    roles = [message["role"] for message in retried.session_state["chats"]["c1"]]
+    assert roles == ["user", "assistant"]
+    assert interrupted not in [caption.value for caption in retried.caption]

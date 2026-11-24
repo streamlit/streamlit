@@ -263,7 +263,7 @@ When `theme="streamlit"` (default), the chart automatically matches the active S
     `media` overrides inherit it when they merge over a base time axis, but a time axis that
     only a tick or override declares keeps ECharts' labels, as do slider `dataZoom` labels.
 - **Backgrounds / axes / grid** — transparent chart background over the app background, with
-  gridlines, axis lines, and tick labels colored from the Streamlit gray scale. Time, value, and
+  gridlines, axis lines, and tick labels derived from the theme's `textColor`. Time, value, and
   log axes hide tick labels that would overlap (`axisLabel.hideOverlap`), since ECharts spaces
   their ticks by the data range, not the chart width; category axes keep ECharts' own label
   thinning. Interaction components (`tooltip`, `legend`, `dataZoom`, `brush`, `toolbox`) also

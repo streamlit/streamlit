@@ -23,7 +23,7 @@ import threading
 import time
 import unittest
 from typing import TYPE_CHECKING, Any
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import pytest
 from parameterized import parameterized
@@ -1422,6 +1422,41 @@ class ScriptRunnerTest(unittest.TestCase):
             assert call_kwargs["exec_time"] > 0
             assert call_kwargs["prep_time"] > 0
             assert call_kwargs["uncaught_exception"] == "AttributeError"
+
+    @parameterized.expand([(True,), (False,)])
+    @patch("streamlit.runtime.scriptrunner.script_runner.create_page_profile_message")
+    def test_server_uptime_is_read_only_when_gathering_usage_stats(
+        self,
+        gather_usage_stats: bool,
+        patched_create_page_profile_message: MagicMock,
+    ):
+        """The run reads the server uptime only when it sends a page profile."""
+        uptime_seconds = PropertyMock(return_value=42)
+        # Runtime._instance is a MagicMock here, and a PropertyMock only records
+        # reads when it is set on the class.
+        with (
+            patch.object(
+                type(Runtime._instance),
+                "uptime_seconds",
+                new=uptime_seconds,
+                create=True,
+            ),
+            testutil.patch_config_options(
+                {"browser.gatherUsageStats": gather_usage_stats}
+            ),
+        ):
+            scriptrunner = TestScriptRunner("good_script.py")
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+        if gather_usage_stats:
+            uptime_seconds.assert_called_once()
+            call_kwargs = patched_create_page_profile_message.call_args.kwargs
+            assert call_kwargs["server_uptime_seconds"] == 42
+        else:
+            uptime_seconds.assert_not_called()
+            patched_create_page_profile_message.assert_not_called()
 
     @parameterized.expand([(True,), (False,)])
     @patch("streamlit.runtime.runtime.Runtime.exists", MagicMock(return_value=True))
