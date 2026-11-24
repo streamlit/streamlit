@@ -13,9 +13,8 @@
 # limitations under the License.
 from __future__ import annotations
 
-import inspect
 import re
-from collections.abc import Collection, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from datetime import date, datetime, time, timedelta
 from typing import (
@@ -28,13 +27,15 @@ from typing import (
     overload,
 )
 
-from streamlit.dataframe_util import (
-    DataFormat,
-    OptionSequence,
-    convert_anything_to_list,
-    determine_data_format,
-)
 from streamlit.elements.lib import agent_spec
+from streamlit.elements.lib.date_input_availability import (
+    DateAvailability,
+    DateFilter,
+    is_date_selectable,
+    parse_date_availability,
+    raise_unavailable_value_error,
+    resolve_today_to_selectable,
+)
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     WidthWithoutContent,
@@ -53,7 +54,6 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitIncompatibleParametersError,
     StreamlitInvalidMinMaxError,
     StreamlitInvalidParameterTypeError,
     StreamlitValueAboveMaxError,
@@ -94,34 +94,9 @@ NullableScalarDateValue: TypeAlias = date | datetime | str | Literal["today"] | 
 # The accepted input value for st.date_input. Can be a date scalar or a date range.
 DateValue: TypeAlias = NullableScalarDateValue | Sequence[NullableScalarDateValue]
 
-# Exact dates, weekdays, or list-likes accepted by enabled_dates / disabled_dates.
-DateLike: TypeAlias = date | datetime | str
-DateFilter: TypeAlias = OptionSequence[DateLike] | DateLike | Collection[DateLike]
-
 # The return value of st.date_input.
 DateWidgetRangeReturn: TypeAlias = tuple[()] | tuple[date] | tuple[date, date]
 DateWidgetReturn: TypeAlias = date | DateWidgetRangeReturn | None
-
-_WEEKDAY_NAME_TO_ISO: Final[dict[str, int]] = {
-    "monday": 1,
-    "tuesday": 2,
-    "wednesday": 3,
-    "thursday": 4,
-    "friday": 5,
-    "saturday": 6,
-    "sunday": 7,
-}
-_ISO_WEEKDAY_TO_NAME: Final[dict[int, str]] = {
-    value: name for name, value in _WEEKDAY_NAME_TO_ISO.items()
-}
-_DATE_FILTER_ACCEPTED_FORMS: Final[list[str]] = [
-    "date",
-    "datetime",
-    "ISO string",
-    '"today"',
-    'weekday name ("monday"…"sunday")',
-    "list-like of these",
-]
 
 DEFAULT_STEP_MINUTES: Final = 15
 _SUPPORTED_DATE_FORMATS: Final = [
@@ -310,270 +285,9 @@ def _parse_max_date(
     return parsed_max_date
 
 
-def _is_rejected_dataframe(obj: object) -> bool:
-    """True for 2D dataframe objects that must not be accepted as a date filter."""
-    return determine_data_format(obj) in {
-        DataFormat.PANDAS_DATAFRAME,
-        DataFormat.POLARS_DATAFRAME,
-        DataFormat.POLARS_LAZYFRAME,
-        DataFormat.MODIN_OBJECT,
-        DataFormat.PYSPARK_OBJECT,
-        DataFormat.SNOWPARK_OBJECT,
-        DataFormat.SNOWPANDAS_OBJECT,
-        DataFormat.DASK_OBJECT,
-        DataFormat.XARRAY_DATASET,
-        DataFormat.XARRAY_DATA_ARRAY,
-        DataFormat.PYARROW_TABLE,
-        DataFormat.NUMPY_MATRIX,
-    }
-
-
-def _convert_numpy_datetime64_to_date(value: object) -> date | None:
-    """Convert a NumPy datetime64-like value to date, or return None if unsupported."""
-    type_name = type(value).__name__
-    module_name = type(value).__module__
-    # pandas Timestamp is a datetime subclass and is handled elsewhere.
-    if (
-        "datetime64" not in type_name
-        and "datetime64" not in module_name
-        and not (module_name.startswith("numpy") and type_name.startswith("datetime64"))
-    ):
-        return None
-    try:
-        # Prefer pandas when available: handles datetime64[ns] and DatetimeArray entries.
-        import pandas as pd
-
-        return pd.Timestamp(value).date()  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-    except Exception:
-        try:
-            text = str(value)
-            return date.fromisoformat(text[:10])
-        except ValueError:
-            return None
-
-
-def _parse_date_filter_entry(
-    entry: object,
-    param_name: str,
-) -> tuple[date | None, int | None, bool]:
-    """Parse one filter entry into (exact_date, weekday, is_today_literal).
-
-    Exactly one of exact_date or weekday is set, unless the entry is the
-    literal ``"today"``, in which case exact_date is today's date and
-    ``is_today_literal`` is True.
-    """
-    if isinstance(entry, str):
-        stripped = entry.strip()
-        weekday = _WEEKDAY_NAME_TO_ISO.get(stripped.casefold())
-        if weekday is not None:
-            return None, weekday, False
-        if stripped.casefold() == "today":
-            return datetime.now().date(), None, True
-        try:
-            return _convert_datelike_to_date(stripped), None, False
-        except StreamlitInvalidParameterTypeError as exc:
-            raise StreamlitInvalidParameterTypeError(
-                param_name,
-                type(entry).__name__,
-                _DATE_FILTER_ACCEPTED_FORMS,
-            ) from exc
-
-    if isinstance(entry, datetime):
-        return entry.date(), None, False
-    if isinstance(entry, date):
-        return entry, None, False
-
-    converted = _convert_numpy_datetime64_to_date(entry)
-    if converted is not None:
-        return converted, None, False
-
-    raise StreamlitInvalidParameterTypeError(
-        param_name,
-        type(entry).__name__,
-        _DATE_FILTER_ACCEPTED_FORMS,
-    )
-
-
-@dataclass(frozen=True)
-class _DateAvailability:
-    """Normalized availability configuration for st.date_input."""
-
-    mode: DateInputProto.AvailabilityMode.ValueType
-    # Resolved exact dates after materialization (including resolved "today").
-    exact_dates: frozenset[date]
-    weekdays: frozenset[int]
-    # Element-ID tokens: exact dates as ISO strings, with "today" kept symbolic.
-    id_exact_entries: tuple[str, ...]
-    id_weekdays: tuple[int, ...]
-    # Parameter that produced this config, for agent reporting and errors.
-    param_name: Literal["enabled_dates", "disabled_dates"]
-
-    def is_available(self, value: date) -> bool:
-        """Return True when ``value`` is selectable under this configuration."""
-        matches = value in self.exact_dates or value.isoweekday() in self.weekdays
-        if self.mode == DateInputProto.AvailabilityMode.ALLOW:
-            return matches
-        if self.mode == DateInputProto.AvailabilityMode.BLOCK:
-            return not matches
-        return True
-
-    def bounds_filtered(self, min_value: date, max_value: date) -> _DateAvailability:
-        """Drop exact dates outside the min/max window for protobuf / agent use."""
-        filtered = frozenset(d for d in self.exact_dates if min_value <= d <= max_value)
-        return replace(self, exact_dates=filtered)
-
-    def agent_report(self) -> list[str]:
-        """Weekday names plus ISO dates the browser receives."""
-        values = [_ISO_WEEKDAY_TO_NAME[day] for day in sorted(self.weekdays)]
-        values.extend(_date_to_proto_string(d) for d in sorted(self.exact_dates))
-        return values
-
-
-def _normalize_date_filter(
-    raw: DateFilter | None,
-    param_name: Literal["enabled_dates", "disabled_dates"],
-) -> tuple[frozenset[date], frozenset[int], tuple[str, ...], tuple[int, ...]] | None:
-    """Materialize, validate, deduplicate, and sort a date filter parameter."""
-    if raw is None:
-        return None
-
-    if inspect.isgenerator(raw) or inspect.isgeneratorfunction(raw):
-        raise StreamlitAPIException(
-            f"The `{param_name}` parameter does not accept generators. "
-            "Pass a list, tuple, set, Series, Index, or NumPy array instead.",
-            error_id="date-input-filter-generator",
-        )
-
-    if _is_rejected_dataframe(raw):
-        raise StreamlitAPIException(
-            f"The `{param_name}` parameter does not accept DataFrames. "
-            "Pass a column as a Series, Index, or NumPy array instead "
-            '(for example `df["date"]` or `df["date"].unique()`).',
-            error_id="date-input-filter-dataframe",
-        )
-
-    if isinstance(raw, (str, date, datetime)):
-        entries: list[object] = [raw]
-    else:
-        entries = cast("list[object]", convert_anything_to_list(raw))
-
-    exact_dates: set[date] = set()
-    weekdays: set[int] = set()
-    id_exact: set[str] = set()
-    for entry in entries:
-        exact, weekday, is_today = _parse_date_filter_entry(entry, param_name)
-        if weekday is not None:
-            weekdays.add(weekday)
-        elif exact is not None:
-            exact_dates.add(exact)
-            id_exact.add("today" if is_today else _date_to_proto_string(exact))
-
-    return (
-        frozenset(exact_dates),
-        frozenset(weekdays),
-        tuple(sorted(id_exact)),
-        tuple(sorted(weekdays)),
-    )
-
-
-def _parse_date_availability(
-    enabled_dates: DateFilter | None,
-    disabled_dates: DateFilter | None,
-) -> _DateAvailability | None:
-    """Parse enabled_dates / disabled_dates into a single availability config."""
-    if enabled_dates is not None and disabled_dates is not None:
-        raise StreamlitIncompatibleParametersError(
-            "enabled_dates",
-            "disabled_dates",
-        )
-
-    if enabled_dates is not None:
-        normalized = _normalize_date_filter(enabled_dates, "enabled_dates")
-        if normalized is None:
-            raise StreamlitAPIException(
-                "Failed to normalize `enabled_dates`.",
-                error_id="date-input-filter-normalize",
-            )
-        exact, weekdays, id_exact, id_weekdays = normalized
-        return _DateAvailability(
-            mode=DateInputProto.AvailabilityMode.ALLOW,
-            exact_dates=exact,
-            weekdays=weekdays,
-            id_exact_entries=id_exact,
-            id_weekdays=id_weekdays,
-            param_name="enabled_dates",
-        )
-
-    if disabled_dates is not None:
-        normalized = _normalize_date_filter(disabled_dates, "disabled_dates")
-        if normalized is None:
-            raise StreamlitAPIException(
-                "Failed to normalize `disabled_dates`.",
-                error_id="date-input-filter-normalize",
-            )
-        exact, weekdays, id_exact, id_weekdays = normalized
-        return _DateAvailability(
-            mode=DateInputProto.AvailabilityMode.BLOCK,
-            exact_dates=exact,
-            weekdays=weekdays,
-            id_exact_entries=id_exact,
-            id_weekdays=id_weekdays,
-            param_name="disabled_dates",
-        )
-
-    return None
-
-
-def _is_date_selectable(
-    value: date,
-    min_value: date,
-    max_value: date,
-    availability: _DateAvailability | None,
-) -> bool:
-    if value < min_value or value > max_value:
-        return False
-    if availability is None:
-        return True
-    return availability.is_available(value)
-
-
-def _resolve_today_to_selectable(
-    today: date,
-    min_value: date,
-    max_value: date,
-    availability: _DateAvailability | None,
-) -> date | None:
-    """Snap ``today`` to a selectable date: keep, else next, else previous, else None."""
-    if _is_date_selectable(today, min_value, max_value, availability):
-        return today
-
-    candidate = today + timedelta(days=1)
-    while candidate <= max_value:
-        if _is_date_selectable(candidate, min_value, max_value, availability):
-            return candidate
-        candidate += timedelta(days=1)
-
-    candidate = today - timedelta(days=1)
-    while candidate >= min_value:
-        if _is_date_selectable(candidate, min_value, max_value, availability):
-            return candidate
-        candidate -= timedelta(days=1)
-
-    return None
-
-
-def _raise_unavailable_value_error(value: date) -> None:
-    raise StreamlitAPIException(
-        f"The `value` {value} is not selectable with the current "
-        "`enabled_dates` / `disabled_dates` configuration. "
-        'Pass `value="today"` to snap to a selectable date instead of raising.',
-        error_id="date-input-value-unavailable",
-    )
-
-
 def _apply_availability_to_parsed_values(
     parsed_values: _DateInputValues,
-    availability: _DateAvailability | None,
+    availability: DateAvailability | None,
     *,
     value_was_today: bool,
 ) -> _DateInputValues:
@@ -583,7 +297,7 @@ def _apply_availability_to_parsed_values(
 
     if value_was_today:
         today = parsed_values.value[0] if parsed_values.value else datetime.now().date()
-        resolved = _resolve_today_to_selectable(
+        resolved = resolve_today_to_selectable(
             today, parsed_values.min, parsed_values.max, availability
         )
         if resolved is None:
@@ -597,10 +311,10 @@ def _apply_availability_to_parsed_values(
         return parsed_values
 
     for entry in parsed_values.value:
-        if not _is_date_selectable(
+        if not is_date_selectable(
             entry, parsed_values.min, parsed_values.max, availability
         ):
-            _raise_unavailable_value_error(entry)
+            raise_unavailable_value_error(entry)
 
     return parsed_values
 
@@ -1033,7 +747,7 @@ def _default_date_widget_return(parsed_values: _DateInputValues) -> DateWidgetRe
 def _validate_date_availability(
     current_value: DateWidgetReturn,
     parsed_values: _DateInputValues,
-    availability: _DateAvailability | None,
+    availability: DateAvailability | None,
 ) -> tuple[DateWidgetReturn, bool]:
     """Reset the current value when it is unavailable under the current config.
 
@@ -1097,7 +811,7 @@ def _validate_datetime_value(
 @dataclass
 class DateInputSerde:
     value: _DateInputValues
-    availability: _DateAvailability | None = None
+    availability: DateAvailability | None = None
 
     @staticmethod
     def _parse_date(value: str) -> date:
@@ -2722,7 +2436,7 @@ class TimeWidgetsMixin:
         else:
             parsed = parse_date_deterministic_for_id(value)
 
-        availability = _parse_date_availability(enabled_dates, disabled_dates)
+        availability = parse_date_availability(enabled_dates, disabled_dates)
         # Hash under the public param names so ComputeElementIdTests stays in
         # sync with the signature. Only one side is ever non-None.
         availability_payload = (

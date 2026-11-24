@@ -1332,6 +1332,156 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
             id2 = self.get_delta_from_queue().new_element.date_input.id
             assert id1 == id2
 
+    def test_today_value_snaps_when_unavailable(self) -> None:
+        """value=\"today\" on a weekend snaps forward to the next weekday."""
+
+        class FixedDateTime(datetime):
+            @classmethod
+            def now(cls, tz: Any = None) -> datetime:
+                return datetime(2024, 3, 9, 12, 0, 0)  # Saturday
+
+        with (
+            patch(
+                "streamlit.elements.widgets.time_widgets.datetime",
+                FixedDateTime,
+            ),
+            patch(
+                "streamlit.elements.lib.date_input_availability.datetime",
+                FixedDateTime,
+            ),
+        ):
+            result = st.date_input(
+                "day",
+                value="today",
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 12, 31),
+                disabled_dates=["saturday", "sunday"],
+            )
+        assert result == date(2024, 3, 11)  # Monday
+
+    def test_today_literal_in_enabled_dates(self) -> None:
+        today = datetime.now().date()
+        result = st.date_input("day", value="today", enabled_dates=["today"])
+        c = self.get_delta_from_queue().new_element.date_input
+        assert result == today
+        assert list(c.available_dates) == [today.isoformat()]
+
+    def test_today_in_filter_keeps_symbolic_id_token(self) -> None:
+        """\"today\" is hashed as the literal token, not the resolved ISO date."""
+        from streamlit.elements.lib.date_input_availability import (
+            normalize_date_filter,
+        )
+
+        normalized = normalize_date_filter(["today", "monday"], "enabled_dates")
+        assert normalized is not None
+        exact_dates, _weekdays, id_exact, id_weekdays = normalized
+        assert id_exact == ("today",)
+        assert id_weekdays == (1,)
+        assert exact_dates == frozenset({datetime.now().date()})
+
+    def test_scalar_filter_accepted(self) -> None:
+        st.date_input("day", value=date(2026, 8, 25), enabled_dates=date(2026, 8, 25))
+        c = self.get_delta_from_queue().new_element.date_input
+        assert list(c.available_dates) == ["2026-08-25"]
+
+        st.date_input("day2", value=date(2026, 8, 25), disabled_dates="saturday")
+        c2 = self.get_delta_from_queue().new_element.date_input
+        assert list(c2.available_weekdays) == [6]
+
+    def test_generator_rejected(self) -> None:
+        def gen():
+            yield date(2026, 8, 25)
+
+        with pytest.raises(StreamlitAPIException, match="does not accept generators"):
+            st.date_input("day", enabled_dates=gen())
+
+    def test_dataframe_rejected(self) -> None:
+        import pandas as pd
+
+        df = pd.DataFrame({"d": [date(2026, 8, 25)]})
+        with pytest.raises(StreamlitAPIException, match="does not accept DataFrames"):
+            st.date_input("day", enabled_dates=df)
+
+    def test_invalid_filter_entry_rejected(self) -> None:
+        with pytest.raises(StreamlitInvalidParameterTypeError):
+            st.date_input("day", enabled_dates=[123])
+
+        with pytest.raises(StreamlitInvalidParameterTypeError):
+            st.date_input("day", disabled_dates=["not-a-weekday-or-date"])
+
+    def test_serde_unavailable_date_reverts_to_default(self) -> None:
+        from streamlit.elements.lib.date_input_availability import (
+            parse_date_availability,
+        )
+
+        values = _DateInputValues(
+            value=(date(2024, 3, 8),),
+            is_range=False,
+            min=date(2024, 1, 1),
+            max=date(2024, 12, 31),
+        )
+        availability = parse_date_availability(
+            enabled_dates=None,
+            disabled_dates=["saturday", "sunday"],
+        )
+        serde = DateInputSerde(values, availability=availability)
+        assert serde.deserialize(["2024-03-09"]) == date(2024, 3, 8)
+        assert serde.deserialize(["2024-03-11"]) == date(2024, 3, 11)
+
+
+def test_resolve_today_snaps_forward() -> None:
+    from streamlit.elements.lib.date_input_availability import (
+        parse_date_availability,
+        resolve_today_to_selectable,
+    )
+
+    availability = parse_date_availability(
+        enabled_dates=None,
+        disabled_dates=["saturday", "sunday"],
+    )
+    assert resolve_today_to_selectable(
+        date(2024, 3, 9),
+        date(2024, 1, 1),
+        date(2024, 12, 31),
+        availability,
+    ) == date(2024, 3, 11)
+
+
+def test_resolve_today_snaps_backward_when_forward_exhausted() -> None:
+    from streamlit.elements.lib.date_input_availability import (
+        parse_date_availability,
+        resolve_today_to_selectable,
+    )
+
+    availability = parse_date_availability(
+        enabled_dates=None,
+        disabled_dates=[date(2024, 3, 10)],
+    )
+    assert resolve_today_to_selectable(
+        date(2024, 3, 10),
+        date(2024, 3, 1),
+        date(2024, 3, 10),
+        availability,
+    ) == date(2024, 3, 9)
+
+
+def test_resolve_today_returns_none_when_empty_window() -> None:
+    from streamlit.elements.lib.date_input_availability import (
+        parse_date_availability,
+        resolve_today_to_selectable,
+    )
+
+    availability = parse_date_availability(enabled_dates=[], disabled_dates=None)
+    assert (
+        resolve_today_to_selectable(
+            date(2024, 3, 9),
+            date(2024, 3, 1),
+            date(2024, 3, 31),
+            availability,
+        )
+        is None
+    )
+
 
 def test_availability_resets_session_state_without_explicit_bounds() -> None:
     """Unavailable stored values reset even when min/max are omitted."""
