@@ -34,10 +34,7 @@ export interface ReceivedMessageSize {
   cachedByteLength?: number
 }
 
-export type OnMessage = (
-  ForwardMsg: ForwardMsg,
-  size?: ReceivedMessageSize
-) => void
+export type OnMessage = (msg: ForwardMsg, size?: ReceivedMessageSize) => void
 
 export interface ErrorDetails {
   message: string

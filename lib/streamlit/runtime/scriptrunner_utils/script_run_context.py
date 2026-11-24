@@ -558,7 +558,7 @@ def record_arrow_bytes(num_bytes: int) -> None:
     """Add a serialized Arrow payload to the current run's page profile.
 
     Payloads serialized without a ``ScriptRunContext``, such as lazily loaded
-    dataframe chunks, aren't counted.
+    dataframe chunks after the first, aren't counted.
     """
     try:
         ctx = get_script_run_ctx(suppress_warning=True)

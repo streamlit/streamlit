@@ -44,7 +44,7 @@ class ThreadRunStats:
         # reports it only for parallel fragment runs.
         self.command_time = 0.0
         self.cache = ThreadCacheStats()
-        # Size of the Arrow payloads this thread serialized.
+        # Total size in bytes of the Arrow payloads this thread serialized.
         self.arrow_bytes = 0
 
 

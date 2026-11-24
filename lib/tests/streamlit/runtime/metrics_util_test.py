@@ -28,12 +28,13 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, mock_open, patch
 
 import pandas as pd
+import pyarrow as pa
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
 import streamlit.components.v1 as components
-from streamlit import config
+from streamlit import config, dataframe_util
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.connections import SQLConnection
 from streamlit.errors import (
@@ -1978,8 +1979,6 @@ def _arrow_payloads(deltas: list[Any]) -> list[bytes]:
 
 
 def _arrow_rows(payload: bytes) -> int:
-    import pyarrow as pa
-
     return pa.ipc.open_stream(payload).read_all().num_rows
 
 
@@ -2012,6 +2011,7 @@ class PageProfileArrowBytesTest(DeltaGeneratorTestCase):
         assert self._arrow_bytes() == sum(len(payload) for payload in payloads)
 
     def test_a_new_run_counts_only_its_own_payloads(self) -> None:
+        """Resetting the context for a new run drops the previous run's bytes."""
         ctx = get_script_run_ctx()
         assert ctx is not None
         st.dataframe(pd.DataFrame({"a": range(100)}))
@@ -2022,6 +2022,7 @@ class PageProfileArrowBytesTest(DeltaGeneratorTestCase):
         assert self._arrow_bytes() == len(payloads[-1])
 
     def test_reports_zero_for_a_run_without_data(self) -> None:
+        """A run without Arrow payloads still sends ``arrow_bytes`` as 0."""
         st.markdown("No data here")
 
         msg = metrics_util.create_page_profile_message([], 0, 0)
@@ -2030,6 +2031,7 @@ class PageProfileArrowBytesTest(DeltaGeneratorTestCase):
         assert msg.page_profile.arrow_bytes == 0
 
     def test_counts_nothing_while_usage_stats_are_off(self) -> None:
+        """No thread records Arrow bytes while usage stats are off."""
         ctx = get_script_run_ctx()
         assert ctx is not None
         ctx.gather_usage_stats = False
@@ -2056,8 +2058,6 @@ class PageProfileArrowBytesTest(DeltaGeneratorTestCase):
         """Payloads serialized on a thread without a ``ScriptRunContext``, such
         as lazily loaded dataframe chunks, don't count toward any run.
         """
-        from streamlit import dataframe_util
-
         df = pd.DataFrame({"a": range(10)})
         thread = threading.Thread(
             target=lambda: dataframe_util.convert_pandas_df_to_arrow_bytes(df)
