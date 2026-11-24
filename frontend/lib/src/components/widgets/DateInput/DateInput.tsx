@@ -560,7 +560,7 @@ function DateInput({
           onClose={handleClose}
           formCommit={inForm ? handleSingleChange : undefined}
           formResetKey={formResetKey}
-          isDateUnavailable={isDateUnavailable}
+          isDateUnavailable={isDateUnavailable ?? undefined}
         />
       )}
     </div>

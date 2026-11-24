@@ -1241,13 +1241,15 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
     """Tests for enabled_dates / disabled_dates."""
 
     def test_disabled_weekends_proto(self) -> None:
+        """BLOCK mode serializes weekend ISO weekdays and no exact dates."""
         st.date_input("day", disabled_dates=["saturday", "sunday"])
         c = self.get_delta_from_queue().new_element.date_input
         assert c.availability_mode == DateInputProto.AvailabilityMode.BLOCK
-        assert list(c.available_weekdays) == [6, 7]
-        assert list(c.available_dates) == []
+        assert list(c.filter_weekdays) == [6, 7]
+        assert list(c.filter_dates) == []
 
     def test_enabled_dates_proto(self) -> None:
+        """ALLOW mode serializes exact dates and weekdays into filter_* fields."""
         st.date_input(
             "day",
             value=date(2026, 8, 25),
@@ -1255,10 +1257,11 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         )
         c = self.get_delta_from_queue().new_element.date_input
         assert c.availability_mode == DateInputProto.AvailabilityMode.ALLOW
-        assert list(c.available_weekdays) == [1]
-        assert list(c.available_dates) == ["2026-08-24", "2026-08-25"]
+        assert list(c.filter_weekdays) == [1]
+        assert list(c.filter_dates) == ["2026-08-24", "2026-08-25"]
 
     def test_both_parameters_raise(self) -> None:
+        """Passing enabled_dates and disabled_dates together is an error."""
         with pytest.raises(StreamlitAPIException, match="cannot be used together"):
             st.date_input(
                 "day",
@@ -1267,6 +1270,7 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
             )
 
     def test_empty_enabled_with_none_value(self) -> None:
+        """An empty allowlist is valid when value is None."""
         result = st.date_input("day", value=None, enabled_dates=[])
         c = self.get_delta_from_queue().new_element.date_input
         assert result is None
@@ -1274,6 +1278,7 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         assert list(c.default) == []
 
     def test_range_raises(self) -> None:
+        """Availability with a range value is rejected until range support lands."""
         with pytest.raises(StreamlitAPIException, match="not yet supported"):
             st.date_input(
                 "period",
@@ -1282,6 +1287,7 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
             )
 
     def test_explicit_unavailable_value_raises(self) -> None:
+        """An explicit unavailable value raises instead of snapping."""
         with pytest.raises(StreamlitAPIException, match="not selectable"):
             st.date_input(
                 "day",
@@ -1289,7 +1295,8 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
                 disabled_dates=["saturday", "sunday"],
             )
 
-    def test_out_of_window_dates_dropped_from_proto_not_id(self) -> None:
+    def test_out_of_window_exact_dates_dropped_from_proto(self) -> None:
+        """Proto omits out-of-window exact dates; element ID still hashes them."""
         st.date_input(
             "day",
             value=date(2026, 8, 25),
@@ -1298,30 +1305,43 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
             enabled_dates=[date(2026, 8, 25), date(2020, 1, 1)],
         )
         c = self.get_delta_from_queue().new_element.date_input
-        assert list(c.available_dates) == ["2026-08-25"]
+        assert list(c.filter_dates) == ["2026-08-25"]
+
+        id_with_oob = c.id
+        st.date_input(
+            "day",
+            value=date(2026, 8, 25),
+            min_value=date(2026, 8, 1),
+            max_value=date(2026, 8, 31),
+            enabled_dates=[date(2026, 8, 25)],
+        )
+        id_without_oob = self.get_delta_from_queue().new_element.date_input.id
+        assert id_with_oob != id_without_oob
 
     def test_series_and_numpy_unique_accepted(self) -> None:
+        """Series, Index.unique(), and NumPy datetime64 arrays are accepted."""
         import numpy as np
         import pandas as pd
 
         series = pd.Series([date(2026, 8, 24), date(2026, 8, 25)])
         st.date_input("day", value=date(2026, 8, 25), enabled_dates=series)
         c = self.get_delta_from_queue().new_element.date_input
-        assert list(c.available_dates) == ["2026-08-24", "2026-08-25"]
+        assert list(c.filter_dates) == ["2026-08-24", "2026-08-25"]
 
         unique = pd.Series(
             [pd.Timestamp("2026-08-24"), pd.Timestamp("2026-08-25")]
         ).unique()
         st.date_input("day2", value=date(2026, 8, 25), enabled_dates=unique)
         c2 = self.get_delta_from_queue().new_element.date_input
-        assert list(c2.available_dates) == ["2026-08-24", "2026-08-25"]
+        assert list(c2.filter_dates) == ["2026-08-24", "2026-08-25"]
 
         arr = np.array(["2026-08-24", "2026-08-25"], dtype="datetime64[D]")
         st.date_input("day3", value=date(2026, 8, 25), enabled_dates=arr)
         c3 = self.get_delta_from_queue().new_element.date_input
-        assert list(c3.available_dates) == ["2026-08-24", "2026-08-25"]
+        assert list(c3.filter_dates) == ["2026-08-24", "2026-08-25"]
 
     def test_availability_in_unkeyed_id(self) -> None:
+        """Unkeyed widgets include availability in the element ID."""
         st.date_input("day", disabled_dates=["saturday"])
         id1 = self.get_delta_from_queue().new_element.date_input.id
         st.date_input("day", disabled_dates=["sunday"])
@@ -1329,6 +1349,7 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         assert id1 != id2
 
     def test_availability_not_in_keyed_id(self) -> None:
+        """Keyed widgets keep a stable ID when only availability changes."""
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
@@ -1366,7 +1387,7 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         result = st.date_input("day", value="today", enabled_dates=["today"])
         c = self.get_delta_from_queue().new_element.date_input
         assert result == today
-        assert list(c.available_dates) == [today.isoformat()]
+        assert list(c.filter_dates) == [today.isoformat()]
 
     def test_today_in_filter_keeps_symbolic_id_token(self) -> None:
         """'today' is hashed as the literal token, not the resolved ISO date."""
@@ -1380,15 +1401,32 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         assert normalized.exact_dates == frozenset({datetime.now().date()})
 
     def test_scalar_filter_accepted(self) -> None:
+        """A bare date or weekday string is accepted without wrapping in a list."""
         st.date_input("day", value=date(2026, 8, 25), enabled_dates=date(2026, 8, 25))
         c = self.get_delta_from_queue().new_element.date_input
-        assert list(c.available_dates) == ["2026-08-25"]
+        assert list(c.filter_dates) == ["2026-08-25"]
 
         st.date_input("day2", value=date(2026, 8, 25), disabled_dates="saturday")
         c2 = self.get_delta_from_queue().new_element.date_input
-        assert list(c2.available_weekdays) == [6]
+        assert list(c2.filter_weekdays) == [6]
+
+    def test_date_subclass_accepted(self) -> None:
+        """date subclasses (e.g. freezegun FakeDate) normalize to datetime.date."""
+
+        class FakeDate(date):
+            pass
+
+        st.date_input(
+            "day",
+            value=date(2026, 8, 25),
+            enabled_dates=[FakeDate(2026, 8, 25)],
+        )
+        c = self.get_delta_from_queue().new_element.date_input
+        assert list(c.filter_dates) == ["2026-08-25"]
 
     def test_generator_rejected(self) -> None:
+        """Generators are rejected so availability cannot be consumed once."""
+
         def gen():
             yield date(2026, 8, 25)
 
@@ -1396,6 +1434,7 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
             st.date_input("day", enabled_dates=gen())
 
     def test_dataframe_rejected(self) -> None:
+        """DataFrames are rejected; pass a Series or column instead."""
         import pandas as pd
 
         df = pd.DataFrame({"d": [date(2026, 8, 25)]})
@@ -1403,6 +1442,7 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
             st.date_input("day", enabled_dates=df)
 
     def test_invalid_filter_entry_rejected(self) -> None:
+        """Non-date / unknown weekday entries raise a typed parameter error."""
         with pytest.raises(StreamlitInvalidParameterTypeError, match="Could not parse"):
             st.date_input("day", enabled_dates=[123])
 
@@ -1546,6 +1586,20 @@ def test_resolve_today_returns_none_when_empty_window() -> None:
     )
 
 
+def test_resolve_today_picks_nearest_exact_allowlist_date() -> None:
+    """Exact-date-only ALLOW snaps to the nearest listed date without a day walk."""
+    availability = _parse_date_availability(
+        enabled_dates=[date(2020, 1, 1), date(2020, 6, 15)],
+        disabled_dates=None,
+    )
+    assert _resolve_today_to_selectable(
+        date(2024, 3, 9),
+        date(2010, 1, 1),
+        date(2030, 12, 31),
+        availability,
+    ) == date(2020, 6, 15)
+
+
 def test_availability_resets_session_state_without_explicit_bounds() -> None:
     """Unavailable stored values reset even when min/max are omitted."""
     st.session_state.trading = date(2024, 3, 9)  # Saturday
@@ -1558,7 +1612,45 @@ def test_availability_resets_session_state_without_explicit_bounds() -> None:
     assert result == date(2024, 3, 8)
 
 
+def test_availability_change_pushes_set_value_to_frontend() -> None:
+    """Blocking a keyed browser value pushes set_value with the resolved default."""
+
+    def script() -> None:
+        from datetime import date
+
+        import streamlit as st
+
+        disabled = (
+            ["saturday", "sunday"] if st.session_state.get("block_weekends") else None
+        )
+        value = st.date_input(
+            "day",
+            value=date(2024, 3, 8),
+            key="day",
+            disabled_dates=disabled,
+        )
+        st.text(f"Value: {value}")
+
+    at = AppTest.from_function(script).run()
+    at = at.date_input[0].set_value(date(2024, 3, 9)).run()
+    assert at.date_input[0].value == date(2024, 3, 9)
+
+    at.session_state["block_weekends"] = True
+    at = at.run()
+    assert at.date_input[0].proto.set_value is True
+    assert list(at.date_input[0].proto.value) == ["2024-03-08"]
+    # AppTest needs an extra run to apply the set_value response.
+    at = at.run()
+    assert at.date_input[0].value == date(2024, 3, 8)
+    assert at.text[0].value == "Value: 2024-03-08"
+
+    at = at.run()
+    assert at.date_input[0].proto.set_value is False
+
+
 def test_apptest_exposes_availability() -> None:
+    """AppTest surfaces enabled_dates / disabled_dates from the proto."""
+
     def script() -> None:
         from datetime import date
 

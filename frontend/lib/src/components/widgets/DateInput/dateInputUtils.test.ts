@@ -15,8 +15,10 @@
  */
 
 import {
+  BuddhistCalendar,
   CalendarDate,
   type DateValue,
+  toCalendar,
   toCalendarDate,
 } from "@internationalized/date"
 import type { DateSegment as IDateSegment } from "react-stately"
@@ -778,7 +780,7 @@ describe("createIsDateUnavailable", () => {
   it("blocks matching weekdays in BLOCK mode", () => {
     const element = DateInputProto.create({
       availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
-      availableWeekdays: [6, 7],
+      filterWeekdays: [6, 7],
     })
     const isUnavailable = createIsDateUnavailable(element)
     expect(isUnavailable).not.toBeNull()
@@ -793,8 +795,8 @@ describe("createIsDateUnavailable", () => {
   it("allows only matching dates and weekdays in ALLOW mode", () => {
     const element = DateInputProto.create({
       availabilityMode: DateInputProto.AvailabilityMode.ALLOW,
-      availableDates: ["2024-03-11"],
-      availableWeekdays: [1],
+      filterDates: ["2024-03-11"],
+      filterWeekdays: [1],
     })
     const isUnavailable = createIsDateUnavailable(element)
     expect(isUnavailable).not.toBeNull()
@@ -810,6 +812,36 @@ describe("createIsDateUnavailable", () => {
     // Monday 2024-03-11 must be weekday 1 regardless of locale week start.
     expect(getIsoWeekday(new CalendarDate(2024, 3, 11))).toBe(1)
     expect(getIsoWeekday(new CalendarDate(2024, 3, 10))).toBe(7)
+    // German locales start the week on Monday; ISO weekday must stay Monday=1.
+    expect(getIsoWeekday(new CalendarDate(2024, 3, 11))).toBe(1)
+  })
+
+  it("matches exact dates from non-Gregorian CalendarDate values", () => {
+    // React Aria passes Buddhist/Persian dates in those locales; toString()
+    // still yields Gregorian ISO that matches backend filter_dates.
+    const element = DateInputProto.create({
+      availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
+      filterDates: ["2024-03-09"],
+      filterWeekdays: [6],
+    })
+    const isUnavailable = createIsDateUnavailable(element)
+    expect(isUnavailable).not.toBeNull()
+    if (isUnavailable === null) {
+      throw new Error("expected BLOCK predicate")
+    }
+    const gregorianSaturday = new CalendarDate(2024, 3, 9)
+    const buddhistSaturday = toCalendar(
+      gregorianSaturday,
+      new BuddhistCalendar()
+    )
+    expect(buddhistSaturday.year).toBe(2567)
+    expect(calendarDateToIso(buddhistSaturday)).toBe("2024-03-09")
+    expect(isUnavailable(buddhistSaturday)).toBe(true)
+    const buddhistMonday = toCalendar(
+      new CalendarDate(2024, 3, 11),
+      new BuddhistCalendar()
+    )
+    expect(isUnavailable(buddhistMonday)).toBe(false)
   })
 })
 

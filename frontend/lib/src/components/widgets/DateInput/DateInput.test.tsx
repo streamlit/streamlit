@@ -7250,7 +7250,7 @@ describe("DateInput no-op interactions", () => {
       default: ["2024-03-08"],
       min: "2024-01-01",
       availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
-      availableWeekdays: [6, 7],
+      filterWeekdays: [6, 7],
     })
 
     const region = screen.getByTestId("stDateInput")
@@ -7270,6 +7270,33 @@ describe("DateInput no-op interactions", () => {
     expect(sendRerunBackMsg).toHaveBeenCalledOnce()
   })
 
+  it("does not strike through out-of-range unavailable cells", async () => {
+    // ALLOW mode marks every out-of-range day unavailable; those cells also
+    // get data-disabled. Strike-through must not override the faded style.
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          default: ["2024-03-15"],
+          min: "2024-03-01",
+          max: "2024-03-31",
+          availabilityMode: DateInputProto.AvailabilityMode.ALLOW,
+          filterWeekdays: [1],
+        })}
+      />
+    )
+    const region = screen.getByTestId("stDateInput")
+    await user.click(getSingleDateSegments(region).year)
+    const outOfRange = await screen.findByLabelText(
+      /Thursday, February 29, 2024/
+    )
+    expect(outOfRange).toHaveAttribute("data-disabled", "true")
+    expect(outOfRange).toHaveAttribute("data-unavailable", "true")
+    expect(getComputedStyle(outOfRange).textDecoration).not.toMatch(
+      /line-through/
+    )
+  })
+
   it("does not commit a typed unavailable date and shows an error", async () => {
     const user = userEvent.setup()
     const { sendRerunBackMsg, setStringArrayValueSpy } = renderWithRerunSpy({
@@ -7277,7 +7304,7 @@ describe("DateInput no-op interactions", () => {
       min: "2024-01-01",
       format: "YYYY/MM/DD",
       availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
-      availableWeekdays: [6, 7],
+      filterWeekdays: [6, 7],
     })
 
     const region = screen.getByTestId("stDateInput")
@@ -7309,7 +7336,7 @@ describe("DateInput no-op interactions", () => {
       min: "2024-01-01",
       format: "YYYY/MM/DD",
       availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
-      availableWeekdays: [6, 7],
+      filterWeekdays: [6, 7],
     })
 
     const region = screen.getByTestId("stDateInput")

@@ -246,8 +246,8 @@ export function createIsDateUnavailable(
     return null
   }
 
-  const exactDates = new Set(element.availableDates)
-  const weekdays = new Set(element.availableWeekdays)
+  const exactDates = new Set(element.filterDates)
+  const weekdays = new Set(element.filterWeekdays)
 
   // React Aria types the prop as `(DateValue) => boolean`; convert so we can
   // reuse CalendarDate helpers for ISO and weekday checks.

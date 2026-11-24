@@ -1246,8 +1246,8 @@ class DateInput(Widget):
         self.min = datetime.strptime(proto.min, "%Y-%m-%d").date()
         self.max = datetime.strptime(proto.max, "%Y-%m-%d").date()
         filter_entries = [
-            *(_ISO_WEEKDAY_TO_NAME[day] for day in proto.available_weekdays),
-            *proto.available_dates,
+            *(_ISO_WEEKDAY_TO_NAME[day] for day in proto.filter_weekdays),
+            *proto.filter_dates,
         ]
         if proto.availability_mode == DateInputProto.AvailabilityMode.ALLOW:
             self.enabled_dates = filter_entries

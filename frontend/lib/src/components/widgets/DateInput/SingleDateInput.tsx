@@ -51,7 +51,7 @@ import {
 } from "~lib/hooks/useFloatingOverlay"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { convertRemToPx } from "~lib/theme/utils"
-import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
+import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   CalendarPopoverHeader,
@@ -137,7 +137,7 @@ interface SingleDateInputProps {
    * have changed if segment edits were never committed). */
   formResetKey: number
   /** When set, dates matching the predicate cannot be selected. */
-  isDateUnavailable?: ((date: DateValue) => boolean) | null
+  isDateUnavailable?: (date: DateValue) => boolean
 }
 
 /** True when close/blur should notify the parent, including a full clear
@@ -207,7 +207,7 @@ function SingleDateInput({
   onClose,
   formCommit,
   formResetKey,
-  isDateUnavailable = null,
+  isDateUnavailable,
 }: SingleDateInputProps): ReactElement {
   const theme = useEmotionTheme()
   const id = useId()
@@ -814,7 +814,7 @@ function SingleDateInput({
                 onChange={handleFieldChange}
                 minValue={minDate}
                 maxValue={maxDate}
-                isDateUnavailable={isDateUnavailable ?? undefined}
+                isDateUnavailable={isDateUnavailable}
                 shouldForceLeadingZeros
                 isDisabled={disabled}
               >
@@ -888,7 +888,7 @@ function SingleDateInput({
               <StyledVisuallyHidden id={popoverDescId}>
                 Use arrow keys to navigate dates. Enter to select. Escape to
                 close.
-                {notNullOrUndefined(isDateUnavailable)
+                {isDateUnavailable
                   ? " Unavailable dates are marked disabled and cannot be selected."
                   : null}
               </StyledVisuallyHidden>
@@ -902,7 +902,7 @@ function SingleDateInput({
                 onChange={handleCalendarChange}
                 minValue={minDate}
                 maxValue={maxDate}
-                isDateUnavailable={isDateUnavailable ?? undefined}
+                isDateUnavailable={isDateUnavailable}
                 focusedValue={focusedValue}
                 onFocusChange={onFocusChange}
               >

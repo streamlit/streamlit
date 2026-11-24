@@ -1372,7 +1372,9 @@ def test_unavailable_weekend_not_selectable(app: Page):
     saturday = calendar.get_by_role("button", name=re.compile(r"Saturday, March 9"))
     expect(saturday).to_have_attribute("aria-disabled", "true")
     saturday.click(force=True)
-    # Value stays Friday March 8
+    # Selecting a date closes the popover; an ignored unavailable click must
+    # leave it open. Checking markdown alone can race before a bad commit.
+    expect(calendar).to_be_visible()
     expect_markdown(app, "Value weekdays only: 2024-03-08")
     monday = calendar.get_by_role("button", name=re.compile(r"Monday, March 11"))
     monday.click()

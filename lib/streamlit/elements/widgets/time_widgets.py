@@ -23,6 +23,7 @@ from typing import (
     Any,
     Final,
     Literal,
+    NoReturn,
     TypeAlias,
     cast,
     overload,
@@ -340,7 +341,7 @@ def _convert_numpy_datetime64_to_date(value: object) -> date | None:
         import pandas as pd
 
         converted = pd.Timestamp(value).date()  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-        return converted if type(converted) is date else None
+        return _as_real_calendar_date(converted)
     except Exception:
         try:
             text = str(value)
@@ -362,11 +363,21 @@ def _invalid_date_filter_entry_error(
 
 
 def _as_real_calendar_date(value: object) -> date | None:
-    """Return a concrete ``datetime.date``, or None for NaT / non-dates."""
+    """Return a concrete ``datetime.date``, or None for NaT / non-dates.
+
+    Accepts ``date`` subclasses (for example pendulum ``Date`` or freezegun
+    ``FakeDate``) by normalizing to ``datetime.date``. Rejects pandas ``NaT``,
+    which claims to be a ``datetime`` / ``date`` but cannot format as ISO.
+    """
     if isinstance(value, datetime):
         value = value.date()
-    # Reject date-like impostors (for example pandas ``NaTType``).
-    return value if type(value) is date else None
+    # NaT.date() is still NaT (a datetime impostor); stop before the format check.
+    if isinstance(value, datetime) or not isinstance(value, date):
+        return None
+    try:
+        return date(value.year, value.month, value.day)
+    except (TypeError, ValueError, OverflowError):
+        return None
 
 
 def _parse_date_filter_entry(
@@ -414,7 +425,7 @@ class _DateAvailability:
     # Element-ID tokens: exact dates as ISO strings, with "today" kept symbolic.
     id_exact_entries: tuple[str, ...]
     id_weekdays: tuple[int, ...]
-    # Parameter that produced this config, for agent reporting and errors.
+    # Public parameter that produced this config; keys the element ID and agent report.
     param_name: Literal["enabled_dates", "disabled_dates"]
 
     def is_available(self, value: date) -> bool:
@@ -537,6 +548,19 @@ def _resolve_today_to_selectable(
     if _is_date_selectable(today, min_value, max_value, availability):
         return today
 
+    # Exact-date-only ALLOW: pick the nearest listed date in the window instead
+    # of scanning day by day (common with ``enabled_dates=df["date"].unique()``).
+    # Empty ALLOW has nothing selectable.
+    if (
+        availability is not None
+        and availability.mode == DateInputProto.AvailabilityMode.ALLOW
+        and not availability.weekdays
+    ):
+        in_window = [d for d in availability.exact_dates if min_value <= d <= max_value]
+        if not in_window:
+            return None
+        return min(in_window, key=lambda d: (abs((d - today).days), d))
+
     candidate = today + timedelta(days=1)
     while candidate <= max_value:
         if _is_date_selectable(candidate, min_value, max_value, availability):
@@ -552,7 +576,7 @@ def _resolve_today_to_selectable(
     return None
 
 
-def _raise_unavailable_value_error(value: date) -> None:
+def _raise_unavailable_value_error(value: date) -> NoReturn:
     """Raise when an explicit ``value`` is blocked by availability."""
     raise StreamlitAPIException(
         f"The `value` {value} is not selectable with the current "
@@ -1036,6 +1060,8 @@ def _validate_date_availability(
     elif not parsed_values.is_range and isinstance(current_value, date):
         dates_to_check = (_to_date(current_value),)
     else:
+        # Stored value doesn't match the widget mode (e.g. a tuple for a
+        # single-date widget); reset to the default.
         return _default_date_widget_return(parsed_values), True
 
     if all(availability.is_available(d) for d in dates_to_check):
@@ -2407,31 +2433,22 @@ class TimeWidgetsMixin:
             set, Series, Index, NumPy array). Cannot be set together with
             ``disabled_dates``. When this is set, every other date is
             unavailable. An empty collection makes every date unavailable;
-            pass ``value=None`` in that case. Not yet supported with range
-            values.
-
-            Example::
-
-                st.date_input(
-                    "Appointment",
-                    value=date(2026, 8, 25),
-                    enabled_dates=[date(2026, 8, 25), date(2026, 8, 26), "monday"],
-                )
+            pass ``value=None`` in that case. A range ``value`` raises; pass a
+            single date until range support is available. Weekday names are
+            English and ISO-based (Monday-Sunday), independent of locale.
+            When a keyed widget's availability changes and invalidates the
+            current value, Streamlit resets it to the resolved default.
 
         disabled_dates : date, datetime, str, list-like of these, or None
             Dates and weekdays that are not selectable between ``min_value``
             and ``max_value``. If this is ``None`` (default), no dates are
             blocked by availability. Accepts the same forms as
             ``enabled_dates``. Cannot be set together with ``enabled_dates``.
-            An empty collection disables nothing. Not yet supported with range
-            values.
-
-            Example::
-
-                st.date_input(
-                    "Trading day",
-                    disabled_dates=["saturday", "sunday", date(2026, 12, 25)],
-                )
+            An empty collection disables nothing. A range ``value`` raises;
+            pass a single date until range support is available. Weekday
+            names are English and ISO-based, independent of locale. When a
+            keyed widget's availability changes and invalidates the current
+            value, Streamlit resets it to the resolved default.
 
         key : str, int, or None
             An optional string or integer to use as the unique key for
@@ -2641,6 +2658,29 @@ class TimeWidgetsMixin:
         .. output::
            https://doc-date-input-empty.streamlit.app/
            height: 380px
+
+        **Example 4: Allow only specific dates**
+
+        >>> from datetime import date
+        >>> import streamlit as st
+        >>>
+        >>> d = st.date_input(
+        ...     "Appointment",
+        ...     value=date(2026, 8, 25),
+        ...     enabled_dates=[date(2026, 8, 25), date(2026, 8, 26), "monday"],
+        ... )
+        >>> st.write("Selected:", d)
+
+        **Example 5: Disable weekends and holidays**
+
+        >>> from datetime import date
+        >>> import streamlit as st
+        >>>
+        >>> d = st.date_input(
+        ...     "Trading day",
+        ...     disabled_dates=["saturday", "sunday", date(2026, 12, 25)],
+        ... )
+        >>> st.write("Selected:", d)
 
         """
         ctx = get_script_run_ctx()
@@ -2855,10 +2895,10 @@ class TimeWidgetsMixin:
         )
         if proto_availability is not None:
             date_input_proto.availability_mode = proto_availability.mode
-            date_input_proto.available_dates[:] = [
+            date_input_proto.filter_dates[:] = [
                 _date_to_proto_string(d) for d in sorted(proto_availability.exact_dates)
             ]
-            date_input_proto.available_weekdays[:] = sorted(proto_availability.weekdays)
+            date_input_proto.filter_weekdays[:] = sorted(proto_availability.weekdays)
 
         if help is not None:
             date_input_proto.help = to_help_str(help)
@@ -2909,8 +2949,17 @@ class TimeWidgetsMixin:
                 with get_session_state().query_params() as qp:
                     qp.remove_param(str(key))
 
-        if value_needs_reset or widget_state.value_changed:
-            date_input_proto.value[:] = serde.serialize(current_value)
+        # Serde may already have swapped an unavailable browser wire value for
+        # the default, so value_needs_reset stays False. Still push set_value
+        # when the wire form differs from the resolved value (same pattern as
+        # button_group label changes).
+        correct_serialization = serde.serialize(current_value)
+        frontend_out_of_sync = (
+            widget_state.incoming_serialized_values is not None
+            and widget_state.incoming_serialized_values != correct_serialization
+        )
+        if value_needs_reset or widget_state.value_changed or frontend_out_of_sync:
+            date_input_proto.value[:] = correct_serialization
             date_input_proto.set_value = True
 
         layout_config = create_layout_config(width=width)
@@ -2937,7 +2986,9 @@ class TimeWidgetsMixin:
             "date_input",
             date_input_proto,
             layout_config=layout_config,
-            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            has_one_shot_effect=value_needs_reset
+            or widget_state.value_changed
+            or frontend_out_of_sync,
             agent_props=agent_spec.element(
                 "date_input",
                 key=element_id,

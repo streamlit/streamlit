@@ -53,9 +53,12 @@ message DateInput {
     BLOCK = 2;
   }
   AvailabilityMode availability_mode = 17;
-  // Exact dates in ISO YYYY-MM-DD. The backend omits exact dates outside min/max.
-  repeated string available_dates = 18;
-  // ISO-8601 weekday numbers (Monday=1 … Sunday=7).
-  repeated int32 available_weekdays = 19;
+  // Exact dates in ISO YYYY-MM-DD used by availability_mode. In ALLOW mode
+  // these are selectable; in BLOCK mode they are not. The backend omits exact
+  // dates outside min/max.
+  repeated string filter_dates = 18;
+  // ISO-8601 weekday numbers (Monday=1 … Sunday=7) used by availability_mode.
+  // In ALLOW mode these weekdays are selectable; in BLOCK mode they are not.
+  repeated int32 filter_weekdays = 19;
   // Next: 20
 }
