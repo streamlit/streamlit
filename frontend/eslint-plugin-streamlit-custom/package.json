@@ -24,7 +24,7 @@
     "eslint": "^10.14.0",
     "typescript": "^6.0.3",
     "typescript-v7": "npm:typescript@7.0.2",
-    "typesync": "^0.14.3",
+    "typesync": "^0.15.0",
     "vite": "^8.3.8",
     "vitest": "^5.1.1"
   },
