@@ -1503,7 +1503,6 @@ def test_create_page_profile_message_reports_query_usage() -> None:
     # Distinct values, so that copying one field into another fails.
     totals.queries = 15
     totals.failed = 1
-    totals.async_queries = 2
     totals.describe_queries = 3
     totals.queries_in_cache = 4
     totals.queries_in_commands = 5
@@ -1521,7 +1520,6 @@ def test_create_page_profile_message_reports_query_usage() -> None:
     connector = usage.snowflake_connector
     assert connector.queries == 15
     assert connector.failed == 1
-    assert connector.async_queries == 2
     assert connector.describe_queries == 3
     assert connector.queries_in_cache == 4
     assert connector.queries_in_commands == 5

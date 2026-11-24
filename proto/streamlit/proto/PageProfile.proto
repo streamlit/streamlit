@@ -78,11 +78,12 @@ message PageProfile {
 // lib/streamlit/connections/query_telemetry.py lists which queries are
 // recorded.
 message QueryUsage {
-  // Snowflake Connector for Python cursors created by Streamlit:
-  // SnowflakeConnection.query() and SnowflakeConnection.cursor().
+  // Queries that SnowflakeConnection.query() runs. Queries the app runs on a
+  // cursor, including one from SnowflakeConnection.cursor(), aren't recorded.
   // Unset when no such query was recorded.
   QuerySourceUsage snowflake_connector = 1;
-  // SQLAlchemy engines, including the one behind SQLConnection.
+  // Queries on the engine behind a SQLConnection, including its session.
+  // Engines the app creates itself aren't recorded.
   // Unset when no such query was recorded.
   QuerySourceUsage sqlalchemy = 2;
   // Snowpark sessions from SnowflakeConnection.session(), and the active
@@ -100,37 +101,33 @@ message QueryUsage {
 // time - time_in_cache - time_in_commands is the query time that's otherwise
 // part of user code.
 message QuerySourceUsage {
-  // All recorded queries, including failed, async and describe queries.
+  // All recorded queries, including failed and describe queries.
   int64 queries = 1;
   // Queries that raised an error. Snowpark reports only some failures, so
   // some failed Snowpark queries are counted only in queries.
   int64 failed = 2;
-  // Queries submitted without waiting for them to finish. Their time covers
-  // only the submission.
-  int64 async_queries = 3;
   // Queries that only look up the shape of a result, such as the ones Snowpark
   // runs to work out a DataFrame's columns.
-  int64 describe_queries = 4;
+  int64 describe_queries = 3;
   // Queries while a recorded cached call was open on the same thread: mostly
   // the cached function's computation, but also the cache's own work, such as
   // a hash_funcs function, and in async code, other tasks' queries while the
   // call awaits. Threads a cached function attaches with add_script_run_ctx
   // record their queries as their own, so their time is also in the cached
   // call's compute_time.
-  int64 queries_in_cache = 5;
+  int64 queries_in_cache = 4;
   // Queries inside a listed command.
-  int64 queries_in_commands = 6;
-  // Time blocked in the driver's execute call: sending the query, and for a
-  // query that isn't async, waiting for it to finish. Fetching the results
-  // afterwards isn't included.
-  int64 time = 7;
+  int64 queries_in_commands = 5;
+  // Time blocked in the driver's execute call: sending the query and waiting
+  // for it to finish. Fetching the results afterwards isn't included.
+  int64 time = 6;
   // Time of the queries in queries_in_cache, which cache_usage already counts
   // in its compute, wait or overhead time.
-  int64 time_in_cache = 8;
+  int64 time_in_cache = 7;
   // Time of the queries in queries_in_commands, which those commands' times
   // already count. For example, a lazy DataFrame passed to st.dataframe runs
   // its query inside the command.
-  int64 time_in_commands = 9;
+  int64 time_in_commands = 8;
 }
 
 // Cache activity during one script run: counts, and times in microseconds.

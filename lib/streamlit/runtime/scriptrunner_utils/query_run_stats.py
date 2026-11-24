@@ -38,7 +38,6 @@ class QueryTotals:
 
     queries: int = 0
     failed: int = 0
-    async_queries: int = 0
     describe_queries: int = 0
     queries_in_cache: int = 0
     queries_in_commands: int = 0
@@ -50,7 +49,6 @@ class QueryTotals:
         """Add ``other`` to these totals."""
         self.queries += other.queries
         self.failed += other.failed
-        self.async_queries += other.async_queries
         self.describe_queries += other.describe_queries
         self.queries_in_cache += other.queries_in_cache
         self.queries_in_commands += other.queries_in_commands

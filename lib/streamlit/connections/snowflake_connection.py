@@ -148,8 +148,9 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             sql: str,
             params: Any = None,
         ) -> DataFrame:
-            cur = query_telemetry.create_snowflake_cursor(self._instance)
-            cur.execute(sql, params=params, **kwargs)
+            cur = self._instance.cursor()
+            with query_telemetry.record_query("snowflake_connector"):
+                cur.execute(sql, params=params, **kwargs)
             return cur.fetch_pandas_all()  # type: ignore
 
         # We modify our helper function's `__qualname__` here to work around default
@@ -283,7 +284,7 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         ... )
 
         """
-        return query_telemetry.create_snowflake_cursor(self._instance)
+        return self._instance.cursor()
 
     @property
     def raw_connection(self) -> InternalSnowflakeConnection:

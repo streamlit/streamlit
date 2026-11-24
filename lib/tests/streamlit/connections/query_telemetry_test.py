@@ -77,57 +77,39 @@ class FakeSnowflakeError(Exception):
     """Stands in for a Snowflake connector error."""
 
 
-class FakeSnowflakeConnection:
-    """Stands in for a Snowflake connector connection. Each query takes
-    ``query_seconds`` on ``clock``.
+class FakeSnowflakeCursor:
+    """Stands in for a Snowflake connector cursor. Each query takes 0.5 s on
+    ``clock``.
     """
 
-    def __init__(self, clock: FakeClock) -> None:
+    def __init__(self, clock: FakeClock, error: Exception | None) -> None:
         self.clock = clock
-        self.query_seconds = 0.5
-        self.error: Exception | None = None
+        self.error = error
         self.executed = 0
 
-    def cursor(self, cursor_class: type[Any] | None = None) -> Any:
-        return (cursor_class or FakeSnowflakeCursor)(self)
-
-
-class FakeSnowflakeCursor:
-    """Stands in for ``snowflake.connector.cursor.SnowflakeCursor``, whose
-    ``executemany``, ``execute_async`` and ``describe`` call ``execute``.
-    """
-
-    def __init__(self, connection: FakeSnowflakeConnection) -> None:
-        self.connection = connection
-
     def execute(self, command: str, params: Any = None, **kwargs: Any) -> Any:
-        if command == "CALL nested":
-            # A query that runs another statement through execute.
-            self.execute("SELECT inner")
-        conn = self.connection
-        conn.clock.advance(conn.query_seconds)
-        conn.executed += 1
-        if conn.error is not None:
-            raise conn.error
+        self.clock.advance(0.5)
+        self.executed += 1
+        if self.error is not None:
+            raise self.error
         return self
-
-    def executemany(self, command: str, seqparams: list[Any]) -> Any:
-        for params in seqparams:
-            self.execute(command, params)
-        return self
-
-    def execute_async(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        kwargs["_exec_async"] = True
-        self.execute(*args, **kwargs)
-        return {}
-
-    def describe(self, *args: Any, **kwargs: Any) -> list[Any]:
-        kwargs["_describe_only"] = True
-        self.execute(*args, **kwargs)
-        return []
 
     def fetch_pandas_all(self) -> str:
         return "a dataframe"
+
+
+class FakeSnowflakeConnection:
+    """Stands in for a Snowflake connector connection."""
+
+    def __init__(self, clock: FakeClock) -> None:
+        self.clock = clock
+        self.error: Exception | None = None
+        self.cursors: list[FakeSnowflakeCursor] = []
+
+    def cursor(self) -> FakeSnowflakeCursor:
+        cursor = FakeSnowflakeCursor(self.clock, self.error)
+        self.cursors.append(cursor)
+        return cursor
 
 
 @dataclass
@@ -194,20 +176,12 @@ def clock(monkeypatch: pytest.MonkeyPatch) -> FakeClock:
 
 
 @pytest.fixture
-def snowflake_connection(
-    monkeypatch: pytest.MonkeyPatch, clock: FakeClock
-) -> Iterator[FakeSnowflakeConnection]:
-    """Install a fake ``snowflake.connector`` and return a connection on it."""
-    snowflake_mod = types.ModuleType("snowflake")
-    connector_mod = types.ModuleType("snowflake.connector")
-    cursor_mod = types.ModuleType("snowflake.connector.cursor")
-    cursor_mod.SnowflakeCursor = FakeSnowflakeCursor  # type: ignore[attr-defined]
-    monkeypatch.setitem(sys.modules, "snowflake", snowflake_mod)
-    monkeypatch.setitem(sys.modules, "snowflake.connector", connector_mod)
-    monkeypatch.setitem(sys.modules, "snowflake.connector.cursor", cursor_mod)
-    query_telemetry._recording_cursor_class.cache_clear()
-    yield FakeSnowflakeConnection(clock)
-    query_telemetry._recording_cursor_class.cache_clear()
+def snowflake_connection(clock: FakeClock) -> SnowflakeConnection:
+    """Return a ``SnowflakeConnection`` on a fake connector connection."""
+    with patch.object(SnowflakeConnection, "_connect", return_value=None):
+        conn = SnowflakeConnection("my_snowflake_connection")
+    conn._raw_instance = FakeSnowflakeConnection(clock)
+    return conn
 
 
 @pytest.fixture
@@ -253,165 +227,99 @@ def _all_queries(ctx: ScriptRunContext) -> QueryTotals:
     ).combined()
 
 
-def _counts(totals: QueryTotals) -> tuple[int, int, int, int]:
-    return (
-        totals.queries,
-        totals.failed,
-        totals.async_queries,
-        totals.describe_queries,
-    )
+def _counts(totals: QueryTotals) -> tuple[int, int, int]:
+    return (totals.queries, totals.failed, totals.describe_queries)
 
 
 def _overlap_counts(totals: QueryTotals) -> tuple[int, int]:
     return (totals.queries_in_cache, totals.queries_in_commands)
 
 
-# Snowflake connector cursors
+def _timed_query(clock: FakeClock, seconds: float = 0.5) -> None:
+    """Run one Snowflake connector query that takes ``seconds``."""
+    with query_telemetry.record_query("snowflake_connector"):
+        clock.advance(seconds)
 
 
-def test_cursor_records_query_time(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
+# Timing a query
+
+
+def test_record_query_records_count_and_time(
+    ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
-    """A query on a recording cursor adds its count and time."""
-    cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
-
-    assert isinstance(cursor, FakeSnowflakeCursor)
-    assert type(cursor) is not FakeSnowflakeCursor
-    assert cursor.execute("SELECT 1") is cursor
+    """A recorded block adds one query with its time."""
+    _timed_query(clock)
 
     totals = _totals(ctx, "snowflake_connector")
-    assert _counts(totals) == (1, 0, 0, 0)
+    assert _counts(totals) == (1, 0, 0)
     assert totals.time == pytest.approx(0.5)
     assert totals.time_in_cache == totals.time_in_commands == 0
 
 
-def test_cursor_records_failed_query_and_reraises(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
+def test_record_query_records_failed_query_and_reraises(
+    ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
-    """A failed query counts as failed and raises the original error, and the
-    cursor keeps recording later queries.
+    """A block that raises counts as a failed query and raises the original
+    error.
     """
     error = FakeSnowflakeError()
-    snowflake_connection.error = error
-    cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
 
-    with pytest.raises(FakeSnowflakeError) as raised:
-        cursor.execute("SELECT broken")
-    snowflake_connection.error = None
-    cursor.execute("SELECT 1")
+    with (
+        pytest.raises(FakeSnowflakeError) as raised,
+        query_telemetry.record_query("snowflake_connector"),
+    ):
+        clock.advance(0.5)
+        raise error
 
     assert raised.value is error
     totals = _totals(ctx, "snowflake_connector")
-    assert _counts(totals) == (2, 1, 0, 0)
-    assert totals.time == pytest.approx(1.0)
-
-
-def test_cursor_records_async_describe_and_executemany(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
-) -> None:
-    """Async and describe queries are flagged, and each statement that
-    executemany runs is a query.
-    """
-    cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
-
-    cursor.execute_async("SELECT slow")
-    cursor.describe("SELECT 1")
-    cursor.executemany("INSERT INTO t VALUES (?)", [[1], [2]])
-
-    assert _counts(_totals(ctx, "snowflake_connector")) == (4, 0, 1, 1)
-
-
-def test_cursor_counts_a_nested_execute_once(
-    ctx: ScriptRunContext,
-    snowflake_connection: FakeSnowflakeConnection,
-    clock: FakeClock,
-) -> None:
-    """An execute call from inside execute is part of the outer query."""
-    cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
-
-    cursor.execute("CALL nested")
-
-    totals = _totals(ctx, "snowflake_connector")
-    assert _counts(totals) == (1, 0, 0, 0)
-    assert totals.time == pytest.approx(1.0)
-
-
-def test_cursor_without_cursor_class_support_is_a_plain_cursor(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
-) -> None:
-    """A connection whose cursor() takes no cursor class still returns a cursor."""
-    plain_cursor = FakeSnowflakeCursor(snowflake_connection)
-
-    class ConnectionWithoutCursorClass:
-        def cursor(self) -> FakeSnowflakeCursor:
-            return plain_cursor
-
-    connection = ConnectionWithoutCursorClass()
-
-    assert query_telemetry.create_snowflake_cursor(connection) is plain_cursor  # type: ignore[arg-type]
-
-
-def test_cursor_is_plain_without_usage_stats(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
-) -> None:
-    """No recording cursor is created when browser.gatherUsageStats is off."""
-    with patch_config_options({"browser.gatherUsageStats": False}):
-        cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
-
-    assert type(cursor) is FakeSnowflakeCursor
-
-
-def test_cursor_is_plain_without_the_connector(ctx: ScriptRunContext) -> None:
-    """Without the Snowflake connector installed, the connection's own cursor is
-    returned.
-    """
-    query_telemetry._recording_cursor_class.cache_clear()
-    connection = MagicMock()
-    with patch.dict(sys.modules, {"snowflake.connector.cursor": None}):
-        cursor = query_telemetry.create_snowflake_cursor(connection)
-
-    assert cursor is connection.cursor.return_value
-    connection.cursor.assert_called_once_with()
+    assert _counts(totals) == (1, 1, 0)
+    assert totals.time == pytest.approx(0.5)
 
 
 def test_instrumentation_failure_never_affects_the_query(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
+    ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
-    """Errors while recording are swallowed, and the query's result is kept."""
-    cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
-
+    """Errors while recording are swallowed, the block still runs, and the
+    block's own error still propagates unchanged.
+    """
+    ran: list[str] = []
     with patch.object(
         query_telemetry, "start_query", side_effect=RuntimeError("telemetry broke")
     ):
-        assert cursor.execute("SELECT 1") is cursor
+        with query_telemetry.record_query("snowflake_connector"):
+            ran.append("start failed")
     with patch.object(
         query_telemetry.QueryTimer, "finish", side_effect=RuntimeError("broke")
     ):
-        assert cursor.execute("SELECT 2") is cursor
+        with query_telemetry.record_query("snowflake_connector"):
+            ran.append("finish failed")
+        with (
+            pytest.raises(FakeSnowflakeError),
+            query_telemetry.record_query("snowflake_connector"),
+        ):
+            raise FakeSnowflakeError
 
+    assert ran == ["start failed", "finish failed"]
     assert _totals(ctx, "snowflake_connector").queries == 0
 
 
-def test_connection_query_and_cursor_record_queries(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
+# Snowflake connector
+
+
+def test_connection_query_records_its_query_inside_the_cache(
+    ctx: ScriptRunContext, snowflake_connection: SnowflakeConnection
 ) -> None:
     """``SnowflakeConnection.query()`` records its query on a miss, inside the
-    cache's compute time, and ``cursor()`` returns a recording cursor.
+    cache's compute time, and a hit runs no query.
     """
-    with patch.object(SnowflakeConnection, "_connect", return_value=None):
-        conn = SnowflakeConnection("my_snowflake_connection")
-    conn._raw_instance = snowflake_connection
-
-    assert conn.query("SELECT 1", show_spinner=False) == "a dataframe"
-    assert conn.query("SELECT 1", show_spinner=False) == "a dataframe"
-    conn.cursor().execute("INSERT INTO t VALUES (1)")
+    assert snowflake_connection.query("SELECT 1", show_spinner=False) == "a dataframe"
+    assert snowflake_connection.query("SELECT 1", show_spinner=False) == "a dataframe"
 
     totals = _totals(ctx, "snowflake_connector")
-    # The second query() call is a cache hit, so it runs no query.
-    assert _counts(totals) == (2, 0, 0, 0)
+    assert _counts(totals) == (1, 0, 0)
     assert _overlap_counts(totals) == (1, 0)
-    assert totals.time == pytest.approx(1.0)
-    assert totals.time_in_cache == pytest.approx(0.5)
+    assert totals.time == totals.time_in_cache == pytest.approx(0.5)
     cache_data = RunCacheTotals.combine(
         (stats.cache for stats in ctx.shared.stats.all_thread_stats()),
         time.perf_counter(),
@@ -420,22 +328,51 @@ def test_connection_query_and_cursor_record_queries(
     assert cache_data.compute_time == pytest.approx(0.5)
 
 
+def test_connection_query_failure_is_recorded_and_raised(
+    ctx: ScriptRunContext, snowflake_connection: SnowflakeConnection
+) -> None:
+    """A query that fails in ``SnowflakeConnection.query()`` counts as failed,
+    and its error reaches the app.
+    """
+    error = FakeSnowflakeError()
+    snowflake_connection._raw_instance.error = error  # type: ignore[attr-defined]
+
+    with pytest.raises(FakeSnowflakeError) as raised:
+        snowflake_connection.query("SELECT broken", show_spinner=False)
+
+    assert raised.value is error
+    assert _counts(_totals(ctx, "snowflake_connector")) == (1, 1, 0)
+
+
+def test_connection_cursor_is_unchanged_and_not_recorded(
+    ctx: ScriptRunContext, snowflake_connection: SnowflakeConnection
+) -> None:
+    """``SnowflakeConnection.cursor()`` returns the connector's own cursor, and
+    the app's queries on it aren't recorded.
+    """
+    cursor = snowflake_connection.cursor()
+    cursor.execute("INSERT INTO t VALUES (1)")
+
+    assert type(cursor) is FakeSnowflakeCursor
+    assert cursor.executed == 1
+    assert _all_queries(ctx) == QueryTotals()
+
+
 # Attribution to cached functions, commands, threads and runs
 
 
 def test_query_in_hash_funcs_counts_in_time_in_cache(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
+    ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
     """A query from a hash_funcs function is in the cached call's overhead time,
     on a miss and on a hit.
     """
-    cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
 
     class Key:
         pass
 
     def hash_key(_key: Key) -> str:
-        cursor.execute("SELECT 1")
+        _timed_query(clock)
         return "key"
 
     @st.cache_data(show_spinner=False, hash_funcs={Key: hash_key})
@@ -452,12 +389,11 @@ def test_query_in_hash_funcs_counts_in_time_in_cache(
 
 
 def test_other_tasks_query_while_an_async_cached_call_awaits_counts_in_cache(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
+    ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
     """Another task's query while an async cached call awaits is in that call's
     time, and a query after the call finishes isn't.
     """
-    cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
     events: dict[str, asyncio.Event] = {}
 
     @st.cache_data(show_spinner=False)
@@ -468,14 +404,14 @@ def test_other_tasks_query_while_an_async_cached_call_awaits_counts_in_cache(
 
     async def query_meanwhile() -> None:
         await events["started"].wait()
-        cursor.execute("SELECT 1")
+        _timed_query(clock)
         events["queried"].set()
 
     async def main() -> None:
         events["started"] = asyncio.Event()
         events["queried"] = asyncio.Event()
         await asyncio.gather(load(), query_meanwhile())
-        cursor.execute("SELECT 2")
+        _timed_query(clock)
 
     asyncio.run(main())
 
@@ -486,17 +422,16 @@ def test_other_tasks_query_while_an_async_cached_call_awaits_counts_in_cache(
 
 
 def test_queries_on_a_thread_a_cached_function_attaches_are_its_own(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
+    ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
     """A thread a cached function attaches records its queries as its own,
     outside the cache's compute time, like its cached calls and commands.
     """
-    cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
 
     @st.cache_data(show_spinner=False)
     def load() -> str:
         thread = add_script_run_ctx(
-            threading.Thread(target=cursor.execute, args=("SELECT 1",)), ctx
+            threading.Thread(target=_timed_query, args=(clock,)), ctx
         )
         thread.start()
         thread.join(5)
@@ -511,7 +446,7 @@ def test_queries_on_a_thread_a_cached_function_attaches_are_its_own(
 
 
 def test_query_in_listed_command_counts_in_time_in_commands(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
+    ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
     """A query inside a listed command is in that command's time, even inside a
     cached function.
@@ -519,9 +454,7 @@ def test_query_in_listed_command_counts_in_time_in_commands(
 
     @st.cache_data(show_spinner=False)
     def load() -> str:
-        query_telemetry.create_snowflake_cursor(snowflake_connection).execute(
-            "SELECT 1"
-        )
+        _timed_query(clock)
         return "rows"
 
     @metrics_util.gather_metrics("show_rows")
@@ -538,22 +471,21 @@ def test_query_in_listed_command_counts_in_time_in_commands(
 
 
 def test_parallel_fragment_queries_go_to_the_fragment_run(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
+    ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
     """A parallel fragment's queries on its worker thread count toward its own
     run as well as the run totals, with the same attribution.
     """
-    cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
 
     @st.cache_data(show_spinner=False)
     def load() -> str:
-        cursor.execute("SELECT 1")
+        _timed_query(clock)
         return "rows"
 
-    cursor.execute("SELECT main")
+    _timed_query(clock)
     with ctx.shared.parallel_fragments.recording_run() as run:
         load()
-        cursor.execute("SELECT 2")
+        _timed_query(clock)
 
     fragment = run.stats.query.snowflake_connector
     assert (fragment.queries, fragment.queries_in_cache) == (2, 1)
@@ -563,20 +495,18 @@ def test_parallel_fragment_queries_go_to_the_fragment_run(
 
 
 def test_parallel_worker_queries_are_added_to_the_run(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
+    ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
     """Queries from parallel fragment workers count toward the run, per thread."""
-    query_telemetry.create_snowflake_cursor(snowflake_connection).execute("SELECT 1")
+    _timed_query(clock)
 
     coordinator = ParallelFragmentCoordinator(yield_check=lambda: None, max_workers=4)
     barrier = threading.Barrier(4)
 
     def worker() -> None:
         barrier.wait(5)
-        connection = FakeSnowflakeConnection(FakeClock())
-        cursor = query_telemetry.create_snowflake_cursor(connection)
-        cursor.execute("SELECT 1")
-        cursor.execute("SELECT 2")
+        _timed_query(clock)
+        _timed_query(clock)
 
     for _ in range(4):
         coordinator.submit(worker, ctx)
@@ -587,27 +517,30 @@ def test_parallel_worker_queries_are_added_to_the_run(
 
 
 def test_queries_without_a_script_run_are_not_recorded(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
+    ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
-    """Threads without a ScriptRunContext record nothing."""
-    cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
-    thread = threading.Thread(target=cursor.execute, args=("SELECT 1",))
+    """Threads without a ScriptRunContext run the query but record nothing."""
+    ran: list[bool] = []
+
+    def query() -> None:
+        with query_telemetry.record_query("snowflake_connector"):
+            ran.append(True)
+
+    thread = threading.Thread(target=query)
     thread.start()
     thread.join(5)
 
+    assert ran == [True]
     assert _all_queries(ctx) == QueryTotals()
-    assert snowflake_connection.executed == 1
 
 
 def test_query_without_thread_state_is_recorded_outside_commands(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
+    ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
     """A thread with a ScriptRunContext but no ThreadState still records the
     query, as not inside a command.
     """
-    cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
-
-    contextvars.Context().run(cursor.execute, "SELECT 1")
+    contextvars.Context().run(_timed_query, clock)
 
     totals = _totals(ctx, "snowflake_connector")
     assert totals.queries == 1
@@ -615,22 +548,19 @@ def test_query_without_thread_state_is_recorded_outside_commands(
 
 
 def test_nothing_is_recorded_without_usage_stats(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
+    ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
     """A run that doesn't gather usage stats records nothing."""
-    cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
     ctx.gather_usage_stats = False
 
-    cursor.execute("SELECT 1")
+    _timed_query(clock)
     query_telemetry.record_untimed_query("snowpark")
 
     assert _all_queries(ctx) == QueryTotals()
 
 
 def test_previous_and_new_run_record_queries_into_their_own_totals_at_the_same_time(
-    ctx: ScriptRunContext,
-    snowflake_connection: FakeSnowflakeConnection,
-    clock: FakeClock,
+    ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
     """A query left running from the previous run keeps adding to that run's
     totals while the new run's queries add to the new run's.
@@ -639,18 +569,16 @@ def test_previous_and_new_run_record_queries_into_their_own_totals_at_the_same_t
     release = threading.Event()
 
     def query_in_previous_run() -> None:
-        timer = query_telemetry.start_query("snowflake_connector")
-        assert timer is not None
-        started.set()
-        release.wait(5)
-        timer.finish()
+        with query_telemetry.record_query("snowflake_connector"):
+            started.set()
+            release.wait(5)
 
     previous_stats = ctx.shared.stats
     thread = add_script_run_ctx(threading.Thread(target=query_in_previous_run), ctx)
     thread.start()
     assert started.wait(5)
     ctx.shared.reset()
-    query_telemetry.create_snowflake_cursor(snowflake_connection).execute("SELECT 1")
+    _timed_query(clock)
     clock.advance(1.0)
     release.set()
     thread.join(5)
@@ -695,7 +623,7 @@ def test_sqlalchemy_events_record_query_time(
     _sqlalchemy_execute(clock)
 
     totals = _totals(ctx, "sqlalchemy")
-    assert _counts(totals) == (1, 0, 0, 0)
+    assert _counts(totals) == (1, 0, 0)
     assert totals.time == pytest.approx(0.25)
 
 
@@ -708,7 +636,7 @@ def test_sqlalchemy_error_records_failed_query(
     query_telemetry._after_cursor_execute(None, object(), "", {}, context, False)
 
     totals = _totals(ctx, "sqlalchemy")
-    assert _counts(totals) == (1, 1, 0, 0)
+    assert _counts(totals) == (1, 1, 0)
 
 
 def test_sqlalchemy_events_without_context_record_nothing(
@@ -725,31 +653,26 @@ def test_sqlalchemy_events_without_context_record_nothing(
 
 @pytest.fixture
 def fake_sqlalchemy(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
-    """Install a fake ``sqlalchemy`` and reset whether the hooks are installed."""
+    """Install a fake ``sqlalchemy`` and return its ``event`` module."""
     event_mod = MagicMock(name="sqlalchemy.event")
-    engine_mod = types.ModuleType("sqlalchemy.engine")
-    engine_mod.Engine = type("Engine", (), {})  # type: ignore[attr-defined]
     sqlalchemy_mod = types.ModuleType("sqlalchemy")
     sqlalchemy_mod.event = event_mod  # type: ignore[attr-defined]
-    sqlalchemy_mod.engine = engine_mod  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "sqlalchemy", sqlalchemy_mod)
     monkeypatch.setitem(sys.modules, "sqlalchemy.event", event_mod)
-    monkeypatch.setitem(sys.modules, "sqlalchemy.engine", engine_mod)
-    monkeypatch.setattr(query_telemetry, "_sqlalchemy_hooks_installed", False)
     return event_mod
 
 
-def test_sqlalchemy_hooks_are_installed_once_on_the_engine_class(
+def test_sqlalchemy_hooks_are_installed_on_the_given_engine(
     ctx: ScriptRunContext, fake_sqlalchemy: MagicMock
 ) -> None:
-    query_telemetry.install_hooks_for_run()
-    query_telemetry.install_sqlalchemy_hooks()
+    engine = object()
 
-    engine_class = sys.modules["sqlalchemy.engine"].Engine  # type: ignore[attr-defined]
+    query_telemetry.install_sqlalchemy_hooks(engine)  # type: ignore[arg-type]
+
     assert [call.args[:2] for call in fake_sqlalchemy.listen.call_args_list] == [
-        (engine_class, "before_cursor_execute"),
-        (engine_class, "after_cursor_execute"),
-        (engine_class, "handle_error"),
+        (engine, "before_cursor_execute"),
+        (engine, "after_cursor_execute"),
+        (engine, "handle_error"),
     ]
 
 
@@ -757,7 +680,7 @@ def test_sqlalchemy_hooks_are_not_installed_without_usage_stats(
     ctx: ScriptRunContext, fake_sqlalchemy: MagicMock
 ) -> None:
     with patch_config_options({"browser.gatherUsageStats": False}):
-        query_telemetry.install_sqlalchemy_hooks()
+        query_telemetry.install_sqlalchemy_hooks(object())  # type: ignore[arg-type]
 
     fake_sqlalchemy.listen.assert_not_called()
 
@@ -767,10 +690,7 @@ def test_sqlalchemy_hook_install_failure_is_swallowed(
 ) -> None:
     fake_sqlalchemy.listen.side_effect = RuntimeError("no events")
 
-    query_telemetry.install_sqlalchemy_hooks()
-    query_telemetry.install_sqlalchemy_hooks()
-
-    fake_sqlalchemy.listen.assert_called_once()
+    query_telemetry.install_sqlalchemy_hooks(object())  # type: ignore[arg-type]
 
 
 # Snowpark
@@ -790,7 +710,7 @@ def test_snowpark_session_queries_are_counted_without_time(
 
     assert len(session._conn.listeners) == 1
     totals = _totals(ctx, "snowpark")
-    assert _counts(totals) == (3, 1, 0, 1)
+    assert _counts(totals) == (3, 1, 1)
     assert totals.time == 0
 
 
@@ -872,26 +792,18 @@ def test_run_start_watches_the_active_snowpark_session(
     assert len(session._conn.listeners) == 1
 
 
-def test_run_start_skips_libraries_the_app_hasnt_imported(
+def test_run_start_skips_snowpark_if_the_app_hasnt_imported_it(
     ctx: ScriptRunContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Run start doesn't import SQLAlchemy or Snowpark for an app that doesn't
-    use them.
-    """
-    monkeypatch.delitem(sys.modules, "sqlalchemy", raising=False)
+    """Run start doesn't import Snowpark for an app that doesn't use it."""
     monkeypatch.delitem(sys.modules, "snowflake.snowpark", raising=False)
-    install_sqlalchemy_hooks = MagicMock()
     watch_active_session = MagicMock()
-    monkeypatch.setattr(
-        query_telemetry, "install_sqlalchemy_hooks", install_sqlalchemy_hooks
-    )
     monkeypatch.setattr(
         query_telemetry, "_watch_active_snowpark_session", watch_active_session
     )
 
     query_telemetry.install_hooks_for_run()
 
-    install_sqlalchemy_hooks.assert_not_called()
     watch_active_session.assert_not_called()
 
 
@@ -928,44 +840,6 @@ def test_connection_session_is_watched(
 
 
 @pytest.mark.require_integration
-def test_real_snowflake_cursor_records_execute_async_and_describe(
-    ctx: ScriptRunContext, clock: FakeClock
-) -> None:
-    """The connector's execute_async and describe go through execute, so the
-    recording cursor sees them with their flags.
-    """
-    from snowflake.connector.connection import (
-        SnowflakeConnection as ConnectorConnection,
-    )
-    from snowflake.connector.cursor import SnowflakeCursor
-
-    query_telemetry._recording_cursor_class.cache_clear()
-    executed: list[dict[str, Any]] = []
-
-    def fake_execute(self: Any, *args: Any, **kwargs: Any) -> Any:
-        executed.append(kwargs)
-        clock.advance(0.1)
-        return self
-
-    connection = MagicMock()
-    connection.cursor = lambda cursor_class=SnowflakeCursor: ConnectorConnection.cursor(
-        connection, cursor_class=cursor_class
-    )
-    with patch.object(SnowflakeCursor, "execute", fake_execute):
-        cursor = query_telemetry.create_snowflake_cursor(connection)
-        assert isinstance(cursor, SnowflakeCursor)
-        cursor.execute("SELECT 1")
-        cursor.execute_async("SELECT 2")
-        cursor.describe("SELECT 3")
-
-    assert len(executed) == 3
-    totals = _totals(ctx, "snowflake_connector")
-    assert _counts(totals) == (3, 0, 1, 1)
-    assert totals.time == pytest.approx(0.3)
-    query_telemetry._recording_cursor_class.cache_clear()
-
-
-@pytest.mark.require_integration
 def test_real_snowpark_notifies_the_listener(
     ctx: ScriptRunContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -998,52 +872,11 @@ def test_real_snowpark_notifies_the_listener(
     with pytest.raises(ProgrammingError):
         server_connection.execute_and_notify_query_listener("SELECT x")
 
-    assert _counts(_totals(ctx, "snowpark")) == (2, 1, 0, 0)
+    assert _counts(_totals(ctx, "snowpark")) == (2, 1, 0)
     query_telemetry._snowpark_query_listener.cache_clear()
 
 
-@pytest.fixture
-def real_sqlalchemy_hooks(
-    ctx: ScriptRunContext, monkeypatch: pytest.MonkeyPatch
-) -> Iterator[None]:
-    """Install the SQLAlchemy hooks on the real Engine class, and remove them
-    afterwards so that no other test sees them.
-    """
-    from sqlalchemy import event
-    from sqlalchemy.engine import Engine
-
-    monkeypatch.setattr(query_telemetry, "_sqlalchemy_hooks_installed", False)
-    query_telemetry.install_sqlalchemy_hooks()
-    yield
-    event.remove(
-        Engine, "before_cursor_execute", query_telemetry._before_cursor_execute
-    )
-    event.remove(Engine, "after_cursor_execute", query_telemetry._after_cursor_execute)
-    event.remove(Engine, "handle_error", query_telemetry._handle_sqlalchemy_error)
-
-
 @pytest.mark.require_integration
-@pytest.mark.usefixtures("real_sqlalchemy_hooks")
-def test_real_sqlalchemy_engine_records_queries(ctx: ScriptRunContext) -> None:
-    """Queries on an engine the app creates itself are recorded, including
-    failed ones.
-    """
-    import sqlalchemy
-
-    engine = sqlalchemy.create_engine("sqlite://")
-    with engine.connect() as connection:
-        connection.execute(sqlalchemy.text("SELECT 1"))
-        with pytest.raises(sqlalchemy.exc.OperationalError):
-            connection.execute(sqlalchemy.text("SELECT * FROM missing_table"))
-    engine.dispose()
-
-    totals = _totals(ctx, "sqlalchemy")
-    assert (totals.queries, totals.failed) == (2, 1)
-    assert totals.time > 0
-
-
-@pytest.mark.require_integration
-@pytest.mark.usefixtures("real_sqlalchemy_hooks")
 def test_real_sql_connection_records_query_and_session(ctx: ScriptRunContext) -> None:
     """SQLConnection.query() records its query on a miss, inside the cache's
     compute time, and its session's queries are recorded too.
@@ -1064,3 +897,30 @@ def test_real_sql_connection_records_query_and_session(ctx: ScriptRunContext) ->
     assert totals.queries_in_cache >= 1
     assert totals.queries - totals.queries_in_cache == 1
     assert 0 < totals.time_in_cache < totals.time
+
+
+@pytest.mark.require_integration
+def test_real_sqlalchemy_records_only_sql_connection_engines(
+    ctx: ScriptRunContext,
+) -> None:
+    """Queries on an autocommit SQLConnection are recorded, including failed
+    ones, and queries on an engine the app creates itself aren't.
+    """
+    import sqlalchemy
+
+    from streamlit.connections import SQLConnection
+
+    app_engine = sqlalchemy.create_engine("sqlite://")
+    with app_engine.connect() as connection:
+        connection.execute(sqlalchemy.text("SELECT 1"))
+    app_engine.dispose()
+    conn = SQLConnection("sql", url="sqlite://", autocommit=True)
+    with conn.engine.connect() as connection:
+        connection.execute(sqlalchemy.text("SELECT 1"))
+        with pytest.raises(sqlalchemy.exc.OperationalError):
+            connection.execute(sqlalchemy.text("SELECT * FROM missing_table"))
+    conn.engine.dispose()
+
+    totals = _totals(ctx, "sqlalchemy")
+    assert (totals.queries, totals.failed) == (2, 1)
+    assert totals.time > 0

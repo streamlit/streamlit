@@ -12,33 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# NOTE: snowflake.connector, snowflake.snowpark and sqlalchemy aren't always
-# installed, so their imports need `type: ignore` comments, which would be
-# reported as unused when the packages are available.
+# NOTE: snowflake.snowpark and sqlalchemy aren't always installed, so their
+# imports need `type: ignore` comments, which would be reported as unused when
+# the packages are available.
 # mypy: no-warn-unused-ignores
 
 """Records database queries for the page profile's per-run query totals.
 
-Recorded queries, by source:
+Recording never changes the objects an app gets from Streamlit, such as
+cursors, engines or sessions, and uses only hooks the libraries provide, so
+some queries aren't recorded. Recorded queries, by source:
 
-- ``snowflake_connector``: queries on the Snowflake Connector for Python
-  cursors that ``SnowflakeConnection.query()`` and
-  ``SnowflakeConnection.cursor()`` create. Streamlit creates them with a
-  ``SnowflakeCursor`` subclass that times ``execute``, which ``executemany``,
-  ``execute_async`` and ``describe`` call too. Cursors created any other way,
-  such as from ``raw_connection`` or inside ``write_pandas``, aren't recorded.
-- ``sqlalchemy``: queries on any SQLAlchemy engine, through SQLAlchemy's
-  cursor execute events. The events are registered on the ``Engine`` class
-  when a ``SQLConnection`` connects, or at the start of a script run once the
-  app has imported SQLAlchemy, so engines the app creates itself are recorded
-  too.
+- ``snowflake_connector``: the query that ``SnowflakeConnection.query()``
+  runs, timed around Streamlit's own ``execute`` call. Queries the app runs on
+  a cursor, including one from ``SnowflakeConnection.cursor()``, aren't
+  recorded, because the connector has no hook for them.
+- ``sqlalchemy``: queries on the engine behind a ``SQLConnection``, including
+  its ``session``, through SQLAlchemy's cursor execute events on that engine.
+  Engines the app creates itself aren't recorded.
 - ``snowpark``: queries on Snowpark sessions from
   ``SnowflakeConnection.session()``, and on the active Snowpark session found
   when a Snowflake connection connects or a script run starts. They're
   recorded through the query listener that ``Session.query_history()`` also
   uses. Snowpark notifies listeners only after a query finishes, so these
-  queries aren't timed. Requires Snowpark 1.26 or later, the first version that
-  registers listeners under a lock.
+  queries aren't timed. Requires Snowpark 1.26 or later, the first version
+  with query listeners.
 
 A query is recorded only if it runs on a thread attached to a script run that
 gathers usage stats, and finishes before the run's page profile is built. No
@@ -49,14 +47,15 @@ error.
 A query that overlaps other recorded times is counted, with its time, in
 ``queries_in_commands`` if it runs inside a listed command, or else in
 ``queries_in_cache`` if it runs on a thread while a recorded cached call is
-open there. Threads a cached function attaches with ``add_script_run_ctx`` record their
-queries as their own, like their cached calls and commands. A parallel
-fragment's queries on its worker thread also count toward the fragment's own
-run in the page profile.
+open there. Threads a cached function attaches with ``add_script_run_ctx``
+record their queries as their own, like their cached calls and commands. A
+parallel fragment's queries on its worker thread also count toward the
+fragment's own run in the page profile.
 """
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import sys
 import threading
@@ -72,11 +71,10 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 )
 
 if TYPE_CHECKING:
-    from snowflake.connector import (  # type: ignore[import]
-        SnowflakeConnection as InternalSnowflakeConnection,
-    )
-    from snowflake.connector.cursor import SnowflakeCursor  # type: ignore[import]
+    from collections.abc import Generator
+
     from snowflake.snowpark.session import Session  # type: ignore[import]
+    from sqlalchemy.engine import Engine  # type: ignore[import]
 
     from streamlit.runtime.scriptrunner_utils.query_run_stats import (
         QuerySource,
@@ -93,7 +91,6 @@ _LOGGER: Final = get_logger(__name__)
 _SQLALCHEMY_TIMER_ATTR: Final = "_streamlit_query_timer"
 
 _install_lock = threading.Lock()
-_sqlalchemy_hooks_installed = False
 # Snowpark server connections that already have the query listener.
 _watched_snowpark_connections: weakref.WeakSet[Any] = weakref.WeakSet()
 
@@ -119,13 +116,7 @@ class QueryTimer:
         self._in_cache = in_cache
         self._start = time.perf_counter()
 
-    def finish(
-        self,
-        *,
-        failed: bool = False,
-        is_async: bool = False,
-        is_describe: bool = False,
-    ) -> None:
+    def finish(self, *, failed: bool = False) -> None:
         elapsed = time.perf_counter() - self._start
         totals = self._totals
         totals.time += elapsed
@@ -136,8 +127,7 @@ class QueryTimer:
         _count_query(
             totals,
             failed=failed,
-            is_async=is_async,
-            is_describe=is_describe,
+            is_describe=False,
             in_command=self._in_command,
             in_cache=self._in_cache,
         )
@@ -147,7 +137,6 @@ def _count_query(
     totals: QueryTotals,
     *,
     failed: bool,
-    is_async: bool,
     is_describe: bool,
     in_command: bool,
     in_cache: bool,
@@ -155,8 +144,6 @@ def _count_query(
     totals.queries += 1
     if failed:
         totals.failed += 1
-    if is_async:
-        totals.async_queries += 1
     if is_describe:
         totals.describe_queries += 1
     if in_command:
@@ -225,7 +212,6 @@ def record_untimed_query(
     _count_query(
         thread_stats.query.totals_for(source),
         failed=failed,
-        is_async=False,
         is_describe=is_describe,
         in_command=in_command,
         in_cache=in_cache,
@@ -240,79 +226,34 @@ def _start_query_safely(source: QuerySource) -> QueryTimer | None:
         return None
 
 
-def _finish_safely(
-    timer: QueryTimer,
-    *,
-    failed: bool = False,
-    is_async: bool = False,
-    is_describe: bool = False,
-) -> None:
+def _finish_safely(timer: QueryTimer, *, failed: bool = False) -> None:
     try:
-        timer.finish(failed=failed, is_async=is_async, is_describe=is_describe)
+        timer.finish(failed=failed)
     except Exception as ex:
         _LOGGER.debug("Failed to record query telemetry", exc_info=ex)
 
 
+@contextlib.contextmanager
+def record_query(source: QuerySource) -> Generator[None, None, None]:
+    """Time the block as one query from ``source``, if the page profile records
+    it.
+
+    Errors while recording are swallowed, and an error raised by the block
+    always propagates unchanged.
+    """
+    timer = _start_query_safely(source)
+    try:
+        yield
+    except Exception:
+        if timer is not None:
+            _finish_safely(timer, failed=True)
+        raise
+    if timer is not None:
+        _finish_safely(timer)
+
+
 def _gathers_usage_stats() -> bool:
     return bool(config.get_option("browser.gatherUsageStats"))
-
-
-@functools.cache
-def _recording_cursor_class() -> type[SnowflakeCursor]:
-    from snowflake.connector.cursor import SnowflakeCursor  # type: ignore[import]
-
-    class StreamlitSnowflakeCursor(SnowflakeCursor):  # type: ignore[misc]
-        """A ``SnowflakeCursor`` that records its queries in the page profile."""
-
-        # Set while execute runs, so a call from inside it isn't counted again.
-        _streamlit_in_execute = False
-
-        def execute(self, *args: Any, **kwargs: Any) -> Any:
-            timer = (
-                None
-                if self._streamlit_in_execute
-                else _start_query_safely("snowflake_connector")
-            )
-            if timer is None:
-                return super().execute(*args, **kwargs)
-            is_async = bool(kwargs.get("_exec_async"))
-            is_describe = bool(kwargs.get("_describe_only"))
-            self._streamlit_in_execute = True
-            try:
-                result = super().execute(*args, **kwargs)
-            except Exception:
-                _finish_safely(
-                    timer, failed=True, is_async=is_async, is_describe=is_describe
-                )
-                raise
-            finally:
-                self._streamlit_in_execute = False
-            _finish_safely(timer, is_async=is_async, is_describe=is_describe)
-            return result
-
-    return StreamlitSnowflakeCursor
-
-
-def create_snowflake_cursor(
-    connection: InternalSnowflakeConnection,
-) -> SnowflakeCursor:
-    """Return a new cursor on ``connection`` that records its queries in the
-    page profile when usage stats are gathered.
-    """
-    if not _gathers_usage_stats():
-        return connection.cursor()
-    try:
-        cursor_class = _recording_cursor_class()
-    except ImportError:
-        return connection.cursor()
-    except Exception as ex:
-        _LOGGER.debug("Failed to create the recording cursor class", exc_info=ex)
-        return connection.cursor()
-    try:
-        return connection.cursor(cursor_class=cursor_class)
-    except TypeError:
-        # A connection whose cursor() doesn't take a cursor class.
-        return connection.cursor()
 
 
 def _pop_sqlalchemy_timer(context: Any) -> QueryTimer | None:
@@ -366,28 +307,23 @@ def _handle_sqlalchemy_error(exception_context: Any) -> None:
         _LOGGER.debug("Failed to record query telemetry", exc_info=ex)
 
 
-def install_sqlalchemy_hooks() -> None:
-    """Record queries on every SQLAlchemy engine, if usage stats are gathered.
+def install_sqlalchemy_hooks(engine: Engine) -> None:
+    """Record the queries on ``engine``, if usage stats are gathered.
 
-    Only call this once SQLAlchemy has been imported.
+    The events are registered on this engine only, so engines the app creates
+    itself are unaffected. Engines derived from it with ``execution_options()``
+    share its events.
     """
-    global _sqlalchemy_hooks_installed  # noqa: PLW0603
     if not _gathers_usage_stats():
         return
-    with _install_lock:
-        if _sqlalchemy_hooks_installed:
-            return
-        # Set first, so that a failure isn't retried on every run.
-        _sqlalchemy_hooks_installed = True
-        try:
-            from sqlalchemy import event  # type: ignore[import]
-            from sqlalchemy.engine import Engine  # type: ignore[import]
+    try:
+        from sqlalchemy import event  # type: ignore[import]
 
-            event.listen(Engine, "before_cursor_execute", _before_cursor_execute)
-            event.listen(Engine, "after_cursor_execute", _after_cursor_execute)
-            event.listen(Engine, "handle_error", _handle_sqlalchemy_error)
-        except Exception as ex:
-            _LOGGER.debug("Failed to install SQLAlchemy query telemetry", exc_info=ex)
+        event.listen(engine, "before_cursor_execute", _before_cursor_execute)
+        event.listen(engine, "after_cursor_execute", _after_cursor_execute)
+        event.listen(engine, "handle_error", _handle_sqlalchemy_error)
+    except Exception as ex:
+        _LOGGER.debug("Failed to install SQLAlchemy query telemetry", exc_info=ex)
 
 
 def _record_snowpark_query(query_record: Any, **kwargs: Any) -> None:
@@ -463,13 +399,11 @@ def _watch_active_snowpark_session() -> None:
 
 
 def install_hooks_for_run() -> None:
-    """Install the query hooks for libraries the app has imported.
+    """Watch the active Snowpark session, if the app has imported Snowpark.
 
     Call this at the start of each script run that gathers usage stats.
     """
     try:
-        if "sqlalchemy" in sys.modules:
-            install_sqlalchemy_hooks()
         if "snowflake.snowpark" in sys.modules:
             _watch_active_snowpark_session()
     except Exception as ex:

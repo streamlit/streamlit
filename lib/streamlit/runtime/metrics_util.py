@@ -864,7 +864,6 @@ def _fill_query_usage(page_profile: PageProfile, ctx: ScriptRunContext) -> None:
             continue
         usage.queries = totals.queries
         usage.failed = totals.failed
-        usage.async_queries = totals.async_queries
         usage.describe_queries = totals.describe_queries
         usage.queries_in_cache = totals.queries_in_cache
         usage.queries_in_commands = totals.queries_in_commands
