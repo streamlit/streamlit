@@ -19,38 +19,26 @@
 
 """Records database queries for the page profile's per-run query totals.
 
-Recording never changes the objects an app gets from Streamlit, such as
-cursors, engines or sessions, and uses only hooks the libraries provide, so
-some queries aren't recorded. Recorded queries, by source:
+Only hooks the libraries provide are used, and the cursors, engines and
+sessions an app gets are never replaced or wrapped, so some queries aren't
+recorded. By source:
 
-- ``snowflake_connector``: the query that ``SnowflakeConnection.query()``
-  runs, timed around Streamlit's own ``execute`` call. Queries the app runs on
-  a cursor, including one from ``SnowflakeConnection.cursor()``, aren't
-  recorded, because the connector has no hook for them.
-- ``sqlalchemy``: queries on the engine behind a ``SQLConnection``, including
-  its ``session``, through SQLAlchemy's cursor execute events on that engine.
-  Engines the app creates itself aren't recorded.
-- ``snowpark``: queries on Snowpark sessions from
-  ``SnowflakeConnection.session()``, and on the active Snowpark session found
-  when a Snowflake connection connects or a script run starts. They're
-  recorded through the query listener that ``Session.query_history()`` also
-  uses. Snowpark notifies listeners only after a query finishes, so these
-  queries aren't timed. Requires Snowpark 1.26 or later, the first version
-  with query listeners.
+- ``snowflake_connector``: ``SnowflakeConnection.query()``, timed around its
+  ``execute`` call. The connector has no query hook, so queries the app runs
+  on its own cursors aren't recorded.
+- ``sqlalchemy``: the ``SQLConnection`` engine, through its cursor execute
+  events.
+- ``snowpark``: sessions from ``SnowflakeConnection.session()`` and the active
+  session, through Snowpark's query listener (Snowpark 1.26 or later). It's
+  notified only after a query finishes, so these queries aren't timed.
 
-A query is recorded only if it runs on a thread attached to a script run that
-gathers usage stats, and finishes before the run's page profile is built. No
-hooks are installed when ``browser.gatherUsageStats`` is off. A failure in the
-instrumentation is logged at debug level and never changes a query's result or
-error.
+Queries are recorded only on threads attached to a script run that gathers
+usage stats. An instrumentation failure is logged at debug level and never
+changes a query's result or error.
 
-A query that overlaps other recorded times is counted, with its time, in
-``queries_in_commands`` if it runs inside a listed command, or else in
-``queries_in_cache`` if it runs on a thread while a recorded cached call is
-open there. Threads a cached function attaches with ``add_script_run_ctx``
-record their queries as their own, like their cached calls and commands. A
-parallel fragment's queries on its worker thread also count toward the
-fragment's own run in the page profile.
+A query inside a listed command also counts toward ``queries_in_commands``,
+or else, inside a recorded cached call, toward ``queries_in_cache``, so
+analysis can subtract it from those times without counting it twice.
 """
 
 from __future__ import annotations
