@@ -51,7 +51,7 @@ import {
 } from "~lib/hooks/useFloatingOverlay"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
 import { convertRemToPx } from "~lib/theme/utils"
-import { isNullOrUndefined } from "~lib/util/utils"
+import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
   CalendarPopoverHeader,
@@ -888,7 +888,7 @@ function SingleDateInput({
               <StyledVisuallyHidden id={popoverDescId}>
                 Use arrow keys to navigate dates. Enter to select. Escape to
                 close.
-                {isDateUnavailable != null
+                {notNullOrUndefined(isDateUnavailable)
                   ? " Unavailable dates are marked disabled and cannot be selected."
                   : null}
               </StyledVisuallyHidden>
