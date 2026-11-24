@@ -438,15 +438,7 @@ describe("metrics helpers", () => {
         "pageProfile",
         decodedPageProfile({
           parallelFragmentUsage: {
-            runs: [
-              {
-                startTime: 10,
-                execTime: 900,
-                cacheComputeTime: 600,
-                queryTime: 400,
-                queryTimeInCache: 300,
-              },
-            ],
+            runs: [{ startTime: 10, execTime: 900, cacheComputeTime: 600 }],
             runCount: 1,
             cacheUsage: { cacheData: { calls: 1, misses: 1 } },
             waitTime: 700,
@@ -459,15 +451,7 @@ describe("metrics helpers", () => {
       .toJSON()
 
     expect(withUsage.parallelFragmentUsage).toStrictEqual({
-      runs: [
-        {
-          startTime: "10",
-          execTime: "900",
-          cacheComputeTime: "600",
-          queryTime: "400",
-          queryTimeInCache: "300",
-        },
-      ],
+      runs: [{ startTime: "10", execTime: "900", cacheComputeTime: "600" }],
       runCount: "1",
       cacheUsage: { cacheData: { calls: "1", misses: "1" } },
       waitTime: "700",

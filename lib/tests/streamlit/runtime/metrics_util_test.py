@@ -1533,19 +1533,9 @@ def test_create_page_profile_message_reports_query_usage() -> None:
     assert usage.snowpark.time == 0
 
 
-def test_create_page_profile_message_leaves_query_usage_unset() -> None:
-    """``query_usage`` stays unset when the run recorded no query."""
-    ctx = create_mock_script_run_ctx()
-
-    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
-        msg = metrics_util.create_page_profile_message([], 0, 0)
-
-    assert not msg.page_profile.HasField("query_usage")
-
-
-def test_create_page_profile_message_leaves_cache_usage_and_uptime_unset() -> None:
-    """``cache_usage`` and ``server_uptime_seconds`` stay unset without cached
-    calls or a known uptime.
+def test_create_page_profile_message_leaves_usage_and_uptime_unset() -> None:
+    """``cache_usage``, ``query_usage`` and ``server_uptime_seconds`` stay unset
+    without cached calls, queries or a known uptime.
     """
     ctx = create_mock_script_run_ctx()
 
@@ -1553,6 +1543,7 @@ def test_create_page_profile_message_leaves_cache_usage_and_uptime_unset() -> No
         msg = metrics_util.create_page_profile_message([], 0, 0)
 
     assert not msg.page_profile.HasField("cache_usage")
+    assert not msg.page_profile.HasField("query_usage")
     assert not msg.page_profile.HasField("server_uptime_seconds")
 
 
