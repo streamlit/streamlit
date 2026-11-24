@@ -63,7 +63,7 @@ All server times are wall-clock times in microseconds. `exec_time` and `prep_tim
 - **`exec_time`** runs from the start of the run until the page profile is built. That includes widget callbacks, the script or fragments, and joining parallel fragment workers.
 - **`prep_time`** is the part of `exec_time` before the script starts: resolving the page, cleaning up widget state and compiling the script. Callbacks run after it.
 - **Command times** are the `time` of each entry in `commands`.
-- **User code time** isn't sent. Analysis of the events derives it as `exec_time - prep_time - sum(command times)`. It's approximate:
+- **User code time** isn't sent. Analysis derives it from `exec_time - prep_time`, minus listed command time and cache time (compute + wait + overhead − `async_overlap_time`). When parallel fragments ran, also subtract `parallel_fragment_usage.wait_time`, and subtract the fragments' command and cache times from the top-level totals to get the main script's share. See [Cache totals](#cache-totals) and [Parallel fragments](#parallel-fragments). It's approximate:
   - Command times from parallel fragment workers and other attached threads are summed, so they can exceed the wall-clock time they overlap. `parallel_fragment_usage` reports the parallel fragments' share, so it can be subtracted. See [Parallel fragments](#parallel-fragments).
   - Commands past the tracking limits aren't listed, and a command that raises anything other than a rerun request is listed with time 0. Both stay inside `exec_time` and aren't subtracted, so their time counts as user code.
   - Work that happens inside a command counts as command time, for example a lazy Snowpark DataFrame passed to `st.dataframe` runs its query inside the command, and `st.write_stream` consumes its generator.
@@ -82,7 +82,7 @@ All server times are wall-clock times in microseconds. `exec_time` and `prep_tim
 - Sets `in_listed_command` in `ThreadState` while a listed command runs, and reports the command's time to the run's cache totals when it ends. See [Cache totals](#cache-totals).
 - Swallows any telemetry error, logging it at debug level, so telemetry can't break the app.
 
-`SharedRunState` (`lib/streamlit/runtime/scriptrunner_utils/shared_run_state.py`) holds the per-run telemetry state shared by the script thread and its workers. `reset()` clears that state at the start of each run, before any parallel fragment workers start, and workers keep the same `SharedRunState`. It replaces `stats` with a new `RunStats`, and `parallel_fragments` with a new `RunParallelFragmentStats`, so a cached call or fragment still running from the previous run finishes into that run's totals.
+`SharedRunState` (`lib/streamlit/runtime/scriptrunner_utils/shared_run_state.py`) holds the per-run telemetry state shared by the script thread and its workers. `reset()` clears that state at the start of each run, before any parallel fragment workers start, and workers keep the same `SharedRunState`. It replaces `stats` with a new `RunStats`, and `parallel_fragments` with a new `ParallelFragmentUsageStats`, so a cached call or fragment still running from the previous run finishes into that run's totals.
 
 ## Cache totals
 
@@ -105,7 +105,7 @@ Each thread records into its own `ThreadRunStats` (`lib/streamlit/runtime/script
 
 ## Parallel fragments
 
-Fragments with `parallel=True` run on worker threads alongside the main script, and only in full runs. When the run gathers usage stats, `_run_parallel_fragment` (`fragment.py`) records each one with `RunParallelFragmentStats.recording_run` (`lib/streamlit/runtime/scriptrunner_utils/parallel_fragment_stats.py`). For each fragment run, `parallel_fragment_usage` reports:
+Fragments with `parallel=True` run on worker threads alongside the main script, and only in full runs. When the run gathers usage stats, `_run_parallel_fragment` (`fragment.py`) records each one with `ParallelFragmentUsageStats.recording_run` (`lib/streamlit/runtime/scriptrunner_utils/parallel_fragment_stats.py`). For each fragment run, `parallel_fragment_usage` reports:
 
 - When it started, measured from the start of the script run, and its wall-clock time. A run still going when the page profile is built counts up to then.
 - The time of its listed commands, and its cache compute, wait, overhead and async overlap times. `RunStats.recording_into` gives the worker thread the fragment run's own `ThreadRunStats` while the fragment runs, because one worker thread can run several fragments one after another. Threads the fragment attaches get their own records, so only the worker counts toward the fragment.

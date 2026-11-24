@@ -19,7 +19,7 @@ import threading
 import pytest
 
 from streamlit.runtime.scriptrunner_utils.parallel_fragment_stats import (
-    RunParallelFragmentStats,
+    ParallelFragmentUsageStats,
 )
 from streamlit.runtime.scriptrunner_utils.run_stats import RunStats, ThreadRunStats
 
@@ -29,7 +29,7 @@ def test_recording_run_records_its_span_and_stats() -> None:
     toward the run's totals.
     """
     run_stats = RunStats()
-    stats = RunParallelFragmentStats(run_stats)
+    stats = ParallelFragmentUsageStats(run_stats)
 
     with stats.recording_run() as run:
         assert run.end is None
@@ -46,7 +46,7 @@ def test_recording_run_records_its_span_and_stats() -> None:
 
 def test_recording_run_ends_the_run_when_the_fragment_raises() -> None:
     """A fragment run records its end time even when its body raises."""
-    stats = RunParallelFragmentStats(RunStats())
+    stats = ParallelFragmentUsageStats(RunStats())
 
     with pytest.raises(RuntimeError), stats.recording_run():
         raise RuntimeError
@@ -60,7 +60,7 @@ def test_runs_on_one_worker_thread_keep_their_stats_apart() -> None:
     stats, and goes back to the thread's own stats afterwards.
     """
     run_stats = RunStats()
-    stats = RunParallelFragmentStats(run_stats)
+    stats = ParallelFragmentUsageStats(run_stats)
     worker_stats = run_stats.current_thread_stats()
 
     with stats.recording_run() as first:
@@ -79,7 +79,7 @@ def test_threads_the_fragment_attaches_record_into_their_own_stats() -> None:
     the main script.
     """
     run_stats = RunStats()
-    stats = RunParallelFragmentStats(run_stats)
+    stats = ParallelFragmentUsageStats(run_stats)
     attached_stats: list[ThreadRunStats] = []
 
     with stats.recording_run() as run:
@@ -95,7 +95,7 @@ def test_threads_the_fragment_attaches_record_into_their_own_stats() -> None:
 
 def test_wait_time_accumulates_across_waits() -> None:
     """Join and drain wait times add up within one run."""
-    stats = RunParallelFragmentStats(RunStats())
+    stats = ParallelFragmentUsageStats(RunStats())
     stats.add_wait_time(0.25)
     stats.add_wait_time(0.5)
 

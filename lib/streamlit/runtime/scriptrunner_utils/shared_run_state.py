@@ -19,7 +19,7 @@ import threading
 from typing import TYPE_CHECKING
 
 from streamlit.runtime.scriptrunner_utils.parallel_fragment_stats import (
-    RunParallelFragmentStats,
+    ParallelFragmentUsageStats,
 )
 from streamlit.runtime.scriptrunner_utils.run_stats import RunStats
 from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
@@ -56,7 +56,7 @@ class SharedRunState:
         # parallel fragment still running from the previous run finishes into
         # that run's totals.
         self.stats = RunStats()
-        self.parallel_fragments = RunParallelFragmentStats(self.stats)
+        self.parallel_fragments = ParallelFragmentUsageStats(self.stats)
 
     def reset(self) -> None:
         """Re-initialize all shared mutable state for a new script run.
@@ -77,7 +77,7 @@ class SharedRunState:
             self._tracked_commands_counter = collections.Counter()
 
         self.stats = RunStats()
-        self.parallel_fragments = RunParallelFragmentStats(self.stats)
+        self.parallel_fragments = ParallelFragmentUsageStats(self.stats)
 
     @property
     def tracked_commands(self) -> tuple[Command, ...]:

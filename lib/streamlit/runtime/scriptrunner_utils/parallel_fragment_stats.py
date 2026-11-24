@@ -15,10 +15,9 @@
 """Per-run times of parallel fragments, reported in the page profile.
 
 Fragments with ``parallel=True`` run on worker threads alongside the main
-script, so their times would overlap the main script's if they were added to
-the run totals alone. Each fragment run records its own wall time and
-``ThreadRunStats`` instead, so the page profile can report them apart from the
-main script's.
+script, so in the run totals their times overlap the main script's. Each
+fragment run also records its own wall time and ``ThreadRunStats``, so the
+page profile can report the fragments' share separately.
 """
 
 from __future__ import annotations
@@ -54,7 +53,7 @@ class ParallelFragmentRunStats:
         self.stats = ThreadRunStats()
 
 
-class RunParallelFragmentStats:
+class ParallelFragmentUsageStats:
     """The parallel fragment runs of one script run."""
 
     def __init__(self, stats: RunStats) -> None:

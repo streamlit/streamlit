@@ -55,9 +55,9 @@ _MAX_TRACKED_COMMANDS: Final = 400
 # commands excessively (e.g. calling write thousands of times in one rerun)
 # making the page profile useless.
 _MAX_TRACKED_PER_COMMAND: Final = 25
-# Most parallel fragment runs that get their own page profile entry. Later runs
-# are combined into one overflow entry, which caps the payload for apps that
-# start a fragment per item in a loop.
+# Maximum parallel fragment runs that get their own page profile entry.
+# _fill_parallel_fragment_usage combines later runs into one overflow entry to
+# cap the payload for apps that start a fragment per item in a loop.
 _MAX_PARALLEL_FRAGMENT_RUNS: Final = 25
 
 # A mapping to convert from the actual name to preferred/shorter representations
@@ -639,9 +639,10 @@ def _record_command_time(
 ) -> None:
     """Set a tracked command's time, and report it if the command is listed.
 
-    A listed command's time is added to the thread's stats, which on a parallel
-    fragment's worker are the fragment run's, so that a recorded cached call
-    open on the thread leaves it out of its times.
+    Adds the time to the calling thread's stats. On a parallel fragment worker
+    those stats belong to the fragment run, which is how that run's command time
+    is totaled. A recorded cached call open on the thread also leaves the time
+    out of its cache times.
     """
     try:
         command_telemetry.time = to_microseconds(seconds)

@@ -165,6 +165,7 @@ class ThreadCacheStats:
 
     @property
     def is_in_call(self) -> bool:
+        """Whether a recorded cached call is open on this thread."""
         return self._calls_open > 0
 
     @property

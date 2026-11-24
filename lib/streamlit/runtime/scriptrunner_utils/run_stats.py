@@ -40,7 +40,8 @@ class ThreadRunStats:
     __slots__ = ("cache", "command_time")
 
     def __init__(self) -> None:
-        # Time of listed commands that ran on this thread.
+        # Time of listed commands that ran on this thread. The page profile
+        # reports it only for parallel fragment runs.
         self.command_time = 0.0
         self.cache = ThreadCacheStats()
 

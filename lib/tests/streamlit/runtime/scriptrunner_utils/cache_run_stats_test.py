@@ -34,7 +34,7 @@ def _record_call(
     stats.close_call(now, compute_time)
 
 
-def test_combine_adds_every_threads_totals() -> None:
+def test_combine_adds_totals_from_all_threads() -> None:
     """``combine()`` adds every thread's counts, times and overlap per cache
     type.
     """
