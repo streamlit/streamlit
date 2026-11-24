@@ -212,7 +212,9 @@ class QueryParamsProxy(MutableMapping[str, str]):
         Query parameters bound to a widget through ``bind="query-params"``
         are kept, because the widget controls them. If ``params`` contains a
         bound key, this method raises ``StreamlitAPIException`` and leaves
-        the query parameters unchanged. Change the widget's value instead.
+        the query parameters unchanged. Change the widget's value instead, or
+        use ``st.query_params.update()`` to change parameters that are not
+        bound.
 
         .. note::
             ``.from_dict()`` is not a direct inverse of ``.to_dict()`` if
