@@ -96,7 +96,7 @@ interface PlotlyHierarchicalPoint extends Plotly.PlotDatum {
   percentParent?: number
 }
 
-interface PlotlyHeatmapPoint extends Plotly.PlotDatum {
+interface PlotlyHeatmapOrImagePoint extends Plotly.PlotDatum {
   z?: unknown
   color?: unknown
   colormodel?: string
@@ -114,9 +114,33 @@ interface PlotlySankeyPoint extends Plotly.PlotDatum {
   target?: PlotlySankeyEndpoint
 }
 
+const HEATMAP_OR_IMAGE_TRACE_TYPES = new Set([
+  "heatmap",
+  "histogram2d",
+  "image",
+])
+
+/**
+ * Returns the trace type of a clicked point. Sankey click points only carry
+ * `trace`, while cartesian points carry `fullData` and `data`.
+ */
 function getTraceType(point: Plotly.PlotDatum): string | undefined {
-  const data = point.data as { type?: string } | undefined
-  return data?.type
+  const { trace, fullData, data } = point as unknown as {
+    trace?: { type?: string }
+    fullData?: { type?: string }
+    data?: { type?: string }
+  }
+  return trace?.type ?? fullData?.type ?? data?.type
+}
+
+/**
+ * Converts typed arrays (such as image pixels read from a canvas) to plain
+ * arrays, because JSON serializes typed arrays as index-keyed objects.
+ */
+function toPlainArray(value: unknown): unknown {
+  return ArrayBuffer.isView(value)
+    ? Array.from(value as unknown as ArrayLike<number>)
+    : value
 }
 
 function scalarPointIndices(pointNumber: unknown): number[] {
@@ -418,6 +442,10 @@ export function sendEmptySelection(
   })
 }
 
+/**
+ * Commits a single clicked point as the selection, unless it matches the
+ * stored selection.
+ */
 function writeClickSelection(
   widgetMgr: WidgetStateManager,
   element: PlotlyChartProto,
@@ -466,27 +494,19 @@ function mapHierarchicalClick(
 }
 
 function mapHeatmapOrImageClick(
-  point: PlotlyHeatmapPoint
+  point: PlotlyHeatmapOrImagePoint
 ): Record<string, unknown> | undefined {
   const type = getTraceType(point)
-  const pointNumber = point.pointNumber
-  const has2dIndex = Array.isArray(pointNumber) && pointNumber.length === 2
-  const isHeatmapFamily =
-    type === "heatmap" ||
-    type === "image" ||
-    type === "histogram2d" ||
-    (type === undefined &&
-      has2dIndex &&
-      (point.z !== undefined || point.color !== undefined))
-  if (!isHeatmapFamily) {
+  if (type === undefined || !HEATMAP_OR_IMAGE_TRACE_TYPES.has(type)) {
     return undefined
   }
   return {
     x: point.x,
     y: point.y,
-    z: point.z,
-    color: point.color,
+    z: toPlainArray(point.z),
+    color: toPlainArray(point.color),
     colormodel: point.colormodel,
+    customdata: toPlainArray(point.customdata),
     pointNumber: point.pointNumber,
     curveNumber: point.curveNumber,
   }
@@ -495,20 +515,13 @@ function mapHeatmapOrImageClick(
 function mapSankeyClick(
   point: PlotlySankeyPoint
 ): Record<string, unknown> | undefined {
-  const type = getTraceType(point)
-  const isSankey =
-    type === "sankey" ||
-    (type === undefined &&
-      (point.source !== undefined ||
-        (point.label !== undefined &&
-          point.value !== undefined &&
-          (point as PlotlyHierarchicalPoint).id === undefined)))
-  if (!isSankey) {
+  if (getTraceType(point) !== "sankey") {
     return undefined
   }
   return {
     label: point.label,
     value: point.value,
+    customdata: toPlainArray(point.customdata),
     pointNumber: point.pointNumber,
     curveNumber: point.curveNumber,
     source: sankeyEndpoint(point.source),
@@ -517,10 +530,9 @@ function mapSankeyClick(
 }
 
 /**
- * Handles click events from traces that don't emit plotly_selected events but
- * do emit plotly_click (treemap, sunburst, heatmap, image, Sankey). Scatter and
- * other selectable traces still go through handleSelection. The click data is
- * sent as selection state to maintain API consistency.
+ * Maps clicks on traces that don't emit plotly_selected (treemap, sunburst,
+ * heatmap, histogram2d, image, Sankey) into selection state. Scatter and other
+ * selectable traces go through handleSelection instead.
  *
  * @param event The Plotly click event, or undefined when Plotly invokes the
  *   callback without event data. A present event includes points.
@@ -539,7 +551,7 @@ export function handleClickEvent(
   }
 
   const point = event.points[0] as PlotlyHierarchicalPoint &
-    PlotlyHeatmapPoint &
+    PlotlyHeatmapOrImagePoint &
     PlotlySankeyPoint
 
   const hierarchical = mapHierarchicalClick(point)
@@ -556,7 +568,7 @@ export function handleClickEvent(
 
   const heatmapOrImage = mapHeatmapOrImageClick(point)
   if (heatmapOrImage) {
-    // Heatmap/image pointNumber is [row, col]; keep point_indices as list[int].
+    // point_indices is list[int], so the [row, col] index stays only on the point.
     writeClickSelection(widgetMgr, element, fragmentId, heatmapOrImage, [])
     return
   }

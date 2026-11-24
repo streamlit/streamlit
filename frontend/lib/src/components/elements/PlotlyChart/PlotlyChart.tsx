@@ -582,7 +582,7 @@ export function PlotlyChart({
         }}
         onSelected={isSelectionActivated ? handleSelectionCallback : () => {}}
         // Clicks on traces that don't emit plotly_selected (treemap, sunburst,
-        // heatmap, image, Sankey) are mapped into selection state.
+        // heatmap, histogram2d, image, Sankey) are mapped into selection state.
         onClick={isPointsSelectionActivated ? handleClickCallback : undefined}
         // Double click is needed to make it easier to the user to
         // reset the selection. The default handling can be a bit annoying
