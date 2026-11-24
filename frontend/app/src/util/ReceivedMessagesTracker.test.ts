@@ -18,8 +18,8 @@ import { ForwardMsg } from "@streamlit/protobuf"
 
 import { ReceivedMessagesTracker } from "./ReceivedMessagesTracker"
 
-const newSessionMsg = (): ForwardMsg =>
-  ForwardMsg.fromObject({ newSession: {} })
+const newSessionMsg = (gatherUsageStats = true): ForwardMsg =>
+  ForwardMsg.fromObject({ newSession: { config: { gatherUsageStats } } })
 const deltaMsg = (): ForwardMsg =>
   ForwardMsg.fromObject({ delta: { newElement: {} } })
 const pageProfileMsg = (): ForwardMsg =>
@@ -44,14 +44,42 @@ describe("ReceivedMessagesTracker", () => {
 
   it("counts a cached message whose size is 0 as cached", () => {
     const tracker = new ReceivedMessagesTracker()
+    tracker.recordMessage(newSessionMsg())
     tracker.recordMessage(deltaMsg(), { byteLength: 60, cachedByteLength: 0 })
 
     expect(tracker.getRunTotals()).toEqual({
       bytes: 60,
-      messages: 1,
+      messages: 2,
       cachedMessages: 1,
       cachedBytes: 0,
     })
+  })
+
+  it("counts nothing for a run with usage stats turned off", () => {
+    const tracker = new ReceivedMessagesTracker()
+    tracker.recordMessage(newSessionMsg(), { byteLength: 1_000 })
+    tracker.recordMessage(newSessionMsg(false), { byteLength: 900 })
+    tracker.recordMessage(deltaMsg(), {
+      byteLength: 60,
+      cachedByteLength: 500,
+    })
+
+    expect(tracker.getRunTotals()).toEqual({
+      bytes: 0,
+      messages: 0,
+      cachedMessages: 0,
+      cachedBytes: 0,
+    })
+
+    tracker.recordMessage(newSessionMsg(), { byteLength: 800 })
+    expect(tracker.getRunTotals().bytes).toBe(800)
+  })
+
+  it("counts nothing before the first NewSession", () => {
+    const tracker = new ReceivedMessagesTracker()
+    tracker.recordMessage(deltaMsg(), { byteLength: 60 })
+
+    expect(tracker.getRunTotals().messages).toBe(0)
   })
 
   it("restarts the totals at each NewSession message", () => {

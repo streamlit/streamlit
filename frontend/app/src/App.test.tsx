@@ -761,10 +761,14 @@ describe("App", () => {
   it("adds the messages received for the run to the pageProfile event", () => {
     renderApp(getProps())
     const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    const newSession = {
+      ...NEW_SESSION_JSON,
+      config: { ...NEW_SESSION_JSON.config, gatherUsageStats: true },
+    }
 
     sendForwardMessage(
       "newSession",
-      NEW_SESSION_JSON,
+      newSession,
       { run: RUN_IDENTITY_JSON },
       { byteLength: 2_000 }
     )
@@ -790,7 +794,7 @@ describe("App", () => {
     sendForwardMessage("pageConfigChanged", {}, null, { byteLength: 9_999 })
     sendForwardMessage(
       "newSession",
-      NEW_SESSION_JSON,
+      newSession,
       { run: RUN_IDENTITY_JSON },
       { byteLength: 1_500 }
     )
