@@ -27,19 +27,18 @@ other recorded time already covers it:
   other threads without a script run aren't recorded. A background refresh
   itself isn't a lookup; its compute time and result go only to the server
   metrics.
-- It isn't nested inside another cached call, whose time covers it. Nested
-  calls include calls made:
+- It isn't nested inside another cached call on the same thread, whose time
+  covers it. Nested calls include calls made:
 
-  - while the outer function computes, including on threads it attaches with
-    ``add_script_run_ctx``;
+  - while the outer function computes;
   - while the outer call hashes its arguments or reads its result, such as
     from a ``hash_funcs`` function.
 
-  Exception: a thread started without ``add_script_run_ctx`` that later
-  attaches itself doesn't inherit the outer call's state, so its calls are
-  recorded even during the outer computation. Conversely, a task that an async
-  cached function starts with ``asyncio.create_task()`` inherits it for good,
-  so its cached calls aren't recorded even after the outer computation ends.
+  Threads that a cached function attaches with ``add_script_run_ctx`` record
+  their cached calls as their own, so the run totals count that time twice. A
+  task that an async cached function starts with ``asyncio.create_task()``
+  inherits the outer call's state for good, so its cached calls aren't
+  recorded even after the outer computation ends.
 - It isn't inside a command listed in the page profile, such as the
   ``st.cache_resource`` call inside ``st.connection``, whose command time covers
   it. A command past the listing limits in ``metrics_util.py`` isn't listed, so
@@ -50,8 +49,7 @@ A recorded call's time is split into waiting for another caller's computation,
 computing the value, and the remaining overhead (hashing the arguments, reading
 the result, and replaying cached elements). Listed commands that run during the
 call, such as ``st.*`` calls inside the cached function or the cache write, are
-left out of all three. That includes commands on threads the cached function
-attaches, until its computation ends.
+left out of all three.
 
 Async cached calls awaited at the same time on one event loop each count the
 time they share. Their times aren't changed; the run's ``async_overlap_time``
@@ -60,22 +58,18 @@ reports how much they counted more than once.
 
 from __future__ import annotations
 
-import contextlib
 import time
 from typing import TYPE_CHECKING, Final
 
 from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
-    CacheComputeScope,
     ThreadState,
     get_script_run_ctx,
     in_cached_function,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-
     from streamlit.runtime.caching.cache_metrics import FunctionCacheMetrics
     from streamlit.runtime.scriptrunner_utils.cache_run_stats import (
         CacheTotals,
@@ -106,7 +100,6 @@ class CacheCallTimer:
     _compute_time: float = 0.0
     _command_time_at_compute_start: float = 0.0
     _command_time_in_compute: float = 0.0
-    _attached_command_time: float = 0.0
 
     def __init__(
         self,
@@ -195,13 +188,6 @@ class CacheCallTimer:
             # Telemetry must never reach the cached function's caller.
             _LOGGER.debug("Failed to record a cached call", exc_info=ex)
 
-    def exclude_attached_command_time(self, seconds: float) -> None:
-        """Remember ``seconds`` of listed commands that attached threads ran
-        during the computation, so ``finish()`` leaves them out of the compute
-        time.
-        """
-        self._attached_command_time += seconds
-
     def finish(self) -> None:
         """Record the call's wait, and add its counts and times to the run totals.
 
@@ -250,14 +236,7 @@ class CacheCallTimer:
         if self._waited:
             totals.waits += 1
         command_time = thread_stats.tracked_command_time - self._command_time_at_start
-        # Attached threads' commands ran during the computation, so only compute
-        # time contains them. The overhead below never included them.
-        compute_time = max(
-            self._compute_time
-            - self._command_time_in_compute
-            - self._attached_command_time,
-            0,
-        )
+        compute_time = max(self._compute_time - self._command_time_in_compute, 0)
         # Command time during the compute is already excluded from compute_time,
         # so only the rest of command_time comes out of the overhead. Wall-clock
         # overlap between concurrent async calls on one event loop can make the
@@ -287,16 +266,10 @@ def start_call(cache_type: CacheType, metrics: FunctionCacheMetrics) -> CacheCal
     if ctx is None or not ctx.gather_usage_stats:
         return CacheCallTimer(metrics)
     try:
-        thread_state = ThreadState.get()
+        if ThreadState.get().in_listed_command:
+            return CacheCallTimer(metrics)
     except RuntimeError:
         # A thread with a ScriptRunContext but no ThreadState.
-        return CacheCallTimer(metrics)
-    if thread_state.in_listed_command:
-        return CacheCallTimer(metrics)
-    # Skip calls on a thread attached during another cached call's computation;
-    # that call's compute time covers them. in_cached_function above catches
-    # nesting on the same thread.
-    if thread_state.in_cache_compute:
         return CacheCallTimer(metrics)
     thread_stats = ctx.shared.stats.current_thread_stats().cache
     # Skip calls made while another call on this thread hashes its arguments or
@@ -309,56 +282,3 @@ def start_call(cache_type: CacheType, metrics: FunctionCacheMetrics) -> CacheCal
         else thread_stats.cache_data
     )
     return CacheCallTimer(metrics, thread_stats, totals)
-
-
-@contextlib.contextmanager
-def computing_cached_value(call_timer: CacheCallTimer) -> Generator[None, None, None]:
-    """Mark the current context as computing ``call_timer``'s value.
-
-    Threads attached with ``add_script_run_ctx`` during the computation inherit
-    the mark, so:
-
-    - their cached calls are part of this computation, not recorded separately;
-    - their listed commands' time comes out of ``call_timer``'s compute time.
-
-    A context that is already marked keeps the outer mark, so threads that a
-    nested cached function attaches still report to the outermost recorded
-    call. Nothing is marked when the run doesn't gather usage stats, on a thread
-    without script-run thread state, or if marking fails.
-    """
-    scope: CacheComputeScope | None = None
-    with contextlib.ExitStack() as stack:
-        try:
-            scope = _new_compute_scope()
-            if scope is not None:
-                stack.enter_context(ThreadState.scoped(cache_compute=scope))
-        except Exception as ex:
-            # Telemetry must never stop the cached function from running.
-            _LOGGER.debug("Failed to mark a cached computation", exc_info=ex)
-            scope = None
-        try:
-            yield
-        finally:
-            if scope is not None:
-                try:
-                    call_timer.exclude_attached_command_time(scope.end())
-                except Exception as ex:
-                    # Telemetry must never replace the function's result or error.
-                    _LOGGER.debug("Failed to end a cached computation", exc_info=ex)
-
-
-def _new_compute_scope() -> CacheComputeScope | None:
-    """Return a scope for a computation starting in this context, or None if
-    ``computing_cached_value`` shouldn't mark it.
-    """
-    ctx = get_script_run_ctx(suppress_warning=True)
-    if ctx is None or not ctx.gather_usage_stats:
-        return None
-    try:
-        thread_state = ThreadState.get()
-    except RuntimeError:
-        # A thread that isn't attached to a script run.
-        return None
-    if thread_state.in_cache_compute:
-        return None
-    return CacheComputeScope()

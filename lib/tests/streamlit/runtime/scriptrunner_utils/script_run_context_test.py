@@ -32,7 +32,6 @@ from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
-    CacheComputeScope,
     ScriptRunContext,
     ThreadState,
     add_script_run_ctx,
@@ -617,16 +616,3 @@ def test_script_run_context_attr_name_reexported_from_leaf_module() -> None:
         SCRIPT_RUN_CONTEXT_ATTR_NAME
         is script_run_context_attr.SCRIPT_RUN_CONTEXT_ATTR_NAME
     )
-
-
-def test_cache_compute_scope_keeps_command_time_only_until_it_ends() -> None:
-    """Command time from attached threads counts only during the computation."""
-    scope = CacheComputeScope()
-    scope.add_command_time(1.0)
-    scope.add_command_time(0.5)
-
-    assert scope.end() == 1.5
-    assert not scope.is_active
-
-    scope.add_command_time(2.0)
-    assert scope.end() == 1.5

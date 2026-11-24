@@ -636,18 +636,12 @@ def _record_command_time(
     seconds: float,
     *,
     is_command_listed: bool,
-    thread_state: FragmentThreadState | None,
 ) -> None:
     """Set a tracked command's time, and report it if the command is listed.
 
     A listed command's time is added to the thread's stats, which on a parallel
-    fragment's worker are the fragment run's. It's also subtracted from at most
-    one cached call:
-
-    - a recorded cached call open on this thread, which leaves the command out
-      of its times;
-    - otherwise, the cached computation that attached this thread, which
-      subtracts it from its compute time.
+    fragment's worker are the fragment run's, so that a recorded cached call
+    open on the thread leaves it out of its times.
     """
     try:
         command_telemetry.time = to_microseconds(seconds)
@@ -655,13 +649,7 @@ def _record_command_time(
             return
         stats = ctx.shared.stats.current_thread_stats()
         stats.command_time += seconds
-        if stats.cache.record_tracked_command_time(seconds):
-            return
-        scope = thread_state.cache_compute if thread_state is not None else None
-        # A long-lived attached thread keeps the scope after the computation
-        # ends; skip it then rather than take its lock for nothing.
-        if scope is not None and scope.is_active:
-            scope.add_command_time(seconds)
+        stats.cache.record_tracked_command_time(seconds)
     except Exception as ex:
         # This runs after the command returns or raises RerunException, so
         # telemetry must never replace its result.
@@ -798,7 +786,6 @@ def gather_metrics(
                     command_telemetry,
                     timer() - exec_start,
                     is_command_listed=is_command_listed,
-                    thread_state=thread_state,
                 )
             raise
         finally:
@@ -814,7 +801,6 @@ def gather_metrics(
                 command_telemetry,
                 timer() - exec_start,
                 is_command_listed=is_command_listed,
-                thread_state=thread_state,
             )
 
         return result

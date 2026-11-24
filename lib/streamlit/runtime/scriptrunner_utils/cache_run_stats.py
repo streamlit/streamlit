@@ -178,18 +178,14 @@ class ThreadCacheStats:
         """
         return self._calls_in_cache_code > 0
 
-    def record_tracked_command_time(self, seconds: float) -> bool:
+    def record_tracked_command_time(self, seconds: float) -> None:
         """Record the time of a listed command that ran on this thread.
 
         Only counts while a recorded cached call is open on the thread, so the
-        call's cache times leave it out. Returns False otherwise, so the caller
-        can report the time to an attached thread's ``CacheComputeScope``
-        instead.
+        call's cache times leave it out.
         """
-        if self._calls_open == 0:
-            return False
-        self.tracked_command_time += seconds
-        return True
+        if self._calls_open > 0:
+            self.tracked_command_time += seconds
 
     def open_call(self, now: float) -> None:
         if self._calls_open == 0:

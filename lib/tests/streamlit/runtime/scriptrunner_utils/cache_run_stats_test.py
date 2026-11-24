@@ -61,15 +61,15 @@ def test_combine_adds_every_threads_totals() -> None:
 def test_tracked_command_time_counts_only_inside_calls() -> None:
     """Command time is recorded only while a cached call is open on the thread."""
     stats = ThreadCacheStats()
-    assert not stats.record_tracked_command_time(1.0)
+    stats.record_tracked_command_time(1.0)
     assert stats.tracked_command_time == 0
 
     stats.open_call(0.0)
-    assert stats.record_tracked_command_time(0.25)
+    stats.record_tracked_command_time(0.25)
     stats.close_call(1.0, 0.0)
+    stats.record_tracked_command_time(1.0)
 
     assert stats.tracked_command_time == 0.25
-    assert not stats.record_tracked_command_time(1.0)
 
 
 @pytest.mark.parametrize(

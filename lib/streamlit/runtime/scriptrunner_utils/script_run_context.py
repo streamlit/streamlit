@@ -91,51 +91,6 @@ _fragment_callback_warning_suppressed: contextvars.ContextVar[bool] = (
 )
 
 
-class CacheComputeScope:
-    """State shared between a cached function's computation and the threads it
-    attaches.
-
-    - ``is_active`` is True until the computation ends. Until then, the attached
-      threads' cached calls count as part of the computation and aren't
-      recorded.
-    - It collects the listed command time those threads report, which the
-      cached call subtracts from its compute time.
-    """
-
-    __slots__ = ("_command_time", "_lock", "is_active")
-
-    def __init__(self) -> None:
-        self.is_active = True
-        # Time of listed commands that attached threads ran during the
-        # computation, which several threads can add to at once.
-        self._command_time = 0.0
-        self._lock = threading.Lock()
-
-    def add_command_time(self, seconds: float) -> None:
-        """Add a listed command's time from an attached thread.
-
-        Ignored once the computation ends, because the cached call has already
-        read the total.
-        """
-        with self._lock:
-            if self.is_active:
-                self._command_time += seconds
-
-    def end(self) -> float:
-        """End the computation and return the command time attached threads
-        added during it.
-        """
-        with self._lock:
-            self.is_active = False
-            return self._command_time
-
-    def __deepcopy__(self, memo: dict[int, object]) -> CacheComputeScope:
-        # add_script_run_ctx copies FragmentThreadState with dataclasses.asdict,
-        # which deep-copies this field. Return the same scope so the child sees
-        # is_active turn False when the computation ends.
-        return self
-
-
 @dataclass(frozen=True)
 class FragmentThreadState:
     """Per-thread state for a fragment execution.
@@ -167,18 +122,6 @@ class FragmentThreadState:
     # True inside a `with st.skeleton()` block, so spinners there don't add a
     # second loading indicator.
     in_skeleton_slot: bool = False
-    # The cached computation running in this context, if any. Unlike the
-    # in_cached_function ContextVar, add_script_run_ctx copies it to attached
-    # threads, so their cached calls during the computation aren't recorded on
-    # top of the outer call's compute time.
-    cache_compute: CacheComputeScope | None = None
-
-    @property
-    def in_cache_compute(self) -> bool:
-        """True while this thread, or the thread that attached it, is still
-        computing a cached value.
-        """
-        return self.cache_compute is not None and self.cache_compute.is_active
 
     @property
     def in_fragment_callback(self) -> bool:
@@ -205,7 +148,6 @@ class _FragmentThreadStateFields(TypedDict, total=False):
     command_tracking_deactivated: bool
     in_listed_command: bool
     in_skeleton_slot: bool
-    cache_compute: CacheComputeScope | None
 
 
 _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(

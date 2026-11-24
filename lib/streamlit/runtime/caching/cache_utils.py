@@ -968,11 +968,8 @@ class CachedFunc(Generic[P, R]):
             # We acquired the lock before any other thread. Compute the value!
             call_timer.begin_compute()
             try:
-                with (
-                    cache_call_timer.computing_cached_value(call_timer),
-                    self._info.cached_message_replay_ctx.calling_cached_function(
-                        self._info.func
-                    ),
+                with self._info.cached_message_replay_ctx.calling_cached_function(
+                    self._info.func
                 ):
                     computed_value = self._info.func(*func_args, **func_kwargs)
             finally:
@@ -1164,11 +1161,8 @@ class CachedFunc(Generic[P, R]):
                     )
                 call_timer.begin_compute()
                 try:
-                    with (
-                        cache_call_timer.computing_cached_value(call_timer),
-                        self._info.cached_message_replay_ctx.calling_cached_function(
-                            self._info.func
-                        ),
+                    with self._info.cached_message_replay_ctx.calling_cached_function(
+                        self._info.func
                     ):
                         # `is_async` guarantees the call returns a coroutine; cast so
                         # the type checker allows awaiting it (the wrapper's `R` is the
