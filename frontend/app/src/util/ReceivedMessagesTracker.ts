@@ -26,22 +26,15 @@ interface ReceivedMessagesTotals {
 }
 
 /**
- * Counts the ForwardMsgs received for the current script run, for its
- * pageProfile metrics event.
- *
- * Every run starts with a NewSession message, and a run's other messages
- * arrive after it, so the counts restart at each NewSession. Read them when
- * the run's PageProfile message arrives: they then cover the run's messages
- * from its NewSession through its PageProfile. Messages after that, until the
- * next NewSession, aren't reported for any run.
+ * Counts the ForwardMsgs received for each script run, for its pageProfile
+ * metrics event. Every run starts with a NewSession, so the counts restart
+ * there, and reading them at the run's PageProfile covers the messages in
+ * between. Messages after the PageProfile count toward no run.
  */
 export class ReceivedMessagesTracker {
   private totals: ReceivedMessagesTotals = emptyTotals()
 
-  /**
-   * Count a message as it's handled. Messages are counted in the order the
-   * server sent them, after references to cached messages are resolved.
-   */
+  /** Call for each message, in the order the server sent them. */
   public recordMessage(msg: ForwardMsg, size?: ReceivedMessageSize): void {
     if (msg.type === "newSession") {
       this.totals = emptyTotals()

@@ -106,10 +106,7 @@ export class ForwardMsgCache {
     return Array.from(this.messages.keys())
   }
 
-  /**
-   * Return the encoded size in bytes of the cached message with the given
-   * hash, or undefined if no such message exists.
-   */
+  /** Encoded size in bytes of the cached message, or undefined if not cached. */
   public getCachedMessageByteLength(hash: string): number | undefined {
     return this.messages.get(hash)?.encodedMsg.byteLength
   }

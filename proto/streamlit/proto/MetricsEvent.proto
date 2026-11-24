@@ -96,27 +96,23 @@ message MetricsEvent {
   // fields.
   // Same as PageProfile.data_size.
   DataSize data_size = 62;
-  // Set by the browser: the messages it received for this script run.
+  // Set by the browser.
   ReceivedMessages received_messages = 63;
 
   // Next ID: 64
 }
 
-// ForwardMsgs the browser received for one script run, from the run's
-// NewSession message through its PageProfile message, in the order they were
-// handled. Messages after the PageProfile, such as ScriptFinished, and
-// messages outside script runs aren't counted toward any run. Data the browser
-// fetches over HTTP, such as media files and chunks of lazily loaded
-// dataframes, isn't included. Sizes are encoded message sizes in bytes. With
-// WebSocket compression, the bytes transferred can be fewer.
+// ForwardMsgs the browser received for one script run, from its NewSession
+// through its PageProfile. Later messages, such as ScriptFinished, count
+// toward no run. Data fetched over HTTP (media files and lazily loaded
+// dataframe chunks) isn't included. Sizes are encoded bytes before WebSocket
+// compression.
 message ReceivedMessages {
-  // Size of the messages as they arrived, with a message sent as a reference
-  // to a cached copy counted at the size of the reference.
+  // A reference to a cached message counts at the reference's size.
   int64 bytes = 1;
   int64 messages = 2;
-  // Messages sent as a reference to a copy the browser had cached from an
-  // earlier run, and the total size of those cached copies. Compare
-  // cached_bytes with bytes to see how much transfer the cache saved.
+  // References to messages the browser cached in an earlier run, and the
+  // total size of those cached copies, which shows how much the cache saved.
   int64 cached_messages = 3;
   int64 cached_bytes = 4;
 }

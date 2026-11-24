@@ -68,29 +68,24 @@ message PageProfile {
   DataSize data_size = 26;
 }
 
-// Arrow payloads (Arrow IPC streams) serialized during one script run, in
-// bytes as serialized, before WebSocket compression. Covers dataframes, data
-// editors, tables, charts and dataframe arguments of custom components, so it
-// measures how much data the run puts on the page, not what was transferred:
-// a payload the browser already has still counts here, and
-// MetricsEvent.received_messages reports what arrived. Each payload is counted
-// once, when it's serialized, on the thread that serialized it:
-// - A fragment run counts only its own payloads. Payloads of parallel
-//   fragments and of threads attached with add_script_run_ctx count toward
-//   the run's totals.
-// - A run that ends early, for example with st.rerun(), st.stop(),
-//   st.switch_page() or an uncaught exception, counts what it serialized
-//   before it ended.
-// - Elements an st.cache_data hit replays aren't serialized again, so they
-//   aren't counted.
-// - Chunks that the browser loads later for a lazily loaded dataframe aren't
-//   counted; the first chunk, sent with the element, is. Media files served
-//   over HTTP aren't Arrow payloads and aren't counted.
+// How much Arrow data one script run puts on the page: dataframes, data
+// editors, tables, charts and custom component dataframe arguments. Sizes are
+// serialized bytes before WebSocket compression. A payload the browser already
+// has still counts; MetricsEvent.received_messages reports what arrived.
+// Each payload counts once, on the thread that serialized it:
+// - A fragment run counts only its own payloads.
+// - Parallel fragments and threads attached with add_script_run_ctx count
+//   toward the run.
+// - A run that ends early (st.rerun(), st.stop(), st.switch_page() or an
+//   uncaught exception) counts what it serialized before it ended.
+// Not counted:
+// - Elements replayed by an st.cache_data hit, which aren't serialized again.
+// - Lazily loaded dataframe chunks after the first, and media files.
 message DataSize {
   int64 arrow_bytes = 1;
-  // Rows summed across payloads. Some elements send more than one payload: a
-  // pandas Styler also sends its display values, and a custom component v1
-  // sends a dataframe argument's index and columns separately.
+  // Rows summed across payloads, so elements that send several payloads count
+  // some rows twice: a pandas Styler also sends its display values, and a
+  // custom component v1 sends a dataframe's index and columns separately.
   int64 arrow_rows = 2;
   // Size of the largest single payload.
   int64 largest_arrow_bytes = 3;

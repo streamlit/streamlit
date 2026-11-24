@@ -117,12 +117,12 @@ The fragments' commands and cached calls are also in the top-level `commands` an
 
 ## Data size
 
-Two values describe how much data a run sends, measured where each is already known:
+Two values describe how much data a run sends, each measured where it's already known:
 
-- **`data_size`, on the server**, is the Arrow data the run serialized. Every Arrow payload goes through `convert_arrow_table_to_arrow_bytes` (`lib/streamlit/dataframe_util.py`), which adds its size and row count to the calling thread's `ThreadRunStats` while the run gathers usage stats. Payloads are counted when serialized, even if the message is then sent as a reference to a copy the browser already has. Elements an `st.cache_data` hit replays aren't serialized again, so they aren't counted. Chunks of lazily loaded dataframes are serialized outside the run, without a `ScriptRunContext`, so they aren't counted either.
-- **`receivedMessages`, in the browser**, is the ForwardMsgs the browser received for the run, from its `NewSession` through its `PageProfile`. `WebsocketConnection` passes each message's encoded size to `onMessage`, and for a reference to a cached message, the cached copy's size too. `ReceivedMessagesTracker` (`frontend/app/src/util/ReceivedMessagesTracker.ts`) adds them up. Only the browser knows which references it resolved from its cache.
+- **`data_size`, on the server**, is the Arrow data the run serialized. `convert_arrow_table_to_arrow_bytes` (`lib/streamlit/dataframe_util.py`) serializes every Arrow payload and adds its size and rows to the calling thread's `ThreadRunStats`. It counts a payload even if the browser already has it. It misses elements replayed by an `st.cache_data` hit, which aren't serialized again, and lazy dataframe chunks, which are serialized without a `ScriptRunContext`.
+- **`receivedMessages`, in the browser**, is the ForwardMsgs received from the run's `NewSession` through its `PageProfile`. `WebsocketConnection` passes each message's encoded size to `onMessage`, plus the cached copy's size for a cache reference, and `ReceivedMessagesTracker` (`frontend/app/src/util/ReceivedMessagesTracker.ts`) adds them up. It's measured in the browser because only the browser knows which references it resolved from its cache.
 
-Sizes are encoded sizes before WebSocket compression, so the bytes actually transferred can be fewer. Media files and lazy dataframe chunks are fetched over HTTP and aren't in either value.
+Both are encoded sizes before WebSocket compression. Neither includes media files or lazy dataframe chunks, which the browser fetches over HTTP.
 
 ## Server metrics
 

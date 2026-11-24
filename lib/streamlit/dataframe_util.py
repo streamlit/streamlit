@@ -920,13 +920,11 @@ def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
 
 
 def _record_arrow_payload(num_bytes: int, num_rows: int) -> None:
-    """Count a serialized Arrow payload toward the current script run's page
-    profile.
+    """Add a serialized Arrow payload to the current run's page profile.
 
-    Every Arrow payload Streamlit sends to the browser is serialized by
-    ``convert_arrow_table_to_arrow_bytes``. Payloads serialized outside a script
-    run, such as chunks of a lazily loaded dataframe, have no ``ScriptRunContext``
-    and aren't counted.
+    ``convert_arrow_table_to_arrow_bytes`` serializes every Arrow payload sent to
+    the browser, so recording here covers them all. Payloads serialized without a
+    ``ScriptRunContext``, such as lazily loaded dataframe chunks, aren't counted.
     """
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
         get_script_run_ctx,

@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Per-run Arrow payload totals reported in the page profile.
+"""Per-run Arrow payload totals for the page profile.
 
-Each thread counts the Arrow payloads it serializes in the
-``ThreadDataSizeStats`` of its own ``ThreadRunStats`` (see ``run_stats.py``),
-so counting takes no lock. The totals are combined when the run's page
-profile is built.
+Each thread records into its own ``ThreadRunStats`` (see ``run_stats.py``), so
+recording takes no lock. The page profile combines the threads' totals.
 """
 
 from __future__ import annotations
@@ -29,9 +27,7 @@ if TYPE_CHECKING:
 
 
 class ThreadDataSizeStats:
-    """Arrow payloads serialized by one thread, or by one parallel fragment run
-    on its worker thread, during one script run.
-    """
+    """Arrow payloads that one thread or parallel fragment run serialized."""
 
     __slots__ = ("arrow_bytes", "arrow_rows", "largest_arrow_bytes")
 
@@ -47,7 +43,7 @@ class ThreadDataSizeStats:
 
     @classmethod
     def combine(cls, threads: Iterable[ThreadDataSizeStats]) -> ThreadDataSizeStats:
-        """Return the totals of ``threads`` added together."""
+        """Sum the threads' totals, keeping the largest single payload."""
         totals = cls()
         for stats in threads:
             totals.arrow_bytes += stats.arrow_bytes

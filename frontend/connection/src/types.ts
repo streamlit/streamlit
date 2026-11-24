@@ -30,10 +30,7 @@ import type { ConnectionState } from "./ConnectionState"
 export interface ReceivedMessageSize {
   /** Size of the message as it arrived. */
   byteLength: number
-  /**
-   * For a message sent as a reference to a cached message, the size of the
-   * cached message it resolved to. Unset for other messages.
-   */
+  /** For a reference to a cached message, the cached message's size. */
   cachedByteLength?: number
 }
 
