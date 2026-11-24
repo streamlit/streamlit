@@ -548,8 +548,8 @@ def _resolve_today_to_selectable(
     if _is_date_selectable(today, min_value, max_value, availability):
         return today
 
-    # Exact-date-only ALLOW: pick the nearest listed date in the window instead
-    # of scanning day by day (common with ``enabled_dates=df["date"].unique()``).
+    # Exact-date-only ALLOW: same next-then-previous rule as the day walk, but
+    # over the finite allowlist (common with ``enabled_dates=df["date"].unique()``).
     # Empty ALLOW has nothing selectable.
     if (
         availability is not None
@@ -559,7 +559,13 @@ def _resolve_today_to_selectable(
         in_window = [d for d in availability.exact_dates if min_value <= d <= max_value]
         if not in_window:
             return None
-        return min(in_window, key=lambda d: (abs((d - today).days), d))
+        later = [d for d in in_window if d > today]
+        if later:
+            return min(later)
+        earlier = [d for d in in_window if d < today]
+        if earlier:
+            return max(earlier)
+        return None
 
     candidate = today + timedelta(days=1)
     while candidate <= max_value:
@@ -2433,21 +2439,25 @@ class TimeWidgetsMixin:
             set, Series, Index, NumPy array). Cannot be set together with
             ``disabled_dates``. When this is set, every other date is
             unavailable. An empty collection makes every date unavailable;
-            pass ``value=None`` in that case. A range ``value`` raises; pass a
-            single date until range support is available. Weekday names are
-            English and ISO-based (Monday-Sunday), independent of locale.
-            When a keyed widget's availability changes and invalidates the
-            current value, Streamlit resets it to the resolved default.
+            pass ``value=None`` in that case.
+
+            A range ``value`` raises; pass a single date until range support
+            is available. A weekday name always means the same day of the
+            week, whatever the user's locale or first day of the week. When
+            a keyed widget's availability changes and invalidates the current
+            value, Streamlit resets it to the resolved default.
 
         disabled_dates : date, datetime, str, list-like of these, or None
             Dates and weekdays that are not selectable between ``min_value``
             and ``max_value``. If this is ``None`` (default), no dates are
             blocked by availability. Accepts the same forms as
             ``enabled_dates``. Cannot be set together with ``enabled_dates``.
-            An empty collection disables nothing. A range ``value`` raises;
-            pass a single date until range support is available. Weekday
-            names are English and ISO-based, independent of locale. When a
-            keyed widget's availability changes and invalidates the current
+            An empty collection disables nothing.
+
+            A range ``value`` raises; pass a single date until range support
+            is available. A weekday name always means the same day of the
+            week, whatever the user's locale or first day of the week. When
+            a keyed widget's availability changes and invalidates the current
             value, Streamlit resets it to the resolved default.
 
         key : str, int, or None
@@ -2771,23 +2781,15 @@ class TimeWidgetsMixin:
         availability = _parse_date_availability(enabled_dates, disabled_dates)
         # Hash the normalized filter, with "today" kept symbolic, under its
         # public parameter name. At most one of the two is set.
-        availability_payload = (
-            None
-            if availability is None
-            else {
-                "dates": availability.id_exact_entries,
-                "weekdays": availability.id_weekdays,
+        availability_id_kwargs = (
+            {
+                availability.param_name: {
+                    "dates": availability.id_exact_entries,
+                    "weekdays": availability.id_weekdays,
+                }
             }
-        )
-        enabled_dates_id = (
-            availability_payload
-            if availability is not None and availability.param_name == "enabled_dates"
-            else None
-        )
-        disabled_dates_id = (
-            availability_payload
-            if availability is not None and availability.param_name == "disabled_dates"
-            else None
+            if availability is not None
+            else {}
         )
 
         element_id = compute_and_register_element_id(
@@ -2809,8 +2811,7 @@ class TimeWidgetsMixin:
             format=format,
             width=width,
             required=required,
-            enabled_dates=enabled_dates_id,
-            disabled_dates=disabled_dates_id,
+            **availability_id_kwargs,
         )
         _validate_date_format(format)
 
@@ -2964,23 +2965,11 @@ class TimeWidgetsMixin:
 
         layout_config = create_layout_config(width=width)
 
-        agent_report = (
-            proto_availability.agent_report()
-            if agent_spec.is_recording() and proto_availability is not None
-            else None
-        )
-        agent_enabled = (
-            agent_report
-            if proto_availability is not None
-            and proto_availability.param_name == "enabled_dates"
-            else None
-        )
-        agent_disabled = (
-            agent_report
-            if proto_availability is not None
-            and proto_availability.param_name == "disabled_dates"
-            else None
-        )
+        agent_availability_kwargs: dict[str, object] = {}
+        if agent_spec.is_recording() and proto_availability is not None:
+            agent_availability_kwargs[proto_availability.param_name] = (
+                proto_availability.agent_report()
+            )
 
         self.dg._enqueue(
             "date_input",
@@ -3005,8 +2994,7 @@ class TimeWidgetsMixin:
                 help=date_input_proto.help or None,
                 disabled=disabled,
                 required=required,
-                enabled_dates=agent_enabled,
-                disabled_dates=agent_disabled,
+                **agent_availability_kwargs,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",
             ),

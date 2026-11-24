@@ -14,14 +14,18 @@
 
 """date_input unit test."""
 
+import json
 from datetime import date, datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import numpy as np
+import pandas as pd
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.widgets.time_widgets import (
     DateInputSerde,
     _DateInputValues,
@@ -40,6 +44,7 @@ from streamlit.errors import (
 )
 from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.runtime.state import get_session_state
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -1320,9 +1325,6 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
 
     def test_series_and_numpy_unique_accepted(self) -> None:
         """Series, Index.unique(), and NumPy datetime64 arrays are accepted."""
-        import numpy as np
-        import pandas as pd
-
         series = pd.Series([date(2026, 8, 24), date(2026, 8, 25)])
         st.date_input("day", value=date(2026, 8, 25), enabled_dates=series)
         c = self.get_delta_from_queue().new_element.date_input
@@ -1435,7 +1437,6 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
 
     def test_dataframe_rejected(self) -> None:
         """DataFrames are rejected; pass a Series or column instead."""
-        import pandas as pd
 
         df = pd.DataFrame({"d": [date(2026, 8, 25)]})
         with pytest.raises(StreamlitAPIException, match="does not accept DataFrames"):
@@ -1453,7 +1454,6 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
 
     def test_nat_in_filter_rejected(self) -> None:
         """Missing pandas timestamps raise a Streamlit type error, not a native crash."""
-        import pandas as pd
 
         with pytest.raises(StreamlitInvalidParameterTypeError, match="Could not parse"):
             st.date_input(
@@ -1503,7 +1503,6 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
 
     def test_query_param_unavailable_value_is_cleared(self) -> None:
         """Unavailable URL-bound values reset and drop the query param."""
-        from streamlit.runtime.state import get_session_state
 
         st.session_state["day"] = date(2024, 3, 9)  # Saturday
         with get_session_state().query_params() as qp:
@@ -1523,9 +1522,6 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         self,
     ) -> None:
         """Agent descriptions report availability and omit out-of-window dates."""
-        import json
-
-        from streamlit.elements.lib import agent_spec
 
         agent_spec.register_agent_session(self.script_run_ctx.session_id)
         try:
@@ -1586,9 +1582,22 @@ def test_resolve_today_returns_none_when_empty_window() -> None:
     )
 
 
-def test_resolve_today_picks_nearest_exact_allowlist_date() -> None:
-    """Exact-date-only ALLOW snaps to the nearest listed date without a day walk."""
+def test_resolve_today_exact_allowlist_prefers_next_then_previous() -> None:
+    """Exact-date-only ALLOW snaps next, then previous — not nearest by distance."""
+    # Saturday: Friday is closer, but Monday is the next selectable date.
     availability = _parse_date_availability(
+        enabled_dates=[date(2024, 3, 8), date(2024, 3, 11)],
+        disabled_dates=None,
+    )
+    assert _resolve_today_to_selectable(
+        date(2024, 3, 9),
+        date(2024, 1, 1),
+        date(2024, 12, 31),
+        availability,
+    ) == date(2024, 3, 11)
+
+    # Only past dates remain: fall back to the latest previous allowlisted day.
+    past_only = _parse_date_availability(
         enabled_dates=[date(2020, 1, 1), date(2020, 6, 15)],
         disabled_dates=None,
     )
@@ -1596,7 +1605,7 @@ def test_resolve_today_picks_nearest_exact_allowlist_date() -> None:
         date(2024, 3, 9),
         date(2010, 1, 1),
         date(2030, 12, 31),
-        availability,
+        past_only,
     ) == date(2020, 6, 15)
 
 
@@ -1643,6 +1652,40 @@ def test_availability_change_pushes_set_value_to_frontend() -> None:
     at = at.run()
     assert at.date_input[0].value == date(2024, 3, 8)
     assert at.text[0].value == "Value: 2024-03-08"
+
+    at = at.run()
+    assert at.date_input[0].proto.set_value is False
+
+
+def test_dynamic_min_value_pushes_set_value_to_frontend() -> None:
+    """Raising min_value past a keyed browser date pushes set_value with the default."""
+
+    def script() -> None:
+        from datetime import date
+
+        import streamlit as st
+
+        raise_min = st.session_state.get("raise_min", False)
+        value = st.date_input(
+            "day",
+            value=date(2024, 7, 15),
+            min_value=date(2024, 6, 1) if raise_min else date(2024, 1, 1),
+            max_value=date(2024, 12, 31),
+            key="day",
+        )
+        st.text(f"Value: {value}")
+
+    at = AppTest.from_function(script).run()
+    at = at.date_input[0].set_value(date(2024, 3, 1)).run()
+    assert at.date_input[0].value == date(2024, 3, 1)
+
+    at.session_state["raise_min"] = True
+    at = at.run()
+    assert at.date_input[0].proto.set_value is True
+    assert list(at.date_input[0].proto.value) == ["2024-07-15"]
+    at = at.run()
+    assert at.date_input[0].value == date(2024, 7, 15)
+    assert at.text[0].value == "Value: 2024-07-15"
 
     at = at.run()
     assert at.date_input[0].proto.set_value is False

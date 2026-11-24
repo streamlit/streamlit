@@ -654,11 +654,9 @@ export const StyledCalendarCell = styled(CalendarCell, {
       boxShadow: "none",
     },
 
-    // Availability-blocked cells stay focusable and use a strike-through so
-    // they stay distinct from fully disabled (out-of-range) cells. Keep the
-    // focus ring (do not clear boxShadow) and full bodyText contrast. React
-    // Aria can set both data-unavailable and data-disabled on out-of-range
-    // cells; leave those to the faded disabled style above.
+    // Availability-blocked cells: strike-through at full contrast, still
+    // focusable (keep the focus ring). Out-of-range cells can also carry
+    // data-unavailable; :not([data-disabled]) leaves them to the style above.
     "&[data-unavailable]:not([data-disabled])": {
       color: theme.colors.bodyText,
       textDecoration: "line-through",

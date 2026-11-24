@@ -808,12 +808,9 @@ describe("createIsDateUnavailable", () => {
     expect(isUnavailable(new CalendarDate(2024, 3, 12))).toBe(true) // Tuesday
   })
 
-  it("uses locale-independent ISO weekdays", () => {
-    // Monday 2024-03-11 must be weekday 1 regardless of locale week start.
+  it("returns ISO weekdays with Monday as 1 and Sunday as 7", () => {
     expect(getIsoWeekday(new CalendarDate(2024, 3, 11))).toBe(1)
     expect(getIsoWeekday(new CalendarDate(2024, 3, 10))).toBe(7)
-    // German locales start the week on Monday; ISO weekday must stay Monday=1.
-    expect(getIsoWeekday(new CalendarDate(2024, 3, 11))).toBe(1)
   })
 
   it("matches exact dates from non-Gregorian CalendarDate values", () => {

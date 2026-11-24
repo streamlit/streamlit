@@ -7287,6 +7287,15 @@ describe("DateInput no-op interactions", () => {
     )
     const region = screen.getByTestId("stDateInput")
     await user.click(getSingleDateSegments(region).year)
+    const inRangeUnavailable = await screen.findByLabelText(
+      /Saturday, March 9, 2024/
+    )
+    expect(inRangeUnavailable).toHaveAttribute("data-unavailable", "true")
+    expect(inRangeUnavailable).not.toHaveAttribute("data-disabled")
+    expect(getComputedStyle(inRangeUnavailable).textDecoration).toMatch(
+      /line-through/
+    )
+
     const outOfRange = await screen.findByLabelText(
       /Thursday, February 29, 2024/
     )

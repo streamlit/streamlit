@@ -1376,6 +1376,13 @@ def test_unavailable_weekend_not_selectable(app: Page):
     # leave it open. Checking markdown alone can race before a bad commit.
     expect(calendar).to_be_visible()
     expect_markdown(app, "Value weekdays only: 2024-03-08")
+
+    # Keyboard path: focus Saturday and press Enter; value must stay Friday.
+    saturday.focus()
+    app.keyboard.press("Enter")
+    expect(calendar).to_be_visible()
+    expect_markdown(app, "Value weekdays only: 2024-03-08")
+
     monday = calendar.get_by_role("button", name=re.compile(r"Monday, March 11"))
     monday.click()
     wait_for_app_run(app)
