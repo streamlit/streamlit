@@ -403,8 +403,8 @@ Rerun reason has no overlap with other times, so it uses none of the covered-spa
 
 Each count is measured where it's already known, so none needs a second serialization pass:
 
-- **Arrow bytes and rows** are counted where dataframes and charts are serialized, in the serializing thread's `ThreadRunStats`.
-- **Bytes and messages received, and messages served from the browser's cache,** are counted in the browser, because only the browser knows which references it resolved locally.
+- **Arrow bytes** are counted where dataframes and charts are serialized, in the serializing thread's `ThreadRunStats`.
+- **Bytes received, and messages served from the browser's cache,** are counted in the browser, because only the browser knows which references it resolved locally.
 
 The server doesn't count message bytes (see [Count message bytes on the server](#count-message-bytes-on-the-server)).
 

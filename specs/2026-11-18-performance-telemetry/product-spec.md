@@ -147,6 +147,16 @@ Several rerun requests can be combined into one run, and one run can match sever
 
 For widget interactions, the run also records the type of the widget that started it, such as a slider, a chart selection, a dataframe or a form's submit button. This is Streamlit's internal element type name, the same fixed name for every app, never the widget's key or a custom component's name. When several widgets changed at once, the run records their shared type, or the type of the widget that triggered the change, such as the button that submitted a form, or else "multiple".
 
+### Data size
+
+Data size shows whether slow runs are the ones that send a lot of data, for example whether SiS apps are slow because they send more, and whether that data is dataframes and charts. Each run reports three totals, in bytes:
+
+- **Bytes received**: the messages the browser received for the run. Compared with the run's load time, it shows how much of a slow run's time could be transfer.
+- **Bytes from the browser's cache**: messages the browser already had from an earlier run, which the server sent as short references instead, and how many there were. They explain runs that put a lot of data on the page but transfer little, such as most reruns.
+- **Arrow bytes**: the dataframes, tables and charts the run serialized, counted even when the browser already has them. Their share of the run's data says whether advice about data volume applies, such as aggregating before charting, paginating, or loading dataframes lazily.
+
+Rows, the largest payload and message counts aren't reported, because none of the questions above needs them.
+
 ### Additions
 
 | Addition | What it adds | Measured in |
@@ -158,10 +168,10 @@ For widget interactions, the run also records the type of the widget that starte
 | Parallel fragment breakdown | Per parallel fragment: start, wall, command, CPU, query, and cache compute, wait, overhead and async overlap time, capped per run; cache counts across all parallel fragments; how long the main script waited for them | Server |
 | Rerun reason | Why the run started, such as a first load, a page change, a widget interaction or a fragment timer, and for a widget interaction, the type of widget, such as a slider or chart selection (see [Rerun reason](#rerun-reason)) | Server |
 | Render timing | When the user's screen reached each loading milestone, what it waited on after the script finished, the number of visible elements, a viewport size bucket, and flags for hidden, superseded and timed-out runs. No per-element render or paint times | Browser |
-| Data size | Bytes and messages the browser received, Arrow bytes, rows and the largest payload for dataframes and charts, and messages served from the browser's message cache | Server and browser |
+| Data size | Bytes the browser received, the count and bytes of messages served from its message cache, and Arrow bytes for dataframes, tables and charts (see [Data size](#data-size)) | Server and browser |
 | Query time | Per client library: query, failure, async and describe counts, and execute time, with the count and time inside cached calls and commands | Server |
 
-Each addition documents its fields and attribution rules in `PageProfile.proto` (or `MetricsEvent.proto` for browser-only values), and updates the telemetry reference when it lands.
+Each addition describes its fields in `PageProfile.proto` (or `MetricsEvent.proto` for browser-only values), and documents its attribution rules in the telemetry reference when it lands.
 
 ### Open questions
 
