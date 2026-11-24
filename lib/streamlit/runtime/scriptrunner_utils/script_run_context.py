@@ -554,6 +554,22 @@ def get_run_yield_check() -> Callable[[], None] | None:
     return ctx.yield_check if ctx is not None else None
 
 
+def record_arrow_bytes(num_bytes: int) -> None:
+    """Add a serialized Arrow payload to the current run's page profile.
+
+    Payloads serialized without a ``ScriptRunContext``, such as lazily loaded
+    dataframe chunks, aren't counted.
+    """
+    try:
+        ctx = get_script_run_ctx(suppress_warning=True)
+        if ctx is None or not ctx.gather_usage_stats:
+            return
+        ctx.shared.stats.current_thread_stats().arrow_bytes += num_bytes
+    except Exception:
+        # Telemetry must never break serializing the payload.
+        _LOGGER.debug("Failed to record Arrow payload size", exc_info=True)
+
+
 def enqueue_message(msg: ForwardMsg) -> None:
     """Enqueues a ForwardMsg proto to send to the app."""
     ctx = get_script_run_ctx()

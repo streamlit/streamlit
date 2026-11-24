@@ -915,29 +915,14 @@ def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
     writer.write_table(table)
     writer.close()
     arrow_bytes = cast("bytes", sink.getvalue().to_pybytes())
-    _record_arrow_payload(len(arrow_bytes))
-    return arrow_bytes
 
-
-def _record_arrow_payload(num_bytes: int) -> None:
-    """Add a serialized Arrow payload to the current run's page profile.
-
-    ``convert_arrow_table_to_arrow_bytes`` serializes every Arrow payload sent to
-    the browser, so recording here covers them all. Payloads serialized without a
-    ``ScriptRunContext``, such as lazily loaded dataframe chunks, aren't counted.
-    """
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
-        get_script_run_ctx,
+        record_arrow_bytes,
     )
 
-    try:
-        ctx = get_script_run_ctx(suppress_warning=True)
-        if ctx is None or not ctx.gather_usage_stats:
-            return
-        ctx.shared.stats.current_thread_stats().arrow_bytes += num_bytes
-    except Exception:
-        # Telemetry must never break serializing the payload.
-        _LOGGER.debug("Failed to record Arrow payload size", exc_info=True)
+    # Every Arrow payload sent to the browser is serialized here.
+    record_arrow_bytes(len(arrow_bytes))
+    return arrow_bytes
 
 
 def get_arrow_conversion_errors() -> tuple[type[BaseException], ...]:

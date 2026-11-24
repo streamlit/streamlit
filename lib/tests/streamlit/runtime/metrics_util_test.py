@@ -2062,7 +2062,9 @@ class PageProfileArrowBytesTest(DeltaGeneratorTestCase):
         thread = threading.Thread(
             target=lambda: dataframe_util.convert_pandas_df_to_arrow_bytes(df)
         )
-        with patch.object(dataframe_util, "_LOGGER") as logger_mock:
+        with patch(
+            "streamlit.runtime.scriptrunner_utils.script_run_context._LOGGER"
+        ) as logger_mock:
             thread.start()
             thread.join()
 
