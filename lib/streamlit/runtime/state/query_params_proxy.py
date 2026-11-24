@@ -197,7 +197,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
         | Iterable[tuple[str, str | Iterable[str]]],
     ) -> None:
         """
-        Set all query parameters from a mapping or an iterable of pairs.
+        Replace all query parameters with a mapping or an iterable of pairs.
 
         This method primarily exists for advanced users who want to control
         multiple query parameters in a single update. To set individual query
@@ -210,11 +210,10 @@ class QueryParamsProxy(MutableMapping[str, str]):
         For a repeated key, pass an iterable of strings as the value.
 
         Query parameters bound to a widget through ``bind="query-params"``
-        are kept, because the widget controls them. If ``params`` contains a
+        are kept, because the widget controls them. If ``params`` includes a
         bound key, this method raises ``StreamlitAPIException`` and leaves
-        the query parameters unchanged. Change the widget's value instead, or
-        use ``st.query_params.update()`` to change parameters that are not
-        bound.
+        the query parameters unchanged. Omit that key from ``params``, or
+        change the widget's value instead.
 
         .. note::
             ``.from_dict()`` is not a direct inverse of ``.to_dict()`` if
@@ -224,8 +223,8 @@ class QueryParamsProxy(MutableMapping[str, str]):
         Parameters
         ----------
         params : mapping or iterable of pairs
-            Query parameters that replace the current values. Values are
-            strings, or iterables of strings for repeated keys.
+            Query parameters that replace the current unbound values. Values
+            are strings, or iterables of strings for repeated keys.
 
         Examples
         --------
