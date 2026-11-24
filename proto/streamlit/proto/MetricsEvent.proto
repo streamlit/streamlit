@@ -96,7 +96,8 @@ message MetricsEvent {
   // fields.
   // Same as PageProfile.arrow_bytes.
   optional int64 arrow_bytes = 62;
-  // Set by the browser.
+  // Messages the browser received for this script run. Not in PageProfile,
+  // because only the browser measures it.
   ReceivedMessages received_messages = 63;
 
   // Next ID: 64
