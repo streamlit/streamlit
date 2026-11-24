@@ -192,7 +192,7 @@ describe("buildStreamlitEChartsTheme", () => {
     expect(
       radar.splitArea.areaStyle.color.map(c => parseToRgba(c)[3])
     ).toEqual([0.03, 0.07])
-    // Indicator names use the themed body text color.
+    // Indicator names use the faded secondary text color.
     expect(radar.axisName.color).toBe(theme.colors.fadedText70)
   })
 
@@ -459,7 +459,7 @@ describe("buildStreamlitEChartsTheme", () => {
   it("keeps the dataZoom preview visible against the app background", () => {
     const echartsTheme = buildStreamlitEChartsTheme(theme)
 
-    // The gridline gray is too faint here, since the slider sits outside the plot.
+    // The gridline color is too faint here, since the slider sits outside the plot.
     const dataZoom = echartsTheme.dataZoom as {
       dataBackground: { lineStyle: { color: string } }
     }
@@ -541,7 +541,7 @@ describe("buildStreamlitEChartsTheme", () => {
     // fixed dark defaults that vanish on a dark background.
     expect(gauge.title.color).toBe(theme.colors.fadedText70)
     expect(gauge.detail.color).toBe(theme.colors.bodyText)
-    // The background track is a themed gray, as an array of [stop, color]
+    // The background track is a faint text-derived color, as an array of [stop, color]
     // segments (so an explicit user color array replaces it wholesale).
     const axisLine = gauge.axisLine as Record<string, Record<string, unknown>>
     expect(axisLine.lineStyle.color).toEqual([[1, theme.colors.fadedText05]])

@@ -544,8 +544,9 @@ export function buildStreamlitEChartsTheme(
       splitArea: {
         areaStyle: {
           // Very faint, theme-derived alternating rings that stay subtle on
-          // both light and dark backgrounds. Built from opaque `bodyText`,
-          // since `labelColor` is already translucent.
+          // both light and dark backgrounds. Built from `bodyText` rather
+          // than the already-translucent `labelColor`, so `transparentize`
+          // doesn't zero out the alpha.
           color: [
             transparentize(colors.bodyText, 0.97),
             transparentize(colors.bodyText, 0.93),
@@ -767,7 +768,7 @@ export function buildStreamlitEChartsTheme(
       borderColor: colors.borderColor,
       fillerColor: transparentize(colors.primary, 0.85),
       // The slider's mini series preview. It sits on the app background rather
-      // than inside the plot, so the faint gray used for gridlines leaves it
+      // than inside the plot, so the faint gridline color would leave it
       // almost invisible in dark mode. ECharts multiplies `opacity` by the
       // color's own alpha, so these combine with `labelColor`'s 0.7 alpha.
       dataBackground: {
