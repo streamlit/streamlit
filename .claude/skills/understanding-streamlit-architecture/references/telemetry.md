@@ -119,10 +119,16 @@ The fragments' commands and cached calls are also in the top-level `commands` an
 
 Two values describe how much data a run sends, each measured where it's already known:
 
-- **`data_size`, on the server**, is the Arrow data the run serialized. `convert_arrow_table_to_arrow_bytes` (`lib/streamlit/dataframe_util.py`) serializes every Arrow payload and adds its size and rows to the calling thread's `ThreadRunStats`. It counts a payload even if the browser already has it. It misses elements replayed by an `st.cache_data` hit, which aren't serialized again, and lazy dataframe chunks, which are serialized without a `ScriptRunContext`.
+- **`data_size`, on the server**, is the Arrow data the run serialized for dataframes, data editors, tables, charts and custom component dataframe arguments. `convert_arrow_table_to_arrow_bytes` (`lib/streamlit/dataframe_util.py`) serializes every Arrow payload and adds its size and rows to the calling thread's `ThreadRunStats`. It counts a payload even if the browser already has it, so it measures what the run puts on the page rather than what's transferred.
 - **`receivedMessages`, in the browser**, is the ForwardMsgs received from the run's `NewSession` through its `PageProfile`. `WebsocketConnection` passes each message's encoded size to `onMessage`, plus the cached copy's size for a cache reference, and `ReceivedMessagesTracker` (`frontend/app/src/util/ReceivedMessagesTracker.ts`) adds them up. It's measured in the browser because only the browser knows which references it resolved from its cache.
 
-Both are encoded sizes before WebSocket compression. Neither includes media files or lazy dataframe chunks, which the browser fetches over HTTP.
+Both are encoded sizes before WebSocket compression, so the bytes transferred can be fewer. Neither side counts anything while usage stats are off. What counts toward a run:
+
+- **Fragment runs:** a fragment-only run counts only its own payloads. Parallel fragments and threads attached with `add_script_run_ctx` record into their own `ThreadRunStats`, which count toward the run.
+- **Runs that end early** with `st.rerun()`, `st.stop()`, `st.switch_page()` or an uncaught exception count what they serialized before they ended.
+- **Messages after the `PageProfile`**, such as `ScriptFinished`, count toward no run.
+- **Not counted:** elements replayed by an `st.cache_data` hit, which aren't serialized again; lazy dataframe chunks after the first, which are serialized without a `ScriptRunContext` and fetched over HTTP; and media files.
+- **Rows** add up across payloads, so a pandas Styler (which also sends its display values) and a custom component v1 dataframe argument (index and columns sent separately) count some rows more than once.
 
 ## Server metrics
 

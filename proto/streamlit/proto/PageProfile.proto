@@ -63,29 +63,17 @@ message PageProfile {
   // Parallel fragments that ran during this script run. Unset when none ran.
   ParallelFragmentUsage parallel_fragment_usage = 22;
   // 23-25 are held for planned query-time and rerun-reason fields.
-  // Arrow data serialized during this script run. Always set, so a run with
-  // no data reports zeros.
+  // Arrow data serialized during this script run. Always set, so a run
+  // without data reports zeros.
   DataSize data_size = 26;
 }
 
-// How much Arrow data one script run puts on the page: dataframes, data
-// editors, tables, charts and custom component dataframe arguments. Sizes are
-// serialized bytes before WebSocket compression. A payload the browser already
-// has still counts; MetricsEvent.received_messages reports what arrived.
-// Each payload counts once, on the thread that serialized it:
-// - A fragment run counts only its own payloads.
-// - Parallel fragments and threads attached with add_script_run_ctx count
-//   toward the run.
-// - A run that ends early (st.rerun(), st.stop(), st.switch_page() or an
-//   uncaught exception) counts what it serialized before it ended.
-// Not counted:
-// - Elements replayed by an st.cache_data hit, which aren't serialized again.
-// - Lazily loaded dataframe chunks after the first, and media files.
+// Arrow payloads serialized during one script run, for dataframes, tables,
+// charts and similar elements. Sizes are in bytes.
 message DataSize {
   int64 arrow_bytes = 1;
-  // Rows summed across payloads, so elements that send several payloads count
-  // some rows twice: a pandas Styler also sends its display values, and a
-  // custom component v1 sends a dataframe's index and columns separately.
+  // Rows summed across payloads, so an element that sends several payloads
+  // can count rows more than once.
   int64 arrow_rows = 2;
   // Size of the largest single payload.
   int64 largest_arrow_bytes = 3;
