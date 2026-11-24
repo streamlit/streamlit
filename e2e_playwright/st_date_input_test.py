@@ -1387,3 +1387,41 @@ def test_unavailable_weekend_not_selectable(app: Page):
     monday.click()
     wait_for_app_run(app)
     expect_markdown(app, "Value weekdays only: 2024-03-11")
+
+
+def test_unavailable_range_endpoint_not_selectable(app: Page):
+    """Range mode rejects unavailable endpoints but allows spanning weekends."""
+    date_input = get_element_by_key(app, "weekdays_only_range")
+    date_input.get_by_test_id("stDateInputCalendarButton").click()
+    calendar = app.get_by_test_id("stDateInputCalendar")
+    saturday = calendar.get_by_role("button", name=re.compile(r"Saturday, March 9"))
+    expect(saturday).to_have_attribute("data-unavailable", "true")
+    saturday.click(force=True)
+    expect(calendar).to_be_visible()
+    expect_markdown(
+        app,
+        "Value weekdays only range: (datetime.date(2024, 3, 8), datetime.date(2024, 3, 11))",
+    )
+
+    saturday.focus()
+    app.keyboard.press("Enter")
+    expect(calendar).to_be_visible()
+    expect_markdown(
+        app,
+        "Value weekdays only range: (datetime.date(2024, 3, 8), datetime.date(2024, 3, 11))",
+    )
+
+    # Start a new range on Friday and complete on the following Monday,
+    # crossing the unavailable weekend.
+    friday = calendar.get_by_role("button", name=re.compile(r"Friday, March 8"))
+    friday.click()
+    wait_for_app_run(app)
+    expect_markdown(app, "Value weekdays only range: (datetime.date(2024, 3, 8),)")
+
+    monday = calendar.get_by_role("button", name=re.compile(r"Monday, March 11"))
+    monday.click()
+    wait_for_app_run(app)
+    expect_markdown(
+        app,
+        "Value weekdays only range: (datetime.date(2024, 3, 8), datetime.date(2024, 3, 11))",
+    )

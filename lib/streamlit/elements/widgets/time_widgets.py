@@ -2527,11 +2527,15 @@ class TimeWidgetsMixin:
             tuple, set, Series, Index, NumPy array). Cannot be set together
             with ``disabled_dates``. When this is set, every other date is
             unavailable. An empty collection makes every date unavailable;
-            pass ``value=None`` in that case.
+            pass ``value=None`` (or an empty range) in that case.
 
-            Not supported with a range ``value``. A weekday name always means
-            the same day of the week, whatever the user's locale or first day
-            of the week. If a keyed widget's current value becomes
+            For a range ``value``, availability applies to the endpoints only
+            (and to the start of a partial range). A range may cross
+            unavailable interior days. Quick-select presets snap an
+            unavailable start forward and end back within the min/max window,
+            or are dropped when no valid snap exists. A weekday name always
+            means the same day of the week, whatever the user's locale or
+            first day of the week. If a keyed widget's current value becomes
             unavailable, Streamlit resets it to the widget's default.
 
         disabled_dates : date, datetime, str, list-like of these, or None
@@ -2539,8 +2543,8 @@ class TimeWidgetsMixin:
             and ``max_value``. If this is ``None`` (default), no dates are
             disabled. Accepts the same forms as ``enabled_dates``. Cannot be
             set together with ``enabled_dates``. An empty collection disables
-            nothing. Range values, weekday names, and keyed resets follow the
-            same rules as ``enabled_dates``.
+            nothing. Range endpoints, weekday names, quick-select snapping,
+            and keyed resets follow the same rules as ``enabled_dates``.
 
         disabled : bool
             An optional boolean that disables the date input if set to
@@ -2871,8 +2875,8 @@ class TimeWidgetsMixin:
                 if availability is not None:
                     # Keep the snapped today value as the reset target. A
                     # stored date that is still selectable is returned from
-                    # widget state. Carry range mode so the range-unsupported
-                    # guard still runs.
+                    # widget state. Carry range mode so an OOB or unavailable
+                    # stored range does not collapse to a single-date control.
                     if stored_is_range:
                         parsed_values = replace(parsed_values, is_range=True)
                 else:
@@ -2898,15 +2902,6 @@ class TimeWidgetsMixin:
                         # The stored value replaces the "today" default, so it
                         # must not snap.
                         value_was_today = False
-
-        if availability is not None and parsed_values.is_range:
-            raise StreamlitAPIException(
-                "`enabled_dates` and `disabled_dates` are not yet supported when "
-                "the widget is in range mode, including a range saved in Session "
-                "State for this key. Pass a single date for `value`, or clear "
-                "that key.",
-                error_id="date-input-availability-range-unsupported",
-            )
 
         parsed_values = _apply_availability_to_parsed_values(
             parsed_values,

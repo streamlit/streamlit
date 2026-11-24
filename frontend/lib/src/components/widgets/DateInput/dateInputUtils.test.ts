@@ -31,6 +31,9 @@ import {
   calendarDateToIso,
   createDateErrorMessage,
   createIsDateUnavailable,
+  filterQuickSelectPresets,
+  findAvailableOnOrAfter,
+  findAvailableOnOrBefore,
   formatCalendarDate,
   getFocusedDateFallback,
   getInitialFocusedDate,
@@ -50,6 +53,7 @@ import {
   parsePastedDateRange,
   readCalendarDateFromField,
   reorderSegments,
+  snapQuickSelectPreset,
   validateDate,
 } from "./dateInputUtils"
 
@@ -586,6 +590,95 @@ describe("getQuickSelectPresets", () => {
     expect(byId.pastSixMonths).toEqual(new CalendarDate(2023, 9, 15))
     expect(byId.pastYear).toEqual(new CalendarDate(2023, 3, 15))
     expect(byId.pastTwoYears).toEqual(new CalendarDate(2022, 3, 15))
+  })
+})
+
+describe("snapQuickSelectPreset", () => {
+  const minDate = new CalendarDate(2020, 1, 1)
+  const maxDate = new CalendarDate(2024, 12, 31)
+  const weekendsUnavailable = (date: DateValue): boolean => {
+    const day = getIsoWeekday(toCalendarDate(date))
+    return day === 6 || day === 7
+  }
+
+  it("snaps Past Week on Saturday to Mon after first Sat through Fri before second", () => {
+    // Saturday 2024-03-16: Past Week is Sat 03-09 → Sat 03-16.
+    const preset = {
+      id: "pastWeek",
+      label: "Past Week",
+      start: new CalendarDate(2024, 3, 9),
+      end: new CalendarDate(2024, 3, 16),
+    }
+    const snapped = snapQuickSelectPreset(
+      preset,
+      minDate,
+      maxDate,
+      weekendsUnavailable
+    )
+    expect(snapped).toEqual({
+      id: "pastWeek",
+      label: "Past Week",
+      start: new CalendarDate(2024, 3, 11),
+      end: new CalendarDate(2024, 3, 15),
+    })
+  })
+
+  it("drops a preset when no available snap exists inside the window", () => {
+    const preset = {
+      id: "pastWeek",
+      label: "Past Week",
+      start: new CalendarDate(2024, 3, 9),
+      end: new CalendarDate(2024, 3, 10),
+    }
+    expect(
+      snapQuickSelectPreset(preset, minDate, maxDate, () => true)
+    ).toBeNull()
+  })
+
+  it("filterQuickSelectPresets keeps labels and hides empty results", () => {
+    const presets = [
+      {
+        id: "pastWeek",
+        label: "Past Week",
+        start: new CalendarDate(2024, 3, 9),
+        end: new CalendarDate(2024, 3, 16),
+      },
+      {
+        id: "blocked",
+        label: "Blocked",
+        start: new CalendarDate(2024, 3, 9),
+        end: new CalendarDate(2024, 3, 10),
+      },
+    ]
+    const filtered = filterQuickSelectPresets(
+      presets,
+      minDate,
+      maxDate,
+      weekendsUnavailable
+    )
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0].label).toBe("Past Week")
+    expect(filtered[0].start).toEqual(new CalendarDate(2024, 3, 11))
+    expect(filtered[0].end).toEqual(new CalendarDate(2024, 3, 15))
+  })
+
+  it("findAvailable helpers walk within min/max", () => {
+    expect(
+      findAvailableOnOrAfter(
+        new CalendarDate(2024, 3, 9),
+        minDate,
+        maxDate,
+        weekendsUnavailable
+      )
+    ).toEqual(new CalendarDate(2024, 3, 11))
+    expect(
+      findAvailableOnOrBefore(
+        new CalendarDate(2024, 3, 10),
+        minDate,
+        maxDate,
+        weekendsUnavailable
+      )
+    ).toEqual(new CalendarDate(2024, 3, 8))
   })
 })
 

@@ -37,7 +37,7 @@ import {
 } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { FloatingPortal } from "@floating-ui/react"
-import type { CalendarDate } from "@internationalized/date"
+import type { CalendarDate, DateValue } from "@internationalized/date"
 import {
   CalendarGridBody,
   CalendarGridHeader,
@@ -68,6 +68,7 @@ import {
   calendarDateFromSegments,
   calendarDateToIso,
   datesEqual,
+  filterQuickSelectPresets,
   getQuickSelectPresets,
   getSafeLocale,
   isSegmentCleared,
@@ -148,6 +149,8 @@ interface RangeDateInputProps {
    * reset its local display state to the parent's value props (which may not
    * have changed if segment edits were never committed). */
   formResetKey: number
+  /** When set, dates matching the predicate cannot be selected as endpoints. */
+  isDateUnavailable?: (date: DateValue) => boolean
 }
 
 /**
@@ -434,6 +437,7 @@ function RangeDateInput({
   onClose,
   formCommit,
   formResetKey,
+  isDateUnavailable,
 }: RangeDateInputProps): ReactElement {
   const theme = useEmotionTheme()
   const id = useId()
@@ -444,13 +448,16 @@ function RangeDateInput({
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
   // today() inside getQuickSelectPresets is intentionally not a dep — the
   // component remounts on each script rerun, so stale-day is not possible.
-  const quickSelectPresets = useMemo(() => {
-    const presets = getQuickSelectPresets()
-    if (!maxDate) return presets
-    return presets
-      .filter(p => p.start.compare(maxDate) <= 0)
-      .map(p => (p.end.compare(maxDate) > 0 ? { ...p, end: maxDate } : p))
-  }, [maxDate])
+  const quickSelectPresets = useMemo(
+    () =>
+      filterQuickSelectPresets(
+        getQuickSelectPresets(),
+        minDate,
+        maxDate,
+        isDateUnavailable
+      ),
+    [minDate, maxDate, isDateUnavailable]
+  )
   const quickSelectRef = useRef<HTMLDivElement>(null)
 
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -878,11 +885,22 @@ function RangeDateInput({
   const validateBothFields = useCallback(
     (start: CalendarDate | null, end: CalendarDate | null): void => {
       const invalidDate =
-        (start && validateDate(start, minDate, maxDate) ? start : null) ??
-        (end && validateDate(end, minDate, maxDate) ? end : null)
+        (start && validateDate(start, minDate, maxDate, isDateUnavailable)
+          ? start
+          : null) ??
+        (end && validateDate(end, minDate, maxDate, isDateUnavailable)
+          ? end
+          : null)
       onValidate(invalidDate)
     },
-    [minDate, maxDate, onValidate]
+    [isDateUnavailable, minDate, maxDate, onValidate]
+  )
+
+  const hasUnavailableEndpoint = useCallback(
+    (dates: CalendarDate[]): boolean =>
+      isDateUnavailable !== undefined &&
+      dates.some(date => isDateUnavailable(date)),
+    [isDateUnavailable]
   )
 
   // Segment typing: update display only, no parent commit.
@@ -928,6 +946,10 @@ function RangeDateInput({
   // When required, incomplete ranges stay in local display until close/blur.
   const emitRangeSelection = useCallback(
     (dates: CalendarDate[]): void => {
+      if (hasUnavailableEndpoint(dates)) {
+        validateBothFields(dates[0] ?? null, dates[1] ?? null)
+        return
+      }
       if (required && dates.length !== 2) {
         onEdit(dates.map(calendarDateToIso))
         return
@@ -935,7 +957,7 @@ function RangeDateInput({
       hasEditedRef.current = false
       onChange(dates)
     },
-    [onChange, onEdit, required]
+    [hasUnavailableEndpoint, onChange, onEdit, required, validateBothFields]
   )
 
   // Null when start > end prevents RangeCalendar from rewriting state
@@ -961,6 +983,9 @@ function RangeDateInput({
         if (displayEndRef.current) {
           // First click while a complete range is shown — enter anchor mode.
           // Calendar stays open for the second click (core two-click UX).
+          if (hasUnavailableEndpoint([range.start])) {
+            return
+          }
           inAnchorModeRef.current = true
           selfCommittedAnchorRef.current = range.start
           setDisplayStart(range.start)
@@ -971,12 +996,15 @@ function RangeDateInput({
         if (inAnchorModeRef.current && displayStartRef.current) {
           // Second click — complete the range using the current start as anchor
           const anchor = displayStartRef.current
-          inAnchorModeRef.current = false
-          selfCommittedAnchorRef.current = null
           const [start, end] =
             anchor.compare(range.start) <= 0
               ? [anchor, range.start]
               : [range.start, anchor]
+          if (hasUnavailableEndpoint([start, end])) {
+            return
+          }
+          inAnchorModeRef.current = false
+          selfCommittedAnchorRef.current = null
           setDisplayStart(start)
           setDisplayEnd(end)
           hasEditedRef.current = false
@@ -991,6 +1019,9 @@ function RangeDateInput({
       }
       // Normal completed range (two distinct dates, or single-day when not
       // in anchor mode)
+      if (hasUnavailableEndpoint([range.start, range.end])) {
+        return
+      }
       inAnchorModeRef.current = false
       selfCommittedAnchorRef.current = null
       setDisplayStart(range.start)
@@ -1003,7 +1034,7 @@ function RangeDateInput({
       restoreFocusToField()
       setIsCalendarActive(false)
     },
-    [emitRangeSelection, onChange, restoreFocusToField]
+    [emitRangeSelection, hasUnavailableEndpoint, onChange, restoreFocusToField]
   )
 
   // Passive preview stays open on Tab to the calendar button; closes on leave.
@@ -1169,13 +1200,16 @@ function RangeDateInput({
     (date: CalendarDate): void => {
       if (inAnchorModeRef.current && datesEqual(displayStartRef.current, date))
         return
+      if (hasUnavailableEndpoint([date])) {
+        return
+      }
       inAnchorModeRef.current = true
       selfCommittedAnchorRef.current = date
       setDisplayStart(date)
       setDisplayEnd(null)
       emitRangeSelection([date])
     },
-    [emitRangeSelection]
+    [emitRangeSelection, hasUnavailableEndpoint]
   )
 
   const handleClear = useCallback((): void => {
@@ -1218,6 +1252,11 @@ function RangeDateInput({
     (presetId: string): void => {
       const preset = quickSelectPresets.find(p => p.id === presetId)
       if (!preset) return
+      // Revalidate so a stale preset cannot bypass availability.
+      if (hasUnavailableEndpoint([preset.start, preset.end])) {
+        validateBothFields(preset.start, preset.end)
+        return
+      }
       inAnchorModeRef.current = false
       selfCommittedAnchorRef.current = null
       setDisplayStart(preset.start)
@@ -1226,7 +1265,7 @@ function RangeDateInput({
       onChange([preset.start, preset.end])
       setIsQuickSelectOpen(false)
     },
-    [quickSelectPresets, onChange]
+    [hasUnavailableEndpoint, onChange, quickSelectPresets, validateBothFields]
   )
 
   const handleQuickSelectSelection = useCallback(
@@ -1290,6 +1329,10 @@ function RangeDateInput({
               : [parsed.end, parsed.start]
           setDisplayStart(start)
           setDisplayEnd(end)
+          if (hasUnavailableEndpoint([start, end])) {
+            validateBothFields(start, end)
+            return
+          }
           hasEditedRef.current = false
           onChange([start, end])
           return
@@ -1301,6 +1344,10 @@ function RangeDateInput({
             isStartField ? parsed.date : displayStartRef.current,
             isStartField ? displayEndRef.current : parsed.date,
           ])
+          if (hasUnavailableEndpoint(next)) {
+            validateBothFields(next[0] ?? null, next[1] ?? null)
+            return
+          }
           emitRangeSelection(next)
           return
         }
@@ -1317,9 +1364,21 @@ function RangeDateInput({
           isStartField ? newDate : displayStartRef.current,
           isStartField ? displayEndRef.current : newDate,
         ])
+        if (hasUnavailableEndpoint(next)) {
+          validateBothFields(next[0] ?? null, next[1] ?? null)
+          return
+        }
         emitRangeSelection(next)
       },
-    [disabled, emitRangeSelection, format, minDate, onChange]
+    [
+      disabled,
+      emitRangeSelection,
+      format,
+      hasUnavailableEndpoint,
+      minDate,
+      onChange,
+      validateBothFields,
+    ]
   )
 
   const handleStartPaste = useMemo(
@@ -1459,6 +1518,7 @@ function RangeDateInput({
                   onChange={handleStartFieldChange}
                   minValue={minDate}
                   maxValue={maxDate}
+                  isDateUnavailable={isDateUnavailable}
                   shouldForceLeadingZeros
                   isDisabled={disabled}
                 >
@@ -1483,6 +1543,7 @@ function RangeDateInput({
                   onChange={handleEndFieldChange}
                   minValue={minDate}
                   maxValue={maxDate}
+                  isDateUnavailable={isDateUnavailable}
                   shouldForceLeadingZeros
                   isDisabled={disabled}
                 >
@@ -1561,6 +1622,9 @@ function RangeDateInput({
               <StyledVisuallyHidden id={popoverDescId}>
                 Use arrow keys to navigate dates. Enter to select. Escape to
                 close.
+                {isDateUnavailable
+                  ? " Some dates are unavailable and cannot be selected."
+                  : null}
               </StyledVisuallyHidden>
             )}
             <I18nProvider locale={safeLocale}>
@@ -1571,6 +1635,8 @@ function RangeDateInput({
                 commitBehavior="reset"
                 minValue={minDate}
                 maxValue={maxDate}
+                isDateUnavailable={isDateUnavailable}
+                allowsNonContiguousRanges
                 focusedValue={focusedValue}
                 onFocusChange={onFocusChange}
               >

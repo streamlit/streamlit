@@ -7360,6 +7360,93 @@ describe("DateInput no-op interactions", () => {
     expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 
+  it("allows a non-contiguous range across unavailable weekends", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, setStringArrayValueSpy } = renderWithRerunSpy({
+      isRange: true,
+      default: ["2024-03-08", "2024-03-11"],
+      min: "2024-01-01",
+      availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
+      filterWeekdays: [6, 7],
+    })
+
+    const region = screen.getByTestId("stDateInput")
+    await user.click(getRangeDateSegments(region, "start").year)
+
+    const saturday = await screen.findByLabelText(/Saturday, March 9, 2024/)
+    expect(saturday).toHaveAttribute("data-unavailable", "true")
+    expect(saturday).toHaveAttribute("aria-disabled", "true")
+
+    await user.click(await screen.findByLabelText(/Friday, March 8, 2024/))
+    await flushScheduledRerun()
+    expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      ["2024-03-08"],
+      expect.objectContaining({ fromUser: true })
+    )
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(await screen.findByLabelText(/Monday, March 11, 2024/))
+    await flushScheduledRerun()
+    expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      ["2024-03-08", "2024-03-11"],
+      expect.objectContaining({ fromUser: true })
+    )
+    expect(sendRerunBackMsg).toHaveBeenCalledOnce()
+  })
+
+  it("does not commit an unavailable range endpoint from the calendar", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, setStringArrayValueSpy } = renderWithRerunSpy({
+      isRange: true,
+      default: ["2024-03-08", "2024-03-11"],
+      min: "2024-01-01",
+      availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
+      filterWeekdays: [6, 7],
+    })
+
+    const region = screen.getByTestId("stDateInput")
+    await user.click(getRangeDateSegments(region, "start").year)
+    const saturday = await screen.findByLabelText(/Saturday, March 9, 2024/)
+    await user.click(saturday)
+    await flushScheduledRerun()
+
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+  })
+
+  it("snaps Past Week quick-select when weekends are unavailable on Saturday", async () => {
+    const user = userEvent.setup()
+    // Saturday 2024-03-16 so Past Week is Sat→Sat and snaps Mon→Fri.
+    vi.setSystemTime(new Date(2024, 2, 16))
+    const { setStringArrayValueSpy, props } = renderWithRerunSpy({
+      isRange: true,
+      default: ["2024-03-08", "2024-03-15"],
+      min: "2020-01-01",
+      max: "2024-12-31",
+      availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
+      filterWeekdays: [6, 7],
+    })
+
+    const region = screen.getByTestId("stDateInput")
+    await user.click(getRangeDateSegments(region, "start").year)
+    const quickSelect = await screen.findByRole("button", {
+      name: /quick select/i,
+    })
+    await user.click(quickSelect)
+    await user.click(await screen.findByRole("option", { name: "Past Week" }))
+    await flushScheduledRerun()
+
+    expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      ["2024-03-11", "2024-03-15"],
+      expect.objectContaining({ fromUser: true })
+    )
+  })
+
   it("does not commit or rerun when re-picking the selected calendar date", async () => {
     const user = userEvent.setup()
     const { sendRerunBackMsg, setStringArrayValueSpy, props } =

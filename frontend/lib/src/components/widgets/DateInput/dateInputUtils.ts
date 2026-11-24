@@ -222,6 +222,127 @@ export function getQuickSelectPresets(): QuickSelectPreset[] {
   ].map(({ id, label, start }) => ({ id, label, start, end }))
 }
 
+function isOutsideMinMax(
+  date: CalendarDate,
+  minDate: CalendarDate,
+  maxDate: CalendarDate | undefined
+): boolean {
+  return (
+    date.compare(minDate) < 0 ||
+    (maxDate !== undefined && date.compare(maxDate) > 0)
+  )
+}
+
+/** Nearest selectable date at or after ``from``, within min/max. */
+export function findAvailableOnOrAfter(
+  from: CalendarDate,
+  minDate: CalendarDate,
+  maxDate: CalendarDate | undefined,
+  isDateUnavailable?: ((date: DateValue) => boolean) | null
+): CalendarDate | null {
+  let candidate = from
+  // Cap the walk so an empty allowlist cannot loop forever.
+  const limit = maxDate ?? from.add({ years: 200 })
+  while (candidate.compare(limit) <= 0) {
+    if (
+      !isOutsideMinMax(candidate, minDate, maxDate) &&
+      isDateUnavailable?.(candidate) !== true
+    ) {
+      return candidate
+    }
+    const next = candidate.add({ days: 1 })
+    if (next.compare(candidate) <= 0) {
+      return null
+    }
+    candidate = next
+  }
+  return null
+}
+
+/** Nearest selectable date at or before ``from``, within min/max. */
+export function findAvailableOnOrBefore(
+  from: CalendarDate,
+  minDate: CalendarDate,
+  maxDate: CalendarDate | undefined,
+  isDateUnavailable?: ((date: DateValue) => boolean) | null
+): CalendarDate | null {
+  let candidate = from
+  while (candidate.compare(minDate) >= 0) {
+    if (
+      !isOutsideMinMax(candidate, minDate, maxDate) &&
+      isDateUnavailable?.(candidate) !== true
+    ) {
+      return candidate
+    }
+    const prev = candidate.subtract({ days: 1 })
+    if (prev.compare(candidate) >= 0) {
+      return null
+    }
+    candidate = prev
+  }
+  return null
+}
+
+/**
+ * Clamp a quick-select preset to min/max and snap endpoints around
+ * unavailable days. Returns null when the preset cannot yield a valid range.
+ * Keeps the original label/id so the UI still reads "Past Week" after a snap.
+ */
+export function snapQuickSelectPreset(
+  preset: QuickSelectPreset,
+  minDate: CalendarDate,
+  maxDate: CalendarDate | undefined,
+  isDateUnavailable?: ((date: DateValue) => boolean) | null
+): QuickSelectPreset | null {
+  const start = preset.start.compare(minDate) < 0 ? minDate : preset.start
+  const end =
+    maxDate !== undefined && preset.end.compare(maxDate) > 0
+      ? maxDate
+      : preset.end
+
+  if (maxDate !== undefined && start.compare(maxDate) > 0) {
+    return null
+  }
+  if (end.compare(minDate) < 0) {
+    return null
+  }
+  if (start.compare(end) > 0) {
+    return null
+  }
+
+  const snappedStart = findAvailableOnOrAfter(
+    start,
+    minDate,
+    maxDate,
+    isDateUnavailable
+  )
+  const snappedEnd = findAvailableOnOrBefore(
+    end,
+    minDate,
+    maxDate,
+    isDateUnavailable
+  )
+  if (!snappedStart || !snappedEnd || snappedStart.compare(snappedEnd) > 0) {
+    return null
+  }
+
+  return { ...preset, start: snappedStart, end: snappedEnd }
+}
+
+/** Apply min/max clamping and availability snapping to every preset. */
+export function filterQuickSelectPresets(
+  presets: QuickSelectPreset[],
+  minDate: CalendarDate,
+  maxDate: CalendarDate | undefined,
+  isDateUnavailable?: ((date: DateValue) => boolean) | null
+): QuickSelectPreset[] {
+  return presets
+    .map(preset =>
+      snapQuickSelectPreset(preset, minDate, maxDate, isDateUnavailable)
+    )
+    .filter((preset): preset is QuickSelectPreset => preset !== null)
+}
+
 export type DateValidationErrorType =
   | "beforeMin"
   | "afterMax"
