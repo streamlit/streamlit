@@ -1500,12 +1500,13 @@ def test_create_page_profile_message_reports_query_usage() -> None:
     ctx = create_mock_script_run_ctx()
     query_stats = ctx.shared.stats.current_thread_stats().query
     totals = query_stats.snowflake_connector
-    totals.queries = 4
+    # Distinct values, so that copying one field into another fails.
+    totals.queries = 15
     totals.failed = 1
-    totals.async_queries = 1
-    totals.describe_queries = 1
-    totals.queries_in_cache = 2
-    totals.queries_in_commands = 1
+    totals.async_queries = 2
+    totals.describe_queries = 3
+    totals.queries_in_cache = 4
+    totals.queries_in_commands = 5
     totals.time = 2.5
     totals.time_in_cache = 1.0
     totals.time_in_commands = 0.5
@@ -1518,12 +1519,12 @@ def test_create_page_profile_message_reports_query_usage() -> None:
     usage = msg.page_profile.query_usage
     assert not usage.HasField("sqlalchemy")
     connector = usage.snowflake_connector
-    assert connector.queries == 4
+    assert connector.queries == 15
     assert connector.failed == 1
-    assert connector.async_queries == 1
-    assert connector.describe_queries == 1
-    assert connector.queries_in_cache == 2
-    assert connector.queries_in_commands == 1
+    assert connector.async_queries == 2
+    assert connector.describe_queries == 3
+    assert connector.queries_in_cache == 4
+    assert connector.queries_in_commands == 5
     assert connector.time == 2_500_000
     assert connector.time_in_cache == 1_000_000
     assert connector.time_in_commands == 500_000
@@ -1565,7 +1566,8 @@ def _record_parallel_fragment_run(
     query_time: float = 0.0,
 ) -> ParallelFragmentRunStats:
     """Record a finished parallel fragment run with one cached call of each type,
-    and a query from each of two sources taking ``query_time`` between them.
+    and a query from each of two sources taking ``query_time`` between them:
+    three quarters of it in cache, and a quarter in commands.
     """
     with ctx.shared.parallel_fragments.recording_run() as run:
         thread_stats = ctx.shared.stats.current_thread_stats()
@@ -1581,12 +1583,12 @@ def _record_parallel_fragment_run(
         query_stats = thread_stats.query
         query_stats.sqlalchemy.queries = 1
         query_stats.sqlalchemy.queries_in_cache = 1
-        query_stats.sqlalchemy.time = query_time / 2
-        query_stats.sqlalchemy.time_in_cache = query_time / 2
+        query_stats.sqlalchemy.time = query_time * 0.75
+        query_stats.sqlalchemy.time_in_cache = query_time * 0.75
         query_stats.snowflake_connector.queries = 1
         query_stats.snowflake_connector.queries_in_commands = 1
-        query_stats.snowflake_connector.time = query_time / 2
-        query_stats.snowflake_connector.time_in_commands = query_time / 2
+        query_stats.snowflake_connector.time = query_time * 0.25
+        query_stats.snowflake_connector.time_in_commands = query_time * 0.25
     return run
 
 
@@ -1638,10 +1640,10 @@ def test_create_page_profile_message_reports_parallel_fragments() -> None:
         first_entry.query_time,
         first_entry.query_time_in_cache,
         first_entry.query_time_in_commands,
-    ) == (1_000_000, 500_000, 500_000)
+    ) == (1_000_000, 750_000, 250_000)
     assert second_entry.query_time == 0
     assert msg.page_profile.query_usage.sqlalchemy.queries == 2
-    assert msg.page_profile.query_usage.sqlalchemy.time == 500_000
+    assert msg.page_profile.query_usage.sqlalchemy.time == 750_000
     assert second.end is not None
 
 
@@ -1670,7 +1672,8 @@ def test_create_page_profile_message_adds_parallel_fragments_past_the_limit() ->
     assert usage.overflow.cache_overhead_time == 4_000
     assert usage.overflow.cache_async_overlap_time == 750_000
     assert usage.overflow.query_time == 1_500_000
-    assert usage.overflow.query_time_in_cache == 750_000
+    assert usage.overflow.query_time_in_cache == 1_125_000
+    assert usage.overflow.query_time_in_commands == 375_000
     assert usage.overflow.start_time == 0
     assert usage.cache_usage.cache_data.calls == 3
 
