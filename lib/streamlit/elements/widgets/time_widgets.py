@@ -2965,11 +2965,24 @@ class TimeWidgetsMixin:
 
         layout_config = create_layout_config(width=width)
 
-        agent_availability_kwargs: dict[str, object] = {}
-        if agent_spec.is_recording() and proto_availability is not None:
-            agent_availability_kwargs[proto_availability.param_name] = (
-                proto_availability.agent_report()
-            )
+        # Keep these as explicit kwargs so ty can check agent_spec.element.
+        agent_report = (
+            proto_availability.agent_report()
+            if agent_spec.is_recording() and proto_availability is not None
+            else None
+        )
+        agent_enabled = (
+            agent_report
+            if proto_availability is not None
+            and proto_availability.param_name == "enabled_dates"
+            else None
+        )
+        agent_disabled = (
+            agent_report
+            if proto_availability is not None
+            and proto_availability.param_name == "disabled_dates"
+            else None
+        )
 
         self.dg._enqueue(
             "date_input",
@@ -2994,7 +3007,8 @@ class TimeWidgetsMixin:
                 help=date_input_proto.help or None,
                 disabled=disabled,
                 required=required,
-                **agent_availability_kwargs,
+                enabled_dates=agent_enabled,
+                disabled_dates=agent_disabled,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",
             ),
