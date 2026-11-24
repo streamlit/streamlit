@@ -15,7 +15,20 @@
  */
 /* eslint-disable  @typescript-eslint/no-non-null-assertion */
 
-import { GridCellKind, type NumberCell } from "@glideapps/glide-data-grid"
+import {
+  createElement,
+  type FunctionComponent,
+  type ReactElement,
+  useState,
+} from "react"
+
+import {
+  GridCellKind,
+  type NumberCell,
+  numberCellRenderer,
+} from "@glideapps/glide-data-grid"
+import { render, screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 import {
   Duration,
   DurationNanosecond,
@@ -739,4 +752,226 @@ describe("NumberColumn", () => {
       (mockColumn.getCell(Number.NEGATIVE_INFINITY) as NumberCell).displayData
     ).toEqual("-Infinity")
   })
+})
+
+interface NumberEditorProps {
+  value: NumberCell
+  onChange: (cell: NumberCell) => void
+}
+
+/**
+ * Renders Glide's number overlay editor for a cell and feeds every change back
+ * into it, like the grid's overlay does while a cell is being edited.
+ */
+function NumberEditorHarness({
+  initialCell,
+  onCellChange,
+}: {
+  initialCell: NumberCell
+  onCellChange: (cell: NumberCell) => void
+}): ReactElement {
+  const [cell, setCell] = useState(initialCell)
+  const [Editor] = useState(
+    () =>
+      numberCellRenderer.provideEditor!(
+        initialCell
+      ) as FunctionComponent<NumberEditorProps>
+  )
+  return createElement(Editor, {
+    value: cell,
+    onChange: (newCell: NumberCell) => {
+      setCell(newCell)
+      onCellChange(newCell)
+    },
+  })
+}
+
+/**
+ * Enters text into the number editor of a fresh cell and returns the shown
+ * text, the last cell value sent to the grid, and the column's validation
+ * result. Uses "." as the decimal separator unless the cell overrides it.
+ */
+async function enterIntoNumberEditor(
+  column: ReturnType<typeof NumberColumn>,
+  text: string,
+  {
+    cellOverrides = {},
+    paste = false,
+    blur = false,
+  }: {
+    cellOverrides?: Partial<NumberCell>
+    paste?: boolean
+    blur?: boolean
+  } = {}
+): Promise<{
+  shownText: string
+  emittedValue: number | null | undefined
+  isValid: unknown
+}> {
+  const user = userEvent.setup()
+  const onCellChange = vi.fn()
+  const initialCell = {
+    ...(column.getCell(1) as NumberCell),
+    decimalSeparator: ".",
+    ...cellOverrides,
+  }
+  render(createElement(NumberEditorHarness, { initialCell, onCellChange }))
+
+  const input = await screen.findByRole("textbox")
+  await user.clear(input)
+  if (paste) {
+    await user.paste(text)
+  } else {
+    await user.type(input, text)
+  }
+  if (blur) {
+    await user.tab()
+    expect(input).not.toHaveFocus()
+  }
+
+  const lastCell = onCellChange.mock.lastCall?.[0] as NumberCell
+  return {
+    shownText: (input as HTMLInputElement).value,
+    emittedValue: lastCell.data,
+    isValid: column.validateInput!(column.getCellValue(lastCell)),
+  }
+}
+
+describe("NumberColumn cell editor", () => {
+  const floatColumn = (): ReturnType<typeof NumberColumn> =>
+    getNumberColumn(MOCK_FLOAT_ARROW_TYPE, undefined, { isEditable: true })
+
+  it.each([
+    ["1,23", MOCK_FLOAT_ARROW_TYPE],
+    ["1a2", MOCK_FLOAT_ARROW_TYPE],
+    ["1.2.3", MOCK_FLOAT_ARROW_TYPE],
+    ["1.5", MOCK_INT_ARROW_TYPE],
+    ["-5", MOCK_UINT_ARROW_TYPE],
+  ])(
+    "keeps %s as typed and fails validation instead of committing another number",
+    async (text, arrowType) => {
+      const column = getNumberColumn(arrowType, undefined, {
+        isEditable: true,
+      })
+
+      const { shownText, emittedValue, isValid } = await enterIntoNumberEditor(
+        column,
+        text
+      )
+
+      expect(shownText).toBe(text)
+      expect(emittedValue).toBeNaN()
+      expect(isValid).toBe(false)
+    }
+  )
+
+  it.each([
+    ["1,23", "."],
+    ["1,234.56", "."],
+    ["1.23", ","],
+  ])(
+    "keeps pasted %s with a %s decimal separator and fails validation",
+    async (text, decimalSeparator) => {
+      const { shownText, emittedValue, isValid } = await enterIntoNumberEditor(
+        floatColumn(),
+        text,
+        { cellOverrides: { decimalSeparator }, paste: true }
+      )
+
+      expect(shownText).toBe(text)
+      expect(emittedValue).toBeNaN()
+      expect(isValid).toBe(false)
+    }
+  )
+
+  it("keeps rejected text when the editor loses focus", async () => {
+    const { shownText, emittedValue, isValid } = await enterIntoNumberEditor(
+      floatColumn(),
+      "0a12",
+      { blur: true }
+    )
+
+    expect(shownText).toBe("0a12")
+    expect(emittedValue).toBeNaN()
+    expect(isValid).toBe(false)
+  })
+
+  it.each([
+    ["1.23", "1.23", 1.23],
+    [".07", ".07", 0.07],
+    ["-1.5", "-1.5", -1.5],
+    ["5-", "-5", -5],
+    ["-5{Home}-", "5", 5],
+    ["1.5{ArrowLeft}{ArrowLeft}.", "1.5", 1.5],
+  ])("accepts typed %s as %s", async (text, expectedText, expectedValue) => {
+    const { shownText, emittedValue, isValid } = await enterIntoNumberEditor(
+      floatColumn(),
+      text
+    )
+
+    expect(shownText).toBe(expectedText)
+    expect(emittedValue).toBe(expectedValue)
+    expect(isValid).toBe(true)
+  })
+
+  it("accepts integers in integer columns", async () => {
+    const column = getNumberColumn(MOCK_INT_ARROW_TYPE, undefined, {
+      isEditable: true,
+    })
+
+    const { shownText, emittedValue, isValid } = await enterIntoNumberEditor(
+      column,
+      "42"
+    )
+
+    expect(shownText).toBe("42")
+    expect(emittedValue).toBe(42)
+    expect(isValid).toBe(true)
+  })
+
+  it("truncates decimals beyond the column step while typing", async () => {
+    const column = getNumberColumn(
+      MOCK_FLOAT_ARROW_TYPE,
+      { step: 0.01 },
+      { isEditable: true }
+    )
+
+    const { shownText, emittedValue, isValid } = await enterIntoNumberEditor(
+      column,
+      "1.234"
+    )
+
+    expect(shownText).toBe("1.23")
+    expect(emittedValue).toBe(1.23)
+    expect(isValid).toBe(true)
+  })
+
+  it("recovers once the rejected character is removed", async () => {
+    const { shownText, emittedValue, isValid } = await enterIntoNumberEditor(
+      floatColumn(),
+      "1,23{ArrowLeft}{ArrowLeft}{Backspace}"
+    )
+
+    expect(shownText).toBe("123")
+    expect(emittedValue).toBe(123)
+    expect(isValid).toBe(true)
+  })
+
+  it.each([
+    ["1,23", "1,23"],
+    ["1.23", "1,23"],
+  ])(
+    "accepts typed %s with a comma decimal separator as 1.23",
+    async (text, expectedText) => {
+      const { shownText, emittedValue, isValid } = await enterIntoNumberEditor(
+        floatColumn(),
+        text,
+        { cellOverrides: { decimalSeparator: "," } }
+      )
+
+      expect(shownText).toBe(expectedText)
+      expect(emittedValue).toBe(1.23)
+      expect(isValid).toBe(true)
+    }
+  )
 })
