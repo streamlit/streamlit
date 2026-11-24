@@ -336,6 +336,9 @@ def replay_cached_messages(
     message using that, recording any new DGs produced in case a later st function
     call is on one of them.
     """
+    if not result.messages:
+        return
+
     from streamlit.delta_generator import DeltaGenerator
 
     # Maps originally recorded dg ids to this script run's version of that dg

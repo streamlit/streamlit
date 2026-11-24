@@ -161,6 +161,54 @@ class CacheDataTest(unittest.TestCase):
             _data_caches.clear_all()
             assert budget.total_bytes == 0
 
+    def test_concurrent_get_cache_creates_one_cache(self) -> None:
+        """Threads racing to look up a new cache all get the same instance."""
+        common = {
+            "key": "concurrent",
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "concurrent",
+        }
+        threads = 16
+        start = threading.Barrier(threads)
+        caches: list[DataCache[Any]] = []
+
+        def get_cache() -> None:
+            start.wait()
+            caches.extend(_data_caches.get_cache(**common) for _ in range(200))
+
+        workers = [threading.Thread(target=get_cache) for _ in range(threads)]
+        for worker in workers:
+            worker.start()
+        for worker in workers:
+            worker.join()
+
+        assert len({id(cache) for cache in caches}) == 1
+        assert caches[0] is _data_caches.get_cache(**common)
+
+    def test_reused_cache_is_replaced_on_param_change_and_clear_all(self) -> None:
+        """A reused cache is never returned once it has been replaced or cleared."""
+        common = {
+            "key": "replace",
+            "persist": None,
+            "max_entries": None,
+            "display_name": "replace",
+        }
+        original = _data_caches.get_cache(ttl=10, **common)
+        assert _data_caches.get_cache(ttl=10, **common) is original
+
+        replacement = _data_caches.get_cache(ttl=20, **common)
+        assert replacement is not original
+        assert not original.is_active
+        assert _data_caches.get_cache(ttl=20, **common) is replacement
+
+        _data_caches.clear_all()
+        after_clear = _data_caches.get_cache(ttl=20, **common)
+        assert after_clear is not replacement
+        assert not replacement.is_active
+        assert after_clear.is_active
+
     def test_session_clear_continues_cleanup_after_cache_clear_error(self) -> None:
         """A failed cache clear does not leak any session storage registrations."""
         budget = GlobalCacheBudget(max_bytes=1_000_000)

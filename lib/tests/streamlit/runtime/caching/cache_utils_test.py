@@ -14,12 +14,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_type import CacheType
@@ -28,7 +29,7 @@ from streamlit.runtime.caching.cache_utils import (
     Cache,
     CachedFunc,
     CachedFuncInfo,
-    _get_positional_arg_name,
+    _get_positional_arg_names,
     get_session_id_or_throw,
 )
 from streamlit.runtime.scriptrunner_utils import script_run_context
@@ -175,36 +176,89 @@ def _func_with_varargs(a: int, *args: str) -> None:
     pass
 
 
+def _func_with_private_arg(_private: int, public: int) -> None:
+    pass
+
+
 @pytest.mark.parametrize(
-    ("func", "arg_index", "expected"),
+    ("func", "expected"),
     [
-        (_func_positional, 0, "first"),
-        (_func_positional, 1, "second"),
-        (_func_positional, 2, "third"),
-        (_func_positional, -1, None),
-        (_func_positional, 3, None),
-        (_func_with_kwonly, 0, "a"),
-        (_func_with_kwonly, 1, None),
-        (_func_with_varargs, 0, "a"),
-        (_func_with_varargs, 1, None),
+        (_func_positional, ("first", "second", "third")),
+        (_func_with_kwonly, ("a", None)),
+        (_func_with_varargs, ("a", None)),
     ],
-    ids=[
-        "first_positional",
-        "second_positional",
-        "third_positional",
-        "negative_index",
-        "out_of_range",
-        "before_kwonly",
-        "kwonly_param",
-        "before_varargs",
-        "varargs_param",
-    ],
+    ids=["positional", "kwonly_param", "varargs_param"],
 )
-def test_get_positional_arg_name(
-    func: Callable[..., Any], arg_index: int, expected: str | None
+def test_get_positional_arg_names(
+    func: Callable[..., Any], expected: tuple[str | None, ...]
 ) -> None:
     """Returns the parameter name for positional args, None otherwise."""
-    assert _get_positional_arg_name(func, arg_index) == expected
+    assert _get_positional_arg_names(func) == expected
+
+
+@pytest.mark.parametrize(
+    ("func", "args", "kwargs"),
+    [
+        (_func_positional, (1, "x", 2.5), {}),
+        (_func_positional, (1,), {"second": "x", "third": 2.5}),
+        (_func_with_varargs, (1, "extra", "more"), {}),
+        (_func_with_private_arg, (1, 2), {}),
+        (_func_with_private_arg, (), {"_private": 1, "public": 2}),
+    ],
+    ids=["positional", "mixed", "varargs", "private_positional", "kwargs_only"],
+)
+def test_value_key_is_the_same_with_precomputed_arg_names(
+    func: Callable[..., Any], args: tuple[Any, ...], kwargs: dict[str, Any]
+) -> None:
+    """Passing precomputed positional arg names does not change the value key."""
+    expected = cache_utils._make_value_key(CacheType.DATA, func, args, kwargs, None)
+    assert expected == cache_utils._make_value_key(
+        CacheType.DATA,
+        func,
+        args,
+        kwargs,
+        None,
+        positional_arg_names=_get_positional_arg_names(func),
+    )
+
+
+def test_private_positional_args_are_not_hashed() -> None:
+    """A positional arg whose parameter name starts with "_" is excluded."""
+
+    def key(private: int) -> str:
+        return cache_utils._make_value_key(
+            CacheType.DATA,
+            _func_with_private_arg,
+            (private, 2),
+            {},
+            None,
+            positional_arg_names=_get_positional_arg_names(_func_with_private_arg),
+        )
+
+    assert key(1) == key(2)
+
+
+def test_cached_func_inspects_signature_once() -> None:
+    """The signature is inspected on the first positional call and then reused."""
+    cached_func = cast("CachedFunc[..., None]", st.cache_data(_func_positional))
+
+    with patch.object(
+        cache_utils.type_util,
+        "get_func_parameters",
+        wraps=cache_utils.type_util.get_func_parameters,
+    ) as get_params:
+        cached_func._build_value_key((), {"first": 1})
+        assert get_params.call_count == 0
+
+        first = cached_func._build_value_key((1, "x", 2.5), {})
+        second = cached_func._build_value_key((1, "x", 2.5), {})
+        cached_func._build_value_key((2,), {"second": "y", "third": 1.0})
+
+    assert get_params.call_count == 1
+    assert first == second
+    assert first == cache_utils._make_value_key(
+        CacheType.DATA, _func_positional, (1, "x", 2.5), {}, None
+    )
 
 
 def _placeholder_func() -> None:
