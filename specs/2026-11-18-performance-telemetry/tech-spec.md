@@ -108,11 +108,11 @@ class ThreadQueryStats:  # query time
 
 
 class RunParallelFragmentStats:
-    _runs: list[ParallelFragmentRun]  # in the order the runs started
+    _runs: list[ParallelFragmentRunStats]  # in the order the runs started
     wait_time: float  # the script thread waiting in join() or drain()
 
 
-class ParallelFragmentRun:  # one fragment run on its worker thread
+class ParallelFragmentRunStats:  # one fragment run on its worker thread
     start: float
     end: float | None
     stats: ThreadRunStats  # the worker's record while the fragment runs
@@ -183,11 +183,11 @@ Two edge cases fall outside it. A thread attached from outside the computation d
 
 #### Recording a fragment run
 
-When the run gathers usage stats, `_run_parallel_fragment` (`fragment.py`) wraps each fragment in `RunParallelFragmentStats.recording_run()` on its worker thread. `recording_run()` gives the fragment its own `ParallelFragmentRun` entry and points the worker's recording at it until the fragment ends:
+When the run gathers usage stats, `_run_parallel_fragment` (`fragment.py`) wraps each fragment in `RunParallelFragmentStats.recording_run()` on its worker thread. `recording_run()` gives the fragment its own `ParallelFragmentRunStats` entry and points the worker's recording at it until the fragment ends:
 
 ```python
-run = ParallelFragmentRun(time.perf_counter())
 with self._lock:
+    run = ParallelFragmentRunStats(time.perf_counter())
     self._runs.append(run)
 try:
     with self._stats.recording_into(run.stats):
@@ -196,7 +196,7 @@ finally:
     run.end = time.perf_counter()
 ```
 
-- **Start.** The entry is appended to the run's list under a lock, so entries are in start order.
+- **Start.** The start time is read and the entry appended under one lock, so entries are in start order.
 - **The swap.** `RunStats.recording_into()` puts the fragment's own `ThreadRunStats` in the worker's `_local.stats`, and restores the previous record afterwards. The record is also in `_threads`, so everything the worker records while the fragment runs, its commands, cached calls and queries, counts toward both the fragment's entry and the run's totals.
 - **End.** The entry records its end time, and its CPU time with the CPU time addition, even if the fragment raises.
 
@@ -251,7 +251,7 @@ Following `$44 Contain Failures`, each hook that runs inside or around user code
 
 | Hook | Runs | If telemetry raises |
 |---|---|---|
-| `CacheCallTimer.finish()` | In a `finally` around every recorded cached call | The call is missing from the run totals. The function's result or error is unchanged. |
+| `CacheCallTimer` | When a recorded cached call opens, around its compute and wait phases, and in `finish()`, a `finally` around the call | The call is missing from the run totals. The function's result or error is unchanged, and the thread's later cached calls are still recorded. |
 | `computing_cached_value` | Around the cached function on a miss | Setup fails: the function runs without marking attached threads. Ending fails: the attached threads' command time isn't subtracted. |
 | `_record_command_time` | After a command returns or raises `RerunException` | The command's time is missing from some destinations. |
 | `recording_run()` in `_run_parallel_fragment` | Around each parallel fragment | The fragment runs without an entry. |
@@ -381,7 +381,7 @@ All the run fields are `optional`, so a run that only waits reports a real 0. Th
 #### Attribution
 
 - **Commands.** `gather_metrics` reads the thread's clock around each listed command and adds the difference to the thread's `ThreadRunStats`. `command_cpu_time` sums only the records whose thread's CPU time is also reported, `counts_cpu`: the script thread's record and each fragment run's. So user code CPU time never subtracts CPU time it didn't add. Commands without a listed time, because they're past the tracking limits or raise anything other than a rerun request, count as user code, matching wall time. Nested commands count toward the outer command.
-- **Parallel fragments.** `recording_run()` reads the worker's clock when the fragment starts and when it ends, and stores the difference in the fragment's `ParallelFragmentRun`. `parallel_fragment_cpu_time` is summed from those entries when the profile is built, so no separate total is kept. The time is stored before the coordinator counts the worker as finished, so it's complete once `join()` or `drain()` returns. A parallel fragment nested in another has its own run on its own worker. A fragment without `parallel=True` counts toward the thread that runs it.
+- **Parallel fragments.** `recording_run()` reads the worker's clock when the fragment starts and when it ends, and stores the difference in the fragment's `ParallelFragmentRunStats`. `parallel_fragment_cpu_time` is summed from those entries when the profile is built, so no separate total is kept. The time is stored before the coordinator counts the worker as finished, so it's complete once `join()` or `drain()` returns. A parallel fragment nested in another has its own run on its own worker. A fragment without `parallel=True` counts toward the thread that runs it.
 - **Fragment reruns** run on the script thread, so their CPU time is in `script_cpu_time` and `parallel_fragment_cpu_time` is 0.
 - **Attached threads** are only in `process_cpu_time`, including their listed commands. Process CPU time also includes library thread pools, such as NumPy, Polars and DuckDB, the server itself and, on a shared server, other sessions.
 
