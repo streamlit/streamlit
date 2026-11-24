@@ -49,8 +49,7 @@ error.
 A query that overlaps other recorded times is counted, with its time, in
 ``queries_in_commands`` if it runs inside a listed command, or else in
 ``queries_in_cache`` if it runs on a thread while a recorded cached call is
-open there. Its query ID goes to ``query_ids_in_cache`` in the second case.
-Threads a cached function attaches with ``add_script_run_ctx`` record their
+open there. Threads a cached function attaches with ``add_script_run_ctx`` record their
 queries as their own, like their cached calls and commands. A parallel
 fragment's queries on its worker thread also count toward the fragment's own
 run in the page profile.
@@ -80,7 +79,6 @@ if TYPE_CHECKING:
     from snowflake.snowpark.session import Session  # type: ignore[import]
 
     from streamlit.runtime.scriptrunner_utils.query_run_stats import (
-        QueryIds,
         QuerySource,
         QueryTotals,
     )
@@ -107,18 +105,16 @@ class QueryTimer:
     query ends.
     """
 
-    __slots__ = ("_in_cache", "_in_command", "_query_ids", "_start", "_totals")
+    __slots__ = ("_in_cache", "_in_command", "_start", "_totals")
 
     def __init__(
         self,
         totals: QueryTotals,
-        query_ids: QueryIds,
         *,
         in_command: bool,
         in_cache: bool,
     ) -> None:
         self._totals = totals
-        self._query_ids = query_ids
         self._in_command = in_command
         self._in_cache = in_cache
         self._start = time.perf_counter()
@@ -129,7 +125,6 @@ class QueryTimer:
         failed: bool = False,
         is_async: bool = False,
         is_describe: bool = False,
-        query_id: str | None = None,
     ) -> None:
         elapsed = time.perf_counter() - self._start
         totals = self._totals
@@ -140,26 +135,22 @@ class QueryTimer:
             totals.time_in_cache += elapsed
         _count_query(
             totals,
-            self._query_ids,
             failed=failed,
             is_async=is_async,
             is_describe=is_describe,
             in_command=self._in_command,
             in_cache=self._in_cache,
-            query_id=query_id,
         )
 
 
 def _count_query(
     totals: QueryTotals,
-    query_ids: QueryIds,
     *,
     failed: bool,
     is_async: bool,
     is_describe: bool,
     in_command: bool,
     in_cache: bool,
-    query_id: str | None,
 ) -> None:
     totals.queries += 1
     if failed:
@@ -172,8 +163,6 @@ def _count_query(
         totals.queries_in_commands += 1
     elif in_cache:
         totals.queries_in_cache += 1
-    if query_id:
-        query_ids.add(query_id, in_cache=in_cache)
 
 
 def _overlapping_times(thread_stats: ThreadRunStats) -> tuple[bool, bool]:
@@ -213,13 +202,10 @@ def start_query(source: QuerySource) -> QueryTimer | None:
     ctx = _recording_run_ctx()
     if ctx is None:
         return None
-    shared = ctx.shared
-    thread_stats = shared.stats.current_thread_stats()
+    thread_stats = ctx.shared.stats.current_thread_stats()
     in_command, in_cache = _overlapping_times(thread_stats)
     totals = thread_stats.query.totals_for(source)
-    return QueryTimer(
-        totals, shared.query_ids, in_command=in_command, in_cache=in_cache
-    )
+    return QueryTimer(totals, in_command=in_command, in_cache=in_cache)
 
 
 def record_untimed_query(
@@ -227,7 +213,6 @@ def record_untimed_query(
     *,
     failed: bool = False,
     is_describe: bool = False,
-    query_id: str | None = None,
 ) -> None:
     """Count a finished query whose time isn't known, if the page profile
     records it.
@@ -235,18 +220,15 @@ def record_untimed_query(
     ctx = _recording_run_ctx()
     if ctx is None:
         return
-    shared = ctx.shared
-    thread_stats = shared.stats.current_thread_stats()
+    thread_stats = ctx.shared.stats.current_thread_stats()
     in_command, in_cache = _overlapping_times(thread_stats)
     _count_query(
         thread_stats.query.totals_for(source),
-        shared.query_ids,
         failed=failed,
         is_async=False,
         is_describe=is_describe,
         in_command=in_command,
         in_cache=in_cache,
-        query_id=query_id,
     )
 
 
@@ -264,15 +246,9 @@ def _finish_safely(
     failed: bool = False,
     is_async: bool = False,
     is_describe: bool = False,
-    query_id: Any = None,
 ) -> None:
     try:
-        timer.finish(
-            failed=failed,
-            is_async=is_async,
-            is_describe=is_describe,
-            query_id=query_id if isinstance(query_id, str) else None,
-        )
+        timer.finish(failed=failed, is_async=is_async, is_describe=is_describe)
     except Exception as ex:
         _LOGGER.debug("Failed to record query telemetry", exc_info=ex)
 
@@ -304,23 +280,14 @@ def _recording_cursor_class() -> type[SnowflakeCursor]:
             self._streamlit_in_execute = True
             try:
                 result = super().execute(*args, **kwargs)
-            except Exception as ex:
+            except Exception:
                 _finish_safely(
-                    timer,
-                    failed=True,
-                    is_async=is_async,
-                    is_describe=is_describe,
-                    query_id=getattr(ex, "sfqid", None),
+                    timer, failed=True, is_async=is_async, is_describe=is_describe
                 )
                 raise
             finally:
                 self._streamlit_in_execute = False
-            _finish_safely(
-                timer,
-                is_async=is_async,
-                is_describe=is_describe,
-                query_id=self.sfqid,
-            )
+            _finish_safely(timer, is_async=is_async, is_describe=is_describe)
             return result
 
     return StreamlitSnowflakeCursor
@@ -376,7 +343,7 @@ def _before_cursor_execute(
 
 def _after_cursor_execute(
     conn: Any,  # noqa: ARG001
-    cursor: Any,
+    cursor: Any,  # noqa: ARG001
     statement: Any,  # noqa: ARG001
     parameters: Any,  # noqa: ARG001
     context: Any,
@@ -385,9 +352,7 @@ def _after_cursor_execute(
     try:
         timer = _pop_sqlalchemy_timer(context)
         if timer is not None:
-            # Snowflake's SQLAlchemy dialect runs queries on Snowflake connector
-            # cursors, which have a query ID.
-            _finish_safely(timer, query_id=getattr(cursor, "sfqid", None))
+            _finish_safely(timer)
     except Exception as ex:
         _LOGGER.debug("Failed to record query telemetry", exc_info=ex)
 
@@ -396,11 +361,7 @@ def _handle_sqlalchemy_error(exception_context: Any) -> None:
     try:
         timer = _pop_sqlalchemy_timer(exception_context.execution_context)
         if timer is not None:
-            _finish_safely(
-                timer,
-                failed=True,
-                query_id=getattr(exception_context.original_exception, "sfqid", None),
-            )
+            _finish_safely(timer, failed=True)
     except Exception as ex:
         _LOGGER.debug("Failed to record query telemetry", exc_info=ex)
 
@@ -431,13 +392,11 @@ def install_sqlalchemy_hooks() -> None:
 
 def _record_snowpark_query(query_record: Any, **kwargs: Any) -> None:
     try:
-        query_id = query_record.query_id
         record_untimed_query(
             "snowpark",
             # Snowpark passes the exception only for some failures.
             failed="exception" in kwargs,
             is_describe=bool(query_record.is_describe),
-            query_id=query_id if isinstance(query_id, str) else None,
         )
     except Exception as ex:
         _LOGGER.debug("Failed to record query telemetry", exc_info=ex)

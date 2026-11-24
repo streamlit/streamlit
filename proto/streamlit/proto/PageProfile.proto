@@ -91,16 +91,6 @@ message QueryUsage {
   // counted in queries_in_cache and queries_in_commands.
   // Unset when no such query was recorded.
   QuerySourceUsage snowpark = 3;
-  // Snowflake query IDs of the recorded queries from all sources that aren't
-  // counted in queries_in_cache, in the order they finished. A query ID
-  // contains no SQL, and only someone with access to the Snowflake account can
-  // look it up, for example to get compile, queue and execution time from the
-  // account's query history.
-  repeated string query_ids = 4;
-  // Snowflake query IDs of the recorded queries counted in queries_in_cache,
-  // in the order they finished. query_ids and query_ids_in_cache together hold
-  // at most the first 50 IDs per run.
-  repeated string query_ids_in_cache = 5;
 }
 
 // Recorded queries from one source, with times in microseconds. A query that

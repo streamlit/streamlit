@@ -1495,7 +1495,7 @@ def test_create_page_profile_message_reports_cache_usage() -> None:
 
 def test_create_page_profile_message_reports_query_usage() -> None:
     """``query_usage`` carries the run's totals per query source, in
-    microseconds, and the run's query IDs.
+    microseconds.
     """
     ctx = create_mock_script_run_ctx()
     query_stats = ctx.shared.stats.current_thread_stats().query
@@ -1511,10 +1511,6 @@ def test_create_page_profile_message_reports_query_usage() -> None:
     totals.time_in_commands = 0.5
     query_stats.snowpark.queries = 2
     query_stats.snowpark.queries_in_cache = 1
-    query_ids = ctx.shared.query_ids
-    query_ids.add("01b2-a", in_cache=False)
-    query_ids.add("01b2-cached", in_cache=True)
-    query_ids.add("01b2-b", in_cache=False)
 
     with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
         msg = metrics_util.create_page_profile_message([], 0, 0)
@@ -1534,8 +1530,6 @@ def test_create_page_profile_message_reports_query_usage() -> None:
     assert usage.snowpark.queries == 2
     assert usage.snowpark.queries_in_cache == 1
     assert usage.snowpark.time == 0
-    assert list(usage.query_ids) == ["01b2-a", "01b2-b"]
-    assert list(usage.query_ids_in_cache) == ["01b2-cached"]
 
 
 def test_create_page_profile_message_leaves_query_usage_unset() -> None:

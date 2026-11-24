@@ -491,11 +491,6 @@ describe("metrics helpers", () => {
               time: 3000,
               timeInCache: 2500,
             },
-            queryIds: ["01b2c3d4-0000-0001-0000-000000000001"],
-            queryIdsInCache: [
-              "01b2c3d4-0000-0001-0000-000000000002",
-              "01b2c3d4-0000-0001-0000-000000000003",
-            ],
           },
         })
       )
@@ -513,11 +508,6 @@ describe("metrics helpers", () => {
         time: "3000",
         timeInCache: "2500",
       },
-      queryIds: ["01b2c3d4-0000-0001-0000-000000000001"],
-      queryIdsInCache: [
-        "01b2c3d4-0000-0001-0000-000000000002",
-        "01b2c3d4-0000-0001-0000-000000000003",
-      ],
     })
     expect(withoutUsage).not.toHaveProperty("queryUsage")
   })

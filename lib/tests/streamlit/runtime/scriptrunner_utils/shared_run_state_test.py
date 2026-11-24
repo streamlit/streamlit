@@ -39,17 +39,11 @@ def test_reset_clears_all_fields() -> None:
     parallel_fragments = shared.parallel_fragments
     with parallel_fragments.recording_run():
         pass
-    query_ids = shared.query_ids
-    query_ids.add("01b2-query", in_cache=False)
-    query_ids.add("01b2-cached", in_cache=True)
 
     shared.reset()
 
     assert shared.stats is not run_stats
     assert shared.stats.all_thread_stats() == ()
-    assert shared.query_ids is not query_ids
-    assert shared.query_ids.query_ids() == []
-    assert shared.query_ids.query_ids_in_cache() == []
     assert shared.parallel_fragments is not parallel_fragments
     assert shared.parallel_fragments.runs == ()
     # The new fragment stats record into the new run's stats.

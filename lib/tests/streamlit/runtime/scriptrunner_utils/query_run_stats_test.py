@@ -17,8 +17,6 @@ from __future__ import annotations
 import threading
 
 from streamlit.runtime.scriptrunner_utils.query_run_stats import (
-    MAX_QUERY_IDS,
-    QueryIds,
     QueryTotals,
     ThreadQueryStats,
 )
@@ -48,33 +46,6 @@ def test_combine_adds_every_threads_totals_per_source() -> None:
     assert totals.sqlalchemy == QueryTotals(queries=5, failed=1, time=0.75)
     assert totals.snowpark == QueryTotals(queries=1)
     assert totals.snowflake_connector == QueryTotals()
-
-
-def test_query_ids_keep_the_first_ones_up_to_the_cap() -> None:
-    run_query_ids = QueryIds()
-
-    for i in range(MAX_QUERY_IDS + 5):
-        run_query_ids.add(f"id-{i}", in_cache=False)
-
-    query_ids = run_query_ids.query_ids()
-    assert len(query_ids) == MAX_QUERY_IDS
-    assert query_ids[0] == "id-0"
-    assert query_ids[-1] == f"id-{MAX_QUERY_IDS - 1}"
-    assert run_query_ids.query_ids_in_cache() == []
-
-
-def test_both_query_id_lists_share_the_cap() -> None:
-    run_query_ids = QueryIds()
-
-    for i in range(MAX_QUERY_IDS + 5):
-        run_query_ids.add(f"id-{i}", in_cache=i % 2 == 1)
-
-    query_ids = run_query_ids.query_ids()
-    query_ids_in_cache = run_query_ids.query_ids_in_cache()
-    assert len(query_ids) + len(query_ids_in_cache) == MAX_QUERY_IDS
-    assert query_ids[:2] == ["id-0", "id-2"]
-    assert query_ids_in_cache[:2] == ["id-1", "id-3"]
-    assert f"id-{MAX_QUERY_IDS}" not in query_ids
 
 
 def test_combined_adds_every_source() -> None:

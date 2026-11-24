@@ -18,23 +18,18 @@ Each thread records its queries in the ``ThreadQueryStats`` of its own
 ``ThreadRunStats`` (see ``run_stats.py``), written only by that thread, so
 concurrent queries (for example from parallel fragments) never contend on a
 lock for their counts. The totals are combined when the run's page profile is
-built. The run's first Snowflake query IDs are kept in ``QueryIds``.
+built.
 """
 
 from __future__ import annotations
 
-import threading
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final, Literal
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
 QuerySource = Literal["snowflake_connector", "sqlalchemy", "snowpark"]
-
-# Keeps the page profile small for apps that run many queries per run. The
-# query counts still include the queries past the cap.
-MAX_QUERY_IDS: Final = 50
 
 
 @dataclass(slots=True)
@@ -101,36 +96,3 @@ class ThreadQueryStats:
         for stats in threads:
             totals.add(stats)
         return totals
-
-
-class QueryIds:
-    """The first ``MAX_QUERY_IDS`` Snowflake query IDs of one script run."""
-
-    def __init__(self) -> None:
-        # Guards both lists, which any thread of the run can append to.
-        self._lock = threading.Lock()
-        self._query_ids: list[str] = []
-        self._query_ids_in_cache: list[str] = []
-
-    def add(self, query_id: str, *, in_cache: bool) -> None:
-        """Keep ``query_id`` if the run has fewer than ``MAX_QUERY_IDS``, in the
-        list for queries inside recorded cached calls if ``in_cache``.
-        """
-        with self._lock:
-            if len(self._query_ids) + len(self._query_ids_in_cache) < MAX_QUERY_IDS:
-                if in_cache:
-                    self._query_ids_in_cache.append(query_id)
-                else:
-                    self._query_ids.append(query_id)
-
-    def query_ids(self) -> list[str]:
-        """Return the kept IDs of queries that weren't inside recorded cached
-        calls.
-        """
-        with self._lock:
-            return list(self._query_ids)
-
-    def query_ids_in_cache(self) -> list[str]:
-        """Return the kept IDs of queries inside recorded cached calls."""
-        with self._lock:
-            return list(self._query_ids_in_cache)

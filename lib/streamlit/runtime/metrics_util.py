@@ -850,10 +850,9 @@ def _fill_cache_usage(
 
 
 def _fill_query_usage(page_profile: PageProfile, ctx: ScriptRunContext) -> None:
-    """Copy the run's query totals and query IDs onto the profile."""
-    shared = ctx.shared
+    """Copy the run's query totals onto the profile."""
     query_stats = ThreadQueryStats.combine(
-        stats.query for stats in shared.stats.all_thread_stats()
+        stats.query for stats in ctx.shared.stats.all_thread_stats()
     )
     query_usage = page_profile.query_usage
     for totals, usage in (
@@ -872,12 +871,6 @@ def _fill_query_usage(page_profile: PageProfile, ctx: ScriptRunContext) -> None:
         usage.time = to_microseconds(totals.time)
         usage.time_in_cache = to_microseconds(totals.time_in_cache)
         usage.time_in_commands = to_microseconds(totals.time_in_commands)
-    query_ids = shared.query_ids.query_ids()
-    if query_ids:
-        query_usage.query_ids.extend(query_ids)
-    query_ids_in_cache = shared.query_ids.query_ids_in_cache()
-    if query_ids_in_cache:
-        query_usage.query_ids_in_cache.extend(query_ids_in_cache)
 
 
 def _set_parallel_fragment_run_times(

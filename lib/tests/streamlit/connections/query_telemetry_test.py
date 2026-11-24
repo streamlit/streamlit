@@ -41,7 +41,6 @@ from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.cache_run_stats import RunCacheTotals
 from streamlit.runtime.scriptrunner_utils.query_run_stats import (
-    MAX_QUERY_IDS,
     QueryTotals,
     ThreadQueryStats,
 )
@@ -282,10 +281,10 @@ def _overlap_counts(totals: QueryTotals) -> tuple[int, int]:
 # Snowflake connector cursors
 
 
-def test_cursor_records_query_time_and_id(
+def test_cursor_records_query_time(
     ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
 ) -> None:
-    """A query on a recording cursor adds its count, time and query ID."""
+    """A query on a recording cursor adds its count and time."""
     cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
 
     assert isinstance(cursor, FakeSnowflakeCursor)
@@ -296,15 +295,12 @@ def test_cursor_records_query_time_and_id(
     assert _counts(totals) == (1, 0, 0, 0)
     assert totals.time == pytest.approx(0.5)
     assert totals.time_in_cache == totals.time_in_commands == 0
-    assert ctx.shared.query_ids.query_ids() == ["01b2-query-1"]
 
 
 def test_cursor_records_failed_query_and_reraises(
     ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
 ) -> None:
-    """A failed query counts as failed, keeps its query ID, and raises the
-    original error.
-    """
+    """A failed query counts as failed and raises the original error."""
     error = FakeSnowflakeError("01b2-failed")
     snowflake_connection.error = error
     cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
@@ -316,7 +312,6 @@ def test_cursor_records_failed_query_and_reraises(
     totals = _totals(ctx, "snowflake_connector")
     assert _counts(totals) == (1, 1, 0, 0)
     assert totals.time == pytest.approx(0.5)
-    assert ctx.shared.query_ids.query_ids() == ["01b2-failed"]
 
 
 def test_cursor_records_async_describe_and_executemany(
@@ -332,7 +327,6 @@ def test_cursor_records_async_describe_and_executemany(
     cursor.executemany("INSERT INTO t VALUES (?)", [[1], [2]])
 
     assert _counts(_totals(ctx, "snowflake_connector")) == (4, 0, 1, 1)
-    assert len(ctx.shared.query_ids.query_ids()) == 4
 
 
 def test_cursor_counts_a_nested_execute_once(
@@ -426,8 +420,6 @@ def test_connection_query_and_cursor_record_queries(
     assert _overlap_counts(totals) == (1, 0)
     assert totals.time == pytest.approx(1.0)
     assert totals.time_in_cache == pytest.approx(0.5)
-    assert ctx.shared.query_ids.query_ids_in_cache() == ["01b2-query-1"]
-    assert ctx.shared.query_ids.query_ids() == ["01b2-query-2"]
     cache_data = RunCacheTotals.combine(
         (stats.cache for stats in ctx.shared.stats.all_thread_stats()),
         time.perf_counter(),
@@ -460,8 +452,6 @@ def test_query_in_cached_function_counts_in_time_in_cache(
     assert _overlap_counts(totals) == (1, 0)
     assert totals.time_in_cache == totals.time == pytest.approx(0.5)
     assert totals.time_in_commands == 0
-    assert ctx.shared.query_ids.query_ids_in_cache() == ["01b2-query-1"]
-    assert ctx.shared.query_ids.query_ids() == []
 
 
 def test_query_in_hash_funcs_counts_in_time_in_cache(
@@ -490,7 +480,6 @@ def test_query_in_hash_funcs_counts_in_time_in_cache(
     assert totals.queries == 2
     assert _overlap_counts(totals) == (2, 0)
     assert totals.time_in_cache == totals.time == pytest.approx(1.0)
-    assert ctx.shared.query_ids.query_ids() == []
 
 
 def test_other_tasks_query_while_an_async_cached_call_awaits_counts_in_cache(
@@ -525,8 +514,6 @@ def test_other_tasks_query_while_an_async_cached_call_awaits_counts_in_cache(
     assert totals.queries == 2
     assert _overlap_counts(totals) == (1, 0)
     assert totals.time_in_cache == pytest.approx(0.5)
-    assert ctx.shared.query_ids.query_ids_in_cache() == ["01b2-query-1"]
-    assert ctx.shared.query_ids.query_ids() == ["01b2-query-2"]
 
 
 def test_queries_on_a_thread_a_cached_function_attaches_are_its_own(
@@ -552,8 +539,6 @@ def test_queries_on_a_thread_a_cached_function_attaches_are_its_own(
     assert totals.queries == 1
     assert _overlap_counts(totals) == (0, 0)
     assert totals.time_in_cache == 0
-    assert ctx.shared.query_ids.query_ids() == ["01b2-query-1"]
-    assert ctx.shared.query_ids.query_ids_in_cache() == []
 
 
 def test_query_in_listed_command_counts_in_time_in_commands(
@@ -581,8 +566,6 @@ def test_query_in_listed_command_counts_in_time_in_commands(
     assert _overlap_counts(totals) == (0, 1)
     assert totals.time_in_commands == totals.time == pytest.approx(0.5)
     assert totals.time_in_cache == 0
-    assert ctx.shared.query_ids.query_ids() == ["01b2-query-1"]
-    assert ctx.shared.query_ids.query_ids_in_cache() == []
 
 
 def test_parallel_fragment_queries_go_to_the_fragment_run(
@@ -632,7 +615,6 @@ def test_parallel_worker_queries_are_added_to_the_run(
 
     assert _totals(ctx, "snowflake_connector").queries == 9
     assert len(ctx.shared.stats.all_thread_stats()) == 5
-    assert len(ctx.shared.query_ids.query_ids()) == 9
 
 
 def test_queries_without_a_script_run_are_not_recorded(
@@ -685,41 +667,23 @@ def test_nothing_is_recorded_without_usage_stats(
     ctx.gather_usage_stats = False
 
     cursor.execute("SELECT 1")
-    query_telemetry.record_untimed_query("snowpark", query_id="01b2-x")
+    query_telemetry.record_untimed_query("snowpark")
 
     assert _all_queries(ctx) == QueryTotals()
-    assert ctx.shared.query_ids.query_ids() == []
-
-
-def test_query_ids_are_capped_per_run(
-    ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
-) -> None:
-    """Only the first MAX_QUERY_IDS query IDs are kept, but every query counts."""
-    cursor = query_telemetry.create_snowflake_cursor(snowflake_connection)
-
-    for _ in range(MAX_QUERY_IDS + 10):
-        cursor.execute("SELECT 1")
-
-    assert _totals(ctx, "snowflake_connector").queries == MAX_QUERY_IDS + 10
-    query_ids = ctx.shared.query_ids.query_ids()
-    assert len(query_ids) == MAX_QUERY_IDS
-    assert query_ids[0] == "01b2-query-1"
 
 
 def test_query_running_across_a_reset_finishes_into_the_previous_run(
     ctx: ScriptRunContext, snowflake_connection: FakeSnowflakeConnection
 ) -> None:
     """A query that started before a new run began counts toward its own run."""
-    previous_stats, previous_ids = ctx.shared.stats, ctx.shared.query_ids
+    previous_stats = ctx.shared.stats
     timer = query_telemetry.start_query("snowflake_connector")
     assert timer is not None
 
     ctx.shared.reset()
-    timer.finish(query_id="01b2-late")
+    timer.finish()
 
     assert _run_totals(previous_stats, "snowflake_connector").queries == 1
-    assert previous_ids.query_ids() == ["01b2-late"]
-    assert ctx.shared.query_ids.query_ids() == []
     assert _totals(ctx, "snowflake_connector").queries == 0
 
 
@@ -739,9 +703,9 @@ def test_previous_and_new_run_record_queries_into_their_own_totals_at_the_same_t
         assert timer is not None
         started.set()
         release.wait(5)
-        timer.finish(query_id="01b2-late")
+        timer.finish()
 
-    previous_stats, previous_ids = ctx.shared.stats, ctx.shared.query_ids
+    previous_stats = ctx.shared.stats
     thread = add_script_run_ctx(threading.Thread(target=query_in_previous_run), ctx)
     thread.start()
     assert started.wait(5)
@@ -755,11 +719,9 @@ def test_previous_and_new_run_record_queries_into_their_own_totals_at_the_same_t
     previous = _run_totals(previous_stats, "snowflake_connector")
     assert previous.queries == 1
     assert previous.time == pytest.approx(1.5)
-    assert previous_ids.query_ids() == ["01b2-late"]
     new = _totals(ctx, "snowflake_connector")
     assert new.queries == 1
     assert new.time == pytest.approx(0.5)
-    assert ctx.shared.query_ids.query_ids() == ["01b2-query-1"]
 
 
 # SQLAlchemy
@@ -789,24 +751,12 @@ def _sqlalchemy_execute(
 def test_sqlalchemy_events_record_query_time(
     ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
-    """A SQLAlchemy cursor execute adds its count and time, with no query ID for
-    databases other than Snowflake.
-    """
+    """A SQLAlchemy cursor execute adds its count and time."""
     _sqlalchemy_execute(clock)
 
     totals = _totals(ctx, "sqlalchemy")
     assert _counts(totals) == (1, 0, 0, 0)
     assert totals.time == pytest.approx(0.25)
-    assert ctx.shared.query_ids.query_ids() == []
-
-
-def test_sqlalchemy_snowflake_dialect_records_query_id(
-    ctx: ScriptRunContext, clock: FakeClock
-) -> None:
-    """Snowflake's dialect runs queries on connector cursors, which have IDs."""
-    _sqlalchemy_execute(clock, cursor=types.SimpleNamespace(sfqid="01b2-sa"))
-
-    assert ctx.shared.query_ids.query_ids() == ["01b2-sa"]
 
 
 def test_sqlalchemy_error_records_failed_query(
@@ -819,7 +769,6 @@ def test_sqlalchemy_error_records_failed_query(
 
     totals = _totals(ctx, "sqlalchemy")
     assert _counts(totals) == (1, 1, 0, 0)
-    assert ctx.shared.query_ids.query_ids() == ["01b2-sa-failed"]
 
 
 def test_sqlalchemy_events_without_context_record_nothing(
@@ -890,7 +839,7 @@ def test_sqlalchemy_hook_install_failure_is_swallowed(
 def test_snowpark_session_queries_are_counted_without_time(
     ctx: ScriptRunContext, snowpark: types.ModuleType
 ) -> None:
-    """A watched session's queries add counts and query IDs, but no time."""
+    """A watched session's queries add counts, but no time."""
     session = FakeSnowparkSession()
     query_telemetry.watch_snowpark_session(session)  # type: ignore[arg-type]
     query_telemetry.watch_snowpark_session(session)  # type: ignore[arg-type]
@@ -903,19 +852,12 @@ def test_snowpark_session_queries_are_counted_without_time(
     totals = _totals(ctx, "snowpark")
     assert _counts(totals) == (3, 1, 0, 1)
     assert totals.time == 0
-    assert ctx.shared.query_ids.query_ids() == [
-        "01b2-sp-1",
-        "01b2-sp-2",
-        "01b2-sp-3",
-    ]
 
 
 def test_snowpark_queries_in_cached_functions_and_commands_are_counted_there(
     ctx: ScriptRunContext, snowpark: types.ModuleType
 ) -> None:
-    """Snowpark queries are attributed like timed ones, without times, and a
-    cached function's query IDs go to the cache list.
-    """
+    """Snowpark queries are attributed like timed ones, without times."""
     session = FakeSnowparkSession()
     query_telemetry.watch_snowpark_session(session)  # type: ignore[arg-type]
 
@@ -936,8 +878,6 @@ def test_snowpark_queries_in_cached_functions_and_commands_are_counted_there(
     assert totals.queries == 3
     assert _overlap_counts(totals) == (1, 1)
     assert totals.time == totals.time_in_cache == totals.time_in_commands == 0
-    assert ctx.shared.query_ids.query_ids_in_cache() == ["01b2-sp-cached"]
-    assert ctx.shared.query_ids.query_ids() == ["01b2-sp-command", "01b2-sp-plain"]
 
 
 def test_snowpark_listener_errors_never_reach_snowpark(
@@ -1053,11 +993,6 @@ def test_real_snowflake_cursor_records_execute_async_and_describe(
     totals = _totals(ctx, "snowflake_connector")
     assert _counts(totals) == (3, 0, 1, 1)
     assert totals.time == pytest.approx(0.3)
-    assert ctx.shared.query_ids.query_ids() == [
-        "01b2-real-1",
-        "01b2-real-2",
-        "01b2-real-3",
-    ]
     query_telemetry._recording_cursor_class.cache_clear()
 
 
@@ -1095,7 +1030,6 @@ def test_real_snowpark_notifies_the_listener(
         server_connection.execute_and_notify_query_listener("SELECT x")
 
     assert _counts(_totals(ctx, "snowpark")) == (2, 1, 0, 0)
-    assert ctx.shared.query_ids.query_ids() == ["01b2-sp-ok", "01b2-sp-failed"]
     query_telemetry._snowpark_query_listener.cache_clear()
 
 
@@ -1138,7 +1072,6 @@ def test_real_sqlalchemy_engine_records_queries(ctx: ScriptRunContext) -> None:
     assert totals.queries >= 2
     assert totals.failed == 1
     assert totals.time > 0
-    assert ctx.shared.query_ids.query_ids() == []
 
 
 @pytest.mark.require_integration
