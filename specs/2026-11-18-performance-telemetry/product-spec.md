@@ -104,15 +104,15 @@ Fully loaded happens after the `PageProfile` message arrives, so render timing i
 
 ### Query time
 
-Query time is reported per client library, because each one is hooked differently and covers different paths:
+Query time is reported per client library, because each one is hooked differently and covers different paths. Recording never changes the cursors, engines or sessions an app gets, and uses only hooks each library provides, so some queries aren't recorded (see the known gaps below):
 
 | Source | Recorded |
 |---|---|
-| Snowflake connector | Cursors from `SnowflakeConnection.query()` and `SnowflakeConnection.cursor()`, including `executemany`, `execute_async` and `describe` |
-| SQLAlchemy | Every engine, including the one behind `SQLConnection` |
+| Snowflake connector | The query `SnowflakeConnection.query()` runs |
+| SQLAlchemy | The engine behind `SQLConnection`, including its `session` |
 | Snowpark | Sessions from `SnowflakeConnection.session()`, and the active session, on Snowpark 1.26 and later |
 
-For each source, the run counts its queries, including how many failed, how many were submitted without waiting for them (async) and how many only looked up a result's shape (describe). It also reports how long the driver's execute call blocked. The time stops when the execute call returns, so fetching the results isn't included, and an async query's time covers only submitting it. A query that a cache hit makes unnecessary never runs, so it isn't recorded.
+For each source, the run counts its queries, including how many failed and how many only looked up a result's shape (describe, which only Snowpark reports). It also reports how long the driver's execute call blocked. The time stops when the execute call returns, so fetching the results isn't included. A query that a cache hit makes unnecessary never runs, so it isn't recorded.
 
 Query time can overlap time that's already reported, so each source also reports the count and time of queries in two places:
 
@@ -123,12 +123,14 @@ The rest, `time − time_in_cache − time_in_commands`, is query time that's ot
 
 Only counts and times are sent. No SQL text, parameters, object names, rows or connection details are sent.
 
-Instrumentation is installed only when usage stats are on, and never changes a query's result or error. Recording adds about 1 µs per query for the Snowflake connector and about 5 µs for SQLAlchemy, mostly SQLAlchemy's own event dispatch. Working out whether a query is inside a cached call or a command adds well under 0.1 µs. A Snowflake query takes tens of milliseconds or more.
+Instrumentation is installed only when usage stats are on, and never changes a query's result or error. Recording adds about 1.5 µs per query for the Snowflake connector and about 5 µs for SQLAlchemy, mostly SQLAlchemy's own event dispatch. Working out whether a query is inside a cached call or a command adds well under 0.1 µs. A Snowflake query takes tens of milliseconds or more.
 
 Known gaps:
 
 - **Snowpark query times.** Snowpark tells query listeners about a query only after it finishes, without its duration, so Snowpark queries are counted but not timed. Timing them needs Snowpark's listeners to report each query's duration. Snowpark also doesn't report some failures, such as failed async jobs.
-- **Paths that aren't recorded.** Cursors from `raw_connection`, `write_pandas`, `execute_string` and `execute_stream`; Snowflake connector connections the app opens itself; Snowpark sessions it creates, other than the active session; plain DB-API drivers; and custom `BaseConnection` classes.
+- **Snowflake connector queries outside `query()`.** The connector has no hook for when a query starts and finishes, so recording them would mean replacing or wrapping the cursor the app gets. That risks breaking queries on connector versions or platforms Streamlit isn't tested on, such as the connector inside Streamlit in Snowflake warehouse runtimes, so these aren't recorded: queries on a cursor from `SnowflakeConnection.cursor()` or `raw_connection`, `write_pandas`, `execute_string`, `execute_stream`, and connections the app opens itself. Recording them needs a query start and finish hook in the connector.
+- **SQLAlchemy engines the app creates.** Events are installed only on the `SQLConnection` engine, so engines the app creates with `create_engine` aren't recorded.
+- **Other paths that aren't recorded.** Snowpark sessions the app creates, other than the active session; plain DB-API drivers; and custom `BaseConnection` classes.
 
 ### Rerun reason
 
@@ -169,13 +171,13 @@ Rows, the largest payload and message counts aren't reported, because none of th
 | Rerun reason | Why the run started, such as a first load, a page change, a widget interaction or a fragment timer, and for a widget interaction, the type of widget, such as a slider or chart selection (see [Rerun reason](#rerun-reason)) | Server |
 | Render timing | When the user's screen reached each loading milestone, what it waited on after the script finished, the number of visible elements, a viewport size bucket, and flags for hidden, superseded and timed-out runs. No per-element render or paint times | Browser |
 | Data size | Bytes the browser received, the count and bytes of messages served from its message cache, and Arrow bytes for dataframes, tables and charts (see [Data size](#data-size)) | Server and browser |
-| Query time | Per client library: query, failure, async and describe counts, and execute time, with the count and time inside cached calls and commands | Server |
+| Query time | Per client library: query, failure and describe counts, and execute time, with the count and time inside cached calls and commands | Server |
 
 Each addition describes its fields in `PageProfile.proto` (or `MetricsEvent.proto` for browser-only values), and documents its attribution rules in the telemetry reference when it lands.
 
 ### Open questions
 
-1. **Unrecorded query paths.** Which of the [paths that aren't recorded](#query-time) are common enough in real apps to instrument, and whether fetching results should be timed.
+1. **Unrecorded query paths.** Which of the [paths that aren't recorded](#query-time) are common enough in real apps to instrument, and whether fetching results should be timed. The safest way to close the largest gaps is in the Snowflake libraries: a query start and finish hook in the connector, and query durations in Snowpark's query listeners. A Streamlit API for queries that `query()` doesn't fit, such as statements without results or uncached reads, would also record more of them.
 2. **Per-function payload.** The cap on per-function cache entries trades payload size against coverage of apps with many cached functions.
 3. **Bytes on the wire.** WebSocket compression makes transferred bytes smaller than message sizes. Data size will report message sizes unless the compressed size is available without extra work.
 
@@ -190,7 +192,7 @@ Each addition describes its fields in `PageProfile.proto` (or `MetricsEvent.prot
 
 | Item                         | ✅ or comment          |
 |------------------------------|------------------------|
-| Works on SiS, Cloud, etc?    | ✅ Collected in the library and the browser on every platform. Snowpark query times wait on Snowpark's query listeners reporting durations. |
+| Works on SiS, Cloud, etc?    | ✅ Collected in the library and the browser on every platform. Query recording uses only hooks the libraries provide and never changes the objects an app gets, so it can't break queries on platforms with their own connector builds. Snowpark query times wait on Snowpark's query listeners reporting durations. |
 | No breaking API changes      | ✅ No public API changes; only new proto fields. |
 | No new dependencies          | ✅ Query timing instruments database clients only when they're installed and in use. |
 | Metrics collected            | ✅ This spec is about metrics. Everything is gated by `browser.gatherUsageStats`. |

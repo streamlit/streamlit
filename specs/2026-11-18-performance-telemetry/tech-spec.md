@@ -243,7 +243,7 @@ Following `$44 Contain Failures`, each hook that runs inside or around user code
 | `_record_command_time` | After a command returns or raises `RerunException` | The command's time is missing from some destinations. |
 | `recording_run()` in `_run_parallel_fragment` | Around each parallel fragment | The fragment runs without an entry. |
 | `_recording_parallel_fragment_wait` | In a `finally` around `join()` and `drain()`, possibly while the script's error propagates | `wait_time` misses that wait. |
-| Query hooks | Around each driver execute call, and in each Snowpark notification | The query is missing from the totals. Its result or error is unchanged. |
+| Query hooks | Around `SnowflakeConnection.query()`'s execute call, in each SQLAlchemy execute event and in each Snowpark notification | The query is missing from the totals. Its result or error is unchanged. |
 | CPU clock reads | At the start and end of the run, around listed commands and around each parallel fragment | The CPU fields are left unset. |
 
 Unit tests inject a failure into each hook and check that the caller sees the same result or error as without telemetry.
@@ -307,15 +307,15 @@ Calls that don't overlap add nothing. Calls on different threads are never compa
 
 #### Where queries are caught
 
-Each client library is hooked where Streamlit already creates or manages its objects. Nothing is imported unless the app already uses the library, and no hook is installed while usage stats are off.
+Each client library is hooked where Streamlit already creates or manages its objects. Recording never changes the cursors, engines or sessions an app gets, and uses only hooks the library provides. Nothing is imported unless the app already uses the library, and no hook is installed while usage stats are off.
 
 | Source | Hook | Installed |
 |---|---|---|
-| Snowflake connector | Cursors from `SnowflakeConnection.query()` and `.cursor()` are created as a `SnowflakeCursor` subclass that times `execute`, which also covers `executemany`, `execute_async` and `describe`. | When the connection creates the cursor |
-| SQLAlchemy | Cursor execute events on the `Engine` class, so every engine is covered, including the one behind `SQLConnection`. | When a `SQLConnection` connects, or when a run starts after the app has imported SQLAlchemy |
+| Snowflake connector | `SnowflakeConnection.query()` times its own `cursor.execute` call. The cursor it creates, and the one `.cursor()` returns, is the connector's own. | Around each `query()` execute |
+| SQLAlchemy | Cursor execute events on the engine behind `SQLConnection`, which also cover its `session` and its `execution_options()` copies. Other engines aren't affected. | When a `SQLConnection` connects |
 | Snowpark | A `QueryListener` on sessions from `SnowflakeConnection.session()` and on the active session. Snowpark notifies it on the thread that ran the query, after the query finishes and without its duration, so Snowpark queries are counted but not timed. Needs Snowpark 1.26 or later. | When a connection connects or a run starts |
 
-The SQLAlchemy and Snowpark hooks are process-wide, so each recorded query finds its run through the calling thread's `ScriptRunContext`. A query on a thread without a run that gathers usage stats isn't recorded. A timed query's time covers only the driver's execute call, so fetching the results isn't included, and an async query's time covers only submitting it.
+A `SQLConnection` engine and a Snowpark session are shared across sessions and runs, so each recorded query finds its run through the calling thread's `ScriptRunContext`. A query on a thread without a run that gathers usage stats isn't recorded. A timed query's time covers only the driver's execute call, so fetching the results isn't included.
 
 #### Recording and attribution
 
@@ -336,7 +336,7 @@ So `time − time_in_cache − time_in_commands` is query time that's otherwise 
 
 #### Failures and cost
 
-A hook that fails logs at debug level and never changes a query's result or error. Recording adds about 1 µs per timed query and about 0.7 µs per Snowpark query. A SQLAlchemy query adds about 5 µs, about half of it SQLAlchemy's own event dispatch, which any listener pays. A Snowflake query takes tens of milliseconds or more.
+A hook that fails logs at debug level and never changes a query's result or error. Recording adds about 1.5 µs per timed query and about 0.5 µs per Snowpark query. A SQLAlchemy query adds about 5 µs, about half of it SQLAlchemy's own event dispatch, which any listener pays. A Snowflake query takes tens of milliseconds or more.
 
 ### CPU time
 
@@ -500,6 +500,10 @@ Each addition could keep its own registry, with its own `threading.local`, `_thr
 ### Count only queries during a computation as inside a cached call
 
 Queries could count as inside a cached call only during the cached function's computation, using `in_cached_function`. That leaves out queries the cache's times still include: queries from a `hash_funcs` function, which are in overhead time, and other async tasks' queries while a call awaits, which are in its wall-clock time. Subtracting both `time_in_cache` and the cache time would then count those queries twice. Using the same test as command time removes the gap.
+
+### Record every Snowflake connector cursor and SQLAlchemy engine
+
+`SnowflakeConnection` could create its cursors as a `SnowflakeCursor` subclass that times `execute`, and SQLAlchemy events could be installed on the `Engine` class, so queries on `conn.cursor()` and on engines the app creates would be recorded too. Both reach into objects the app uses. The cursor subclass depends on the connector's internals, which differ between major versions: connector 5 no longer routes `execute_async` and `describe` through `execute`. It's also untested against the connector builds on platforms such as Streamlit in Snowflake warehouse runtimes, where a failure would break every query. Wrapping the cursor `.cursor()` returns in a proxy avoids the subclass, but still hands the app an object that isn't the connector's own, which breaks `isinstance` checks and code that relies on the cursor's type. Class-wide SQLAlchemy events run inside every engine in the process, including ones Streamlit never created. Missing those queries is the safer failure, so only Streamlit's own calls are timed until the libraries provide hooks (see the product spec's open questions).
 
 ### Report parallel fragment CPU time only in aggregate
 
