@@ -173,6 +173,9 @@ def test_closed_group_keeps_its_own_span() -> None:
 
 
 def test_group_whose_commands_fill_its_span_counts_all_its_time_as_overlap() -> None:
+    """When listed commands fill a group's span, all of its calls' time counts
+    as overlap.
+    """
     stats = ThreadCacheStats()
     stats.open_call(0.0)
     stats.open_call(0.0)
@@ -200,6 +203,7 @@ def test_is_in_cache_code_is_false_while_waiting_or_computing() -> None:
 
 
 def test_totals_add_every_count_and_time() -> None:
+    """Adding run totals sums every count and time, and the overlap."""
     totals = RunCacheTotals()
     other = RunCacheTotals(
         cache_data=CacheTotals(calls=4, hits=3, misses=1, stale_hits=1, waits=2),

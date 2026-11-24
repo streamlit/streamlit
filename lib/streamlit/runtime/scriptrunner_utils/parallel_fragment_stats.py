@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner_utils.run_stats import RunStats
 
 
-class ParallelFragmentRun:
+class ParallelFragmentRunStats:
     """One parallel fragment's run, recorded on its worker thread.
 
     Only the worker thread counts toward the run. Threads the fragment attaches
@@ -61,20 +61,22 @@ class RunParallelFragmentStats:
         self._stats = stats
         # Guards the list of runs, which workers append to as they start.
         self._lock = threading.Lock()
-        self._runs: list[ParallelFragmentRun] = []
+        self._runs: list[ParallelFragmentRunStats] = []
         # Time the script thread waited for the workers, written only by the
         # script thread.
         self.wait_time = 0.0
 
     @contextlib.contextmanager
-    def recording_run(self) -> Generator[ParallelFragmentRun, None, None]:
+    def recording_run(self) -> Generator[ParallelFragmentRunStats, None, None]:
         """Record a parallel fragment's run on the calling worker thread.
 
-        Everything the worker records while the fragment runs goes to the run's
-        own stats, which still count toward the run's totals.
+        While the fragment runs, the worker records into the fragment run's own
+        stats. Those stats still count toward the script run's top-level totals.
         """
-        run = ParallelFragmentRun(time.perf_counter())
         with self._lock:
+            # Read the start time under the lock, so runs are listed in start
+            # order.
+            run = ParallelFragmentRunStats(time.perf_counter())
             self._runs.append(run)
         try:
             with self._stats.recording_into(run.stats):
@@ -87,7 +89,7 @@ class RunParallelFragmentStats:
         self.wait_time += seconds
 
     @property
-    def runs(self) -> tuple[ParallelFragmentRun, ...]:
+    def runs(self) -> tuple[ParallelFragmentRunStats, ...]:
         """The runs so far, in the order they started."""
         with self._lock:
             return tuple(self._runs)

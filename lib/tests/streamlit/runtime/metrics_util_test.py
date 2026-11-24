@@ -77,7 +77,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from streamlit.runtime.scriptrunner_utils.parallel_fragment_stats import (
-        ParallelFragmentRun,
+        ParallelFragmentRunStats,
     )
 
 MAC = "mac"
@@ -1513,7 +1513,7 @@ def _record_parallel_fragment_run(
     compute_time: float = 0.0,
     wait_time: float = 0.0,
     async_overlap_time: float = 0.0,
-) -> ParallelFragmentRun:
+) -> ParallelFragmentRunStats:
     """Record a finished parallel fragment run with one cached call of each type."""
     with ctx.shared.parallel_fragments.recording_run() as run:
         thread_stats = ctx.shared.stats.current_thread_stats()

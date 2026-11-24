@@ -54,6 +54,7 @@ def test_recording_into_swaps_the_threads_stats_and_lists_them() -> None:
 
 
 def test_recording_into_restores_the_stats_when_the_block_raises() -> None:
+    """The thread's own stats come back even when the block raises."""
     run_stats = RunStats()
     own = run_stats.current_thread_stats()
 
@@ -64,6 +65,9 @@ def test_recording_into_restores_the_stats_when_the_block_raises() -> None:
 
 
 def test_recording_into_affects_only_the_calling_thread() -> None:
+    """Other threads keep their own stats while one thread records into a
+    swapped record.
+    """
     run_stats = RunStats()
     swapped = ThreadRunStats()
     other: list[ThreadRunStats] = []

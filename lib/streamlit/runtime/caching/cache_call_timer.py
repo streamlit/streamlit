@@ -123,7 +123,13 @@ class CacheCallTimer:
             return
         self._start = time.perf_counter()
         self._command_time_at_start = thread_stats.tracked_command_time
-        thread_stats.open_call(self._start)
+        try:
+            thread_stats.open_call(self._start)
+        except Exception as ex:
+            # Telemetry must never reach the cached function's caller. The call
+            # then goes only to the server metrics.
+            _LOGGER.debug("Failed to record a cached call", exc_info=ex)
+            self._thread_stats = self._totals = None
 
     def record_hit(self, *, is_stale: bool = False) -> None:
         self._metrics.record_hit()
@@ -135,16 +141,14 @@ class CacheCallTimer:
     def begin_wait(self) -> None:
         self._waited = True
         self._wait_start = time.perf_counter()
-        if self._thread_stats is not None:
-            self._thread_stats.leave_cache_code()
+        self._leave_cache_code()
 
     def end_wait(self) -> None:
         if self._wait_start is None:
             return
         self._wait_time += time.perf_counter() - self._wait_start
         self._wait_start = None
-        if self._thread_stats is not None:
-            self._thread_stats.enter_cache_code()
+        self._enter_cache_code()
 
     def begin_compute(self) -> None:
         """Start timing the cached function, and count the call as a miss."""
@@ -154,7 +158,7 @@ class CacheCallTimer:
             return
         self._is_miss = True
         self._command_time_at_compute_start = self._thread_stats.tracked_command_time
-        self._thread_stats.leave_cache_code()
+        self._leave_cache_code()
 
     def end_compute(self) -> None:
         if self._compute_start is None:
@@ -171,7 +175,25 @@ class CacheCallTimer:
             self._thread_stats.tracked_command_time
             - self._command_time_at_compute_start
         )
-        self._thread_stats.enter_cache_code()
+        self._enter_cache_code()
+
+    def _leave_cache_code(self) -> None:
+        if self._thread_stats is None:
+            return
+        try:
+            self._thread_stats.leave_cache_code()
+        except Exception as ex:
+            # Telemetry must never reach the cached function's caller.
+            _LOGGER.debug("Failed to record a cached call", exc_info=ex)
+
+    def _enter_cache_code(self) -> None:
+        if self._thread_stats is None:
+            return
+        try:
+            self._thread_stats.enter_cache_code()
+        except Exception as ex:
+            # Telemetry must never reach the cached function's caller.
+            _LOGGER.debug("Failed to record a cached call", exc_info=ex)
 
     def exclude_attached_command_time(self, seconds: float) -> None:
         """Remember ``seconds`` of listed commands that attached threads ran
@@ -197,16 +219,27 @@ class CacheCallTimer:
         thread_stats, totals = self._thread_stats, self._totals
         if thread_stats is None or totals is None:
             return
+        # finish() runs in a finally block around every recorded call, so
+        # telemetry must never raise into it.
+        now = time.perf_counter()
+        call_time = 0.0
         try:
-            self._add_to_run_totals(thread_stats, totals)
+            call_time = self._add_to_run_totals(thread_stats, totals, now)
         except Exception as ex:
-            # finish() runs in a finally block around every recorded call, so
-            # telemetry must never raise into it.
+            _LOGGER.debug("Failed to record a cached call", exc_info=ex)
+        try:
+            # Close the call even if adding it failed. Otherwise the thread
+            # would stay in cache code and skip its later cached calls.
+            thread_stats.close_call(now, call_time)
+        except Exception as ex:
             _LOGGER.debug("Failed to record a cached call", exc_info=ex)
 
     def _add_to_run_totals(
-        self, thread_stats: ThreadCacheStats, totals: CacheTotals
-    ) -> None:
+        self, thread_stats: ThreadCacheStats, totals: CacheTotals, now: float
+    ) -> float:
+        """Add the call to ``totals`` and return its compute, wait and overhead
+        time added together.
+        """
         totals.calls += 1
         if self._is_hit:
             totals.hits += 1
@@ -216,7 +249,6 @@ class CacheCallTimer:
             totals.misses += 1
         if self._waited:
             totals.waits += 1
-        now = time.perf_counter()
         command_time = thread_stats.tracked_command_time - self._command_time_at_start
         # Attached threads' commands ran during the computation, so only compute
         # time contains them. The overhead below never included them.
@@ -240,7 +272,7 @@ class CacheCallTimer:
         totals.compute_time += compute_time
         totals.wait_time += self._wait_time
         totals.overhead_time += overhead_time
-        thread_stats.close_call(now, compute_time + self._wait_time + overhead_time)
+        return compute_time + self._wait_time + overhead_time
 
 
 def start_call(cache_type: CacheType, metrics: FunctionCacheMetrics) -> CacheCallTimer:

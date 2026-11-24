@@ -129,9 +129,9 @@ message ParallelFragmentUsage {
   // One entry per run, in the order the runs started, for at most
   // _MAX_PARALLEL_FRAGMENT_RUNS (in metrics_util.py) runs.
   repeated ParallelFragmentRun runs = 1;
-  // Runs after the first _MAX_PARALLEL_FRAGMENT_RUNS, combined into one entry:
-  // each time is the sum across those runs, and start_time is unset. Unset
-  // when no run went past the limit.
+  // Runs after the first _MAX_PARALLEL_FRAGMENT_RUNS, combined into one entry.
+  // Each time is the sum across those runs. start_time stays 0 because the
+  // combined entry has no single start. Unset when no run went past the limit.
   ParallelFragmentRun overflow = 2;
   // Number of parallel fragment runs, including those combined into overflow.
   int64 run_count = 3;

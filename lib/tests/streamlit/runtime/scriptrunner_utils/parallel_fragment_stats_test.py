@@ -45,6 +45,7 @@ def test_recording_run_records_its_span_and_stats() -> None:
 
 
 def test_recording_run_ends_the_run_when_the_fragment_raises() -> None:
+    """A fragment run records its end time even when its body raises."""
     stats = RunParallelFragmentStats(RunStats())
 
     with pytest.raises(RuntimeError), stats.recording_run():
@@ -93,6 +94,7 @@ def test_threads_the_fragment_attaches_record_into_their_own_stats() -> None:
 
 
 def test_wait_time_accumulates_across_waits() -> None:
+    """Join and drain wait times add up within one run."""
     stats = RunParallelFragmentStats(RunStats())
     stats.add_wait_time(0.25)
     stats.add_wait_time(0.5)

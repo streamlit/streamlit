@@ -2008,7 +2008,7 @@ class ScriptRunnerTest(unittest.TestCase):
         assert len(join_calls) == 1
 
     @testutil.patch_config_options({"browser.gatherUsageStats": True})
-    def test_page_profile_reports_each_parallel_fragment(self):
+    def test_page_profile_reports_each_parallel_fragment(self) -> None:
         """Each parallel fragment run reports its own times, which are also in
         the run's commands and cache usage.
         """
@@ -2047,7 +2047,7 @@ class ScriptRunnerTest(unittest.TestCase):
         )
 
     @testutil.patch_config_options({"browser.gatherUsageStats": True})
-    def test_page_profile_wait_time_includes_drain_after_early_stop(self):
+    def test_page_profile_wait_time_includes_drain_after_early_stop(self) -> None:
         """When the script stops early, the time spent draining running
         parallel fragments counts as wait time.
         """

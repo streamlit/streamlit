@@ -30,7 +30,11 @@ import pytest
 import streamlit as st
 from streamlit.connections import BaseConnection
 from streamlit.runtime import Runtime, metrics_util
-from streamlit.runtime.caching import cache_background_refresh, cache_metrics
+from streamlit.runtime.caching import (
+    cache_background_refresh,
+    cache_call_timer,
+    cache_metrics,
+)
 from streamlit.runtime.caching.cache_metrics import (
     CACHE_COMPUTE_DURATION_FAMILY,
     CACHE_LOOKUPS_FAMILY,
@@ -892,11 +896,23 @@ def test_cached_calls_from_hash_funcs_are_not_recorded(
 @pytest.mark.parametrize(
     "failing_step",
     [
+        "streamlit.runtime.scriptrunner_utils.cache_run_stats.ThreadCacheStats.open_call",
+        "streamlit.runtime.scriptrunner_utils.cache_run_stats.ThreadCacheStats.leave_cache_code",
         "streamlit.runtime.caching.cache_call_timer._new_compute_scope",
         "streamlit.runtime.scriptrunner_utils.script_run_context.CacheComputeScope.end",
+        "streamlit.runtime.scriptrunner_utils.cache_run_stats.ThreadCacheStats.enter_cache_code",
+        "streamlit.runtime.caching.cache_call_timer.CacheCallTimer._add_to_run_totals",
         "streamlit.runtime.scriptrunner_utils.cache_run_stats.ThreadCacheStats.close_call",
     ],
-    ids=["marking the computation", "ending the computation", "adding to totals"],
+    ids=[
+        "opening the call",
+        "leaving cache code",
+        "marking the computation",
+        "ending the computation",
+        "entering cache code",
+        "adding to totals",
+        "closing the call",
+    ],
 )
 @pytest.mark.parametrize("raises", [False, True], ids=["returns", "raises"])
 def test_telemetry_errors_dont_reach_the_cached_function_caller(
@@ -920,6 +936,30 @@ def test_telemetry_errors_dont_reach_the_cached_function_caller(
             assert load() == 1
 
     step.assert_called_once()
+
+
+def test_failure_adding_a_call_still_records_later_calls(
+    ctx: ScriptRunContext,
+) -> None:
+    """A call that fails to add to the totals is still closed, so the thread
+    doesn't stay in cache code and skip its later calls.
+    """
+
+    @st.cache_data(show_spinner=False)
+    def load(x: int) -> int:
+        return x
+
+    with patch.object(
+        cache_call_timer.CacheCallTimer,
+        "_add_to_run_totals",
+        side_effect=RuntimeError("bug"),
+    ):
+        assert load(1) == 1
+
+    stats = ctx.shared.stats.current_thread_stats().cache
+    assert (stats.is_in_call, stats.is_in_cache_code) == (False, False)
+    assert load(2) == 2
+    assert _cache_totals_for(ctx, "cache_data").calls == 1
 
 
 def test_parallel_worker_calls_are_added_to_the_run(ctx: ScriptRunContext) -> None:

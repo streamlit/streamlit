@@ -35,9 +35,7 @@ from streamlit.proto.PageProfile_pb2 import (
     CacheUsage,
     Command,
     PageProfile,
-)
-from streamlit.proto.PageProfile_pb2 import (
-    ParallelFragmentRun as ParallelFragmentRunProto,
+    ParallelFragmentRun,
 )
 from streamlit.runtime.agent import usage as agent_usage
 from streamlit.runtime.scriptrunner_utils.cache_run_stats import RunCacheTotals
@@ -861,7 +859,7 @@ def _fill_cache_usage(
 
 
 def _set_parallel_fragment_run_times(
-    entry: ParallelFragmentRunProto,
+    entry: ParallelFragmentRun,
     exec_time: float,
     command_time: float,
     cache: RunCacheTotals,
@@ -887,13 +885,13 @@ def _fill_parallel_fragment_usage(
     ``run_start`` and ``now`` are ``time.perf_counter()`` values: when the script
     run started, and when the profile is built.
     """
-    stats = ctx.shared.parallel_fragments
-    runs = stats.runs
+    fragment_stats = ctx.shared.parallel_fragments
+    runs = fragment_stats.runs
     if not runs:
         return
     usage = page_profile.parallel_fragment_usage
     usage.run_count = len(runs)
-    usage.wait_time = to_microseconds(stats.wait_time)
+    usage.wait_time = to_microseconds(fragment_stats.wait_time)
 
     all_runs_cache = RunCacheTotals()
     overflow_exec_time = 0.0
