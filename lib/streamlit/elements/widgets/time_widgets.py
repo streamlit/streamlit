@@ -601,12 +601,15 @@ def _step_calendar_date(value: date, days: int) -> date | None:
         return None
 
 
-def _raise_unavailable_value_error(value: date) -> NoReturn:
+def _raise_unavailable_value_error(
+    value: date,
+    param_name: Literal["enabled_dates", "disabled_dates"],
+) -> NoReturn:
     """Raise when an explicit ``value`` is blocked by availability."""
     raise StreamlitAPIException(
-        f"The `value` {value} is not selectable with the current "
-        "`enabled_dates` / `disabled_dates` configuration. "
-        'Pass `value="today"` to snap to a selectable date instead of raising.',
+        f"The `value` {value} is not selectable because of `{param_name}`. "
+        'Pass a selectable date, or pass `value="today"` to snap to a '
+        "selectable date instead of raising.",
         error_id="date-input-value-unavailable",
     )
 
@@ -640,7 +643,7 @@ def _apply_availability_to_parsed_values(
         if not _is_date_selectable(
             entry, parsed_values.min, parsed_values.max, availability
         ):
-            _raise_unavailable_value_error(entry)
+            _raise_unavailable_value_error(entry, availability.param_name)
 
     return parsed_values
 
@@ -2412,7 +2415,9 @@ class TimeWidgetsMixin:
             - ``"today"`` (default): The widget initializes with the current
               date. With ``enabled_dates`` or ``disabled_dates``, if today is
               unavailable the widget snaps to the next selectable date, then
-              the previous one, or becomes empty if none exist.
+              the previous one, or becomes empty if none exist. The return
+              type is still ``date``; pass ``value=None`` when that empty
+              result should be typed as ``date | None``.
             - A ``datetime.date`` or ``datetime.datetime`` object: The widget
               initializes with the given date, ignoring any time if included.
               An unavailable explicit date raises; pass ``"today"`` to snap
@@ -2448,30 +2453,6 @@ class TimeWidgetsMixin:
             the maximum selectable date is ten years after the end date of the
             interval. If no initial value is set, the maximum selectable date
             is ten years after today.
-
-        enabled_dates : date, datetime, str, list-like of these, or None
-            Dates and weekdays that are selectable between ``min_value`` and
-            ``max_value``. If this is ``None`` (default), every date in that
-            window is selectable. Accepts exact dates (``date``, ``datetime``,
-            ISO strings, or ``"today"``), English weekday names
-            (``"monday"`` through ``"sunday"``), or a list-like of these (list, tuple,
-            set, Series, Index, NumPy array). Cannot be set together with
-            ``disabled_dates``. When this is set, every other date is
-            unavailable. An empty collection makes every date unavailable;
-            pass ``value=None`` in that case.
-
-            Not supported with a range ``value``. A weekday name always means
-            the same day of the week, whatever the user's locale or first day
-            of the week. If a keyed widget's current value becomes
-            unavailable, Streamlit resets it to the widget's default.
-
-        disabled_dates : date, datetime, str, list-like of these, or None
-            Dates and weekdays that are not selectable between ``min_value``
-            and ``max_value``. If this is ``None`` (default), no dates are
-            blocked by availability. Accepts the same forms as
-            ``enabled_dates``. Cannot be set together with ``enabled_dates``.
-            An empty collection disables nothing. Follows the same rules as
-            ``enabled_dates``.
 
         key : str, int, or None
             An optional string or integer to use as the unique key for
@@ -2536,6 +2517,30 @@ class TimeWidgetsMixin:
             A format string controlling how the interface should display dates.
             Supports ``"YYYY/MM/DD"`` (default), ``"DD/MM/YYYY"``, or ``"MM/DD/YYYY"``.
             You may also use a period (.) or hyphen (-) as separators.
+
+        enabled_dates : date, datetime, str, list-like of these, or None
+            Dates and weekdays that are selectable between ``min_value`` and
+            ``max_value``. If this is ``None`` (default), every date in that
+            window is selectable. Accepts exact dates (``date``, ``datetime``,
+            ISO strings, or ``"today"``), English weekday names
+            (``"monday"`` through ``"sunday"``), or a list-like of these (list,
+            tuple, set, Series, Index, NumPy array). Cannot be set together
+            with ``disabled_dates``. When this is set, every other date is
+            unavailable. An empty collection makes every date unavailable;
+            pass ``value=None`` in that case.
+
+            Not supported with a range ``value``. A weekday name always means
+            the same day of the week, whatever the user's locale or first day
+            of the week. If a keyed widget's current value becomes
+            unavailable, Streamlit resets it to the widget's default.
+
+        disabled_dates : date, datetime, str, list-like of these, or None
+            Dates and weekdays that are not selectable between ``min_value``
+            and ``max_value``. If this is ``None`` (default), no dates are
+            disabled. Accepts the same forms as ``enabled_dates``. Cannot be
+            set together with ``enabled_dates``. An empty collection disables
+            nothing. Range values, weekday names, and keyed resets follow the
+            same rules as ``enabled_dates``.
 
         disabled : bool
             An optional boolean that disables the date input if set to
@@ -2864,9 +2869,10 @@ class TimeWidgetsMixin:
                 # default or catch that error.
                 _, stored_is_range = _parse_date_value(value=state_value)
                 if availability is not None:
-                    # Keep the snapped "today" default as the reset target when
-                    # the stored value is unavailable. Carry range mode from
-                    # session state so the range-unsupported guard still fires.
+                    # Keep the snapped today value as the reset target. A
+                    # stored date that is still selectable is returned from
+                    # widget state. Carry range mode so the range-unsupported
+                    # guard still runs.
                     if stored_is_range:
                         parsed_values = replace(parsed_values, is_range=True)
                 else:

@@ -889,7 +889,7 @@ function SingleDateInput({
                 Use arrow keys to navigate dates. Enter to select. Escape to
                 close.
                 {isDateUnavailable
-                  ? " Unavailable dates are marked disabled and cannot be selected."
+                  ? " Some dates are unavailable and cannot be selected."
                   : null}
               </StyledVisuallyHidden>
             )}
