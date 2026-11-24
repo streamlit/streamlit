@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import math
 from dataclasses import dataclass
 from decimal import Decimal
@@ -1447,10 +1448,14 @@ class DataEditorMixin:
         try:
             arrow_table = pa.Table.from_pandas(data_df)
         except arrow_conversion_errors as ex:
+            # This fallback is expected and can run on every rerun, so the
+            # traceback is only logged at debug level to avoid flooding the logs.
             _LOGGER.info(
-                "Serialization of dataframe to Arrow table was unsuccessful. "
-                "Converting the incompatible columns to strings and retrying.",
-                exc_info=ex,
+                "The dataframe is not Arrow-compatible, so Arrow-incompatible "
+                "columns are converted to read-only strings in the data editor. "
+                "Conversion error: %s",
+                ex,
+                exc_info=_LOGGER.isEnabledFor(logging.DEBUG),
             )
             _stringify_arrow_incompatible_columns(
                 data_df, column_config_mapping, trial_conversion=True

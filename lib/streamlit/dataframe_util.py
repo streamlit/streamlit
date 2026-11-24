@@ -19,6 +19,7 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import inspect
+import logging
 import re
 import warnings
 from collections import ChainMap, UserDict, UserList, deque
@@ -966,11 +967,13 @@ def convert_pandas_df_to_arrow_table(
     try:
         return pa.Table.from_pandas(df, preserve_index=preserve_index)
     except arrow_conversion_errors as ex:
+        # This fallback is expected and can run on every rerun, so the traceback
+        # is only logged at debug level to avoid flooding the logs.
         _LOGGER.info(
-            "Serialization of dataframe to Arrow table was unsuccessful. "
-            "Applying automatic fixes for column types to make the dataframe "
-            "Arrow-compatible.",
-            exc_info=ex,
+            "The dataframe is not Arrow-compatible, so Arrow-incompatible columns "
+            "are converted to strings or lists before display. Conversion error: %s",
+            ex,
+            exc_info=_LOGGER.isEnabledFor(logging.DEBUG),
         )
         fixed_df = fix_arrow_incompatible_column_types(df)
         try:
