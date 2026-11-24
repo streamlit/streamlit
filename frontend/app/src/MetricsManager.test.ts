@@ -459,6 +459,48 @@ describe("metrics helpers", () => {
     expect(withoutUsage).not.toHaveProperty("parallelFragmentUsage")
   })
 
+  it("buildEventProto forwards dataSize and receivedMessages through toJSON - pageProfile", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    const withData = mm
+      .buildEventProto("pageProfile", {
+        ...decodedPageProfile({
+          dataSize: {
+            arrowBytes: 5_000,
+            arrowRows: 120,
+            largestArrowBytes: 4_000,
+          },
+        }),
+        receivedMessages: {
+          bytes: 6_000,
+          messages: 8,
+          cachedMessages: 1,
+          cachedBytes: 3_000,
+        },
+      })
+      .toJSON()
+    // The server always sets dataSize, so a run without data sends an empty
+    // object, while a profile from an older server sends none.
+    const withoutData = mm
+      .buildEventProto("pageProfile", decodedPageProfile({ dataSize: {} }))
+      .toJSON()
+
+    expect(withData.dataSize).toStrictEqual({
+      arrowBytes: "5000",
+      arrowRows: "120",
+      largestArrowBytes: "4000",
+    })
+    expect(withData.receivedMessages).toStrictEqual({
+      bytes: "6000",
+      messages: "8",
+      cachedMessages: "1",
+      cachedBytes: "3000",
+    })
+    expect(withoutData.dataSize).toStrictEqual({})
+    expect(withoutData).not.toHaveProperty("receivedMessages")
+  })
+
   it("buildEventProto populates expected fields - menuClick", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })

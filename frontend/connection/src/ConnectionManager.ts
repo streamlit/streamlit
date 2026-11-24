@@ -16,7 +16,7 @@
 
 import { getLogger } from "loglevel"
 
-import type { BackMsg, ForwardMsg } from "@streamlit/protobuf"
+import type { BackMsg } from "@streamlit/protobuf"
 
 import { ConnectionState } from "./ConnectionState"
 import { MAX_RETRIES_BEFORE_CLIENT_ERROR } from "./constants"
@@ -24,6 +24,7 @@ import { establishStaticConnection } from "./StaticConnection"
 import type {
   ErrorDetails,
   IHostConfigProperties,
+  OnMessage,
   StreamlitEndpoints,
 } from "./types"
 import { getPossibleBaseUris, isHostConfigBypassEnabled } from "./utils"
@@ -41,7 +42,7 @@ interface Props {
   /**
    * Function to be called when we receive a message from the server.
    */
-  onMessage: (message: ForwardMsg) => void
+  onMessage: OnMessage
 
   /**
    * Function to be called when the connection errors out.

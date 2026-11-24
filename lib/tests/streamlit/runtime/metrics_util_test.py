@@ -1957,3 +1957,133 @@ def test_create_page_profile_message_sets_installed_agents(
     ):
         msg = metrics_util.create_page_profile_message([], 0, 0)
     assert list(msg.page_profile.installed_agents) == detected
+
+
+def _arrow_payloads(deltas: list[Any]) -> list[bytes]:
+    """Return the Arrow payloads of the dataframe, table and Vega-Lite chart
+    elements in ``deltas``, as sent to the browser.
+    """
+    payloads: list[bytes] = []
+    for delta in deltas:
+        element = delta.new_element
+        element_type = element.WhichOneof("type")
+        if element_type in {"dataframe", "table"}:
+            payloads.append(getattr(element, element_type).arrow_data.data)
+        elif element_type == "vega_lite_chart":
+            chart = element.vega_lite_chart
+            payloads.extend(dataset.data.data for dataset in chart.datasets)
+            if chart.data.data:
+                payloads.append(chart.data.data)
+    return payloads
+
+
+def _arrow_rows(payload: bytes) -> int:
+    import pyarrow as pa
+
+    return pa.ipc.open_stream(payload).read_all().num_rows
+
+
+class PageProfileDataSizeTest(DeltaGeneratorTestCase):
+    """``data_size`` reports the Arrow payloads that the run's elements sent."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        ctx.reset()
+        ctx.gather_usage_stats = True
+
+    def _data_size(self) -> Any:
+        return metrics_util.create_page_profile_message([], 0, 0).page_profile.data_size
+
+    def test_reports_a_dataframes_arrow_bytes_and_rows(self) -> None:
+        df = pd.DataFrame({"a": range(100), "b": ["x"] * 100})
+        st.dataframe(df)
+
+        (payload,) = _arrow_payloads(self.get_all_deltas_from_queue())
+        data_size = self._data_size()
+        assert data_size.arrow_bytes == len(payload) > 0
+        assert data_size.arrow_rows == 100
+        assert data_size.largest_arrow_bytes == len(payload)
+
+    def test_reports_totals_and_largest_payload_across_elements(self) -> None:
+        """Dataframes, data editors, tables and charts all count, each payload
+        once, and the largest payload is the largest single one.
+        """
+        st.dataframe(pd.DataFrame({"a": range(10)}))
+        st.data_editor(pd.DataFrame({"a": range(20), "b": range(20)}))
+        st.table(pd.DataFrame({"a": range(3)}))
+        st.line_chart(pd.DataFrame({"a": range(500), "b": range(500)}))
+
+        payloads = _arrow_payloads(self.get_all_deltas_from_queue())
+        assert len(payloads) == 4
+        data_size = self._data_size()
+        assert data_size.arrow_bytes == sum(len(payload) for payload in payloads)
+        # The line chart melts its two columns into 1,000 rows.
+        assert data_size.arrow_rows == sum(_arrow_rows(p) for p in payloads) == 1_033
+        assert data_size.largest_arrow_bytes == max(len(p) for p in payloads)
+        assert data_size.largest_arrow_bytes < data_size.arrow_bytes
+
+    def test_reports_zeros_for_a_run_without_data(self) -> None:
+        st.markdown("No data here")
+
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+
+        assert msg.page_profile.HasField("data_size")
+        assert msg.page_profile.data_size.arrow_bytes == 0
+        assert msg.page_profile.data_size.arrow_rows == 0
+        assert msg.page_profile.data_size.largest_arrow_bytes == 0
+
+    def test_counts_nothing_while_usage_stats_are_off(self) -> None:
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        ctx.gather_usage_stats = False
+
+        st.dataframe(pd.DataFrame({"a": range(10)}))
+
+        stats = ctx.shared.stats.all_thread_stats()
+        assert all(thread.data_size.arrow_bytes == 0 for thread in stats)
+
+    def test_counts_payloads_from_attached_threads_toward_the_run(self) -> None:
+        """A thread attached with ``add_script_run_ctx`` records into its own
+        stats, which count toward the run's totals.
+        """
+        df = pd.DataFrame({"a": range(50)})
+        thread = threading.Thread(target=lambda: st.dataframe(df))
+        add_script_run_ctx(thread)
+        thread.start()
+        thread.join()
+
+        (payload,) = _arrow_payloads(self.get_all_deltas_from_queue())
+        data_size = self._data_size()
+        assert data_size.arrow_bytes == len(payload)
+        assert data_size.arrow_rows == 50
+
+    def test_ignores_payloads_serialized_outside_a_script_run(self) -> None:
+        """Payloads serialized on a thread without a ``ScriptRunContext``, such
+        as lazily loaded dataframe chunks, don't count toward any run.
+        """
+        from streamlit import dataframe_util
+
+        df = pd.DataFrame({"a": range(10)})
+        thread = threading.Thread(
+            target=lambda: dataframe_util.convert_pandas_df_to_arrow_bytes(df)
+        )
+        thread.start()
+        thread.join()
+
+        assert self._data_size().arrow_bytes == 0
+
+    def test_recording_failures_dont_reach_the_element(self) -> None:
+        """If recording raises, the element is still sent with its data."""
+        df = pd.DataFrame({"a": range(10)})
+        with patch(
+            "streamlit.runtime.scriptrunner_utils.data_size_run_stats."
+            "ThreadDataSizeStats.record_arrow_payload",
+            side_effect=RuntimeError("boom"),
+        ):
+            st.dataframe(df)
+
+        (payload,) = _arrow_payloads(self.get_all_deltas_from_queue())
+        assert _arrow_rows(payload) == 10
+        assert self._data_size().arrow_bytes == 0

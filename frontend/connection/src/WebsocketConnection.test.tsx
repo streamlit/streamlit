@@ -2758,16 +2758,54 @@ describe("WebsocketConnection state machine", () => {
   it("forwards decoded frames from the socket to onMessage", async () => {
     const { ws, socket, args } = await createConnectedClient()
 
-    socket.dispatch("message", {
-      data: encodeForwardMsg(ForwardMsg.fromObject({ hash: "frame-hash" })),
-    })
+    const frame = encodeForwardMsg(
+      ForwardMsg.fromObject({ hash: "frame-hash" })
+    )
+    socket.dispatch("message", { data: frame })
     await vi.advanceTimersByTimeAsync(0)
 
     expect(args.onMessage).toHaveBeenCalledTimes(1)
     expect(args.onMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ hash: "frame-hash" })
+      expect.objectContaining({ hash: "frame-hash" }),
+      { byteLength: frame.byteLength }
     )
     expect(args.onConnectionStateChange).not.toHaveBeenCalled()
+
+    ws.disconnect()
+  })
+
+  it("passes the sizes of a reference and its cached message to onMessage", async () => {
+    const { ws, socket, args } = await createConnectedClient()
+
+    const cachedMsg = ForwardMsg.fromObject({
+      hash: "cached-hash",
+      delta: { newElement: { text: { body: "x".repeat(1_000) } } },
+      metadata: { cacheable: true },
+    })
+    const cachedFrame = encodeForwardMsg(cachedMsg)
+    const refFrame = encodeForwardMsg(
+      ForwardMsg.fromObject({
+        refHash: "cached-hash",
+        metadata: { cacheable: true },
+      })
+    )
+
+    socket.dispatch("message", { data: cachedFrame })
+    await vi.advanceTimersByTimeAsync(0)
+    socket.dispatch("message", { data: refFrame })
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(args.onMessage).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(args.onMessage).mock.calls[0][1]).toEqual({
+      byteLength: cachedFrame.byteLength,
+    })
+    const [resolvedMsg, refSize] = vi.mocked(args.onMessage).mock.calls[1]
+    expect(resolvedMsg.hash).toBe("cached-hash")
+    expect(refSize).toEqual({
+      byteLength: refFrame.byteLength,
+      cachedByteLength: cachedFrame.byteLength,
+    })
+    expect(refFrame.byteLength).toBeLessThan(cachedFrame.byteLength)
 
     ws.disconnect()
   })

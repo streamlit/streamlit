@@ -24,6 +24,7 @@ The proto field comments are the source of truth for each field's meaning. The f
 | Run type | `is_fragment_run` | Whether the run was fragment-only. |
 | Cache | `cache_usage` | For `st.cache_data` and `st.cache_resource` separately, the run's cached calls, hits, misses, stale hits and waits; the time spent computing on misses, waiting for another caller's computation and on other cache overhead; and how much concurrent async calls counted more than once. See [Cache totals](#cache-totals). |
 | Parallel fragments | `parallel_fragment_usage` | Each `parallel=True` fragment run's start, wall-clock, command and cache times, and how long the script thread waited for them. Unset when none ran. See [Parallel fragments](#parallel-fragments). |
+| Data size | `data_size` | Bytes, rows and the largest single payload of the Arrow data the run serialized for dataframes, data editors, tables, charts and custom components. Always set. See [Data size](#data-size). |
 | Server process | `server_uptime_seconds` | Seconds since the runtime started, read at the start of the run. `optional`, so 0 is still sent. |
 | | `agent_api_usage` | Agent API counts since the process started. Unset while every count is zero. |
 | Errors | `uncaught_exception` | The exception type name, with a suffix only from fixed categories (see `format_uncaught_exception`). |
@@ -33,7 +34,7 @@ The proto field comments are the source of truth for each field's meaning. The f
 
 ### The `pageProfile` event
 
-`handlePageProfileMsg` in `frontend/app/src/App.tsx` spreads `PageProfile.toObject()` into a `pageProfile` event and adds browser-side values: `numPages`, `pageScriptHash`, `activeTheme`, `browserInfo` and `totalLoadTime`. `totalLoadTime` is in microseconds, from handling the run's `NewSession` message to handling its `PageProfile` message.
+`handlePageProfileMsg` in `frontend/app/src/App.tsx` spreads `PageProfile.toObject()` into a `pageProfile` event and adds browser-side values: `numPages`, `pageScriptHash`, `activeTheme`, `browserInfo`, `totalLoadTime` and `receivedMessages`. `totalLoadTime` is in microseconds, from handling the run's `NewSession` message to handling its `PageProfile` message. `receivedMessages` covers the same messages (see [Data size](#data-size)).
 
 `MetricsManager.buildEventProto` (`frontend/app/src/MetricsManager.ts`) adds fields that every event carries, including:
 
@@ -54,7 +55,7 @@ Other usage events are `viewReport` (once per page load), `updateReport` (each `
 - **`"postMessage"`**: each event goes to the host window as a `METRICS_EVENT` message.
 - **An HTTPS URL**: that URL instead of the defaults. A non-HTTPS URL is rejected, which turns sending off.
 
-Dev builds of the frontend (`IS_DEV_ENV`) log events to the console instead of sending them. `make debug` passes `--browser.gatherUsageStats=false`, so it produces no page profiles. To check new fields end to end, run the app with `uv run streamlit run` and inspect the `page_profile` ForwardMsg or the event.
+Dev builds of the frontend (`IS_DEV_ENV`) log events to the console instead of sending them. `make debug` passes `--browser.gatherUsageStats=false`, so it produces no page profiles. To check new fields end to end, run the app with `uv run streamlit run` and inspect the `page_profile` ForwardMsg or the event. From a source checkout, also pass `--global.developmentMode=false` to choose a `--server.port`.
 
 ## Run timing
 
@@ -113,6 +114,15 @@ Fragments with `parallel=True` run on worker threads alongside the main script, 
 The first `_MAX_PARALLEL_FRAGMENT_RUNS` (25) runs to start are listed, and later ones are added together into `overflow`. `run_count` and the cache counts in `cache_usage` cover every run. `wait_time` is how long the script thread waited for the fragments after the script ended. Normally that's `ParallelFragmentCoordinator.join()`. When the script ends early, for example with `st.stop()`, a rerun or an uncaught exception, it's `drain()`. If `join()` itself raises, both count, because `drain()` runs after it.
 
 The fragments' commands and cached calls are also in the top-level `commands` and `cache_usage`. Here, cache time means compute, wait and overhead time minus the async overlap time. A fragment's user code time is its `exec_time` minus its command and cache times. The main script's is `exec_time - prep_time - wait_time`, minus the top-level command and cache times less the fragments'. Threads that a fragment attaches with `add_script_run_ctx` count toward the main script. Their time usually overlaps `wait_time`, while the script thread waits for the fragment, so subtracting both can make the main script's user code time negative. A nested parallel fragment is a run of its own, and its parent doesn't wait for it.
+
+## Data size
+
+Two values describe how much data a run sends, measured where each is already known:
+
+- **`data_size`, on the server**, is the Arrow data the run serialized. Every Arrow payload goes through `convert_arrow_table_to_arrow_bytes` (`lib/streamlit/dataframe_util.py`), which adds its size and row count to the calling thread's `ThreadRunStats` while the run gathers usage stats. Payloads are counted when serialized, even if the message is then sent as a reference to a copy the browser already has. Elements an `st.cache_data` hit replays aren't serialized again, so they aren't counted. Chunks of lazily loaded dataframes are serialized outside the run, without a `ScriptRunContext`, so they aren't counted either.
+- **`receivedMessages`, in the browser**, is the ForwardMsgs the browser received for the run, from its `NewSession` through its `PageProfile`. `WebsocketConnection` passes each message's encoded size to `onMessage`, and for a reference to a cached message, the cached copy's size too. `ReceivedMessagesTracker` (`frontend/app/src/util/ReceivedMessagesTracker.ts`) adds them up. Only the browser knows which references it resolved from its cache.
+
+Sizes are encoded sizes before WebSocket compression, so the bytes actually transferred can be fewer. Media files and lazy dataframe chunks are fetched over HTTP and aren't in either value.
 
 ## Server metrics
 
