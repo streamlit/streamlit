@@ -2928,7 +2928,11 @@ class TimeWidgetsMixin:
                         StreamlitValueAboveMaxError,
                     ):
                         # Changed bounds invalidated the stored date; keep the
-                        # "today" default as the reset target.
+                        # "today" default as the reset target, but preserve
+                        # range mode so the widget does not collapse to a
+                        # single-date control.
+                        if stored_is_range:
+                            parsed_values = replace(parsed_values, is_range=True)
                         value_was_today = False
                     else:
                         parsed_values = stored_values

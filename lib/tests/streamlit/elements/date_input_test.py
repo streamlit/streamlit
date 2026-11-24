@@ -1549,6 +1549,30 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         assert result == date(2024, 3, 15)
         assert st.session_state.day == date(2024, 3, 15)
 
+    def test_keyed_default_today_preserves_range_mode_when_bounds_change(
+        self,
+    ) -> None:
+        """OOB stored range with value='today' must not collapse to single-date."""
+
+        class FixedDateTime(datetime):
+            @classmethod
+            def now(cls, tz: Any = None) -> datetime:
+                return datetime(2024, 7, 15, 12, 0, 0)
+
+        st.session_state.day = (date(2024, 3, 1), date(2024, 3, 15))
+        with patch(
+            "streamlit.elements.widgets.time_widgets.datetime",
+            FixedDateTime,
+        ):
+            result = st.date_input(
+                "day",
+                key="day",
+                min_value=date(2024, 6, 1),
+                max_value=date(2024, 12, 31),
+            )
+        assert result == (date(2024, 7, 15),)
+        assert st.session_state.day == (date(2024, 7, 15),)
+
     def test_query_param_unavailable_value_is_cleared(self) -> None:
         """Unavailable URL-bound values reset and drop the query param."""
 
