@@ -213,16 +213,25 @@ if TYPE_CHECKING:
         date,
     )
 
-    # Availability parameters
+    # Availability parameters: filters can empty the default, so return date | None.
     assert_type(
         date_input("foo", date(2024, 1, 1), disabled_dates=["saturday", "sunday"]),
-        date,
+        date | None,
     )
     assert_type(
         date_input("foo", date(2024, 1, 1), enabled_dates=[date(2024, 1, 1)]),
-        date,
+        date | None,
+    )
+    empty_dates: list[date] = []
+    assert_type(
+        date_input("foo", value="today", enabled_dates=empty_dates),
+        date | None,
     )
     assert_type(
-        date_input("foo", value=None, enabled_dates=[]),
+        date_input("foo", enabled_dates=["monday", "tuesday", "wednesday"]),
+        date | None,
+    )
+    assert_type(
+        date_input("foo", value=None, enabled_dates=empty_dates),
         date | None,
     )

@@ -1505,6 +1505,50 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         assert result == date(2024, 3, 11)
         assert st.session_state.day == date(2024, 3, 11)
 
+    def test_keyed_default_today_resets_when_below_new_min(self) -> None:
+        """Keyed value='today' resets a stored date below a raised min_value."""
+
+        class FixedDateTime(datetime):
+            @classmethod
+            def now(cls, tz: Any = None) -> datetime:
+                return datetime(2024, 7, 15, 12, 0, 0)
+
+        st.session_state.day = date(2024, 3, 1)
+        with patch(
+            "streamlit.elements.widgets.time_widgets.datetime",
+            FixedDateTime,
+        ):
+            result = st.date_input(
+                "day",
+                key="day",
+                min_value=date(2024, 6, 1),
+                max_value=date(2024, 12, 31),
+            )
+        assert result == date(2024, 7, 15)
+        assert st.session_state.day == date(2024, 7, 15)
+
+    def test_keyed_default_today_resets_when_above_new_max(self) -> None:
+        """Keyed value='today' resets a stored date above a lowered max_value."""
+
+        class FixedDateTime(datetime):
+            @classmethod
+            def now(cls, tz: Any = None) -> datetime:
+                return datetime(2024, 3, 15, 12, 0, 0)
+
+        st.session_state.day = date(2024, 9, 1)
+        with patch(
+            "streamlit.elements.widgets.time_widgets.datetime",
+            FixedDateTime,
+        ):
+            result = st.date_input(
+                "day",
+                key="day",
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 6, 30),
+            )
+        assert result == date(2024, 3, 15)
+        assert st.session_state.day == date(2024, 3, 15)
+
     def test_query_param_unavailable_value_is_cleared(self) -> None:
         """Unavailable URL-bound values reset and drop the query param."""
 
@@ -1580,6 +1624,40 @@ def test_resolve_today_returns_none_when_empty_window() -> None:
             date(2024, 3, 9),
             date(2024, 3, 1),
             date(2024, 3, 31),
+            availability,
+        )
+        is None
+    )
+
+
+def test_resolve_today_returns_none_at_date_max_without_overflow() -> None:
+    """Searching past date.max must not raise OverflowError."""
+    availability = _parse_date_availability(
+        enabled_dates=None,
+        disabled_dates=[date.max],
+    )
+    assert (
+        _resolve_today_to_selectable(
+            date.max,
+            date.max,
+            date.max,
+            availability,
+        )
+        is None
+    )
+
+
+def test_resolve_today_returns_none_at_date_min_without_overflow() -> None:
+    """Searching before date.min must not raise OverflowError."""
+    availability = _parse_date_availability(
+        enabled_dates=None,
+        disabled_dates=[date.min],
+    )
+    assert (
+        _resolve_today_to_selectable(
+            date.min,
+            date.min,
+            date.min,
             availability,
         )
         is None

@@ -578,19 +578,27 @@ def _resolve_today_to_selectable(
             return max(earlier)
         return None
 
-    candidate = today + timedelta(days=1)
-    while candidate <= max_value:
+    candidate = _step_calendar_date(today, 1)
+    while candidate is not None and candidate <= max_value:
         if _is_date_selectable(candidate, min_value, max_value, availability):
             return candidate
-        candidate += timedelta(days=1)
+        candidate = _step_calendar_date(candidate, 1)
 
-    candidate = today - timedelta(days=1)
-    while candidate >= min_value:
+    candidate = _step_calendar_date(today, -1)
+    while candidate is not None and candidate >= min_value:
         if _is_date_selectable(candidate, min_value, max_value, availability):
             return candidate
-        candidate -= timedelta(days=1)
+        candidate = _step_calendar_date(candidate, -1)
 
     return None
+
+
+def _step_calendar_date(value: date, days: int) -> date | None:
+    """Add ``days`` to ``value``, or ``None`` if that overflows ``date`` limits."""
+    try:
+        return value + timedelta(days=days)
+    except OverflowError:
+        return None
 
 
 def _raise_unavailable_value_error(value: date) -> NoReturn:
@@ -2274,30 +2282,6 @@ class TimeWidgetsMixin:
     def date_input(
         self,
         label: str,
-        value: date | datetime | str | Literal["today"] = "today",
-        min_value: NullableScalarDateValue = None,
-        max_value: NullableScalarDateValue = None,
-        key: Key | None = None,
-        help: str | None = None,
-        on_change: WidgetCallback | OnChangeMode | None = "rerun",
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
-        format: str = "YYYY/MM/DD",
-        enabled_dates: DateFilter | None = None,
-        disabled_dates: DateFilter | None = None,
-        disabled: bool = False,
-        required: bool = False,
-        label_visibility: LabelVisibility = "visible",
-        width: WidthWithoutContent = "stretch",
-        bind: BindOption = None,
-        persist_state: PersistStateOption = None,
-    ) -> date: ...
-
-    @overload
-    def date_input(
-        self,
-        label: str,
         value: None,
         min_value: NullableScalarDateValue = None,
         max_value: NullableScalarDateValue = None,
@@ -2317,6 +2301,78 @@ class TimeWidgetsMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> date | None: ...
+
+    @overload
+    def date_input(
+        self,
+        label: str,
+        value: date | datetime | str | Literal["today"] = "today",
+        min_value: NullableScalarDateValue = None,
+        max_value: NullableScalarDateValue = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        format: str = "YYYY/MM/DD",
+        enabled_dates: DateFilter,
+        disabled_dates: DateFilter | None = None,
+        disabled: bool = False,
+        required: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> date | None: ...
+
+    @overload
+    def date_input(
+        self,
+        label: str,
+        value: date | datetime | str | Literal["today"] = "today",
+        min_value: NullableScalarDateValue = None,
+        max_value: NullableScalarDateValue = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        format: str = "YYYY/MM/DD",
+        enabled_dates: DateFilter | None = None,
+        disabled_dates: DateFilter,
+        disabled: bool = False,
+        required: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> date | None: ...
+
+    @overload
+    def date_input(
+        self,
+        label: str,
+        value: date | datetime | str | Literal["today"] = "today",
+        min_value: NullableScalarDateValue = None,
+        max_value: NullableScalarDateValue = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        format: str = "YYYY/MM/DD",
+        enabled_dates: None = None,
+        disabled_dates: None = None,
+        disabled: bool = False,
+        required: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> date: ...
 
     @overload
     def date_input(
@@ -2850,22 +2906,35 @@ class TimeWidgetsMixin:
 
             if key is not None and key in session_state:
                 state_value = session_state[key]
-                stored_values = _DateInputValues.from_raw_values(
-                    value=state_value,
-                    min_value=min_value,
-                    max_value=max_value,
-                )
+                # Read single/range shape only. Do not validate the stored date
+                # as a default against the (possibly newly changed) bounds —
+                # that would raise before _validate_date_value can reset it.
+                _, stored_is_range = _parse_date_value(value=state_value)
                 if availability is not None:
                     # Keep the snapped "today" default as the reset target when
                     # the stored value is unavailable. Carry range mode from
                     # session state so the range-unsupported guard still fires.
-                    if stored_values.is_range:
+                    if stored_is_range:
                         parsed_values = replace(parsed_values, is_range=True)
                 else:
-                    parsed_values = stored_values
-                    # The stored value replaces the "today" default, so it must
-                    # not snap.
-                    value_was_today = False
+                    try:
+                        stored_values = _DateInputValues.from_raw_values(
+                            value=state_value,
+                            min_value=min_value,
+                            max_value=max_value,
+                        )
+                    except (
+                        StreamlitValueBelowMinError,
+                        StreamlitValueAboveMaxError,
+                    ):
+                        # Changed bounds invalidated the stored date; keep the
+                        # "today" default as the reset target.
+                        value_was_today = False
+                    else:
+                        parsed_values = stored_values
+                        # The stored value replaces the "today" default, so it
+                        # must not snap.
+                        value_was_today = False
 
         if availability is not None and parsed_values.is_range:
             raise StreamlitAPIException(
