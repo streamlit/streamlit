@@ -53,7 +53,7 @@ message DateInput {
     BLOCK = 2;
   }
   AvailabilityMode availability_mode = 17;
-  // Exact dates in ISO YYYY-MM-DD. Out-of-window dates are omitted.
+  // Exact dates in ISO YYYY-MM-DD. The backend omits exact dates outside min/max.
   repeated string available_dates = 18;
   // ISO-8601 weekday numbers (Monday=1 … Sunday=7).
   repeated int32 available_weekdays = 19;

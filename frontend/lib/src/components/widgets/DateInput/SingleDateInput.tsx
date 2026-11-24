@@ -887,8 +887,10 @@ function SingleDateInput({
             {isCalendarActive && (
               <StyledVisuallyHidden id={popoverDescId}>
                 Use arrow keys to navigate dates. Enter to select. Escape to
-                close. Unavailable dates are marked disabled and cannot be
-                selected.
+                close.
+                {isDateUnavailable != null
+                  ? " Unavailable dates are marked disabled and cannot be selected."
+                  : null}
               </StyledVisuallyHidden>
             )}
             {/* Calendar locale is the visitor's locale (not the field's

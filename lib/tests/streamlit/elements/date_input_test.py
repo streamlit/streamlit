@@ -38,6 +38,7 @@ from streamlit.errors import (
     StreamlitValueBelowMinError,
     StreamlitValueError,
 )
+from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -1242,7 +1243,7 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
     def test_disabled_weekends_proto(self) -> None:
         st.date_input("day", disabled_dates=["saturday", "sunday"])
         c = self.get_delta_from_queue().new_element.date_input
-        assert c.availability_mode == 2  # BLOCK
+        assert c.availability_mode == DateInputProto.AvailabilityMode.BLOCK
         assert list(c.available_weekdays) == [6, 7]
         assert list(c.available_dates) == []
 
@@ -1253,7 +1254,7 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
             enabled_dates=[date(2026, 8, 24), date(2026, 8, 25), "monday"],
         )
         c = self.get_delta_from_queue().new_element.date_input
-        assert c.availability_mode == 1  # ALLOW
+        assert c.availability_mode == DateInputProto.AvailabilityMode.ALLOW
         assert list(c.available_weekdays) == [1]
         assert list(c.available_dates) == ["2026-08-24", "2026-08-25"]
 
@@ -1269,7 +1270,7 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         result = st.date_input("day", value=None, enabled_dates=[])
         c = self.get_delta_from_queue().new_element.date_input
         assert result is None
-        assert c.availability_mode == 1
+        assert c.availability_mode == DateInputProto.AvailabilityMode.ALLOW
         assert list(c.default) == []
 
     def test_range_raises(self) -> None:
@@ -1339,7 +1340,7 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
             assert id1 == id2
 
     def test_today_value_snaps_when_unavailable(self) -> None:
-        """value=\"today\" on a weekend snaps forward to the next weekday."""
+        """value='today' on a weekend snaps forward to the next weekday."""
 
         class FixedDateTime(datetime):
             @classmethod
@@ -1360,6 +1361,7 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         assert result == date(2024, 3, 11)  # Monday
 
     def test_today_literal_in_enabled_dates(self) -> None:
+        """enabled_dates=['today'] materializes today's date in the proto."""
         today = datetime.now().date()
         result = st.date_input("day", value="today", enabled_dates=["today"])
         c = self.get_delta_from_queue().new_element.date_input
@@ -1367,13 +1369,15 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         assert list(c.available_dates) == [today.isoformat()]
 
     def test_today_in_filter_keeps_symbolic_id_token(self) -> None:
-        """\"today\" is hashed as the literal token, not the resolved ISO date."""
-        normalized = _normalize_date_filter(["today", "monday"], "enabled_dates")
-        assert normalized is not None
-        exact_dates, _weekdays, id_exact, id_weekdays = normalized
-        assert id_exact == ("today",)
-        assert id_weekdays == (1,)
-        assert exact_dates == frozenset({datetime.now().date()})
+        """'today' is hashed as the literal token, not the resolved ISO date."""
+        normalized = _normalize_date_filter(
+            ["today", "monday"],
+            "enabled_dates",
+            DateInputProto.AvailabilityMode.ALLOW,
+        )
+        assert normalized.id_exact_entries == ("today",)
+        assert normalized.id_weekdays == (1,)
+        assert normalized.exact_dates == frozenset({datetime.now().date()})
 
     def test_scalar_filter_accepted(self) -> None:
         st.date_input("day", value=date(2026, 8, 25), enabled_dates=date(2026, 8, 25))
@@ -1399,13 +1403,27 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
             st.date_input("day", enabled_dates=df)
 
     def test_invalid_filter_entry_rejected(self) -> None:
-        with pytest.raises(StreamlitInvalidParameterTypeError):
+        with pytest.raises(StreamlitInvalidParameterTypeError, match="Could not parse"):
             st.date_input("day", enabled_dates=[123])
 
-        with pytest.raises(StreamlitInvalidParameterTypeError):
-            st.date_input("day", disabled_dates=["not-a-weekday-or-date"])
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError, match="Could not parse 'satruday'"
+        ):
+            st.date_input("day", disabled_dates=["satruday"])
+
+    def test_nat_in_filter_rejected(self) -> None:
+        """Missing pandas timestamps raise a Streamlit type error, not a native crash."""
+        import pandas as pd
+
+        with pytest.raises(StreamlitInvalidParameterTypeError, match="Could not parse"):
+            st.date_input(
+                "day",
+                value=date(2026, 8, 25),
+                enabled_dates=pd.Series([pd.Timestamp("2026-08-25"), pd.NaT]),
+            )
 
     def test_serde_unavailable_date_reverts_to_default(self) -> None:
+        """Serde rejects unavailable wire values and returns the widget default."""
         values = _DateInputValues(
             value=(date(2024, 3, 8),),
             is_range=False,
@@ -1420,8 +1438,74 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         assert serde.deserialize(["2024-03-09"]) == date(2024, 3, 8)
         assert serde.deserialize(["2024-03-11"]) == date(2024, 3, 11)
 
+    def test_keyed_default_today_resets_unavailable_session_state(self) -> None:
+        """Keyed value='today' resets an unavailable stored date instead of raising."""
+
+        class FixedDateTime(datetime):
+            @classmethod
+            def now(cls, tz: Any = None) -> datetime:
+                return datetime(2024, 3, 9, 12, 0, 0)  # Saturday
+
+        st.session_state.day = date(2024, 3, 9)  # Saturday
+        with patch(
+            "streamlit.elements.widgets.time_widgets.datetime",
+            FixedDateTime,
+        ):
+            result = st.date_input(
+                "day",
+                key="day",
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 12, 31),
+                disabled_dates=["saturday", "sunday"],
+            )
+        assert result == date(2024, 3, 11)
+        assert st.session_state.day == date(2024, 3, 11)
+
+    def test_query_param_unavailable_value_is_cleared(self) -> None:
+        """Unavailable URL-bound values reset and drop the query param."""
+        from streamlit.runtime.state import get_session_state
+
+        st.session_state["day"] = date(2024, 3, 9)  # Saturday
+        with get_session_state().query_params() as qp:
+            qp.set_initial_query_params("day=2024-03-09")
+        result = st.date_input(
+            "day",
+            key="day",
+            value=date(2024, 3, 8),
+            disabled_dates=["saturday", "sunday"],
+            bind="query-params",
+        )
+        assert result == date(2024, 3, 8)
+        assert st.session_state.day == date(2024, 3, 8)
+        assert "day" not in st.query_params
+
+    def test_agent_props_report_availability_without_out_of_window_dates(
+        self,
+    ) -> None:
+        """Agent descriptions report availability and omit out-of-window dates."""
+        import json
+
+        from streamlit.elements.lib import agent_spec
+
+        agent_spec.register_agent_session(self.script_run_ctx.session_id)
+        try:
+            st.date_input(
+                "day",
+                value=date(2026, 8, 25),
+                min_value=date(2026, 8, 1),
+                max_value=date(2026, 8, 31),
+                enabled_dates=[date(2026, 8, 25), date(2020, 1, 1), "monday"],
+            )
+            props = json.loads(self.get_message_from_queue().metadata.agent_props)
+        finally:
+            agent_spec.forget_agent_session(self.script_run_ctx.session_id)
+
+        assert props["props"]["enabled_dates"] == ["monday", "2026-08-25"]
+        assert "disabled_dates" not in props["props"]
+
 
 def test_resolve_today_snaps_forward() -> None:
+    """When today is blocked, resolve_today picks the next selectable date."""
     availability = _parse_date_availability(
         enabled_dates=None,
         disabled_dates=["saturday", "sunday"],
@@ -1435,6 +1519,7 @@ def test_resolve_today_snaps_forward() -> None:
 
 
 def test_resolve_today_snaps_backward_when_forward_exhausted() -> None:
+    """When nothing after today is selectable, resolve_today walks backward."""
     availability = _parse_date_availability(
         enabled_dates=None,
         disabled_dates=[date(2024, 3, 10)],
@@ -1448,6 +1533,7 @@ def test_resolve_today_snaps_backward_when_forward_exhausted() -> None:
 
 
 def test_resolve_today_returns_none_when_empty_window() -> None:
+    """An empty allowlist yields None when no selectable date exists."""
     availability = _parse_date_availability(enabled_dates=[], disabled_dates=None)
     assert (
         _resolve_today_to_selectable(

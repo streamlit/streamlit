@@ -7270,6 +7270,60 @@ describe("DateInput no-op interactions", () => {
     expect(sendRerunBackMsg).toHaveBeenCalledOnce()
   })
 
+  it("does not commit a typed unavailable date and shows an error", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, setStringArrayValueSpy } = renderWithRerunSpy({
+      default: ["2024-03-08"],
+      min: "2024-01-01",
+      format: "YYYY/MM/DD",
+      availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
+      availableWeekdays: [6, 7],
+    })
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    await typeIntoSegment(user, year, "2024")
+    await typeIntoSegment(user, month, "03")
+    await typeIntoSegment(user, day, "09")
+
+    const errorIcon = await screen.findByTestId("stTooltipErrorHoverTarget")
+    expect(errorIcon).toBeVisible()
+    act(() => setInteractionModality("pointer"))
+    await user.hover(errorIcon)
+    expect(
+      await screen.findByTestId("stTooltipErrorContent")
+    ).toHaveTextContent(
+      "Error: Date is unavailable. Choose an available date."
+    )
+
+    await user.keyboard("{Escape}")
+    await flushScheduledRerun()
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not commit a pasted unavailable date", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, setStringArrayValueSpy } = renderWithRerunSpy({
+      default: ["2024-03-08"],
+      min: "2024-01-01",
+      format: "YYYY/MM/DD",
+      availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
+      availableWeekdays: [6, 7],
+    })
+
+    const region = screen.getByTestId("stDateInput")
+    await user.click(getSingleDateSegments(region).year)
+    await user.paste("2024/03/09")
+    await flushScheduledRerun()
+
+    expect(
+      await screen.findByTestId("stTooltipErrorHoverTarget")
+    ).toBeVisible()
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
   it("does not commit or rerun when re-picking the selected calendar date", async () => {
     const user = userEvent.setup()
     const { sendRerunBackMsg, setStringArrayValueSpy, props } =

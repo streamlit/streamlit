@@ -56,6 +56,7 @@ from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
 from streamlit.proto.EChartsChart_pb2 import EChartsChart as EChartsChartProto
 from streamlit.proto.GapSize_pb2 import GapSize
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
@@ -63,6 +64,16 @@ from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import TESTING_KEY, user_key_from_element_id
 from streamlit.testing.v1.errors import AppTestError
+
+_ISO_WEEKDAY_TO_NAME: Final[dict[int, str]] = {
+    1: "monday",
+    2: "tuesday",
+    3: "wednesday",
+    4: "thursday",
+    5: "friday",
+    6: "saturday",
+    7: "sunday",
+}
 
 if TYPE_CHECKING:
     from pandas import DataFrame as PandasDataframe
@@ -74,7 +85,6 @@ if TYPE_CHECKING:
     from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
     from streamlit.proto.Code_pb2 import Code as CodeProto
     from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
-    from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
     from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
     from streamlit.proto.DownloadButton_pb2 import (
         DownloadButton as DownloadButtonProto,
@@ -1236,25 +1246,13 @@ class DateInput(Widget):
         self.min = datetime.strptime(proto.min, "%Y-%m-%d").date()
         self.max = datetime.strptime(proto.max, "%Y-%m-%d").date()
         filter_entries = [
-            *(
-                {
-                    1: "monday",
-                    2: "tuesday",
-                    3: "wednesday",
-                    4: "thursday",
-                    5: "friday",
-                    6: "saturday",
-                    7: "sunday",
-                }[day]
-                for day in proto.available_weekdays
-            ),
+            *(_ISO_WEEKDAY_TO_NAME[day] for day in proto.available_weekdays),
             *proto.available_dates,
         ]
-        # AvailabilityMode: NONE=0, ALLOW=1, BLOCK=2
-        if proto.availability_mode == 1:
+        if proto.availability_mode == DateInputProto.AvailabilityMode.ALLOW:
             self.enabled_dates = filter_entries
             self.disabled_dates = None
-        elif proto.availability_mode == 2:
+        elif proto.availability_mode == DateInputProto.AvailabilityMode.BLOCK:
             self.enabled_dates = None
             self.disabled_dates = filter_entries
         else:

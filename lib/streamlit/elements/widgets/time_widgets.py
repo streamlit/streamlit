@@ -311,7 +311,9 @@ def _parse_max_date(
 
 
 def _is_rejected_dataframe(obj: object) -> bool:
-    """True for 2D dataframe objects that must not be accepted as a date filter."""
+    """Return whether ``obj`` is a dataframe-like or matrix-shaped value that
+    cannot be used as a one-dimensional date filter.
+    """
     return determine_data_format(obj) in {
         DataFormat.PANDAS_DATAFRAME,
         DataFormat.POLARS_DATAFRAME,
@@ -330,20 +332,15 @@ def _is_rejected_dataframe(obj: object) -> bool:
 
 def _convert_numpy_datetime64_to_date(value: object) -> date | None:
     """Convert a NumPy datetime64-like value to date, or return None if unsupported."""
-    type_name = type(value).__name__
-    module_name = type(value).__module__
     # pandas Timestamp is a datetime subclass and is handled elsewhere.
-    if (
-        "datetime64" not in type_name
-        and "datetime64" not in module_name
-        and not (module_name.startswith("numpy") and type_name.startswith("datetime64"))
-    ):
+    if type(value).__name__ != "datetime64":
         return None
     try:
         # Prefer pandas when available: handles datetime64[ns] and DatetimeArray entries.
         import pandas as pd
 
-        return pd.Timestamp(value).date()  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+        converted = pd.Timestamp(value).date()  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+        return converted if type(converted) is date else None
     except Exception:
         try:
             text = str(value)
@@ -352,15 +349,34 @@ def _convert_numpy_datetime64_to_date(value: object) -> date | None:
             return None
 
 
+def _invalid_date_filter_entry_error(
+    param_name: str,
+    entry: object,
+) -> StreamlitInvalidParameterTypeError:
+    return StreamlitInvalidParameterTypeError(
+        param_name,
+        type(entry).__name__,
+        _DATE_FILTER_ACCEPTED_FORMS,
+        detail=f"Could not parse {entry!r} as a date or weekday name.",
+    )
+
+
+def _as_real_calendar_date(value: object) -> date | None:
+    """Return a concrete ``datetime.date``, or None for NaT / non-dates."""
+    if isinstance(value, datetime):
+        value = value.date()
+    # Reject date-like impostors (for example pandas ``NaTType``).
+    return value if type(value) is date else None
+
+
 def _parse_date_filter_entry(
     entry: object,
     param_name: str,
 ) -> tuple[date | None, int | None, bool]:
-    """Parse one filter entry into (exact_date, weekday, is_today_literal).
+    """Parse one filter entry into ``(exact_date, weekday, is_today_literal)``.
 
-    Exactly one of exact_date or weekday is set, unless the entry is the
-    literal ``"today"``, in which case exact_date is today's date and
-    ``is_today_literal`` is True.
+    Exactly one of ``exact_date`` and ``weekday`` is set. ``is_today_literal``
+    is True when the entry was the string ``"today"``.
     """
     if isinstance(entry, str):
         stripped = entry.strip()
@@ -372,26 +388,19 @@ def _parse_date_filter_entry(
         try:
             return _convert_datelike_to_date(stripped), None, False
         except StreamlitInvalidParameterTypeError as exc:
-            raise StreamlitInvalidParameterTypeError(
-                param_name,
-                type(entry).__name__,
-                _DATE_FILTER_ACCEPTED_FORMS,
-            ) from exc
+            raise _invalid_date_filter_entry_error(param_name, entry) from exc
 
-    if isinstance(entry, datetime):
-        return entry.date(), None, False
-    if isinstance(entry, date):
-        return entry, None, False
+    if isinstance(entry, (datetime, date)):
+        converted = _as_real_calendar_date(entry)
+        if converted is not None:
+            return converted, None, False
+        raise _invalid_date_filter_entry_error(param_name, entry)
 
-    converted = _convert_numpy_datetime64_to_date(entry)
+    converted = _as_real_calendar_date(_convert_numpy_datetime64_to_date(entry))
     if converted is not None:
         return converted, None, False
 
-    raise StreamlitInvalidParameterTypeError(
-        param_name,
-        type(entry).__name__,
-        _DATE_FILTER_ACCEPTED_FORMS,
-    )
+    raise _invalid_date_filter_entry_error(param_name, entry)
 
 
 @dataclass(frozen=True)
@@ -430,13 +439,11 @@ class _DateAvailability:
 
 
 def _normalize_date_filter(
-    raw: DateFilter | None,
+    raw: DateFilter,
     param_name: Literal["enabled_dates", "disabled_dates"],
-) -> tuple[frozenset[date], frozenset[int], tuple[str, ...], tuple[int, ...]] | None:
+    mode: DateInputProto.AvailabilityMode.ValueType,
+) -> _DateAvailability:
     """Materialize, validate, deduplicate, and sort a date filter parameter."""
-    if raw is None:
-        return None
-
     if inspect.isgenerator(raw) or inspect.isgeneratorfunction(raw):
         raise StreamlitAPIException(
             f"The `{param_name}` parameter does not accept generators. "
@@ -468,11 +475,13 @@ def _normalize_date_filter(
             exact_dates.add(exact)
             id_exact.add("today" if is_today else _date_to_proto_string(exact))
 
-    return (
-        frozenset(exact_dates),
-        frozenset(weekdays),
-        tuple(sorted(id_exact)),
-        tuple(sorted(weekdays)),
+    return _DateAvailability(
+        mode=mode,
+        exact_dates=frozenset(exact_dates),
+        weekdays=frozenset(weekdays),
+        id_exact_entries=tuple(sorted(id_exact)),
+        id_weekdays=tuple(sorted(weekdays)),
+        param_name=param_name,
     )
 
 
@@ -488,37 +497,17 @@ def _parse_date_availability(
         )
 
     if enabled_dates is not None:
-        normalized = _normalize_date_filter(enabled_dates, "enabled_dates")
-        if normalized is None:
-            raise StreamlitAPIException(
-                "Failed to normalize `enabled_dates`.",
-                error_id="date-input-filter-normalize",
-            )
-        exact, weekdays, id_exact, id_weekdays = normalized
-        return _DateAvailability(
-            mode=DateInputProto.AvailabilityMode.ALLOW,
-            exact_dates=exact,
-            weekdays=weekdays,
-            id_exact_entries=id_exact,
-            id_weekdays=id_weekdays,
-            param_name="enabled_dates",
+        return _normalize_date_filter(
+            enabled_dates,
+            "enabled_dates",
+            DateInputProto.AvailabilityMode.ALLOW,
         )
 
     if disabled_dates is not None:
-        normalized = _normalize_date_filter(disabled_dates, "disabled_dates")
-        if normalized is None:
-            raise StreamlitAPIException(
-                "Failed to normalize `disabled_dates`.",
-                error_id="date-input-filter-normalize",
-            )
-        exact, weekdays, id_exact, id_weekdays = normalized
-        return _DateAvailability(
-            mode=DateInputProto.AvailabilityMode.BLOCK,
-            exact_dates=exact,
-            weekdays=weekdays,
-            id_exact_entries=id_exact,
-            id_weekdays=id_weekdays,
-            param_name="disabled_dates",
+        return _normalize_date_filter(
+            disabled_dates,
+            "disabled_dates",
+            DateInputProto.AvailabilityMode.BLOCK,
         )
 
     return None
@@ -1016,12 +1005,7 @@ def _validate_date_value(
     if not value_needs_reset:
         return current_value, value_needs_reset
 
-    # Reset to the default value from parsed_values
-    if parsed_values.value is None or len(parsed_values.value) == 0:
-        return (() if parsed_values.is_range else None), True
-    if not parsed_values.is_range:
-        return parsed_values.value[0], True
-    return cast("DateWidgetReturn", tuple(parsed_values.value)), True
+    return _default_date_widget_return(parsed_values), True
 
 
 def _default_date_widget_return(parsed_values: _DateInputValues) -> DateWidgetReturn:
@@ -2374,12 +2358,18 @@ class TimeWidgetsMixin:
             The value of this widget when it first renders. This can be one of
             the following:
 
-            - ``"today"`` (default): The widget initializes with the current date.
+            - ``"today"`` (default): The widget initializes with the current
+              date. With ``enabled_dates`` or ``disabled_dates``, if today is
+              unavailable the widget snaps to the next selectable date, then
+              the previous one, or becomes empty if none exist.
             - A ``datetime.date`` or ``datetime.datetime`` object: The widget
               initializes with the given date, ignoring any time if included.
+              An unavailable explicit date raises; pass ``"today"`` to snap
+              instead.
             - An ISO-formatted date (YYYY-MM-DD) or datetime
               (YYYY-MM-DD hh:mm:ss) string: The widget initializes with the
-              given date, ignoring any time if included.
+              given date, ignoring any time if included. Unavailable explicit
+              dates raise as above.
             - A list or tuple with up to two of the above: The widget will
               initialize with the given date interval and return a tuple of the
               selected interval. You can pass an empty list to initialize the
@@ -2409,25 +2399,39 @@ class TimeWidgetsMixin:
             is ten years after today.
 
         enabled_dates : date, datetime, str, list-like of these, or None
-            Dates and weekdays that are selectable inside the min/max window.
-            Accepts exact dates (``date``, ``datetime``, ISO strings, or
-            ``"today"``), English weekday names (``"monday"``…``"sunday"``),
-            or a list-like of these (list, tuple, set, Series, Index, NumPy
-            array). Cannot be set together with ``disabled_dates``. When this
-            is set, every other date is unavailable. An empty collection makes
-            every date unavailable; pass ``value=None`` in that case. Not yet
-            supported with range values.
+            Dates and weekdays that are selectable between ``min_value`` and
+            ``max_value``. If this is ``None`` (default), every date in that
+            window is selectable. Accepts exact dates (``date``, ``datetime``,
+            ISO strings, or ``"today"``), English weekday names
+            (``"monday"``…``"sunday"``), or a list-like of these (list, tuple,
+            set, Series, Index, NumPy array). Cannot be set together with
+            ``disabled_dates``. When this is set, every other date is
+            unavailable. An empty collection makes every date unavailable;
+            pass ``value=None`` in that case. Not yet supported with range
+            values.
+
+            Example::
+
+                st.date_input(
+                    "Appointment",
+                    value=date(2026, 8, 25),
+                    enabled_dates=[date(2026, 8, 25), date(2026, 8, 26), "monday"],
+                )
 
         disabled_dates : date, datetime, str, list-like of these, or None
-            Dates and weekdays that are not selectable inside the min/max
-            window. Accepts the same forms as ``enabled_dates``. Cannot be set
-            together with ``enabled_dates``. An empty collection disables
-            nothing. Not yet supported with range values.
+            Dates and weekdays that are not selectable between ``min_value``
+            and ``max_value``. If this is ``None`` (default), no dates are
+            blocked by availability. Accepts the same forms as
+            ``enabled_dates``. Cannot be set together with ``enabled_dates``.
+            An empty collection disables nothing. Not yet supported with range
+            values.
 
-            When the default ``value="today"`` falls on an unavailable date,
-            it snaps to the next selectable date, then the previous one, or
-            becomes empty if none exist. Explicit date values that are
-            unavailable raise; pass ``value="today"`` to snap instead.
+            Example::
+
+                st.date_input(
+                    "Trading day",
+                    disabled_dates=["saturday", "sunday", date(2026, 12, 25)],
+                )
 
         key : str, int, or None
             An optional string or integer to use as the unique key for
@@ -2725,8 +2729,8 @@ class TimeWidgetsMixin:
             parsed = parse_date_deterministic_for_id(value)
 
         availability = _parse_date_availability(enabled_dates, disabled_dates)
-        # Hash under the public param names so ComputeElementIdTests stays in
-        # sync with the signature. Only one side is ever non-None.
+        # Hash the normalized filter, with "today" kept symbolic, under its
+        # public parameter name. At most one of the two is set.
         availability_payload = (
             None
             if availability is None
@@ -2790,13 +2794,21 @@ class TimeWidgetsMixin:
 
             if key is not None and key in session_state:
                 state_value = session_state[key]
-                parsed_values = _DateInputValues.from_raw_values(
+                stored_values = _DateInputValues.from_raw_values(
                     value=state_value,
                     min_value=min_value,
                     max_value=max_value,
                 )
-                # Session-state values are explicit; do not snap like "today".
-                value_was_today = False
+                if availability is not None:
+                    # Keep the snapped "today" default as the reset target when
+                    # the stored value is unavailable. Carry range mode from
+                    # session state so the range-unsupported guard still fires.
+                    if stored_values.is_range:
+                        parsed_values = replace(parsed_values, is_range=True)
+                else:
+                    parsed_values = stored_values
+                    # Without availability, session-state values are explicit.
+                    value_was_today = False
 
         if availability is not None and parsed_values.is_range:
             raise StreamlitAPIException(
@@ -2903,14 +2915,19 @@ class TimeWidgetsMixin:
 
         layout_config = create_layout_config(width=width)
 
-        agent_enabled = (
+        agent_report = (
             proto_availability.agent_report()
+            if agent_spec.is_recording() and proto_availability is not None
+            else None
+        )
+        agent_enabled = (
+            agent_report
             if proto_availability is not None
             and proto_availability.param_name == "enabled_dates"
             else None
         )
         agent_disabled = (
-            proto_availability.agent_report()
+            agent_report
             if proto_availability is not None
             and proto_availability.param_name == "disabled_dates"
             else None
