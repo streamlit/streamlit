@@ -311,7 +311,7 @@ def _parse_max_date(
     return parsed_max_date
 
 
-def _is_rejected_dataframe(obj: object) -> bool:
+def _is_table_like(obj: object) -> bool:
     """Return whether ``obj`` is a dataframe-like or matrix-shaped value that
     cannot be used as a one-dimensional date filter.
     """
@@ -443,7 +443,7 @@ class _DateAvailability:
         return replace(self, exact_dates=filtered)
 
     def agent_report(self) -> list[str]:
-        """Weekday names plus ISO dates the browser receives."""
+        """Return the weekday names and in-window ISO dates the browser receives."""
         values = [_ISO_WEEKDAY_TO_NAME[day] for day in sorted(self.weekdays)]
         values.extend(_date_to_proto_string(d) for d in sorted(self.exact_dates))
         return values
@@ -455,23 +455,34 @@ def _normalize_date_filter(
     mode: DateInputProto.AvailabilityMode.ValueType,
 ) -> _DateAvailability:
     """Materialize, validate, deduplicate, and sort a date filter parameter."""
-    if inspect.isgenerator(raw) or inspect.isgeneratorfunction(raw):
-        raise StreamlitAPIException(
-            f"The `{param_name}` parameter does not accept generators. "
-            "Pass a list, tuple, set, Series, Index, or NumPy array instead.",
-            error_id="date-input-filter-generator",
+    if inspect.isgenerator(raw):
+        raise StreamlitInvalidParameterTypeError(
+            param_name,
+            type(raw).__name__,
+            _DATE_FILTER_ACCEPTED_FORMS,
+            detail=(
+                "Generators are not accepted. Pass a list, tuple, set, Series, "
+                "Index, or NumPy array instead."
+            ),
         )
 
-    if _is_rejected_dataframe(raw):
-        raise StreamlitAPIException(
-            f"The `{param_name}` parameter does not accept DataFrames. "
-            "Pass a column as a Series, Index, or NumPy array instead "
-            '(for example `df["date"]` or `df["date"].unique()`).',
-            error_id="date-input-filter-dataframe",
-        )
-
+    # Scalars and builtin collections first so weekday lists never pay the
+    # determine_data_format import/scan used to reject table-shaped values.
     if isinstance(raw, (str, date, datetime)):
         entries: list[object] = [raw]
+    elif isinstance(raw, (list, tuple, set, frozenset)):
+        entries = list(raw)
+    elif _is_table_like(raw):
+        raise StreamlitInvalidParameterTypeError(
+            param_name,
+            type(raw).__name__,
+            _DATE_FILTER_ACCEPTED_FORMS,
+            detail=(
+                "DataFrames are not accepted. Pass a column as a Series, Index, "
+                'or NumPy array instead (for example `df["date"]` or '
+                '`df["date"].unique()`).'
+            ),
+        )
     else:
         entries = cast("list[object]", convert_anything_to_list(raw))
 
@@ -548,9 +559,9 @@ def _resolve_today_to_selectable(
     if _is_date_selectable(today, min_value, max_value, availability):
         return today
 
-    # Exact-date-only ALLOW: same next-then-previous rule as the day walk, but
-    # over the finite allowlist (common with ``enabled_dates=df["date"].unique()``).
-    # Empty ALLOW has nothing selectable.
+    # An exact-date-only allowlist can leave most of the window unavailable, so
+    # pick from the list directly instead of walking day by day. Same rule:
+    # next listed date, then previous; None if no listed date is in the window.
     if (
         availability is not None
         and availability.mode == DateInputProto.AvailabilityMode.ALLOW
@@ -2441,24 +2452,18 @@ class TimeWidgetsMixin:
             unavailable. An empty collection makes every date unavailable;
             pass ``value=None`` in that case.
 
-            A range ``value`` raises; pass a single date until range support
-            is available. A weekday name always means the same day of the
-            week, whatever the user's locale or first day of the week. When
-            a keyed widget's availability changes and invalidates the current
-            value, Streamlit resets it to the resolved default.
+            Not supported with a range ``value``. A weekday name always means
+            the same day of the week, whatever the user's locale or first day
+            of the week. If a keyed widget's current value becomes
+            unavailable, Streamlit resets it to the widget's default.
 
         disabled_dates : date, datetime, str, list-like of these, or None
             Dates and weekdays that are not selectable between ``min_value``
             and ``max_value``. If this is ``None`` (default), no dates are
             blocked by availability. Accepts the same forms as
             ``enabled_dates``. Cannot be set together with ``enabled_dates``.
-            An empty collection disables nothing.
-
-            A range ``value`` raises; pass a single date until range support
-            is available. A weekday name always means the same day of the
-            week, whatever the user's locale or first day of the week. When
-            a keyed widget's availability changes and invalidates the current
-            value, Streamlit resets it to the resolved default.
+            An empty collection disables nothing. Follows the same rules as
+            ``enabled_dates``.
 
         key : str, int, or None
             An optional string or integer to use as the unique key for
@@ -2858,7 +2863,8 @@ class TimeWidgetsMixin:
                         parsed_values = replace(parsed_values, is_range=True)
                 else:
                     parsed_values = stored_values
-                    # Without availability, session-state values are explicit.
+                    # The stored value replaces the "today" default, so it must
+                    # not snap.
                     value_was_today = False
 
         if availability is not None and parsed_values.is_range:
@@ -2960,10 +2966,10 @@ class TimeWidgetsMixin:
                 with get_session_state().query_params() as qp:
                     qp.remove_param(str(key))
 
-        # Serde may already have swapped an unavailable browser wire value for
-        # the default, so value_needs_reset stays False. Still push set_value
-        # when the wire form differs from the resolved value (same pattern as
-        # button_group label changes).
+        # Push set_value whenever the browser's value differs from the resolved
+        # one. The serde replaces an unavailable or out-of-range browser value
+        # with the default, so value_needs_reset alone misses that case
+        # (same pattern as button_group label changes).
         correct_serialization = serde.serialize(current_value)
         frontend_out_of_sync = (
             widget_state.incoming_serialized_values is not None

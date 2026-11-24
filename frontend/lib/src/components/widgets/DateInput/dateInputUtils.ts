@@ -256,11 +256,7 @@ export function createIsDateUnavailable(
     const iso = calendarDateToIso(calendarDate)
     const matches =
       exactDates.has(iso) || weekdays.has(getIsoWeekday(calendarDate))
-    if (mode === DateInputProto.AvailabilityMode.ALLOW) {
-      return !matches
-    }
-    // BLOCK
-    return matches
+    return mode === DateInputProto.AvailabilityMode.ALLOW ? !matches : matches
   }
 }
 

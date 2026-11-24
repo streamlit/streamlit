@@ -1432,14 +1432,18 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         def gen():
             yield date(2026, 8, 25)
 
-        with pytest.raises(StreamlitAPIException, match="does not accept generators"):
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError, match="Generators are not accepted"
+        ):
             st.date_input("day", enabled_dates=gen())
 
     def test_dataframe_rejected(self) -> None:
         """DataFrames are rejected; pass a Series or column instead."""
 
         df = pd.DataFrame({"d": [date(2026, 8, 25)]})
-        with pytest.raises(StreamlitAPIException, match="does not accept DataFrames"):
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError, match="DataFrames are not accepted"
+        ):
             st.date_input("day", enabled_dates=df)
 
     def test_invalid_filter_entry_rejected(self) -> None:
