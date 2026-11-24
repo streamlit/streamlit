@@ -200,6 +200,20 @@ describe("PlotlyChart utils", () => {
       )
     })
 
+    it("ignores the empty event Plotly emits before a click on a heatmap", () => {
+      const event = {
+        points: [],
+        selections: [],
+      } as unknown as Plotly.PlotSelectionEvent
+      const widgetMgr = getWidgetMgr()
+      storeSelection(widgetMgr, proto)
+
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      handleSelection(event, widgetMgr, proto, mockFragmentId)
+      expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+    })
+
     it("should process events with points correctly", () => {
       const event = {
         points: [
@@ -664,6 +678,33 @@ describe("PlotlyChart utils", () => {
         )
       }
     )
+
+    it("should process histogram2d clicks with the bin and its samples", () => {
+      const event = {
+        points: [
+          {
+            x: 1.5,
+            y: 2.5,
+            z: 3,
+            binNumber: [2, 1],
+            pointNumbers: [4, 7, 9],
+            pointIndices: [4, 7, 9],
+            curveNumber: 0,
+            fullData: { type: "histogram2d" },
+          },
+        ],
+      } as unknown as Plotly.PlotMouseEvent
+      const widgetMgr = getWidgetMgr()
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      handleClickEvent(event, widgetMgr, proto, mockFragmentId)
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+        proto.id,
+        '{"selection":{"points":[{"x":1.5,"y":2.5,"z":3,"bin_number":[2,1],"point_numbers":[4,7,9],"curve_number":0}],"point_indices":[4,7,9],"box":[],"lasso":[]}}',
+        { formId: proto.formId, fragmentId: mockFragmentId, fromUser: true }
+      )
+    })
 
     it.each([
       [
