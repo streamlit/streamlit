@@ -1633,6 +1633,29 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert reconstructed_df["col1"].tolist() == expected_values
         assert return_df["col1"].tolist() == expected_values
 
+    @parameterized.expand([("INFO", False), ("DEBUG", True)])
+    def test_arrow_retry_logs_traceback_only_at_debug(
+        self, level: str, expect_traceback: bool
+    ) -> None:
+        """Test that the Arrow retry logs the conversion error in one line and only
+        includes the traceback at debug level."""
+        data_df = pd.DataFrame({"col1": pd.Series([[2**70], [1]])})
+
+        with self.assertLogs(
+            logger="streamlit.elements.widgets.data_editor", level=level
+        ) as cm:
+            st.data_editor(data_df)
+
+        retry_records = [
+            record
+            for record in cm.records
+            if "is not Arrow-compatible" in record.getMessage()
+        ]
+        assert len(retry_records) == 1
+        assert retry_records[0].levelname == "INFO"
+        assert "too large to convert" in retry_records[0].getMessage()
+        assert bool(retry_records[0].exc_info) is expect_traceback
+
     def test_disables_incompatible_columns_under_flattened_multiindex_name(
         self,
     ) -> None:
