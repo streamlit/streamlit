@@ -982,7 +982,7 @@ def test_real_snowpark_notifies_the_listener(
     server_connection = ServerConnection.__new__(ServerConnection)
     server_connection._lock = threading.RLock()
     server_connection._query_listeners = set()
-    results_cursor = MagicMock(sfqid="01b2-sp-ok", query="SELECT 1")
+    results_cursor = MagicMock()
     # Snowpark keeps one connector cursor per thread.
     server_connection._thread_store = threading.local()
     server_connection._thread_store.cursor = MagicMock()
@@ -993,7 +993,7 @@ def test_real_snowpark_notifies_the_listener(
     )
     server_connection.execute_and_notify_query_listener("SELECT 1")
     server_connection._thread_store.cursor.execute.side_effect = ProgrammingError(
-        "bad query", sfqid="01b2-sp-failed", query="SELECT x"
+        "bad query"
     )
     with pytest.raises(ProgrammingError):
         server_connection.execute_and_notify_query_listener("SELECT x")
