@@ -544,7 +544,8 @@ export function buildStreamlitEChartsTheme(
       splitArea: {
         areaStyle: {
           // Very faint, theme-derived alternating rings that stay subtle on
-          // both light and dark backgrounds.
+          // both light and dark backgrounds. Built from opaque `bodyText`,
+          // since `labelColor` is already translucent.
           color: [
             transparentize(colors.bodyText, 0.97),
             transparentize(colors.bodyText, 0.93),
@@ -559,7 +560,7 @@ export function buildStreamlitEChartsTheme(
     // the sequential (single-hue) palette so it reads as a clean gradient
     // instead of muddy interpolations between categorical hues, and theme the
     // link ribbons so they stay legible (ECharts' default gray is too faint in
-    // dark mode).
+    // dark mode). The ribbon `opacity` multiplies `labelColor`'s 0.7 alpha.
     sankey: {
       color: [...colors.chartSequentialColors],
       lineStyle: {
@@ -767,8 +768,8 @@ export function buildStreamlitEChartsTheme(
       fillerColor: transparentize(colors.primary, 0.85),
       // The slider's mini series preview. It sits on the app background rather
       // than inside the plot, so the faint gray used for gridlines leaves it
-      // almost invisible in dark mode. Opacity is set explicitly instead of
-      // baked into the color, because ECharts multiplies the two.
+      // almost invisible in dark mode. ECharts multiplies `opacity` by the
+      // color's own alpha, so these combine with `labelColor`'s 0.7 alpha.
       dataBackground: {
         lineStyle: {
           color: labelColor,

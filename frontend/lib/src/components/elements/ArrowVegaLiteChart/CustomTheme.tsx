@@ -152,6 +152,8 @@ export function applyThemeDefaults(
   theme: EmotionTheme
 ): object {
   const { colors, fontSizes, genericFonts } = theme
+  // theme=None keeps full-strength text. Only grid and frame lines use the
+  // faded text color.
   const lineColor = colors.fadedText05
   const themeFonts = {
     labelFont: genericFonts.bodyFont,

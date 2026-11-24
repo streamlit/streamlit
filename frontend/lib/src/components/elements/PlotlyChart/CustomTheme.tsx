@@ -184,8 +184,8 @@ export function applyStreamlitThemeTemplateLayout(
         },
       },
     },
-    // specifically for the ternary graph, whose grid and axis lines are drawn
-    // stronger than the faint cartesian gridlines
+    // Ternary plots use the secondary text color for grid and axis lines,
+    // keeping them stronger than the faint cartesian gridlines.
     ternary: {
       gridcolor: secondaryTextColor,
       bgcolor: colors.bgColor,

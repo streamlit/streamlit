@@ -220,8 +220,7 @@ def test_light_section_chart_colors(app: Page, assert_snapshot: ImageCompareFunc
     _prepare_chart_page(app)
     _select_theme(app, "Light")
 
-    # Tick labels use the faded custom textColor (70% opacity) instead of a
-    # fixed gray.
+    # Tick labels use the custom textColor at 70% opacity.
     tick_label = app.locator(".js-plotly-plot .xtick text").first
     expect(tick_label).to_have_css("fill", LIGHT_TEXT_COLOR_RGB)
     expect(tick_label).to_have_css("fill-opacity", "0.7")
