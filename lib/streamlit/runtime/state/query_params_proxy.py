@@ -209,6 +209,10 @@ class QueryParamsProxy(MutableMapping[str, str]):
 
         For a repeated key, pass an iterable of strings as the value.
 
+        If any current query parameter is bound to a widget through
+        ``bind="query-params"``, this method raises an exception and leaves
+        the query parameters unchanged. Change the widget's value instead.
+
         .. note::
             ``.from_dict()`` is not a direct inverse of ``.to_dict()`` if
             you are working with repeated keys. A true inverse operation is

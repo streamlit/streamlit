@@ -461,8 +461,7 @@ class QueryParams(MutableMapping[str, str]):
         ctx.query_string = msg.page_info_changed.query_string
         ctx.enqueue(msg)
 
-    def clear(self) -> None:
-        # Check if any bound params exist
+    def _raise_if_any_param_is_bound(self) -> None:
         bound_params = [key for key in self._query_params if self.is_bound(key)]
         if bound_params:
             raise StreamlitAPIException(
@@ -471,6 +470,9 @@ class QueryParams(MutableMapping[str, str]):
                 f"Modify the widget values instead, or remove the bind parameter.",
                 error_id="query-param-bound-cannot-clear",
             )
+
+    def clear(self) -> None:
+        self._raise_if_any_param_is_bound()
         self.clear_with_no_forward_msg(preserve_embed=True)
         self._send_query_param_msg()
 
@@ -487,12 +489,13 @@ class QueryParams(MutableMapping[str, str]):
         _dict: Iterable[tuple[str, str | Iterable[str]]]
         | SupportsKeysAndGetItem[str, str | Iterable[str]],
     ) -> None:
+        self._raise_if_any_param_is_bound()
         old_value = self._query_params.copy()
         self.clear_with_no_forward_msg(preserve_embed=True)
         try:
             self.update(_dict)
-        except StreamlitAPIException:
-            # restore the original from before we made any changes.
+        except Exception:
+            # Restore the original from before we made any changes.
             self._query_params = old_value
             raise
 
@@ -516,7 +519,7 @@ class QueryParams(MutableMapping[str, str]):
         }
         try:
             self.update(_dict)
-        except StreamlitAPIException:
+        except Exception:
             self._query_params = old_value
             raise
 

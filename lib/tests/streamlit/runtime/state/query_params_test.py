@@ -319,6 +319,13 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         message = self.get_message_from_queue(0)
         assert message.page_info_changed.query_string == "foo=bar&baz=test"
 
+    def test_from_dict_restores_params_on_non_streamlit_error(self) -> None:
+        """Test that from_dict restores the params on any exception."""
+        old_value = self.query_params._query_params.copy()
+        with pytest.raises(TypeError):
+            self.query_params.from_dict(12345)  # type: ignore[arg-type]
+        assert self.query_params._query_params == old_value
+
     def test_from_dict_raises_error_with_embed_key(self):
         with pytest.raises(StreamlitAPIException):
             self.query_params.from_dict({"foo": "bar", "embed": "true"})
@@ -1174,6 +1181,26 @@ class DirectManipulationProtectionTest(DeltaGeneratorTestCase):
         """Test that replace_unbound refuses bound keys and restores the params."""
         with pytest.raises(StreamlitAPIException, match="bound to a widget"):
             self.query_params.replace_unbound({"bound_key": "new", "new_key": "x"})
+        assert self.query_params._query_params == {
+            "bound_key": "value",
+            "unbound_key": "other",
+        }
+        assert len(self.forward_msg_queue) == 0
+
+    def test_from_dict_raises_for_bound_params_and_keeps_params(self) -> None:
+        """Test that from_dict refuses to clear bound params, like clear()."""
+        with pytest.raises(StreamlitAPIException, match="bound to widgets"):
+            self.query_params.from_dict({"new_key": "x"})
+        assert self.query_params._query_params == {
+            "bound_key": "value",
+            "unbound_key": "other",
+        }
+        assert len(self.forward_msg_queue) == 0
+
+    def test_replace_unbound_restores_params_on_non_streamlit_error(self) -> None:
+        """Test that replace_unbound restores the params on any exception."""
+        with pytest.raises(TypeError):
+            self.query_params.replace_unbound(12345)  # type: ignore[arg-type]
         assert self.query_params._query_params == {
             "bound_key": "value",
             "unbound_key": "other",
