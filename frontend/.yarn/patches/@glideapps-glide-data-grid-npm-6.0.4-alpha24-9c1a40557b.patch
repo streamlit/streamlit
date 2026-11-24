@@ -31,7 +31,7 @@ index face64122d35e884020eeabc6d96514141fc18d1..1e71f5198f0685882e1282cc2abd606d
          if (event.key === "Escape") {
              event.stopPropagation();
 diff --git a/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-editor.js b/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-editor.js
-index 91d575f11f9228cb52a299e9ab37541842e5fe5e..8eacc360228b26491cedfc2602b966bcd5ff2599 100644
+index 91d575f11f9228cb52a299e9ab37541842e5fe5e..7d1d7a3b75e5f0247c463fb44d0acead29190afd 100644
 --- a/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-editor.js
 +++ b/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-editor.js
 @@ -1,6 +1,6 @@
@@ -42,18 +42,18 @@ index 91d575f11f9228cb52a299e9ab37541842e5fe5e..8eacc360228b26491cedfc2602b966bc
  function getDecimalSeparator() {
      const numberWithDecimalSeparator = 1.1;
      const result = Intl.NumberFormat()
-@@ -11,20 +11,93 @@ function getDecimalSeparator() {
+@@ -11,20 +11,96 @@ function getDecimalSeparator() {
  function getThousandSeprator() {
      return getDecimalSeparator() === "." ? "," : ".";
  }
 +function escapeRegExp(text) {
 +    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 +}
-+// Whether the text has characters that react-number-format would drop, which
-+// would commit a different number (e.g. "1,23" -> 123, "1a2" -> 12, "1.5" -> 15
-+// without decimals). Such text is shown as typed and marked invalid instead.
-+// Decimals beyond decimalScale are still truncated visibly while typing.
-+// See streamlit/streamlit#18071.
++// True when the editor would commit a different number than the typed text
++// ("1,23" -> 123, "1a2" -> 12, "1.5" -> 15 in an integer column).
++// The caller then shows the typed text and reports NaN so validation rejects it.
++// The "." adjustment below only affects this check; extra fractional digits are
++// still truncated while typing. See streamlit/streamlit#18071.
 +function hasRejectedInput(inputValue, changeMeta, options) {
 +    const { allowNegative, decimalScale, decimalSeparator, thousandSeparator } = options;
 +    let text = inputValue;
@@ -61,8 +61,10 @@ index 91d575f11f9228cb52a299e9ab37541842e5fe5e..8eacc360228b26491cedfc2602b966bc
 +    if (typedRange !== undefined && typedRange.end - typedRange.start === 1) {
 +        const typedChar = text[typedRange.start];
 +        if (decimalScale !== 0 && (typedChar === "." || typedChar === decimalSeparator)) {
-+            // A typed "." is the decimal separator in every locale. Typed next to
-+            // the existing separator, the caret skips over it instead.
++            // react-number-format treats a typed "." as the decimal separator in
++            // every locale. Typed right before the existing separator, its
++            // onKeyDown moves the caret past that separator first, so the typed
++            // character lands right after it and is dropped as a repeat.
 +            const isRepeat = text[typedRange.start - 1] === decimalSeparator;
 +            text = text.slice(0, typedRange.start) + (isRepeat ? "" : decimalSeparator) + text.slice(typedRange.end);
 +        }
@@ -133,7 +135,8 @@ index 91d575f11f9228cb52a299e9ab37541842e5fe5e..8eacc360228b26491cedfc2602b966bc
 +                rejectedTextRef.current = undefined;
 +                return removeFormatting(inputValue, changeMeta);
 +            }, format: numStr => numStr === rejectedTextRef.current ? numStr : format(numStr), isValidInputCharacter: char => rejectedTextRef.current !== undefined || isValidInputCharacter(char), onBlur: e => {
-+                // Blurring would otherwise clean up the rejected text.
++                // useNumericFormat's onBlur reformats from its own stripped value,
++                // which would replace the rejected text with a different number.
 +                if (rejectedTextRef.current === undefined) {
 +                    onBlur(e);
 +                }
@@ -175,7 +178,7 @@ index face64122d35e884020eeabc6d96514141fc18d1..1e71f5198f0685882e1282cc2abd606d
          if (event.key === "Escape") {
              event.stopPropagation();
 diff --git a/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js b/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js
-index 91d575f11f9228cb52a299e9ab37541842e5fe5e..8eacc360228b26491cedfc2602b966bcd5ff2599 100644
+index 91d575f11f9228cb52a299e9ab37541842e5fe5e..7d1d7a3b75e5f0247c463fb44d0acead29190afd 100644
 --- a/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js
 +++ b/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js
 @@ -1,6 +1,6 @@
@@ -186,18 +189,18 @@ index 91d575f11f9228cb52a299e9ab37541842e5fe5e..8eacc360228b26491cedfc2602b966bc
  function getDecimalSeparator() {
      const numberWithDecimalSeparator = 1.1;
      const result = Intl.NumberFormat()
-@@ -11,20 +11,93 @@ function getDecimalSeparator() {
+@@ -11,20 +11,96 @@ function getDecimalSeparator() {
  function getThousandSeprator() {
      return getDecimalSeparator() === "." ? "," : ".";
  }
 +function escapeRegExp(text) {
 +    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 +}
-+// Whether the text has characters that react-number-format would drop, which
-+// would commit a different number (e.g. "1,23" -> 123, "1a2" -> 12, "1.5" -> 15
-+// without decimals). Such text is shown as typed and marked invalid instead.
-+// Decimals beyond decimalScale are still truncated visibly while typing.
-+// See streamlit/streamlit#18071.
++// True when the editor would commit a different number than the typed text
++// ("1,23" -> 123, "1a2" -> 12, "1.5" -> 15 in an integer column).
++// The caller then shows the typed text and reports NaN so validation rejects it.
++// The "." adjustment below only affects this check; extra fractional digits are
++// still truncated while typing. See streamlit/streamlit#18071.
 +function hasRejectedInput(inputValue, changeMeta, options) {
 +    const { allowNegative, decimalScale, decimalSeparator, thousandSeparator } = options;
 +    let text = inputValue;
@@ -205,8 +208,10 @@ index 91d575f11f9228cb52a299e9ab37541842e5fe5e..8eacc360228b26491cedfc2602b966bc
 +    if (typedRange !== undefined && typedRange.end - typedRange.start === 1) {
 +        const typedChar = text[typedRange.start];
 +        if (decimalScale !== 0 && (typedChar === "." || typedChar === decimalSeparator)) {
-+            // A typed "." is the decimal separator in every locale. Typed next to
-+            // the existing separator, the caret skips over it instead.
++            // react-number-format treats a typed "." as the decimal separator in
++            // every locale. Typed right before the existing separator, its
++            // onKeyDown moves the caret past that separator first, so the typed
++            // character lands right after it and is dropped as a repeat.
 +            const isRepeat = text[typedRange.start - 1] === decimalSeparator;
 +            text = text.slice(0, typedRange.start) + (isRepeat ? "" : decimalSeparator) + text.slice(typedRange.end);
 +        }
@@ -277,7 +282,8 @@ index 91d575f11f9228cb52a299e9ab37541842e5fe5e..8eacc360228b26491cedfc2602b966bc
 +                rejectedTextRef.current = undefined;
 +                return removeFormatting(inputValue, changeMeta);
 +            }, format: numStr => numStr === rejectedTextRef.current ? numStr : format(numStr), isValidInputCharacter: char => rejectedTextRef.current !== undefined || isValidInputCharacter(char), onBlur: e => {
-+                // Blurring would otherwise clean up the rejected text.
++                // useNumericFormat's onBlur reformats from its own stripped value,
++                // which would replace the rejected text with a different number.
 +                if (rejectedTextRef.current === undefined) {
 +                    onBlur(e);
 +                }

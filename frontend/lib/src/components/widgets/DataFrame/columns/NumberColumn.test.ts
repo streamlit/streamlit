@@ -867,6 +867,7 @@ describe("NumberColumn cell editor", () => {
 
   it.each([
     ["1,23", "."],
+    ["1,234.56", "."],
     ["1.23", ","],
   ])(
     "keeps pasted %s with a %s decimal separator and fails validation",
