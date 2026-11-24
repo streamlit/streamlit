@@ -25,8 +25,10 @@ import tempfile
 import threading
 import types
 import unittest
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, call, patch
+
+import pytest
 
 import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
 import tests.streamlit.watcher.test_data.dummy_module2 as DUMMY_MODULE_2
@@ -37,6 +39,9 @@ from streamlit import config
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.watcher import local_sources_watcher
 from streamlit.watcher.path_watcher import NoOpPathWatcher, _is_watchdog_available
+
+if TYPE_CHECKING:
+    from collections.abc import Generator, Iterator
 
 SCRIPT_PATH = os.path.join(
     os.path.dirname(__file__), "test_data", "not_a_real_script.py"
@@ -50,6 +55,14 @@ NESTED_MODULE_CHILD_FILE = os.path.abspath(NESTED_MODULE_CHILD.__file__)
 
 def NOOP_CALLBACK(_filepath):
     pass
+
+
+@pytest.fixture(autouse=True)
+def _clear_shared_module_paths() -> Iterator[None]:
+    """Isolate the process-wide module path cache per test."""
+    local_sources_watcher._watchable_module_paths.clear()
+    yield
+    local_sources_watcher._watchable_module_paths.clear()
 
 
 @patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
@@ -1116,6 +1129,224 @@ def test_deregister_watcher_keeps_main_script(
         main_watcher_entry.watcher.close.assert_not_called()
     finally:
         lsw.close()
+
+
+def _watched_module_paths(lsw: local_sources_watcher.LocalSourcesWatcher) -> set[str]:
+    return {
+        path for path, wm in lsw._watched_modules.items() if wm.module_name is not None
+    }
+
+
+@contextlib.contextmanager
+def _count_module_path_scans() -> Generator[MagicMock, None, None]:
+    with patch.object(
+        local_sources_watcher,
+        "get_module_paths",
+        wraps=local_sources_watcher.get_module_paths,
+    ) as scan:
+        yield scan
+
+
+@patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+@patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+def test_new_session_reuses_module_paths_found_by_earlier_session(
+    mock_path_watcher: MagicMock,
+) -> None:
+    """A new session registers the same watchers without rescanning modules."""
+    modules = {"DUMMY_MODULE_1": DUMMY_MODULE_1, "DUMMY_MODULE_2": DUMMY_MODULE_2}
+    with patch("sys.modules", modules), _count_module_path_scans() as scan:
+        first = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        first.update_watched_modules()
+        assert scan.call_count == 2
+
+        second = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        second.update_watched_modules()
+        assert scan.call_count == 2
+
+    expected = {DUMMY_MODULE_1_FILE, DUMMY_MODULE_2_FILE}
+    assert _watched_module_paths(first) == expected
+    assert _watched_module_paths(second) == expected
+    module_1_callbacks = [
+        c.args[1]
+        for c in mock_path_watcher.call_args_list
+        if c.args[0] == DUMMY_MODULE_1_FILE
+    ]
+    assert module_1_callbacks == [first.on_path_changed, second.on_path_changed]
+
+
+@patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+@patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+def test_newly_imported_module_is_scanned_once_for_all_sessions(
+    _mock_path_watcher: MagicMock,
+) -> None:
+    """Existing and new sessions both watch a later import, which is scanned once."""
+    modules: dict[str, Any] = {"DUMMY_MODULE_1": DUMMY_MODULE_1}
+    with patch("sys.modules", modules), _count_module_path_scans() as scan:
+        existing = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        existing.update_watched_modules()
+
+        modules["DUMMY_MODULE_2"] = DUMMY_MODULE_2
+        existing.update_watched_modules()
+        new = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        new.update_watched_modules()
+
+        assert [c.args[0] for c in scan.call_args_list] == [
+            DUMMY_MODULE_1,
+            DUMMY_MODULE_2,
+        ]
+
+    expected = {DUMMY_MODULE_1_FILE, DUMMY_MODULE_2_FILE}
+    assert _watched_module_paths(existing) == expected
+    assert _watched_module_paths(new) == expected
+
+
+@patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+@patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+def test_reimported_module_is_scanned_again(_mock_path_watcher: MagicMock) -> None:
+    """A different module object under a cached name doesn't reuse its paths."""
+    reimported = types.ModuleType("DUMMY_MODULE_1")
+    reimported.__file__ = DUMMY_MODULE_2_FILE
+    modules: dict[str, Any] = {"DUMMY_MODULE_1": DUMMY_MODULE_1}
+    with patch("sys.modules", modules), _count_module_path_scans() as scan:
+        local_sources_watcher.LocalSourcesWatcher(
+            PagesManager(SCRIPT_PATH)
+        ).update_watched_modules()
+
+        modules["DUMMY_MODULE_1"] = reimported
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.update_watched_modules()
+
+        assert scan.call_count == 2
+
+    assert _watched_module_paths(lsw) == {DUMMY_MODULE_2_FILE}
+    assert lsw._watched_modules[DUMMY_MODULE_2_FILE].module_name == "DUMMY_MODULE_1"
+
+
+@patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+@patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+def test_evicted_module_is_dropped_from_shared_paths(
+    _mock_path_watcher: MagicMock,
+) -> None:
+    """Modules removed from sys.modules stop contributing paths to new sessions."""
+    modules: dict[str, Any] = {
+        "DUMMY_MODULE_1": DUMMY_MODULE_1,
+        "DUMMY_MODULE_2": DUMMY_MODULE_2,
+    }
+    with patch("sys.modules", modules):
+        first = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        first.update_watched_modules()
+        first.on_path_changed(DUMMY_MODULE_2_FILE)
+        first.flush_pending_evictions()
+        assert modules == {}
+
+        modules["DUMMY_MODULE_1"] = DUMMY_MODULE_1
+        second = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        second.update_watched_modules()
+
+    assert local_sources_watcher._watchable_module_paths._entries.keys() == {
+        "DUMMY_MODULE_1"
+    }
+    assert _watched_module_paths(second) == {DUMMY_MODULE_1_FILE}
+
+
+@patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+@patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+def test_deleted_module_file_is_not_watched_by_new_session(
+    mock_path_watcher: MagicMock,
+) -> None:
+    """A cached path whose file was deleted is skipped instead of failing to watch."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        script_path = os.path.join(tmp_dir, "app.py")
+        module_path = os.path.realpath(os.path.join(tmp_dir, "helper.py"))
+        for path in (script_path, module_path):
+            pathlib.Path(path).touch()
+        helper = types.ModuleType("helper")
+        helper.__file__ = module_path
+
+        with patch("sys.modules", {"helper": helper}):
+            first = local_sources_watcher.LocalSourcesWatcher(PagesManager(script_path))
+            first.update_watched_modules()
+            assert _watched_module_paths(first) == {module_path}
+
+            os.remove(module_path)
+            mock_path_watcher.reset_mock()
+            second = local_sources_watcher.LocalSourcesWatcher(
+                PagesManager(script_path)
+            )
+            second.update_watched_modules()
+
+    assert _watched_module_paths(second) == set()
+    assert module_path not in [c.args[0] for c in mock_path_watcher.call_args_list]
+
+
+@patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+@patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+def test_shared_paths_respect_changed_folder_blacklist(
+    _mock_path_watcher: MagicMock,
+) -> None:
+    """Sessions created after a blacklist change don't reuse paths it excludes."""
+    with patch("sys.modules", {"DUMMY_MODULE_1": DUMMY_MODULE_1}):
+        first = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        first.update_watched_modules()
+
+        prev_blacklist = config.get_option("server.folderWatchBlacklist")
+        config.set_option(
+            "server.folderWatchBlacklist", [os.path.dirname(DUMMY_MODULE_1_FILE)]
+        )
+        try:
+            second = local_sources_watcher.LocalSourcesWatcher(
+                PagesManager(SCRIPT_PATH)
+            )
+            second.update_watched_modules()
+        finally:
+            config.set_option("server.folderWatchBlacklist", prev_blacklist)
+
+    assert _watched_module_paths(first) == {DUMMY_MODULE_1_FILE}
+    assert _watched_module_paths(second) == set()
+
+
+@patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+def test_shared_paths_respect_changed_pythonpath(
+    _mock_path_watcher: MagicMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A module outside the script folder is watched once PYTHONPATH includes it."""
+    monkeypatch.delenv("PYTHONPATH", raising=False)
+    with (
+        tempfile.TemporaryDirectory() as tmp_dir,
+        patch("sys.modules", {"DUMMY_MODULE_1": DUMMY_MODULE_1}),
+    ):
+        script_path = os.path.join(tmp_dir, "app.py")
+        pathlib.Path(script_path).touch()
+
+        first = local_sources_watcher.LocalSourcesWatcher(PagesManager(script_path))
+        first.update_watched_modules()
+
+        monkeypatch.setenv("PYTHONPATH", os.path.dirname(DUMMY_MODULE_1_FILE))
+        second = local_sources_watcher.LocalSourcesWatcher(PagesManager(script_path))
+        second.update_watched_modules()
+
+    assert _watched_module_paths(first) == set()
+    assert _watched_module_paths(second) == {DUMMY_MODULE_1_FILE}
+
+
+@patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+@patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+def test_namespace_package_paths_are_not_shared(
+    _mock_path_watcher: MagicMock,
+) -> None:
+    """Namespace packages are rescanned because their __path__ can change."""
+    import tests.streamlit.watcher.test_data.namespace_package as pkg
+
+    try:
+        with patch("sys.modules", {"pkg": pkg}), _count_module_path_scans() as scan:
+            for _ in range(2):
+                local_sources_watcher.LocalSourcesWatcher(
+                    PagesManager(SCRIPT_PATH)
+                ).update_watched_modules()
+
+            assert scan.call_count == 2
+    finally:
+        sys.modules.pop("tests.streamlit.watcher.test_data.namespace_package", None)
 
 
 def sort_args_list(args_list):

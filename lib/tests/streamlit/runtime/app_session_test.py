@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import contextvars
 import gc
+import os
 import threading
 import unittest
 from typing import TYPE_CHECKING, Any, cast
@@ -74,7 +75,9 @@ from streamlit.runtime.uploaded_file_manager import (
     UploadedFileManager,
     UploadFileUrlInfo,
 )
+from streamlit.watcher import local_sources_watcher
 from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
+from tests.streamlit.watcher.test_data import dummy_module1 as dummy_module
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
@@ -86,6 +89,12 @@ if TYPE_CHECKING:
 @pytest.fixture
 def del_path(monkeypatch):
     monkeypatch.setenv("PATH", "")
+
+
+_DUMMY_MODULE_FILE = os.path.realpath(dummy_module.__file__)
+_WATCHER_TEST_SCRIPT_PATH = os.path.join(
+    os.path.dirname(_DUMMY_MODULE_FILE), "not_a_real_script.py"
+)
 
 
 def _create_test_session(
@@ -1862,6 +1871,60 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
                 event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
                 forward_msg=None,  # This is the condition we're testing
             )
+
+    @patch.object(PagesManager, "get_pages", MagicMock(return_value={}))
+    async def test_sessions_share_module_path_scan_across_reconnects(self):
+        """Sessions and reconnects scan a module's paths once but watch it separately."""
+        local_sources_watcher._watchable_module_paths.clear()
+        self.addCleanup(local_sources_watcher._watchable_module_paths.clear)
+
+        def finish_script_run(session: AppSession) -> None:
+            session._scriptrunner = MagicMock(spec=ScriptRunner)
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=session._scriptrunner,
+                event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+            )
+
+        with (
+            patch_config_options({"server.fileWatcherType": "poll"}),
+            patch(
+                "streamlit.watcher.local_sources_watcher.PathWatcher"
+            ) as mock_path_watcher,
+            patch.object(
+                local_sources_watcher,
+                "get_module_paths",
+                wraps=local_sources_watcher.get_module_paths,
+            ) as scan,
+        ):
+            sessions = [
+                AppSession(
+                    script_data=ScriptData(_WATCHER_TEST_SCRIPT_PATH, is_hello=False),
+                    uploaded_file_manager=MagicMock(spec=UploadedFileManager),
+                    script_cache=MagicMock(),
+                    message_enqueued_callback=None,
+                    user_info={"email": "test@example.com"},
+                )
+                for _ in range(2)
+            ]
+            for session in sessions:
+                finish_script_run(session)
+            reconnected = sessions[1]
+            reconnected.disconnect_file_watchers()
+            reconnected.register_file_watchers()
+            finish_script_run(reconnected)
+            for session in sessions:
+                session.disconnect_file_watchers()
+
+        watchers = [
+            c.args[1].__self__
+            for c in mock_path_watcher.call_args_list
+            if c.args[0] == _DUMMY_MODULE_FILE
+        ]
+        assert len(watchers) == 3
+        assert len({id(watcher) for watcher in watchers}) == 3
+        assert [c.args for c in scan.call_args_list if c.args[0] is dummy_module] == [
+            (dummy_module,)
+        ]
 
 
 class PopulateCustomThemeMsgTest(unittest.TestCase):

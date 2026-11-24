@@ -17,6 +17,7 @@ from __future__ import annotations
 import os
 import sys
 import threading
+import weakref
 from typing import TYPE_CHECKING, Any, Final, NamedTuple, cast
 
 from streamlit import config, env_util, file_util
@@ -277,33 +278,131 @@ class LocalSourcesWatcher:
     def _file_is_new(self, filepath: str) -> bool:
         return filepath not in self._watched_modules
 
-    def _file_should_be_watched(self, filepath: str) -> bool:
-        # Using short circuiting for performance.
-        return self._file_is_new(filepath) and (
-            file_util.file_is_in_folder_glob(filepath, self._script_folder)
-            or file_util.file_in_pythonpath(filepath)
-        )
-
     def update_watched_modules(self) -> None:
         if self._is_closed:
             return
 
-        if set(sys.modules) != self._cached_sys_modules:
-            modules_paths = {
-                name: self._exclude_blacklisted_paths(get_module_paths(module))
-                for name, module in dict(sys.modules).items()
-            }
-            self._cached_sys_modules = set(sys.modules)
-            self._register_necessary_watchers(modules_paths)
+        modules = dict(sys.modules)
+        if modules.keys() != self._cached_sys_modules:
+            settings = _WatchablePathSettings(
+                script_folder=self._script_folder,
+                folder_blacklist=self._folder_black_list.patterns,
+                pythonpath=os.environ.get("PYTHONPATH", ""),
+            )
+            module_paths = _watchable_module_paths.get(
+                modules, settings, self._folder_black_list
+            )
+            self._cached_sys_modules = set(modules)
+            self._register_necessary_watchers(module_paths)
 
-    def _register_necessary_watchers(self, module_paths: dict[str, set[str]]) -> None:
+    def _register_necessary_watchers(
+        self, module_paths: dict[str, frozenset[str]]
+    ) -> None:
         for name, paths in module_paths.items():
             for path in paths:
-                if self._file_should_be_watched(path):
-                    self._register_watcher(os.path.realpath(path), name)
+                # The shared paths may predate a file's deletion.
+                if self._file_is_new(path) and _is_valid_path(path):
+                    self._register_watcher(path, name)
 
-    def _exclude_blacklisted_paths(self, paths: set[str]) -> set[str]:
-        return {p for p in paths if not self._folder_black_list.is_blacklisted(p)}
+
+class _WatchablePathSettings(NamedTuple):
+    script_folder: str
+    folder_blacklist: tuple[str, ...]
+    pythonpath: str
+
+
+class _CachedModulePaths(NamedTuple):
+    module_ref: Callable[[], object]
+    paths: frozenset[str]
+
+
+class _WatchableModulePaths:
+    """Process-wide cache of the source paths each loaded module could be watched at.
+
+    Every session's watcher needs the same paths, and finding them (resolving
+    and globbing every path of every loaded module) is expensive for apps with
+    many imports. Caching them per module lets a new session look them up
+    instead of rescanning ``sys.modules``, while each session still registers
+    its own watchers.
+
+    An entry belongs to the module object it was computed for, so a module
+    that is evicted and re-imported under the same name is examined again.
+    Namespace packages are never cached because their ``__path__`` can grow
+    as ``sys.path`` changes.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._settings: _WatchablePathSettings | None = None
+        self._entries: dict[str, _CachedModulePaths] = {}
+
+    def get(
+        self,
+        modules: dict[str, Any],
+        settings: _WatchablePathSettings,
+        folder_black_list: FolderBlackList,
+    ) -> dict[str, frozenset[str]]:
+        """Return the watchable paths of each module that has any, by module name."""
+        with self._lock:
+            if settings != self._settings:
+                self._settings = settings
+                self._entries = {}
+
+            module_paths: dict[str, frozenset[str]] = {}
+            for name, module in modules.items():
+                entry = self._entries.get(name)
+                if entry is not None and entry.module_ref() is module:
+                    paths = entry.paths
+                else:
+                    paths = _find_watchable_paths(module, settings, folder_black_list)
+                    self._remember(name, module, paths)
+                if paths:
+                    module_paths[name] = paths
+
+            for name in self._entries.keys() - modules.keys():
+                del self._entries[name]
+            return module_paths
+
+    def clear(self) -> None:
+        with self._lock:
+            self._settings = None
+            self._entries = {}
+
+    def _remember(self, name: str, module: Any, paths: frozenset[str]) -> None:
+        try:
+            module_ref = weakref.ref(module)
+        except TypeError:
+            module_ref = None
+        if module_ref is None or _has_namespace_path(module):
+            self._entries.pop(name, None)
+        else:
+            self._entries[name] = _CachedModulePaths(module_ref, paths)
+
+
+_watchable_module_paths: Final = _WatchableModulePaths()
+
+
+def _find_watchable_paths(
+    module: ModuleType,
+    settings: _WatchablePathSettings,
+    folder_black_list: FolderBlackList,
+) -> frozenset[str]:
+    return frozenset(
+        path
+        for path in get_module_paths(module)
+        if not folder_black_list.is_blacklisted(path)
+        and (
+            file_util.file_is_in_folder_glob(path, settings.script_folder)
+            or file_util.file_in_pythonpath(path)
+        )
+    )
+
+
+def _has_namespace_path(module: Any) -> bool:
+    try:
+        return type(module.__path__).__name__ in {"_NamespacePath", "NamespacePath"}
+    except Exception:
+        return False
 
 
 def _queue_evictions(changed_path: str, module_names: set[str]) -> None:
