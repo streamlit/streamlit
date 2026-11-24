@@ -325,6 +325,7 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         with pytest.raises(TypeError):
             self.query_params.from_dict(12345)  # type: ignore[arg-type]
         assert self.query_params._query_params == old_value
+        assert len(self.forward_msg_queue) == 0
 
     def test_from_dict_raises_error_with_embed_key(self):
         with pytest.raises(StreamlitAPIException):
@@ -1187,10 +1188,21 @@ class DirectManipulationProtectionTest(DeltaGeneratorTestCase):
         }
         assert len(self.forward_msg_queue) == 0
 
-    def test_from_dict_raises_for_bound_params_and_keeps_params(self) -> None:
-        """Test that from_dict refuses to clear bound params, like clear()."""
-        with pytest.raises(StreamlitAPIException, match="bound to widgets"):
-            self.query_params.from_dict({"new_key": "x"})
+    def test_from_dict_keeps_bound_params_and_replaces_unbound(self) -> None:
+        """Test that from_dict replaces unbound params and keeps bound ones."""
+        self.query_params.from_dict({"new_key": "x"})
+        assert self.query_params._query_params == {
+            "bound_key": "value",
+            "new_key": "x",
+        }
+        assert len(self.forward_msg_queue) == 1
+        message = self.get_message_from_queue(0)
+        assert message.page_info_changed.query_string == "bound_key=value&new_key=x"
+
+    def test_from_dict_raises_for_bound_key_and_keeps_params(self) -> None:
+        """Test that from_dict refuses to set a bound key and restores the params."""
+        with pytest.raises(StreamlitAPIException, match="bound to a widget"):
+            self.query_params.from_dict({"bound_key": "new", "new_key": "x"})
         assert self.query_params._query_params == {
             "bound_key": "value",
             "unbound_key": "other",

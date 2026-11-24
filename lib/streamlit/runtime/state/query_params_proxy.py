@@ -209,8 +209,9 @@ class QueryParamsProxy(MutableMapping[str, str]):
 
         For a repeated key, pass an iterable of strings as the value.
 
-        If any current query parameter is bound to a widget through
-        ``bind="query-params"``, this method raises an exception and leaves
+        Query parameters bound to a widget through ``bind="query-params"``
+        are kept, because the widget controls them. If ``params`` contains a
+        bound key, this method raises ``StreamlitAPIException`` and leaves
         the query parameters unchanged. Change the widget's value instead.
 
         .. note::
