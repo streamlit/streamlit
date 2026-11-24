@@ -120,7 +120,7 @@ _DATE_FILTER_ACCEPTED_FORMS: Final[list[str]] = [
     "datetime",
     "ISO string",
     '"today"',
-    'weekday name ("monday"…"sunday")',
+    'weekday name ("monday" through "sunday")',
     "list-like of these",
 ]
 
@@ -2282,6 +2282,30 @@ class TimeWidgetsMixin:
     def date_input(
         self,
         label: str,
+        value: date | datetime | str | Literal["today"] = "today",
+        min_value: NullableScalarDateValue = None,
+        max_value: NullableScalarDateValue = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,  # keyword-only arguments:
+        format: str = "YYYY/MM/DD",
+        enabled_dates: DateFilter | None = None,
+        disabled_dates: DateFilter | None = None,
+        disabled: bool = False,
+        required: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> date: ...
+
+    @overload
+    def date_input(
+        self,
+        label: str,
         value: None,
         min_value: NullableScalarDateValue = None,
         max_value: NullableScalarDateValue = None,
@@ -2301,78 +2325,6 @@ class TimeWidgetsMixin:
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> date | None: ...
-
-    @overload
-    def date_input(
-        self,
-        label: str,
-        value: date | datetime | str | Literal["today"] = "today",
-        min_value: NullableScalarDateValue = None,
-        max_value: NullableScalarDateValue = None,
-        key: Key | None = None,
-        help: str | None = None,
-        on_change: WidgetCallback | OnChangeMode | None = "rerun",
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
-        format: str = "YYYY/MM/DD",
-        enabled_dates: DateFilter,
-        disabled_dates: DateFilter | None = None,
-        disabled: bool = False,
-        required: bool = False,
-        label_visibility: LabelVisibility = "visible",
-        width: WidthWithoutContent = "stretch",
-        bind: BindOption = None,
-        persist_state: PersistStateOption = None,
-    ) -> date | None: ...
-
-    @overload
-    def date_input(
-        self,
-        label: str,
-        value: date | datetime | str | Literal["today"] = "today",
-        min_value: NullableScalarDateValue = None,
-        max_value: NullableScalarDateValue = None,
-        key: Key | None = None,
-        help: str | None = None,
-        on_change: WidgetCallback | OnChangeMode | None = "rerun",
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
-        format: str = "YYYY/MM/DD",
-        enabled_dates: DateFilter | None = None,
-        disabled_dates: DateFilter,
-        disabled: bool = False,
-        required: bool = False,
-        label_visibility: LabelVisibility = "visible",
-        width: WidthWithoutContent = "stretch",
-        bind: BindOption = None,
-        persist_state: PersistStateOption = None,
-    ) -> date | None: ...
-
-    @overload
-    def date_input(
-        self,
-        label: str,
-        value: date | datetime | str | Literal["today"] = "today",
-        min_value: NullableScalarDateValue = None,
-        max_value: NullableScalarDateValue = None,
-        key: Key | None = None,
-        help: str | None = None,
-        on_change: WidgetCallback | OnChangeMode | None = "rerun",
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        *,  # keyword-only arguments:
-        format: str = "YYYY/MM/DD",
-        enabled_dates: None = None,
-        disabled_dates: None = None,
-        disabled: bool = False,
-        required: bool = False,
-        label_visibility: LabelVisibility = "visible",
-        width: WidthWithoutContent = "stretch",
-        bind: BindOption = None,
-        persist_state: PersistStateOption = None,
-    ) -> date: ...
 
     @overload
     def date_input(
@@ -2502,7 +2454,7 @@ class TimeWidgetsMixin:
             ``max_value``. If this is ``None`` (default), every date in that
             window is selectable. Accepts exact dates (``date``, ``datetime``,
             ISO strings, or ``"today"``), English weekday names
-            (``"monday"``…``"sunday"``), or a list-like of these (list, tuple,
+            (``"monday"`` through ``"sunday"``), or a list-like of these (list, tuple,
             set, Series, Index, NumPy array). Cannot be set together with
             ``disabled_dates``. When this is set, every other date is
             unavailable. An empty collection makes every date unavailable;
@@ -2906,9 +2858,10 @@ class TimeWidgetsMixin:
 
             if key is not None and key in session_state:
                 state_value = session_state[key]
-                # Read single/range shape only. Do not validate the stored date
-                # as a default against the (possibly newly changed) bounds —
-                # that would raise before _validate_date_value can reset it.
+                # Read only the stored value's single/range shape here. Parsing
+                # it as the default can raise when the bounds changed since it
+                # was stored, so the branches below either keep the "today"
+                # default or catch that error.
                 _, stored_is_range = _parse_date_value(value=state_value)
                 if availability is not None:
                     # Keep the snapped "today" default as the reset target when
@@ -2942,8 +2895,10 @@ class TimeWidgetsMixin:
 
         if availability is not None and parsed_values.is_range:
             raise StreamlitAPIException(
-                "`enabled_dates` and `disabled_dates` are not yet supported with "
-                "range `st.date_input` values. Pass a single date for `value`.",
+                "`enabled_dates` and `disabled_dates` are not yet supported when "
+                "the widget is in range mode, including a range saved in Session "
+                "State for this key. Pass a single date for `value`, or clear "
+                "that key.",
                 error_id="date-input-availability-range-unsupported",
             )
 

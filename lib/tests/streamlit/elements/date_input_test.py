@@ -1505,6 +1505,48 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         assert result == date(2024, 3, 11)
         assert st.session_state.day == date(2024, 3, 11)
 
+    def test_query_param_unavailable_value_is_cleared(self) -> None:
+        """Unavailable URL-bound values reset and drop the query param."""
+
+        st.session_state["day"] = date(2024, 3, 9)  # Saturday
+        with get_session_state().query_params() as qp:
+            qp.set_initial_query_params("day=2024-03-09")
+        result = st.date_input(
+            "day",
+            key="day",
+            value=date(2024, 3, 8),
+            disabled_dates=["saturday", "sunday"],
+            bind="query-params",
+        )
+        assert result == date(2024, 3, 8)
+        assert st.session_state.day == date(2024, 3, 8)
+        assert "day" not in st.query_params
+
+    def test_agent_props_report_availability_without_out_of_window_dates(
+        self,
+    ) -> None:
+        """Agent descriptions report availability and omit out-of-window dates."""
+
+        agent_spec.register_agent_session(self.script_run_ctx.session_id)
+        try:
+            st.date_input(
+                "day",
+                value=date(2026, 8, 25),
+                min_value=date(2026, 8, 1),
+                max_value=date(2026, 8, 31),
+                enabled_dates=[date(2026, 8, 25), date(2020, 1, 1), "monday"],
+            )
+            props = json.loads(self.get_message_from_queue().metadata.agent_props)
+        finally:
+            agent_spec.forget_agent_session(self.script_run_ctx.session_id)
+
+        assert props["props"]["enabled_dates"] == ["monday", "2026-08-25"]
+        assert "disabled_dates" not in props["props"]
+
+
+class DateInputKeyedTodayBoundsTest(DeltaGeneratorTestCase):
+    """Keyed value='today' resets when changed bounds invalidate Session State."""
+
     def test_keyed_default_today_resets_when_below_new_min(self) -> None:
         """Keyed value='today' resets a stored date below a raised min_value."""
 
@@ -1572,44 +1614,6 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
             )
         assert result == (date(2024, 7, 15),)
         assert st.session_state.day == (date(2024, 7, 15),)
-
-    def test_query_param_unavailable_value_is_cleared(self) -> None:
-        """Unavailable URL-bound values reset and drop the query param."""
-
-        st.session_state["day"] = date(2024, 3, 9)  # Saturday
-        with get_session_state().query_params() as qp:
-            qp.set_initial_query_params("day=2024-03-09")
-        result = st.date_input(
-            "day",
-            key="day",
-            value=date(2024, 3, 8),
-            disabled_dates=["saturday", "sunday"],
-            bind="query-params",
-        )
-        assert result == date(2024, 3, 8)
-        assert st.session_state.day == date(2024, 3, 8)
-        assert "day" not in st.query_params
-
-    def test_agent_props_report_availability_without_out_of_window_dates(
-        self,
-    ) -> None:
-        """Agent descriptions report availability and omit out-of-window dates."""
-
-        agent_spec.register_agent_session(self.script_run_ctx.session_id)
-        try:
-            st.date_input(
-                "day",
-                value=date(2026, 8, 25),
-                min_value=date(2026, 8, 1),
-                max_value=date(2026, 8, 31),
-                enabled_dates=[date(2026, 8, 25), date(2020, 1, 1), "monday"],
-            )
-            props = json.loads(self.get_message_from_queue().metadata.agent_props)
-        finally:
-            agent_spec.forget_agent_session(self.script_run_ctx.session_id)
-
-        assert props["props"]["enabled_dates"] == ["monday", "2026-08-25"]
-        assert "disabled_dates" not in props["props"]
 
 
 def test_resolve_today_snaps_forward() -> None:
@@ -1754,8 +1758,7 @@ def test_availability_change_pushes_set_value_to_frontend() -> None:
     at = at.run()
     assert at.date_input[0].proto.set_value is True
     assert list(at.date_input[0].proto.value) == ["2024-03-08"]
-    # AppTest needs an extra run to apply the set_value response.
-    at = at.run()
+    # Session State and the script return value are already reset on this run.
     assert at.date_input[0].value == date(2024, 3, 8)
     assert at.text[0].value == "Value: 2024-03-08"
 
@@ -1789,7 +1792,7 @@ def test_dynamic_min_value_pushes_set_value_to_frontend() -> None:
     at = at.run()
     assert at.date_input[0].proto.set_value is True
     assert list(at.date_input[0].proto.value) == ["2024-07-15"]
-    at = at.run()
+    # Session State and the script return value are already reset on this run.
     assert at.date_input[0].value == date(2024, 7, 15)
     assert at.text[0].value == "Value: 2024-07-15"
 

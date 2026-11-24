@@ -293,8 +293,8 @@ export function formatCalendarDate(
 }
 
 /**
- * Builds the out-of-range tooltip. In range mode, the message identifies the
- * violated bound rather than the edited field because either endpoint can
+ * Builds the date-validation tooltip. In range mode, a bounds error identifies
+ * the violated bound rather than the edited field because either endpoint can
  * violate either bound.
  */
 export function createDateErrorMessage(
