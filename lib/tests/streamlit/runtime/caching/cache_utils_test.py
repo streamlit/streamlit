@@ -14,12 +14,14 @@
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING, Any
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+import streamlit as st
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_type import CacheType
@@ -36,6 +38,7 @@ from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from types import FrameType
 
 
 @pytest.fixture(autouse=True)
@@ -293,3 +296,37 @@ def test_cache_clear_only_removes_specified_key() -> None:
     cache.clear()
     assert cache._value_locks == {}
     assert cleared_keys == ["remove_me", None]
+
+
+def _stack_depth() -> int:
+    depth = 0
+    frame: FrameType | None = sys._getframe(1)
+    while frame is not None:
+        depth += 1
+        frame = frame.f_back
+    return depth
+
+
+@pytest.mark.parametrize(
+    "cache_decorator",
+    [
+        pytest.param(st.cache_data, id="cache_data"),
+        pytest.param(st.cache_resource, id="cache_resource"),
+    ],
+)
+def test_cached_call_frame_count_on_miss(cache_decorator: Any) -> None:
+    """A cached call adds a fixed, small number of frames between the caller and
+    the function, which bounds how deep a memoized recursive function can go."""
+    depths: list[int] = []
+
+    @cache_decorator
+    def recurse(n: int) -> None:
+        depths.append(_stack_depth())
+        if n > 0:
+            recurse(n - 1)
+
+    recurse(1)
+
+    # Each extra frame lowers the recursion depth that memoized recursion
+    # reaches before hitting `sys.getrecursionlimit()`.
+    assert depths[1] - depths[0] <= 4
