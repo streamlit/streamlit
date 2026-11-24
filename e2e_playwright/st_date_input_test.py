@@ -40,7 +40,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATE_INPUTS = 36
+NUM_DATE_INPUTS = 37
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -1412,13 +1412,21 @@ def test_unavailable_range_endpoint_not_selectable(app: Page):
     )
 
     # Start a new range on Friday and complete on the following Monday,
-    # crossing the unavailable weekend.
-    friday = calendar.get_by_role("button", name=re.compile(r"Friday, March 8"))
+    # crossing the unavailable weekend. Selected-range aria-labels include
+    # both endpoints, so match the trailing "…, 2024 selected" form that is
+    # unique to the start cell (not the end cell's label).
+    friday = calendar.get_by_role(
+        "button",
+        name=re.compile(r"Friday, March 8, 2024 selected"),
+    )
     friday.click()
     wait_for_app_run(app)
     expect_markdown(app, "Value weekdays only range: (datetime.date(2024, 3, 8),)")
 
-    monday = calendar.get_by_role("button", name=re.compile(r"Monday, March 11"))
+    monday = calendar.get_by_role(
+        "button",
+        name=re.compile(r"Monday, March 11, 2024"),
+    )
     monday.click()
     wait_for_app_run(app)
     expect_markdown(
