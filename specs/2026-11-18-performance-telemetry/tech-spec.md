@@ -73,7 +73,6 @@ class ScriptRunContext:  # ctx: reset() at the start of each run
 class SharedRunState:  # ctx.shared: shared by all the run's threads
     stats: RunStats
     parallel_fragments: ParallelFragmentUsageStats
-    query_ids: QueryIds  # query time: the first 50, under a lock
 
 
 class RunStats:  # one per run, shared by all its threads
@@ -124,7 +123,7 @@ class FragmentThreadState:  # ThreadState: a ContextVar, copied to attached thre
     in_listed_command: bool
 ```
 
-At the start of each run, `SharedRunState.reset()` replaces `stats`, `query_ids` and `parallel_fragments` with new objects instead of clearing them. Late work from the previous run, such as a cached call on a thread the script didn't join, then finishes into the old objects, which nothing reads, instead of the new run's totals.
+At the start of each run, `SharedRunState.reset()` replaces `stats` and `parallel_fragments` with new objects instead of clearing them. Late work from the previous run, such as a cached call on a thread the script didn't join, then finishes into the old objects, which nothing reads, instead of the new run's totals.
 
 ### Per-thread totals without locks
 
@@ -334,10 +333,6 @@ return False, in_recorded_cached_call(stats)
 - **Inside a cached call** covers everything on the thread that a recorded call's times include: its computation, the cache's own work such as a `hash_funcs` function and, in async code, other tasks' queries while it awaits.
 
 So `time − time_in_cache − time_in_commands` is query time that's otherwise part of user code, and subtracting `time_in_cache` from cache time leaves the cache's other work.
-
-#### Query IDs
-
-The run keeps the first 50 Snowflake query IDs it receives, under one lock in `SharedRunState.query_ids`, in two lists that share the limit: `query_ids` and `query_ids_in_cache`. The second list holds queries inside cached calls, whose results later runs and sessions can reuse.
 
 #### Failures and cost
 

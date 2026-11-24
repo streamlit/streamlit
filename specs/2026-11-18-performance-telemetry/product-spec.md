@@ -42,7 +42,7 @@ Each addition exists to answer one of these questions about slow runs:
 
 Every addition follows three principles:
 
-- **Per-run totals, not traces.** Each addition adds a small, fixed-size set of numbers to each run. Per-call detail, such as the time of each query or each element, is left to a developer-facing trace (see [Out of scope](#out-of-scope)). There are two capped exceptions: an entry per parallel fragment, because a run's time can't be explained without each fragment's own span, and the run's Snowflake query IDs, which link a run to each query in the account's query history.
+- **Per-run totals, not traces.** Each addition adds a small, fixed-size set of numbers to each run. Per-call detail, such as the time of each query or each element, is left to a developer-facing trace (see [Out of scope](#out-of-scope)). The one capped exception is an entry per parallel fragment, because a run's time can't be explained without each fragment's own span.
 - **Only what varies between real apps.** Telemetry records what depends on the app, its data, its hosting, the network, the device and how people use it. Costs that are fixed for a given input, such as how long a cache hit takes for a given result size or how long a chart type takes to draw, are measured by benchmarks in the performance suite instead.
 - **The numbers add up.** Every new time is defined relative to the existing ones, so that analysis can subtract times without counting any span twice (see below).
 
@@ -121,9 +121,7 @@ Query time can overlap time that's already reported, so each source also reports
 
 The rest, `time − time_in_cache − time_in_commands`, is query time that's otherwise part of user code. Subtracting `time_in_cache` from cache time leaves the cache's other work. The counts include Snowpark queries, which aren't timed (see below). Each parallel fragment's entry reports its query time and the two parts in the same way. Queries on other threads the app attaches are added into the run's totals, like command and cache times.
 
-The run also sends the Snowflake query IDs of its recorded queries, on every platform, up to the first 50 to finish. IDs of queries inside cached calls go in a second list, `query_ids_in_cache`, which shares the 50-ID limit. A query ID contains no SQL, and only someone with access to the Snowflake account that ran the query can look it up, for example to get its compile, queue and execution time from the account's query history. No SQL text, parameters, object names, rows or connection details are sent.
-
-Looking up the IDs gives the warehouse's time for each query, which leaves out network time and fetching results. For Snowpark queries it's the only time available, and the second list separates the time spent in cached functions from the rest. A run with more than 50 queries links only some of them, and its counts show how many are missing. Each ID adds about 39 bytes to the usage event's JSON, so the IDs add at most about 2 KB per run.
+Only counts and times are sent. No SQL text, parameters, object names, rows, connection details or query IDs are sent (see [Out of scope](#out-of-scope)).
 
 Instrumentation is installed only when usage stats are on, and never changes a query's result or error. Recording adds about 1 µs per query for the Snowflake connector and about 5 µs for SQLAlchemy, mostly SQLAlchemy's own event dispatch. Working out whether a query is inside a cached call or a command adds well under 0.1 µs. A Snowflake query takes tens of milliseconds or more.
 
@@ -161,7 +159,7 @@ For widget interactions, the run also records the type of the widget that starte
 | Rerun reason | Why the run started, such as a first load, a page change, a widget interaction or a fragment timer, and for a widget interaction, the type of widget, such as a slider or chart selection (see [Rerun reason](#rerun-reason)) | Server |
 | Render timing | When the user's screen reached each loading milestone, what it waited on after the script finished, the number of visible elements, a viewport size bucket, and flags for hidden, superseded and timed-out runs. No per-element render or paint times | Browser |
 | Data size | Bytes and messages the browser received, Arrow bytes, rows and the largest payload for dataframes and charts, and messages served from the browser's message cache | Server and browser |
-| Query time | Per client library: query, failure, async and describe counts, and execute time, with the count and time inside cached calls and commands; the first 50 Snowflake query IDs, with those inside cached calls listed separately | Server |
+| Query time | Per client library: query, failure, async and describe counts, and execute time, with the count and time inside cached calls and commands | Server |
 
 Each addition documents its fields and attribution rules in `PageProfile.proto` (or `MetricsEvent.proto` for browser-only values), and updates the telemetry reference when it lands.
 
@@ -176,6 +174,7 @@ Each addition documents its fields and attribution rules in `PageProfile.proto` 
 - **Exporting these numbers to a developer's own observability backend**, for example with OpenTelemetry. That's a separate spec, which would reuse the same per-run totals.
 - **A developer-only trace of a single load** with per-call spans and per-element render times. That's also a separate spec.
 - **Per-call and per-element timings in usage stats.** These would break the fixed-size rule. Fixed per-element costs are covered by performance suite benchmarks.
+- **Snowflake query IDs.** They would link a run to each of its queries in the account's query history, which would give the warehouse's compile, queue and execution time and the only time available for Snowpark queries. They aren't anonymous, so whether to send them, for example only for accounts that opt in, is decided separately.
 - **Changes to existing fields** or to the meaning of the server metrics at `/_stcore/metrics`.
 
 ## Checklist
@@ -186,5 +185,5 @@ Each addition documents its fields and attribution rules in `PageProfile.proto` 
 | No breaking API changes      | ✅ No public API changes; only new proto fields. |
 | No new dependencies          | ✅ Query timing instruments database clients only when they're installed and in use. |
 | Metrics collected            | ✅ This spec is about metrics. Everything is gated by `browser.gatherUsageStats`. |
-| Any security/legal impact?   | No app content is added. Query IDs are opaque and can only be looked up with access to the Snowflake account that ran the query. |
+| Any security/legal impact?   | No app content is added. |
 | Any docs changes needed?     | The telemetry reference is updated as each addition lands. No user-facing docs changes. |
