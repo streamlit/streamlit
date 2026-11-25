@@ -119,6 +119,8 @@ Query time can overlap time that's already reported, so each source also reports
 - **Inside cached calls** (`queries_in_cache`, `time_in_cache`): queries while a recorded cached call is open, which cache time already includes. That's mostly queries in the cached function's computation, but also queries from the cache's own work, such as a `hash_funcs` function, and in async code, other tasks' queries while the call awaits.
 - **Inside commands** (`queries_in_commands`, `time_in_commands`): queries inside a listed command, which that command's time already includes. For example, a lazy DataFrame passed to `st.dataframe` runs its query inside the command.
 
+A query counts toward at most one of the two. A query inside a listed command counts toward the command, even if a cached call is also open, because cache time leaves out listed commands.
+
 The rest, `time − time_in_cache − time_in_commands`, is query time that's otherwise part of user code. Subtracting `time_in_cache` from cache time leaves the cache's other work. The counts include Snowpark queries, which aren't timed (see below). Each parallel fragment's entry reports its query time and the two parts in the same way. Queries on other threads the app attaches are added into the run's totals, like command and cache times.
 
 Only counts and times are sent. No SQL text, parameters, object names, rows or connection details are sent.
