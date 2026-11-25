@@ -743,14 +743,22 @@ def test_snowpark_queries_in_cached_functions_and_commands_are_counted_there(
 def test_snowpark_listener_errors_never_reach_snowpark(
     ctx: ScriptRunContext, snowpark: types.ModuleType
 ) -> None:
-    """A recording error inside the listener doesn't raise into Snowpark."""
+    """Neither a recording error nor arguments from a different Snowpark
+    version raise into Snowpark.
+    """
     session = FakeSnowparkSession()
     query_telemetry.watch_snowpark_session(session)  # type: ignore[arg-type]
+    (listener,) = session._conn.listeners
 
     with patch.object(
         query_telemetry, "record_untimed_query", side_effect=RuntimeError("broke")
     ):
         session._conn.run(FakeQueryRecord())
+
+    listener._notify()
+    listener._notify(FakeQueryRecord(is_describe=True), "extra", new_option=1)
+
+    assert _counts(_totals(ctx, "snowpark")) == (2, 0, 1)
 
 
 def test_old_snowpark_is_not_watched(

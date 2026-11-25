@@ -314,13 +314,14 @@ def install_sqlalchemy_hooks(engine: Engine) -> None:
         _LOGGER.debug("Failed to install SQLAlchemy query telemetry", exc_info=ex)
 
 
-def _record_snowpark_query(query_record: Any, **kwargs: Any) -> None:
+def _record_snowpark_query(args: tuple[Any, ...], kwargs: dict[str, Any]) -> None:
     try:
+        query_record = args[0] if args else kwargs.get("query_record")
         record_untimed_query(
             "snowpark",
             # Snowpark passes the exception only for some failures.
             failed="exception" in kwargs,
-            is_describe=bool(query_record.is_describe),
+            is_describe=bool(getattr(query_record, "is_describe", False)),
         )
     except Exception as ex:
         _LOGGER.debug("Failed to record query telemetry", exc_info=ex)
@@ -345,8 +346,10 @@ def _snowpark_query_listener() -> Any:
         include_describe = True
         include_error = True
 
-        def _notify(self, query_record: Any, **kwargs: Any) -> None:
-            _record_snowpark_query(query_record, **kwargs)
+        # Snowpark calls this without catching errors, so it accepts any
+        # arguments in case a later Snowpark version passes different ones.
+        def _notify(self, *args: Any, **kwargs: Any) -> None:
+            _record_snowpark_query(args, kwargs)
 
     return StreamlitQueryListener()
 
