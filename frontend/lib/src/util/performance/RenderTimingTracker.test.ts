@@ -61,11 +61,15 @@ class FakeBrowser {
 
   observers: FakeIntersectionObserver[] = []
 
+  /** How many callbacks have been queued for a frame. */
+  paintRequests = 0
+
   private paintQueue: (() => void)[] = []
 
   readonly environment = {
     now: () => this.time,
     afterNextPaint: (callback: () => void) => {
+      this.paintRequests++
       this.paintQueue.push(callback)
     },
     createIntersectionObserver: (callback: IntersectionObserverCallback) => {
@@ -807,6 +811,30 @@ describe("RenderTimingTracker", () => {
   })
 
   describe("lifecycle", () => {
+    it("checks every element changed in a frame with one paint callback", async () => {
+      tracker.runStarted(RUN_ID)
+      const paintRequestsBefore = browser.paintRequests
+
+      const targets = Array.from({ length: 50 }, () => commitElement().target)
+      targets.forEach(target => browser.observer.report(target, true))
+
+      expect(browser.paintRequests - paintRequestsBefore).toBe(1)
+
+      browser.paint(30)
+      await finishScript(40)
+      browser.paintUntilIdle()
+
+      expect(reports).toEqual([
+        expect.objectContaining({
+          renderTiming: expect.objectContaining({
+            firstContentMs: 30,
+            fullyLoadedMs: 40,
+            visibleElements: 50,
+          }),
+        }),
+      ])
+    })
+
     it("releases the observer once the run is reported", async () => {
       tracker.runStarted(RUN_ID)
       const { target } = commitElement()

@@ -89,7 +89,6 @@ interface ElementRecord {
   readonly loadIntervals: LoadInterval[]
   /** When the element was painted with no pending work. */
   readyAt?: number
-  isReadyCheckScheduled: boolean
   target?: Element
   /** Undefined until the IntersectionObserver first reports the element. */
   isIntersecting?: boolean
@@ -107,6 +106,15 @@ interface RunMeasurement {
   wasSuperseded: boolean
   readonly records: Set<ElementRecord>
   readonly recordsByTarget: Map<Element, ElementRecord>
+  /**
+   * Number of records the run is still waiting on: not yet reported by the
+   * IntersectionObserver, or visible and not ready. Kept up to date by
+   * `updateRecord`, so checking whether the run is complete doesn't scan.
+   */
+  waitingCount: number
+  /** Records to check for readiness after the next paint. */
+  readonly recordsToCheck: Set<ElementRecord>
+  isReadyCheckScheduled: boolean
   observer?: IntersectionObserver
   viewportSize?: { width: number; height: number }
   timeoutId?: ReturnType<typeof setTimeout>
@@ -138,6 +146,24 @@ const DEFAULT_ENVIRONMENT: RenderTimingEnvironment = {
     // eslint-disable-next-line no-restricted-properties, streamlit-custom/no-force-reflow-access -- Non-React class; see above.
     height: window.innerHeight,
   }),
+}
+
+/** Whether the run can't complete until this record changes. */
+function isWaitingOn(record: ElementRecord): boolean {
+  return (
+    record.isIntersecting === undefined ||
+    (record.isIntersecting && record.readyAt === undefined)
+  )
+}
+
+/**
+ * Applies a change to a record's visibility or readiness, keeping the run's
+ * `waitingCount` up to date.
+ */
+function updateRecord(record: ElementRecord, change: () => void): void {
+  const wasWaiting = isWaitingOn(record)
+  change()
+  record.run.waitingCount += Number(isWaitingOn(record)) - Number(wasWaiting)
 }
 
 function getBucket(size: number, bounds: number[]): number {
@@ -332,6 +358,9 @@ export class RenderTimingTracker {
       wasSuperseded: false,
       records: new Set(),
       recordsByTarget: new Map(),
+      waitingCount: 0,
+      recordsToCheck: new Set(),
+      isReadyCheckScheduled: false,
       changeCount: 0,
       isSettling: false,
       isFinalized: false,
@@ -409,7 +438,6 @@ export class RenderTimingTracker {
       contentCommittedAt: handle.contentVersion === version ? now : undefined,
       pendingLoads: new Map(),
       loadIntervals: [],
-      isReadyCheckScheduled: false,
       wasEverIntersecting: false,
     }
     handle.loadingSlots.forEach((kind, slot) => {
@@ -417,6 +445,8 @@ export class RenderTimingTracker {
     })
     handle.record = record
     run.records.add(record)
+    // Not yet reported by the IntersectionObserver.
+    run.waitingCount++
     run.changeCount++
     this.observe(record)
     this.scheduleReadyCheck(record)
@@ -455,7 +485,9 @@ export class RenderTimingTracker {
     if (isLoading && !pending) {
       record.pendingLoads.set(slot, { kind, start: now })
       // An element that starts new work after being painted isn't done.
-      record.readyAt = undefined
+      updateRecord(record, () => {
+        record.readyAt = undefined
+      })
       record.run.changeCount++
     } else if (!isLoading && pending) {
       record.pendingLoads.delete(slot)
@@ -472,6 +504,8 @@ export class RenderTimingTracker {
     handle.record = undefined
     const { run } = record
     run.records.delete(record)
+    run.recordsToCheck.delete(record)
+    if (isWaitingOn(record)) run.waitingCount--
     if (record.target) {
       run.recordsByTarget.delete(record.target)
       run.observer?.unobserve(record.target)
@@ -498,13 +532,17 @@ export class RenderTimingTracker {
       run.observer?.unobserve(record.target)
     }
     record.target = handle.target
-    record.isIntersecting = undefined
     run.recordsByTarget.set(record.target, record)
     if (run.observer) {
+      updateRecord(record, () => {
+        record.isIntersecting = undefined
+      })
       run.observer.observe(record.target)
     } else {
       // Without IntersectionObserver every element counts as visible.
-      record.isIntersecting = true
+      updateRecord(record, () => {
+        record.isIntersecting = true
+      })
       record.wasEverIntersecting = true
     }
   }
@@ -518,43 +556,54 @@ export class RenderTimingTracker {
     for (const entry of entries) {
       const record = run.recordsByTarget.get(entry.target)
       if (!record) continue
-      record.isIntersecting = entry.isIntersecting
+      updateRecord(record, () => {
+        record.isIntersecting = entry.isIntersecting
+      })
       record.wasEverIntersecting ||= entry.isIntersecting
     }
     run.changeCount++
     this.evaluate(run)
   }
 
+  /**
+   * Checks the record for readiness after the next paint. One check per run
+   * per frame covers every record that changed in that frame.
+   */
   private scheduleReadyCheck(record: ElementRecord): void {
-    if (record.isReadyCheckScheduled) return
+    const { run } = record
+    run.recordsToCheck.add(record)
+    if (run.isReadyCheckScheduled) return
 
-    record.isReadyCheckScheduled = true
+    run.isReadyCheckScheduled = true
     this.env.afterNextPaint(() => {
-      record.isReadyCheckScheduled = false
-      const { run, handle } = record
-      if (
-        run.isFinalized ||
-        handle.record !== record ||
-        record.readyAt !== undefined ||
-        record.contentCommittedAt === undefined ||
-        record.pendingLoads.size > 0
-      ) {
-        return
+      run.isReadyCheckScheduled = false
+      if (run.isFinalized) return
+
+      const paintedAt = this.env.now()
+      let hasNewReady = false
+      for (const pending of run.recordsToCheck) {
+        if (
+          pending.readyAt !== undefined ||
+          pending.contentCommittedAt === undefined ||
+          pending.pendingLoads.size > 0
+        ) {
+          continue
+        }
+        updateRecord(pending, () => {
+          pending.readyAt = paintedAt
+        })
+        hasNewReady = true
       }
-      record.readyAt = this.env.now()
-      run.changeCount++
-      this.evaluate(run)
+      run.recordsToCheck.clear()
+      if (hasNewReady) {
+        run.changeCount++
+        this.evaluate(run)
+      }
     })
   }
 
   private isComplete(run: RunMeasurement): boolean {
-    if (run.scriptFinishedAt === undefined) return false
-
-    for (const record of run.records) {
-      if (record.isIntersecting === undefined) return false
-      if (record.isIntersecting && record.readyAt === undefined) return false
-    }
-    return true
+    return run.scriptFinishedAt !== undefined && run.waitingCount === 0
   }
 
   /**
@@ -612,6 +661,8 @@ export class RenderTimingTracker {
     }
     run.records.clear()
     run.recordsByTarget.clear()
+    run.recordsToCheck.clear()
+    run.waitingCount = 0
   }
 
   private buildRenderTiming(
