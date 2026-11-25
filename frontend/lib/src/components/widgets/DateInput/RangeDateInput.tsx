@@ -948,7 +948,10 @@ function RangeDateInput({
   const emitRangeSelection = useCallback(
     (dates: CalendarDate[]): void => {
       if (hasUnavailableEndpoint(dates)) {
+        // Stage through onEdit so required forms treat the displayed edit as
+        // dirty and reject submit instead of keeping the previous range.
         validateBothFields(dates[0] ?? null, dates[1] ?? null)
+        onEdit(dates.map(calendarDateToIso))
         return
       }
       if (required && dates.length !== 2) {
@@ -1257,6 +1260,7 @@ function RangeDateInput({
       // never commit an unavailable endpoint.
       if (hasUnavailableEndpoint([preset.start, preset.end])) {
         validateBothFields(preset.start, preset.end)
+        onEdit([preset.start, preset.end].map(calendarDateToIso))
         return
       }
       inAnchorModeRef.current = false
@@ -1267,7 +1271,13 @@ function RangeDateInput({
       onChange([preset.start, preset.end])
       setIsQuickSelectOpen(false)
     },
-    [hasUnavailableEndpoint, onChange, quickSelectPresets, validateBothFields]
+    [
+      hasUnavailableEndpoint,
+      onChange,
+      onEdit,
+      quickSelectPresets,
+      validateBothFields,
+    ]
   )
 
   const handleQuickSelectSelection = useCallback(
@@ -1332,7 +1342,10 @@ function RangeDateInput({
           setDisplayStart(start)
           setDisplayEnd(end)
           if (hasUnavailableEndpoint([start, end])) {
+            // Same dirty staging as emitRangeSelection: keep form submit from
+            // accepting the previous complete range behind this display.
             validateBothFields(start, end)
+            onEdit([start, end].map(calendarDateToIso))
             return
           }
           hasEditedRef.current = false
@@ -1373,6 +1386,7 @@ function RangeDateInput({
       hasUnavailableEndpoint,
       minDate,
       onChange,
+      onEdit,
       validateBothFields,
     ]
   )

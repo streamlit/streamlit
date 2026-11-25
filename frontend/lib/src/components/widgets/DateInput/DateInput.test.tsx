@@ -7418,6 +7418,95 @@ describe("DateInput no-op interactions", () => {
     expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
   })
 
+  it.each([
+    ["whole-range", "2024/03/09 – 2024/03/11"],
+    ["single-date", "2024/03/09"],
+  ])(
+    "blocks required form submit after pasting an unavailable %s endpoint",
+    async (_label, pasteText) => {
+      const user = userEvent.setup()
+      const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+      widgetMgr.setFormSubmitBehaviors("form", true)
+      const props = getProps(
+        {
+          isRange: true,
+          formId: "form",
+          required: true,
+          default: ["2024-03-08", "2024-03-11"],
+          min: "2024-01-01",
+          format: "YYYY/MM/DD",
+          availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
+          filterWeekdays: [6, 7],
+        },
+        { widgetMgr }
+      )
+      const setStringArrayValueSpy = vi.spyOn(widgetMgr, "setStringArrayValue")
+      render(<DateInput {...props} />)
+      setStringArrayValueSpy.mockClear()
+
+      const region = screen.getByTestId("stDateInput")
+      await user.click(getRangeDateSegments(region, "start").year)
+      await user.paste(pasteText)
+
+      expect(
+        await screen.findByTestId("stTooltipErrorHoverTarget")
+      ).toBeVisible()
+
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+      expect(setStringArrayValueSpy).not.toHaveBeenCalledWith(
+        props.element.id,
+        expect.arrayContaining(["2024-03-09"]),
+        expect.anything()
+      )
+    }
+  )
+
+  it("blocks required form submit after pasting an unavailable day segment", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    widgetMgr.setFormSubmitBehaviors("form", true)
+    const props = getProps(
+      {
+        isRange: true,
+        formId: "form",
+        required: true,
+        default: ["2024-03-08", "2024-03-11"],
+        min: "2024-01-01",
+        format: "YYYY/MM/DD",
+        availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
+        filterWeekdays: [6, 7],
+      },
+      { widgetMgr }
+    )
+    const setStringArrayValueSpy = vi.spyOn(widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { day } = getRangeDateSegments(region, "start")
+    await user.click(day)
+    await user.paste("09")
+
+    expect(
+      await screen.findByTestId("stTooltipErrorHoverTarget")
+    ).toBeVisible()
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(setStringArrayValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      expect.arrayContaining(["2024-03-09"]),
+      expect.anything()
+    )
+  })
+
   it("snaps Past Week quick-select when weekends are unavailable on Saturday", async () => {
     const user = userEvent.setup()
     // Saturday 2024-03-16 so Past Week is Sat→Sat and snaps Mon→Fri.
