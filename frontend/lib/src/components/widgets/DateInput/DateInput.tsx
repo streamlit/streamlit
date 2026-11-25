@@ -549,6 +549,7 @@ function DateInput({
           onClose={handleClose}
           formCommit={inForm ? handleRangeChange : undefined}
           formResetKey={formResetKey}
+          isDateUnavailable={isDateUnavailable ?? undefined}
         />
       ) : (
         <SingleDateInput

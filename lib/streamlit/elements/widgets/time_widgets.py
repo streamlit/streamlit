@@ -604,8 +604,17 @@ def _step_calendar_date(value: date, days: int) -> date | None:
 def _raise_unavailable_value_error(
     value: date,
     param_name: Literal["enabled_dates", "disabled_dates"],
+    *,
+    is_range: bool = False,
 ) -> NoReturn:
     """Raise when an explicit ``value`` is blocked by availability."""
+    if is_range:
+        raise StreamlitAPIException(
+            f"The range `value` endpoint {value} is not selectable because of "
+            f"`{param_name}`. "
+            "Pass a range whose start and end are both selectable.",
+            error_id="date-input-value-unavailable",
+        )
     raise StreamlitAPIException(
         f"The `value` {value} is not selectable because of `{param_name}`. "
         'Pass a selectable date, or pass `value="today"` to snap to a '
@@ -643,7 +652,11 @@ def _apply_availability_to_parsed_values(
         if not _is_date_selectable(
             entry, parsed_values.min, parsed_values.max, availability
         ):
-            _raise_unavailable_value_error(entry, availability.param_name)
+            _raise_unavailable_value_error(
+                entry,
+                availability.param_name,
+                is_range=parsed_values.is_range,
+            )
 
     return parsed_values
 
@@ -1084,7 +1097,13 @@ def _validate_date_availability(
     if parsed_values.is_range and isinstance(current_value, tuple):
         if len(current_value) == 0:
             return current_value, False
-        dates_to_check = cast("tuple[date, ...]", current_value)
+        # Non-date endpoints (e.g. ISO strings) can't be checked; reset like
+        # the single-date type-mismatch branch. ``datetime`` / Timestamp are
+        # subclasses of ``date``, so they pass this guard and still need
+        # ``_to_date`` for exact_dates membership.
+        if not all(isinstance(d, date) for d in current_value):
+            return _default_date_widget_return(parsed_values), True
+        dates_to_check = tuple(_to_date(d) for d in current_value)
     elif not parsed_values.is_range and isinstance(current_value, date):
         dates_to_check = (_to_date(current_value),)
     else:
@@ -2527,20 +2546,27 @@ class TimeWidgetsMixin:
             tuple, set, Series, Index, NumPy array). Cannot be set together
             with ``disabled_dates``. When this is set, every other date is
             unavailable. An empty collection makes every date unavailable;
-            pass ``value=None`` in that case.
+            pass ``value=None`` (or ``value=()`` for a range) in that case.
 
-            Not supported with a range ``value``. A weekday name always means
-            the same day of the week, whatever the user's locale or first day
-            of the week. If a keyed widget's current value becomes
-            unavailable, Streamlit resets it to the widget's default.
+            For a range ``value``, only the start and end dates must be
+            selectable (or just the start of a partial range); the range may
+            span unavailable days. In the range calendar, quick-select options
+            such as "Past Week" shrink to the nearest selectable start and end
+            within ``min_value`` and ``max_value``. Options with no selectable
+            range are hidden.
+
+            A weekday name always means the same day of the week, whatever the
+            user's locale or first day of the week. If a keyed widget's current
+            value becomes unavailable, Streamlit resets it to the widget's
+            default.
 
         disabled_dates : date, datetime, str, list-like of these, or None
             Dates and weekdays that are not selectable between ``min_value``
             and ``max_value``. If this is ``None`` (default), no dates are
             disabled. Accepts the same forms as ``enabled_dates``. Cannot be
             set together with ``enabled_dates``. An empty collection disables
-            nothing. Range values, weekday names, and keyed resets follow the
-            same rules as ``enabled_dates``.
+            nothing. Range endpoints, weekday names, quick-select snapping,
+            and keyed resets follow the same rules as ``enabled_dates``.
 
         disabled : bool
             An optional boolean that disables the date input if set to
@@ -2710,6 +2736,18 @@ class TimeWidgetsMixin:
         ... )
         >>> st.write("Selected:", d)
 
+        **Example 6: Reporting range that may span unavailable days**
+
+        >>> from datetime import date
+        >>> import streamlit as st
+        >>>
+        >>> period = st.date_input(
+        ...     "Reporting period",
+        ...     value=(date(2026, 8, 24), date(2026, 8, 28)),
+        ...     disabled_dates=["saturday", "sunday", date(2026, 9, 7)],
+        ... )
+        >>> st.write("Selected:", period)
+
         """
         ctx = get_script_run_ctx()
         return self._date_input(
@@ -2871,8 +2909,9 @@ class TimeWidgetsMixin:
                 if availability is not None:
                     # Keep the snapped today value as the reset target. A
                     # stored date that is still selectable is returned from
-                    # widget state. Carry range mode so the range-unsupported
-                    # guard still runs.
+                    # widget state. Carry range mode so an out-of-bounds or
+                    # unavailable stored range does not collapse to a
+                    # single-date control.
                     if stored_is_range:
                         parsed_values = replace(parsed_values, is_range=True)
                 else:
@@ -2898,15 +2937,6 @@ class TimeWidgetsMixin:
                         # The stored value replaces the "today" default, so it
                         # must not snap.
                         value_was_today = False
-
-        if availability is not None and parsed_values.is_range:
-            raise StreamlitAPIException(
-                "`enabled_dates` and `disabled_dates` are not yet supported when "
-                "the widget is in range mode, including a range saved in Session "
-                "State for this key. Pass a single date for `value`, or clear "
-                "that key.",
-                error_id="date-input-availability-range-unsupported",
-            )
 
         parsed_values = _apply_availability_to_parsed_values(
             parsed_values,

@@ -40,7 +40,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATE_INPUTS = 36
+NUM_DATE_INPUTS = 37
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -1364,6 +1364,34 @@ def test_unavailable_dates_calendar_picker_rendering(
     )
 
 
+def test_unavailable_range_calendar_picker_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Range calendar shows a selected span that gaps across unavailable weekends."""
+    date_input = get_element_by_key(themed_app, "weekdays_only_range")
+    date_input.get_by_test_id("stDateInputCalendarButton").click()
+    calendar = themed_app.get_by_test_id("stDateInputCalendar")
+    expect(calendar).to_be_visible()
+    # Snapshot only the day grid: the quick-select row depends on today's date
+    # relative to min/max, so including it would make the image change over time.
+    calendar_grid = calendar.get_by_role("grid")
+    expect(calendar_grid).to_be_visible()
+    # The Friday-to-Monday selection's highlight band skips the unavailable weekend.
+    expect(
+        calendar_grid.get_by_role("button", name=re.compile(r"Saturday, March 9"))
+    ).to_have_attribute("data-unavailable", "true")
+    expect(
+        calendar_grid.get_by_role(
+            "button",
+            name=re.compile(r"Friday, March 8, 2024 selected"),
+        )
+    ).to_be_visible()
+    assert_snapshot(
+        calendar_grid,
+        name="st_date_input-unavailable_range_calendar",
+    )
+
+
 def test_unavailable_weekend_not_selectable(app: Page):
     """Weekends marked unavailable cannot be selected from the calendar."""
     date_input = get_element_by_key(app, "weekdays_only")
@@ -1387,3 +1415,65 @@ def test_unavailable_weekend_not_selectable(app: Page):
     monday.click()
     wait_for_app_run(app)
     expect_markdown(app, "Value weekdays only: 2024-03-11")
+
+
+def test_unavailable_range_endpoint_not_selectable(app: Page):
+    """Range mode rejects unavailable endpoints but allows spanning weekends."""
+    date_input = get_element_by_key(app, "weekdays_only_range")
+    date_input.get_by_test_id("stDateInputCalendarButton").click()
+    calendar = app.get_by_test_id("stDateInputCalendar")
+    saturday = calendar.get_by_role("button", name=re.compile(r"Saturday, March 9"))
+    expect(saturday).to_have_attribute("data-unavailable", "true")
+    friday_selected = calendar.get_by_role(
+        "button",
+        name=re.compile(r"Friday, March 8, 2024 selected"),
+    )
+    saturday.click(force=True)
+    # Selecting a date closes the popover; an ignored unavailable click must
+    # leave it open. Assert selection state sync (not only markdown) so a bad
+    # commit cannot race past expect_markdown.
+    expect(calendar).to_be_visible()
+    expect(friday_selected).to_be_visible()
+    expect(
+        calendar.get_by_role(
+            "button",
+            name=re.compile(r"Saturday, March 9, 2024 selected"),
+        )
+    ).to_have_count(0)
+    expect_markdown(
+        app,
+        "Value weekdays only range: (datetime.date(2024, 3, 8), datetime.date(2024, 3, 11))",
+    )
+
+    saturday.focus()
+    app.keyboard.press("Enter")
+    expect(calendar).to_be_visible()
+    expect(friday_selected).to_be_visible()
+    expect(
+        calendar.get_by_role(
+            "button",
+            name=re.compile(r"Saturday, March 9, 2024 selected"),
+        )
+    ).to_have_count(0)
+    expect_markdown(
+        app,
+        "Value weekdays only range: (datetime.date(2024, 3, 8), datetime.date(2024, 3, 11))",
+    )
+
+    # Only the start cell's label ends in "2024 selected", so this regex skips
+    # the end cell.
+    friday = friday_selected
+    friday.click()
+    wait_for_app_run(app)
+    expect_markdown(app, "Value weekdays only range: (datetime.date(2024, 3, 8),)")
+
+    monday = calendar.get_by_role(
+        "button",
+        name=re.compile(r"Monday, March 11, 2024"),
+    )
+    monday.click()
+    wait_for_app_run(app)
+    expect_markdown(
+        app,
+        "Value weekdays only range: (datetime.date(2024, 3, 8), datetime.date(2024, 3, 11))",
+    )

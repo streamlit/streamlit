@@ -1282,14 +1282,67 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         assert c.availability_mode == DateInputProto.AvailabilityMode.ALLOW
         assert list(c.default) == []
 
-    def test_range_raises(self) -> None:
-        """Availability with a range value is rejected until range support lands."""
-        with pytest.raises(StreamlitAPIException, match="not yet supported"):
+    def test_range_available_endpoints_accepted(self) -> None:
+        """Range mode allows values whose endpoints are selectable."""
+        result = st.date_input(
+            "period",
+            value=(date(2026, 8, 24), date(2026, 8, 28)),  # Mon-Fri
+            disabled_dates=["saturday", "sunday"],
+        )
+        assert result == (date(2026, 8, 24), date(2026, 8, 28))
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.is_range is True
+        assert c.availability_mode == DateInputProto.AvailabilityMode.BLOCK
+        assert list(c.filter_weekdays) == [6, 7]
+
+    def test_range_unavailable_start_raises(self) -> None:
+        """An unavailable range start raises, and the message names ``disabled_dates``."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=(
+                r"The range `value` endpoint .* is not selectable because of "
+                r"`disabled_dates`\. "
+                r"Pass a range whose start and end are both selectable\."
+            ),
+        ):
             st.date_input(
                 "period",
-                value=(date(2026, 8, 24), date(2026, 8, 28)),
+                value=(date(2026, 8, 22), date(2026, 8, 28)),  # Sat-Fri
                 disabled_dates=["saturday", "sunday"],
             )
+
+    def test_range_unavailable_end_raises(self) -> None:
+        """An unavailable range end raises with a range-aware remedy."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=(
+                r"The range `value` endpoint .* is not selectable because of "
+                r"`disabled_dates`\. "
+                r"Pass a range whose start and end are both selectable\."
+            ),
+        ):
+            st.date_input(
+                "period",
+                value=(date(2026, 8, 24), date(2026, 8, 29)),  # Mon-Sat
+                disabled_dates=["saturday", "sunday"],
+            )
+
+    def test_range_partial_unavailable_start_raises(self) -> None:
+        """The start of a partial range must be selectable."""
+        with pytest.raises(StreamlitAPIException, match="not selectable"):
+            st.date_input(
+                "period",
+                value=(date(2026, 8, 22),),  # Saturday
+                disabled_dates=["saturday", "sunday"],
+            )
+
+    def test_empty_enabled_with_empty_range(self) -> None:
+        """An empty allowlist is valid with an empty range value."""
+        result = st.date_input("period", value=(), enabled_dates=[])
+        assert result == ()
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.is_range is True
+        assert list(c.default) == []
 
     def test_explicit_unavailable_value_raises(self) -> None:
         """An explicit unavailable value raises instead of snapping."""
@@ -1505,6 +1558,143 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         assert result == date(2024, 3, 11)
         assert st.session_state.day == date(2024, 3, 11)
 
+    def test_keyed_range_resets_when_endpoint_becomes_unavailable(self) -> None:
+        """Keyed range with an unavailable endpoint resets to the default range."""
+        st.session_state.period = (date(2024, 3, 8), date(2024, 3, 9))  # Fri-Sat
+        result = st.date_input(
+            "period",
+            key="period",
+            value=(date(2024, 3, 8), date(2024, 3, 11)),
+            disabled_dates=["saturday", "sunday"],
+        )
+        assert result == (date(2024, 3, 8), date(2024, 3, 11))
+        assert st.session_state.period == (date(2024, 3, 8), date(2024, 3, 11))
+
+    def test_keyed_range_keeps_datetime_endpoints_on_exact_allowlist(self) -> None:
+        """Datetime Session State endpoints still match exact enabled_dates."""
+        st.session_state.period = (
+            datetime(2024, 3, 8, 9, 30, 0),
+            datetime(2024, 3, 11, 17, 0, 0),
+        )
+        result = st.date_input(
+            "period",
+            key="period",
+            value=(date(2024, 3, 8), date(2024, 3, 11)),
+            enabled_dates=[date(2024, 3, 8), date(2024, 3, 11)],
+        )
+        assert result == (
+            datetime(2024, 3, 8, 9, 30, 0),
+            datetime(2024, 3, 11, 17, 0, 0),
+        )
+        assert st.session_state.period == (
+            datetime(2024, 3, 8, 9, 30, 0),
+            datetime(2024, 3, 11, 17, 0, 0),
+        )
+
+    def test_keyed_range_resets_datetime_endpoint_on_exact_disabled_date(
+        self,
+    ) -> None:
+        """A datetime endpoint on an exact disabled holiday resets the range."""
+        st.session_state.period = (
+            datetime(2024, 3, 8, 9, 30, 0),
+            datetime(2024, 3, 11, 17, 0, 0),
+        )
+        result = st.date_input(
+            "period",
+            key="period",
+            value=(date(2024, 3, 8), date(2024, 3, 12)),
+            disabled_dates=[date(2024, 3, 11)],
+        )
+        assert result == (date(2024, 3, 8), date(2024, 3, 12))
+        assert st.session_state.period == (date(2024, 3, 8), date(2024, 3, 12))
+
+    def test_keyed_range_resets_non_date_string_endpoints(self) -> None:
+        """ISO-string Session State endpoints reset instead of crashing."""
+        st.session_state.period = ("2024-03-08", "2024-03-11")
+        result = st.date_input(
+            "period",
+            key="period",
+            value=(date(2024, 3, 8), date(2024, 3, 11)),
+            disabled_dates=["saturday", "sunday"],
+        )
+        assert result == (date(2024, 3, 8), date(2024, 3, 11))
+        assert st.session_state.period == (date(2024, 3, 8), date(2024, 3, 11))
+
+    def test_keyed_today_preserves_range_mode_on_unavailable_reset(self) -> None:
+        """Unavailable stored range with value='today' stays in range mode."""
+
+        class FixedDateTime(datetime):
+            @classmethod
+            def now(cls, tz: Any = None) -> datetime:
+                return datetime(2024, 3, 9, 12, 0, 0)  # Saturday
+
+        st.session_state.period = (date(2024, 3, 8), date(2024, 3, 9))
+        with patch(
+            "streamlit.elements.widgets.time_widgets.datetime",
+            FixedDateTime,
+        ):
+            result = st.date_input(
+                "period",
+                key="period",
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 12, 31),
+                disabled_dates=["saturday", "sunday"],
+            )
+        assert result == (date(2024, 3, 11),)
+        assert st.session_state.period == (date(2024, 3, 11),)
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.is_range is True
+
+    def test_range_serde_unavailable_endpoint_reverts_to_default(self) -> None:
+        """Serde returns the default range for a wire value with an unavailable endpoint."""
+        values = _DateInputValues(
+            value=(date(2024, 3, 8), date(2024, 3, 11)),
+            is_range=True,
+            min=date(2024, 1, 1),
+            max=date(2024, 12, 31),
+        )
+        availability = _parse_date_availability(
+            enabled_dates=None,
+            disabled_dates=["saturday", "sunday"],
+        )
+        serde = DateInputSerde(values, availability=availability)
+        assert serde.deserialize(["2024-03-08", "2024-03-09"]) == (
+            date(2024, 3, 8),
+            date(2024, 3, 11),
+        )
+        assert serde.deserialize(["2024-03-08", "2024-03-11"]) == (
+            date(2024, 3, 8),
+            date(2024, 3, 11),
+        )
+
+    def test_today_empty_allowlist_resolves_to_empty_range_when_range_mode(
+        self,
+    ) -> None:
+        """A keyed ``value="today"`` widget with an empty allowlist resets a stored range to ``()``."""
+
+        class FixedDateTime(datetime):
+            @classmethod
+            def now(cls, tz: Any = None) -> datetime:
+                return datetime(2024, 3, 9, 12, 0, 0)
+
+        st.session_state.period = (date(2024, 3, 8), date(2024, 3, 11))
+        with patch(
+            "streamlit.elements.widgets.time_widgets.datetime",
+            FixedDateTime,
+        ):
+            result = st.date_input(
+                "period",
+                key="period",
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 12, 31),
+                enabled_dates=[],
+            )
+        assert result == ()
+        assert st.session_state.period == ()
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.is_range is True
+        assert list(c.default) == []
+
     def test_query_param_unavailable_value_is_cleared(self) -> None:
         """Unavailable URL-bound values reset and drop the query param."""
 
@@ -1594,7 +1784,7 @@ class DateInputKeyedTodayBoundsTest(DeltaGeneratorTestCase):
     def test_keyed_default_today_preserves_range_mode_when_bounds_change(
         self,
     ) -> None:
-        """OOB stored range with value='today' must not collapse to single-date."""
+        """Out-of-bounds stored range with value='today' must not collapse to single-date."""
 
         class FixedDateTime(datetime):
             @classmethod
@@ -1761,6 +1951,43 @@ def test_availability_change_pushes_set_value_to_frontend() -> None:
     # Session State and the script return value are already reset on this run.
     assert at.date_input[0].value == date(2024, 3, 8)
     assert at.text[0].value == "Value: 2024-03-08"
+
+    at = at.run()
+    assert at.date_input[0].proto.set_value is False
+
+
+def test_range_availability_change_pushes_set_value_to_frontend() -> None:
+    """Blocking a keyed range endpoint pushes set_value with the default range."""
+
+    def script() -> None:
+        from datetime import date
+
+        import streamlit as st
+
+        disabled = (
+            ["saturday", "sunday"] if st.session_state.get("block_weekends") else None
+        )
+        value = st.date_input(
+            "period",
+            value=(date(2024, 3, 8), date(2024, 3, 11)),
+            key="period",
+            disabled_dates=disabled,
+        )
+        st.text(f"Value: {value}")
+
+    at = AppTest.from_function(script).run()
+    at = at.date_input[0].set_value((date(2024, 3, 8), date(2024, 3, 9))).run()
+    assert at.date_input[0].value == (date(2024, 3, 8), date(2024, 3, 9))
+
+    at.session_state["block_weekends"] = True
+    at = at.run()
+    assert at.date_input[0].proto.set_value is True
+    assert list(at.date_input[0].proto.value) == ["2024-03-08", "2024-03-11"]
+    assert at.date_input[0].value == (date(2024, 3, 8), date(2024, 3, 11))
+    assert (
+        at.text[0].value
+        == "Value: (datetime.date(2024, 3, 8), datetime.date(2024, 3, 11))"
+    )
 
     at = at.run()
     assert at.date_input[0].proto.set_value is False

@@ -320,3 +320,13 @@ v_avail = st.date_input(
     key="weekdays_only",
 )
 st.write("Value weekdays only:", v_avail)
+
+v_avail_range = st.date_input(
+    "Weekdays only range",
+    (date(2024, 3, 8), date(2024, 3, 11)),
+    min_value=date(2024, 1, 1),
+    max_value=date(2024, 12, 31),
+    disabled_dates=["saturday", "sunday"],
+    key="weekdays_only_range",
+)
+st.write("Value weekdays only range:", v_avail_range)
