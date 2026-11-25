@@ -106,9 +106,7 @@ def test_wait_time_accumulates_across_waits() -> None:
 
 
 def test_recording_run_records_the_workers_cpu_time() -> None:
-    """A run stores its worker's CPU time, even when the fragment raises, and
-    its stats count toward the script run's ``command_cpu_time``.
-    """
+    """A run stores its worker's CPU time, even when the fragment raises."""
     stats = ParallelFragmentUsageStats(RunStats())
 
     with (
@@ -124,7 +122,6 @@ def test_recording_run_records_the_workers_cpu_time() -> None:
         raise RuntimeError
 
     assert run.cpu_time == 0.25
-    assert run.stats.counts_cpu
 
 
 @pytest.mark.parametrize(

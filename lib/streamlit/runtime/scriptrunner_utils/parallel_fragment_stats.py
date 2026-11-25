@@ -54,9 +54,6 @@ class ParallelFragmentRunStats:
         self.end: float | None = None
         # What the worker thread records while the fragment runs.
         self.stats = ThreadRunStats()
-        # The run reports its worker's CPU time, so its commands' CPU time
-        # counts toward command_cpu_time.
-        self.stats.counts_cpu = True
         # The worker thread's CPU time from start to end. None until the
         # fragment finishes, or if the CPU clock can't be read.
         self.cpu_time: float | None = None

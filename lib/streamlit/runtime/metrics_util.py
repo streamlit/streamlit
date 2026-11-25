@@ -22,7 +22,7 @@ import sys
 import threading
 import time
 import uuid
-from collections.abc import Callable, Sequence, Sized
+from collections.abc import Callable, Iterable, Sequence, Sized
 from functools import lru_cache, wraps
 from typing import Any, Final, NamedTuple, TypeVar, cast, overload
 
@@ -578,20 +578,6 @@ def read_cpu_clocks() -> CpuClocks | None:
     return CpuClocks(thread, process)
 
 
-def start_run_cpu_times(ctx: ScriptRunContext) -> CpuClocks | None:
-    """Read the CPU clocks when prep ends, and mark the script thread's stats as
-    counting toward ``command_cpu_time``.
-
-    Returns None if a clock can't be read.
-    """
-    try:
-        ctx.shared.stats.current_thread_stats().counts_cpu = True
-    except Exception as ex:
-        _LOGGER.debug("Failed to start the run's CPU times", exc_info=ex)
-        return None
-    return read_cpu_clocks()
-
-
 def _is_streamlit_import_module(module: str) -> bool:
     """Return whether an import namespace is relevant to Streamlit internals."""
     return any(
@@ -895,6 +881,16 @@ def _fill_cache_usage(
     _copy_cache_totals(totals, page_profile.cache_usage)
 
 
+def _sum_if_all_set(values: Iterable[float | None]) -> float | None:
+    """Return the sum of ``values``, or None if any of them is None."""
+    total = 0.0
+    for value in values:
+        if value is None:
+            return None
+        total += value
+    return total
+
+
 def _set_parallel_fragment_run_times(
     entry: ParallelFragmentRun,
     exec_time: float,
@@ -936,8 +932,6 @@ def _fill_parallel_fragment_usage(
     all_runs_cache = RunCacheTotals()
     overflow_exec_time = 0.0
     overflow_command_time = 0.0
-    # None once any combined run has no CPU time.
-    overflow_cpu_time: float | None = 0.0
     overflow_cache = RunCacheTotals()
     for index, run in enumerate(runs):
         run_cache = RunCacheTotals()
@@ -953,17 +947,13 @@ def _fill_parallel_fragment_usage(
         else:
             overflow_exec_time += exec_time
             overflow_command_time += command_time
-            if overflow_cpu_time is not None:
-                overflow_cpu_time = (
-                    None if run.cpu_time is None else overflow_cpu_time + run.cpu_time
-                )
             overflow_cache.add(run_cache)
     if len(runs) > _MAX_PARALLEL_FRAGMENT_RUNS:
         _set_parallel_fragment_run_times(
             usage.overflow,
             overflow_exec_time,
             overflow_command_time,
-            overflow_cpu_time,
+            _sum_if_all_set(run.cpu_time for run in runs[_MAX_PARALLEL_FRAGMENT_RUNS:]),
             overflow_cache,
         )
     _copy_cache_totals(all_runs_cache, usage.cache_usage)
@@ -974,24 +964,28 @@ def _fill_cpu_times(
 ) -> None:
     """Set the run's CPU fields from ``cpu_start`` until now.
 
-    Leaves them all unset if any CPU time they add up is missing, because a
-    clock read failed or a parallel fragment run hadn't finished.
+    Must run on the script thread, because the script thread's CPU time and
+    stats are read from the calling thread. ``command_cpu_time`` adds up only
+    the script thread's and the parallel fragment runs' commands, whose CPU
+    time the other fields also report. Leaves the fields all unset if any CPU
+    time they add up is missing, because a clock read failed or a parallel
+    fragment run hadn't finished.
     """
     cpu_end = read_cpu_clocks()
-    if cpu_end is None:
+    runs = ctx.shared.parallel_fragments.runs
+    command_cpu_time = _sum_if_all_set(
+        [
+            ctx.shared.stats.current_thread_stats().command_cpu_time,
+            *(run.stats.command_cpu_time for run in runs),
+        ]
+    )
+    parallel_fragment_cpu_time = _sum_if_all_set(run.cpu_time for run in runs)
+    if (
+        cpu_end is None
+        or command_cpu_time is None
+        or parallel_fragment_cpu_time is None
+    ):
         return
-    command_cpu_time = 0.0
-    for stats in ctx.shared.stats.all_thread_stats():
-        if not stats.counts_cpu:
-            continue
-        if stats.command_cpu_time is None:
-            return
-        command_cpu_time += stats.command_cpu_time
-    parallel_fragment_cpu_time = 0.0
-    for run in ctx.shared.parallel_fragments.runs:
-        if run.cpu_time is None:
-            return
-        parallel_fragment_cpu_time += run.cpu_time
     page_profile.script_cpu_time = to_microseconds(cpu_end.thread - cpu_start.thread)
     page_profile.command_cpu_time = to_microseconds(command_cpu_time)
     page_profile.parallel_fragment_cpu_time = to_microseconds(
@@ -1015,7 +1009,8 @@ def create_page_profile_message(
     ``run_start`` is the ``time.perf_counter()`` value when the script run
     started. Without it, the profile has no ``parallel_fragment_usage``.
     ``cpu_start`` holds the CPU clocks read on the script thread when prep ended.
-    Without it, the profile has no CPU times.
+    Without it, the profile has no CPU times. With it, this must run on the
+    script thread.
     """
     msg = ForwardMsg()
     page_profile = msg.page_profile

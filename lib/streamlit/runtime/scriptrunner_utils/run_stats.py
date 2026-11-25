@@ -73,23 +73,12 @@ class ThreadRunStats:
     worker thread, during one script run.
     """
 
-    __slots__ = (
-        "arrow_bytes",
-        "cache",
-        "command_cpu_time",
-        "command_time",
-        "counts_cpu",
-    )
+    __slots__ = ("arrow_bytes", "cache", "command_cpu_time", "command_time")
 
     def __init__(self) -> None:
         # Time of listed commands that ran on this thread. The page profile
         # reports it only for parallel fragment runs.
         self.command_time = 0.0
-        # Whether the page profile reports this record's CPU time: true for the
-        # script thread's record and each parallel fragment run's. Only these
-        # records count toward command_cpu_time, so user code CPU time never
-        # subtracts CPU time it didn't add.
-        self.counts_cpu = False
         # CPU time of listed commands that ran on this thread. None after a CPU
         # clock read failed, which leaves the run's CPU fields unset.
         self.command_cpu_time: float | None = 0.0

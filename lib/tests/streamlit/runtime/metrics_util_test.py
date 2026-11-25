@@ -1697,9 +1697,7 @@ def test_create_page_profile_message_reports_cpu_times() -> None:
     fragment run reports its own CPU time.
     """
     ctx = create_mock_script_run_ctx()
-    script_stats = ctx.shared.stats.current_thread_stats()
-    script_stats.counts_cpu = True
-    script_stats.command_cpu_time = 0.25
+    ctx.shared.stats.current_thread_stats().command_cpu_time = 0.25
     _record_attached_thread_command_cpu_time(ctx, 4.0)
     _record_attached_thread_command_cpu_time(ctx, None)
     with patch.object(run_stats, "_thread_cpu_clock", _fake_cpu_clock()):
@@ -1721,10 +1719,7 @@ def test_create_page_profile_message_reports_cpu_times() -> None:
 
 def test_create_page_profile_message_sends_zero_cpu_times() -> None:
     """A run without commands or parallel fragments still sends 0."""
-    ctx = create_mock_script_run_ctx()
-    ctx.shared.stats.current_thread_stats().counts_cpu = True
-
-    profile = _create_profile_with_cpu_times(ctx)
+    profile = _create_profile_with_cpu_times(create_mock_script_run_ctx())
 
     assert profile.HasField("command_cpu_time")
     assert profile.command_cpu_time == 0
@@ -1751,10 +1746,8 @@ def test_create_page_profile_message_leaves_cpu_times_unset_when_one_is_missing(
     unset.
     """
     ctx = create_mock_script_run_ctx()
-    script_stats = ctx.shared.stats.current_thread_stats()
-    script_stats.counts_cpu = True
     if missing == "script command":
-        script_stats.command_cpu_time = None
+        ctx.shared.stats.current_thread_stats().command_cpu_time = None
     if missing == "fragment run":
         with patch.object(run_stats, "_thread_cpu_clock", None):
             _record_parallel_fragment_run(ctx)
@@ -1920,29 +1913,6 @@ def test_read_cpu_clocks_gives_none_if_either_clock_fails() -> None:
         assert metrics_util.read_cpu_clocks() is None
     with patch.object(run_stats, "_thread_cpu_clock", None):
         assert metrics_util.read_cpu_clocks() is None
-
-
-def test_start_run_cpu_times_marks_the_script_thread() -> None:
-    """The script thread's stats count toward CPU time, and the clocks are
-    read.
-    """
-    ctx = create_mock_script_run_ctx()
-    clocks = metrics_util.CpuClocks(thread=1.0, process=2.0)
-
-    with patch.object(metrics_util, "read_cpu_clocks", return_value=clocks):
-        assert metrics_util.start_run_cpu_times(ctx) == clocks
-
-    assert ctx.shared.stats.current_thread_stats().counts_cpu
-
-
-def test_start_run_cpu_times_failure_gives_none() -> None:
-    """A failure starting the CPU times leaves them out of the profile."""
-    ctx = create_mock_script_run_ctx()
-
-    with patch.object(
-        ctx.shared.stats, "current_thread_stats", side_effect=RuntimeError
-    ):
-        assert metrics_util.start_run_cpu_times(ctx) is None
 
 
 def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:
