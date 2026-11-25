@@ -368,7 +368,7 @@ A fragment's CPU time is compared with its `exec_time` to split its time into co
 
 #### Platforms and cost
 
-On Windows, CPU clocks advance in steps of about 15.6 ms, so short spans often read 0 and only aggregates are meaningful. A listed command adds about 0.4 µs (two clock reads and an add), and a run about 1.5 µs. No clock is read while usage stats are off. Waiting for the GIL counts as waiting, not CPU time.
+On Windows, CPU clocks advance in steps of about 15.6 ms, so short spans often read 0 and only aggregates are meaningful. A listed command adds about 0.4 µs (two clock reads and an add), and a run about 1.5 µs. While usage stats are off, the only clock read is one at import that checks the platform supports `time.thread_time()`. Waiting for the GIL counts as waiting, not CPU time.
 
 ### Per-function cache stats
 
