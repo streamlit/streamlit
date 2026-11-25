@@ -29,8 +29,9 @@ recorded. By source:
 - ``sqlalchemy``: the ``SQLConnection`` engine, through its cursor execute
   events.
 - ``snowpark``: sessions from ``SnowflakeConnection.session()`` and the active
-  session, through Snowpark's query listener (Snowpark 1.26 or later). It's
-  notified only after a query finishes, so these queries aren't timed.
+  session, through Snowpark's query listener (Snowpark 1.26 or later, with
+  thread-safe sessions on). It's notified only after a query finishes, so
+  these queries aren't timed.
 
 Queries are recorded only on threads attached to a script run that gathers
 usage stats. An instrumentation failure is logged at debug level and never
@@ -365,6 +366,14 @@ def watch_snowpark_session(session: Session) -> None:
         if listener is None:
             return
         server_connection = session._conn
+        # Without thread-safe sessions, Snowpark's listener lock does nothing,
+        # and other threads can already be using the session. Adding a
+        # listener while one of them notifies listeners would fail its query.
+        if (
+            getattr(server_connection, "_thread_safe_session_enabled", False)
+            is not True
+        ):
+            return
         with _install_lock:
             if server_connection in _watched_snowpark_connections:
                 return

@@ -128,6 +128,7 @@ class FakeServerConnection:
 
     def __init__(self) -> None:
         self.listeners: list[Any] = []
+        self._thread_safe_session_enabled = True
 
     def add_query_listener(self, listener: Any) -> None:
         self.listeners.append(listener)
@@ -785,6 +786,24 @@ def test_snowpark_session_is_not_watched_without_usage_stats(
     assert session._conn.listeners == []
 
 
+@pytest.mark.parametrize("thread_safe", [False, "missing"])
+def test_snowpark_session_is_not_watched_without_thread_safe_sessions(
+    ctx: ScriptRunContext, snowpark: types.ModuleType, thread_safe: bool | str
+) -> None:
+    """Without thread-safe sessions, adding a listener could break a query
+    another thread is running, so the session isn't watched.
+    """
+    session = FakeSnowparkSession()
+    if thread_safe == "missing":
+        del session._conn._thread_safe_session_enabled
+    else:
+        session._conn._thread_safe_session_enabled = thread_safe
+
+    query_telemetry.watch_snowpark_session(session)  # type: ignore[arg-type]
+
+    assert session._conn.listeners == []
+
+
 def test_run_start_watches_the_active_snowpark_session(
     ctx: ScriptRunContext, snowpark: types.ModuleType
 ) -> None:
@@ -862,6 +881,7 @@ def test_real_snowpark_notifies_the_listener(
     )
     query_telemetry._snowpark_query_listener.cache_clear()
     server_connection = ServerConnection.__new__(ServerConnection)
+    server_connection._thread_safe_session_enabled = True
     server_connection._lock = threading.RLock()
     server_connection._query_listeners = set()
     results_cursor = MagicMock()
@@ -882,6 +902,35 @@ def test_real_snowpark_notifies_the_listener(
 
     assert _counts(_totals(ctx, "snowpark")) == (2, 1, 0)
     query_telemetry._snowpark_query_listener.cache_clear()
+
+
+@pytest.mark.require_integration
+@pytest.mark.parametrize("thread_safe", [True, False, None])
+def test_real_snowpark_is_watched_only_with_thread_safe_sessions(
+    ctx: ScriptRunContext, monkeypatch: pytest.MonkeyPatch, thread_safe: bool | None
+) -> None:
+    """A real Snowpark connection gets the listener only when the session
+    parameter turns thread-safe sessions on, which Snowpark defaults to off.
+    """
+    from snowflake.snowpark._internal.server_connection import ServerConnection
+
+    monkeypatch.setattr(
+        query_telemetry, "_watched_snowpark_connections", weakref.WeakSet()
+    )
+    connector_connection = MagicMock()
+    connector_connection.is_closed.return_value = False
+    connector_connection._session_parameters = (
+        {}
+        if thread_safe is None
+        else {"PYTHON_SNOWPARK_ENABLE_THREAD_SAFE_SESSION": thread_safe}
+    )
+    server_connection = ServerConnection({}, connector_connection)
+
+    query_telemetry.watch_snowpark_session(
+        types.SimpleNamespace(_conn=server_connection)  # type: ignore[arg-type]
+    )
+
+    assert bool(server_connection._query_listeners) is (thread_safe is True)
 
 
 @pytest.mark.require_integration
