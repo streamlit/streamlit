@@ -46,6 +46,7 @@ import type {
   OnConnectionStateChange,
   OnMessage,
   OnRetry,
+  ReceivedMessageSize,
   StreamlitEndpoints,
 } from "./types"
 import { buildWsUri } from "./utils"
@@ -216,7 +217,10 @@ export class WebsocketConnection {
    * Incoming messages that we haven't dispatched yet because earlier
    * messages are still being decoded. Keyed by transmission order.
    */
-  private readonly messageQueue = new Map<number, ForwardMsg>()
+  private readonly messageQueue = new Map<
+    number,
+    { msg: ForwardMsg; size: ReceivedMessageSize }
+  >()
 
   /**
    * The current state of this object's state machine.
@@ -867,11 +871,15 @@ export class WebsocketConnection {
 
     const encodedMsg = new Uint8Array(data)
     const msg = ForwardMsg.decode(encodedMsg)
+    const resolvedMsg = await this.cache.processMessagePayload(msg, encodedMsg)
+    const size: ReceivedMessageSize = { byteLength: data.byteLength }
+    if (msg.type === "refHash") {
+      size.cachedByteLength = this.cache.getCachedMessageByteLength(
+        msg.refHash
+      )
+    }
 
-    this.messageQueue.set(
-      messageIndex,
-      await this.cache.processMessagePayload(msg, encodedMsg)
-    )
+    this.messageQueue.set(messageIndex, { msg: resolvedMsg, size })
 
     // Dispatch any pending messages in the queue. This may *not* result
     // in our just-decoded message being dispatched: if there are other
@@ -882,7 +890,7 @@ export class WebsocketConnection {
     )
     while (queuedMessage !== undefined) {
       const dispatchMessageIndex = this.lastDispatchedMessageIndex + 1
-      this.args.onMessage(queuedMessage)
+      this.args.onMessage(queuedMessage.msg, queuedMessage.size)
       this.messageQueue.delete(dispatchMessageIndex)
       this.lastDispatchedMessageIndex = dispatchMessageIndex
       queuedMessage = this.messageQueue.get(dispatchMessageIndex + 1)

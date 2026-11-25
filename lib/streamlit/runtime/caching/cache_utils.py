@@ -825,23 +825,15 @@ class CachedFunc(Generic[P, R]):
                 self._get_or_create_cached_value_async(args, kwargs, spinner_message),
             )
 
-        return self._get_or_create_cached_value(args, kwargs, spinner_message)
-
-    def _get_or_create_cached_value(
-        self,
-        func_args: tuple[Any, ...],
-        func_kwargs: dict[str, Any],
-        spinner_message: str | None = None,
-    ) -> R:
         call_timer = cache_call_timer.start_call(self._info.cache_type, self._metrics)
         try:
-            return self._lookup_or_compute(
-                func_args, func_kwargs, spinner_message, call_timer
+            return self._get_or_create_cached_value(
+                args, kwargs, spinner_message, call_timer
             )
         finally:
             call_timer.finish()
 
-    def _lookup_or_compute(
+    def _get_or_create_cached_value(
         self,
         func_args: tuple[Any, ...],
         func_kwargs: dict[str, Any],

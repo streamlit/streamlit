@@ -224,6 +224,7 @@ repos:
           |^NOTICES$
           |^proto/streamlit/proto/openmetrics_data_model.proto$
           |\.snap$
+          |^frontend/\.yarn/patches/
       - id: check-added-large-files
         exclude: ^uv\.lock$
       - id: check-json

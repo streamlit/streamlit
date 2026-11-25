@@ -496,6 +496,35 @@ describe("metrics helpers", () => {
     expect(withoutUsage).not.toHaveProperty("queryUsage")
   })
 
+  it("buildEventProto forwards arrowBytes and receivedMessages through toJSON - pageProfile", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    const withData = mm
+      .buildEventProto("pageProfile", {
+        ...decodedPageProfile({ arrowBytes: 5_000 }),
+        receivedMessages: {
+          bytes: 6_000,
+          cachedMessages: 1,
+          cachedBytes: 3_000,
+        },
+      })
+      .toJSON()
+    const withoutData = mm
+      .buildEventProto("pageProfile", decodedPageProfile({ arrowBytes: 0 }))
+      .toJSON()
+
+    expect(withData.arrowBytes).toBe("5000")
+    expect(withData.receivedMessages).toStrictEqual({
+      bytes: "6000",
+      cachedMessages: "1",
+      cachedBytes: "3000",
+    })
+    // The field is optional, so a run without data still sends 0.
+    expect(withoutData.arrowBytes).toBe("0")
+    expect(withoutData).not.toHaveProperty("receivedMessages")
+  })
+
   it("buildEventProto populates expected fields - menuClick", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })

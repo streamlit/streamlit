@@ -1012,6 +1012,9 @@ def create_page_profile_message(
         page_profile.server_uptime_seconds = server_uptime_seconds
     if ctx is not None:
         now = time.perf_counter()
+        page_profile.arrow_bytes = sum(
+            stats.arrow_bytes for stats in ctx.shared.stats.all_thread_stats()
+        )
         _fill_cache_usage(page_profile, ctx, now)
         _fill_query_usage(page_profile, ctx)
         if run_start is not None:

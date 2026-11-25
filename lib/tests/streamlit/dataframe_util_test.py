@@ -113,6 +113,41 @@ class DataframeUtilTest(unittest.TestCase):
         table = dataframe_util.convert_pandas_df_to_arrow_table(df)
         assert isinstance(table, pa.Table)
 
+    def test_convert_pandas_df_to_arrow_table_placeholder_in_numeric_column(
+        self,
+    ) -> None:
+        """The fallback stringifies a placeholder string in a numeric column."""
+        df = pd.DataFrame({"price": [1.5, "—", 3.0], "qty": [1, 2, 3]})
+
+        table = dataframe_util.convert_pandas_df_to_arrow_table(df)
+
+        price_type = table.schema.field("price").type
+        assert pa.types.is_string(price_type) or pa.types.is_large_string(price_type)
+        assert table.schema.field("qty").type == pa.int64()
+        assert table.column("price").to_pylist() == ["1.5", "—", "3.0"]
+        assert table.column("qty").to_pylist() == [1, 2, 3]
+
+    @parameterized.expand([("INFO", False), ("DEBUG", True)])
+    def test_convert_pandas_df_to_arrow_table_fallback_logs_traceback_only_at_debug(
+        self, level: str, expect_traceback: bool
+    ) -> None:
+        """The fallback logs the conversion error in one INFO line and attaches the
+        traceback only at debug level."""
+        df = pd.DataFrame({"price": [1.5, "—", 3.0]})
+
+        with self.assertLogs(logger="streamlit.dataframe_util", level=level) as cm:
+            dataframe_util.convert_pandas_df_to_arrow_table(df)
+
+        assert len(cm.records) == 1
+        record = cm.records[0]
+        assert record.levelname == "INFO"
+        assert "Conversion failed for column price" in record.getMessage()
+        if expect_traceback:
+            assert record.exc_info
+            assert isinstance(record.exc_info[1], pa.ArrowInvalid)
+        else:
+            assert not record.exc_info
+
     def test_convert_pandas_df_to_arrow_table_retry_failure_raises(self):
         """A second from_pandas failure raises StreamlitDataframeConversionError."""
         df = pd.DataFrame({"col": [1, 2, 3]})

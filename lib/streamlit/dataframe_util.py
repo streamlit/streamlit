@@ -19,6 +19,7 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import inspect
+import logging
 import re
 import warnings
 from collections import ChainMap, UserDict, UserList, deque
@@ -914,7 +915,16 @@ def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
     writer = pa.RecordBatchStreamWriter(sink, table.schema)
     writer.write_table(table)
     writer.close()
-    return cast("bytes", sink.getvalue().to_pybytes())
+    arrow_bytes = cast("bytes", sink.getvalue().to_pybytes())
+
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        record_arrow_bytes,
+    )
+
+    # Every fresh Arrow serialization passes through here. Elements replayed
+    # by an st.cache_data hit aren't serialized again, so they aren't recorded.
+    record_arrow_bytes(len(arrow_bytes))
+    return arrow_bytes
 
 
 def get_arrow_conversion_errors() -> tuple[type[BaseException], ...]:
@@ -966,11 +976,13 @@ def convert_pandas_df_to_arrow_table(
     try:
         return pa.Table.from_pandas(df, preserve_index=preserve_index)
     except arrow_conversion_errors as ex:
+        # Log the traceback only at debug level because this expected fallback can
+        # run on every rerun.
         _LOGGER.info(
-            "Serialization of dataframe to Arrow table was unsuccessful. "
-            "Applying automatic fixes for column types to make the dataframe "
-            "Arrow-compatible.",
-            exc_info=ex,
+            "Converting Arrow-incompatible dataframe columns to strings or lists. "
+            "Conversion error: %s",
+            ex,
+            exc_info=_LOGGER.isEnabledFor(logging.DEBUG),
         )
         fixed_df = fix_arrow_incompatible_column_types(df)
         try:

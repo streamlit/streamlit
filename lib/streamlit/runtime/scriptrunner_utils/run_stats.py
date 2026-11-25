@@ -38,7 +38,7 @@ class ThreadRunStats:
     worker thread, during one script run.
     """
 
-    __slots__ = ("cache", "command_time", "query")
+    __slots__ = ("arrow_bytes", "cache", "command_time", "query")
 
     def __init__(self) -> None:
         # Time of listed commands that ran on this thread. The page profile
@@ -46,6 +46,8 @@ class ThreadRunStats:
         self.command_time = 0.0
         self.cache = ThreadCacheStats()
         self.query = ThreadQueryStats()
+        # Total size in bytes of the Arrow payloads this thread serialized.
+        self.arrow_bytes = 0
 
 
 class RunStats:

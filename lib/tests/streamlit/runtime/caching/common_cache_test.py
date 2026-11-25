@@ -22,9 +22,11 @@ import threading
 import time
 import unittest
 from datetime import timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, Mock, call, patch
 
+import numpy as np
+import pandas as pd
 import pytest
 from parameterized import parameterized
 
@@ -67,6 +69,9 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import call_on_threads
 from tests.streamlit.elements.image_test import create_image
 from tests.testutil import create_mock_script_run_ctx, patch_config_options
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def get_text_or_block(delta):
@@ -2229,3 +2234,119 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
 
         assert result == 2
         assert call_count[0] == 2
+
+
+_CACHE_HIT_BENCHMARK_ROWS = (10_000, 100_000, 1_000_000)
+
+_CACHE_HIT_BENCHMARK_PARAMS = [
+    (f"{name}_{num_rows}_rows", cache_decorator, num_rows)
+    for name, cache_decorator in (
+        ("cache_data", cache_data),
+        ("cache_resource", cache_resource),
+    )
+    for num_rows in _CACHE_HIT_BENCHMARK_ROWS
+]
+
+
+def _make_mixed_dataframe(num_rows: int) -> pd.DataFrame:
+    """Create a DataFrame with integer, float, string, datetime and bool columns."""
+    rng = np.random.default_rng(seed=0)
+    return pd.DataFrame(
+        {
+            "id": np.arange(num_rows),
+            "value": rng.random(num_rows),
+            "label": [f"item-{i}" for i in range(num_rows)],
+            "timestamp": pd.date_range("2026-01-01", periods=num_rows, freq="s"),
+            "flag": rng.random(num_rows) > 0.5,
+        }
+    )
+
+
+class CacheHitPerformanceTest(DeltaGeneratorTestCase):
+    """Benchmarks for calls to cached functions that hit the cache.
+
+    Each benchmark primes the cache first, so every timed call is a hit. Benchmarks
+    are grouped by DataFrame row count so that st.cache_data and st.cache_resource
+    appear side by side.
+    """
+
+    def tearDown(self) -> None:
+        st.cache_data.clear()
+        st.cache_resource.clear()
+        super().tearDown()
+
+    @parameterized.expand(_CACHE_HIT_BENCHMARK_PARAMS)
+    @pytest.mark.usefixtures("benchmark")
+    def test_cache_hit_without_args_performance(
+        self, _: str, cache_decorator: Callable[..., Any], num_rows: int
+    ) -> None:
+        """A hit on a function without arguments that returns a DataFrame."""
+        df = _make_mixed_dataframe(num_rows)
+        call_count = [0]
+
+        @cache_decorator
+        def load_data() -> pd.DataFrame:
+            call_count[0] += 1
+            return df
+
+        load_data()
+
+        self.benchmark.group = f"cache hit, {num_rows} rows"
+        result = self.benchmark(load_data)
+        assert len(result) == num_rows
+        assert call_count[0] == 1
+
+    @parameterized.expand(_CACHE_HIT_BENCHMARK_PARAMS)
+    @pytest.mark.usefixtures("benchmark")
+    def test_cache_hit_with_dataframe_arg_performance(
+        self, _: str, cache_decorator: Callable[..., Any], num_rows: int
+    ) -> None:
+        """A hit on a function whose DataFrame and scalar arguments get hashed."""
+        source_df = _make_mixed_dataframe(num_rows)
+        call_count = [0]
+
+        @cache_decorator
+        def filter_data(df: pd.DataFrame, min_value: float) -> pd.DataFrame:
+            call_count[0] += 1
+            return df[df["value"] >= min_value]
+
+        filter_data(source_df, 0.0)
+
+        self.benchmark.group = f"cache hit, {num_rows} rows"
+        result = self.benchmark(filter_data, source_df, 0.0)
+        assert len(result) == num_rows
+        assert call_count[0] == 1
+
+    @parameterized.expand(
+        [(f"{num_rows}_rows", num_rows) for num_rows in _CACHE_HIT_BENCHMARK_ROWS]
+    )
+    @pytest.mark.usefixtures("benchmark")
+    def test_cache_data_hit_with_element_replay_performance(
+        self, _: str, num_rows: int
+    ) -> None:
+        """A hit on a function that draws its result with st.dataframe.
+
+        Above the lazy-loading row threshold, st.dataframe stores only the first
+        page of rows in its message, so sizes above the threshold replay a smaller
+        message than the eager sizes.
+        """
+        df = _make_mixed_dataframe(num_rows)
+        call_count = [0]
+
+        @st.cache_data
+        def load_and_show_data() -> pd.DataFrame:
+            call_count[0] += 1
+            st.dataframe(df)
+            return df
+
+        load_and_show_data()
+
+        self.benchmark.group = f"cache hit, {num_rows} rows"
+        # Clearing the queue between rounds keeps replayed elements from piling
+        # up in memory.
+        result = self.benchmark.pedantic(
+            load_and_show_data, setup=self.clear_queue, rounds=50, warmup_rounds=1
+        )
+        assert len(result) == num_rows
+        assert len(self.get_all_deltas_from_queue()) == 1
+        assert call_count[0] == 1

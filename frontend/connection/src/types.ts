@@ -26,7 +26,15 @@ import type { AppPage, ForwardMsg } from "@streamlit/protobuf"
 
 import type { ConnectionState } from "./ConnectionState"
 
-export type OnMessage = (ForwardMsg: ForwardMsg) => void
+/** Encoded sizes of a received ForwardMsg, in bytes. */
+export interface ReceivedMessageSize {
+  /** Size of the message as it arrived. */
+  byteLength: number
+  /** For a reference to a cached message, the cached message's size. */
+  cachedByteLength?: number
+}
+
+export type OnMessage = (msg: ForwardMsg, size?: ReceivedMessageSize) => void
 
 export interface ErrorDetails {
   message: string

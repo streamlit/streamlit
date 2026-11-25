@@ -64,6 +64,13 @@ message PageProfile {
   ParallelFragmentUsage parallel_fragment_usage = 22;
   // Database queries during this script run. Unset when no query was recorded.
   QueryUsage query_usage = 23;
+  // 24-25 are held for planned rerun-reason fields.
+  // Bytes of the Arrow payloads serialized during this script run, for
+  // dataframes, data editors, tables, Arrow-backed charts and custom component
+  // dataframe arguments, including payloads the browser already has cached.
+  // Plotly and pydeck charts send JSON and aren't included. Optional, so that
+  // 0 is still sent.
+  optional int64 arrow_bytes = 26;
 }
 
 // Database queries during one script run: counts, and times in microseconds.
