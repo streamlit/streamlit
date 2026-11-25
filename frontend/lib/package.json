@@ -126,7 +126,7 @@
     "unist-util-visit": "^5.2.0",
     "urlpattern-polyfill": "^10.1.0",
     "vega": "^6.4.0",
-    "vega-embed": "^7.3.0",
+    "vega-embed": "^7.4.0",
     "vega-interpreter": "^2.3.2",
     "vega-lite": "6.5.0",
     "vfile": "^6.0.0",
