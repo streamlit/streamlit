@@ -22,6 +22,8 @@ import sys
 import threading
 from typing import TYPE_CHECKING, Any, Final, Literal
 
+import click
+
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
 from streamlit.errors import StreamlitSecretNotFoundError
 from streamlit.logger import get_logger
@@ -224,6 +226,7 @@ def prepare_streamlit_environment(main_script_path: str) -> None:
     (`streamlit run`) or an ASGI server (`uvicorn myapp:app`).
 
     This function:
+    - Raises if an environment variable for a config option has an invalid value
     - Ensures common MIME types are correctly registered
     - Sets the MAPBOX_API_KEY environment variable for PyDeck
     - Loads secrets from secrets.toml if it exists
@@ -240,6 +243,15 @@ def prepare_streamlit_environment(main_script_path: str) -> None:
     ``st.App`` with uvicorn directly, this is called during the ASGI lifespan
     startup phase.
     """
+    # Fail at startup, like `streamlit run`, instead of silently running with
+    # the default for an option whose environment variable is invalid. The
+    # message is formatted here because str() of a Click error omits the option
+    # and environment variable names.
+    try:
+        config._validate_env_vars()
+    except click.ClickException as exc:
+        raise RuntimeError(exc.format_message()) from None
+
     _initialize_mimetypes()
     _fix_pydeck_mapbox_api_warning()
 

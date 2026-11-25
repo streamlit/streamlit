@@ -692,7 +692,7 @@ class ConfigTest(unittest.TestCase):
         assert config.get_where_defined("_test.tomlTest") == DUMMY_DEFINITION
 
     def test_parsing_sensitive_options(self):
-        """Test config._update_config_with_sensitive_env_var()."""
+        """Test config._update_config_with_env_vars() for sensitive options."""
         # Some useful variables.
         DUMMY_VAL_1, DUMMY_VAL_2 = "Adam", "Malysz"
 

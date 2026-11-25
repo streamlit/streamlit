@@ -647,6 +647,28 @@ class BootstrapSecretsLoadTest(TestCase):
         assert os.environ["SMTP_PORT"] == "587"
 
 
+def test_prepare_streamlit_environment_rejects_invalid_env_var(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Startup fails with the `streamlit run` message for an invalid env var."""
+    monkeypatch.setenv("STREAMLIT_SERVER_MAX_UPLOAD_SIZE", "abc")
+
+    with (
+        patch.object(bootstrap, "_initialize_mimetypes") as initialize_mimetypes,
+        pytest.raises(
+            RuntimeError,
+            match=(
+                r"Invalid value for '--server\.maxUploadSize' "
+                r"\(env var: 'STREAMLIT_SERVER_MAX_UPLOAD_SIZE'\): "
+                r"'abc' is not a valid integer\."
+            ),
+        ),
+    ):
+        bootstrap.prepare_streamlit_environment("app.py")
+
+    initialize_mimetypes.assert_not_called()
+
+
 class BootstrapRunTest(IsolatedAsyncioTestCase):
     def tearDown(self):
         #  Reset the Runtime._instance for subsequent test runs. Otherwise we will get

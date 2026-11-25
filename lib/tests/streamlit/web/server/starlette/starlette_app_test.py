@@ -2251,6 +2251,58 @@ class TestAppRun:
         ):
             app.run(config=["server.port"])  # type: ignore[arg-type]
 
+    def test_run_exits_like_the_cli_for_invalid_env_var(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        reset_runtime: None,
+    ) -> None:
+        """App.run should print the `streamlit run` error and exit with code 2."""
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+        app = App(script)
+        monkeypatch.setenv("STREAMLIT_SERVER_MAX_UPLOAD_SIZE", "abc")
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server.UvicornRunner"
+            ) as runner_cls,
+            pytest.raises(SystemExit) as exit_info,
+        ):
+            app.run()
+
+        assert exit_info.value.code == 2
+        assert capsys.readouterr().err.strip() == (
+            "Error: Invalid value for '--server.maxUploadSize' "
+            "(env var: 'STREAMLIT_SERVER_MAX_UPLOAD_SIZE'): "
+            "'abc' is not a valid integer."
+        )
+        runner_cls.assert_not_called()
+
+    def test_run_ignores_invalid_env_var_overridden_by_config(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        reset_runtime: None,
+    ) -> None:
+        """An invalid env var is not an error when `config=` overrides the option."""
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+        app = App(script)
+        monkeypatch.setenv("STREAMLIT_SERVER_MAX_UPLOAD_SIZE", "abc")
+
+        with (
+            patch("streamlit.web.bootstrap.load_config_options"),
+            patch("streamlit.web.bootstrap._prepare_asgi_app_run_context"),
+            patch(
+                "streamlit.web.server.starlette.starlette_server.UvicornRunner"
+            ) as runner_cls,
+        ):
+            app.run(config={"server.maxUploadSize": 300})
+
+        runner_cls.return_value.run.assert_called_once()
+
 
 class TestAppLifespan:
     """Tests for App lifespan handling."""

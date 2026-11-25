@@ -33,7 +33,7 @@ from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeSection
 from streamlit.signal_util import Signal
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Collection
 
 # Config System Global State #
 
@@ -3121,20 +3121,96 @@ def _set_option(key: str, value: Any, where_defined: str) -> None:
         _config_options[key].set_value(value, where_defined)
 
 
-def _update_config_with_sensitive_env_var(
+def _convert_env_var_value(config_option: ConfigOption, raw_value: str) -> Any:
+    """Convert an environment variable string the way `streamlit run` does.
+
+    `streamlit run` reads these variables through Click, so this uses Click's
+    parameter types to keep both entry points in agreement.
+
+    Raises
+    ------
+    click.BadParameter
+        If the value cannot be converted. The message matches the one
+        `streamlit run` prints.
+    """
+    import click
+    from click.types import convert_type
+
+    click_type = convert_type(config_option.type)
+    try:
+        if config_option.multiple:
+            return tuple(
+                click_type.convert(item, None, None)
+                for item in click_type.split_envvar_value(raw_value)
+            )
+        return click_type.convert(raw_value, None, None)
+    except click.BadParameter as exc:
+        raise click.BadParameter(
+            exc.message,
+            param_hint=f"'--{config_option.key}' (env var: '{config_option.env_var}')",
+        ) from None
+
+
+def _update_config_with_env_vars(
     config_options: dict[str, ConfigOption],
+    overridden_keys: Collection[str] = (),
 ) -> None:
-    """Update the config system by parsing the environment variable.
+    """Update the config system by parsing the environment variables.
 
     This should only be called from get_config_options.
+
+    Sensitive options are stored as raw strings. Other options are converted to
+    their declared type, as `streamlit run` does, and an empty value counts as
+    unset. A value that cannot be converted is logged and ignored. Options in
+    `overridden_keys` are skipped because a higher-precedence source sets them.
     """
+    import click
+
     for opt_name, opt_val in config_options.items():
-        if not opt_val.sensitive:
+        env_var_value = os.environ.get(opt_val.env_var)
+        if opt_val.sensitive:
+            if env_var_value is not None:
+                _set_option(opt_name, env_var_value, _DEFINED_BY_ENV_VAR)
+            continue
+
+        if not env_var_value or opt_name in overridden_keys:
+            continue
+        try:
+            converted_value = _convert_env_var_value(opt_val, env_var_value)
+        except click.BadParameter as exc:
+            # User config error: the message names the variable, so skip the traceback.
+            _LOGGER.error(  # noqa: TRY400
+                "Ignoring environment variable. %s", exc.format_message()
+            )
+            continue
+        if converted_value != ():
+            _set_option(opt_name, converted_value, _DEFINED_BY_ENV_VAR)
+
+
+def _validate_env_vars(overridden_keys: Collection[str] = ()) -> None:
+    """Raise if an environment variable for a non-sensitive option is invalid.
+
+    Options in `overridden_keys`, or already set by a command-line flag, are
+    skipped because the environment variable has no effect on them.
+
+    Raises
+    ------
+    click.BadParameter
+        For the first invalid value, with the message `streamlit run` prints.
+    """
+    loaded_options = _config_options or {}
+    for opt_name, opt_val in _config_options_template.items():
+        if opt_val.sensitive or opt_name in overridden_keys:
             continue
         env_var_value = os.environ.get(opt_val.env_var)
-        if env_var_value is None:
+        if not env_var_value:
             continue
-        _set_option(opt_name, env_var_value, _DEFINED_BY_ENV_VAR)
+        loaded_option = loaded_options.get(opt_name)
+        if loaded_option is not None and loaded_option.where_defined == (
+            _DEFINED_BY_FLAG
+        ):
+            continue
+        _convert_env_var_value(opt_val, env_var_value)
 
 
 def _is_valid_theme_section(section_path: str) -> bool:
@@ -3393,7 +3469,9 @@ def get_config_options(
 
             _update_config_with_toml(file_contents, filename)
 
-        _update_config_with_sensitive_env_var(_config_options)
+        _update_config_with_env_vars(
+            _config_options, overridden_keys=options_from_flags.keys()
+        )
 
         for opt_name, opt_val in options_from_flags.items():
             _set_option(opt_name, opt_val, _DEFINED_BY_FLAG)
