@@ -1300,7 +1300,8 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         with pytest.raises(
             StreamlitAPIException,
             match=(
-                r"not selectable because of `disabled_dates`\. "
+                r"The range `value` endpoint .* is not selectable because of "
+                r"`disabled_dates`\. "
                 r"Pass a range whose start and end are both selectable\."
             ),
         ):
@@ -1314,7 +1315,11 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         """An unavailable range end raises with a range-aware remedy."""
         with pytest.raises(
             StreamlitAPIException,
-            match=r"Pass a range whose start and end are both selectable\.",
+            match=(
+                r"The range `value` endpoint .* is not selectable because of "
+                r"`disabled_dates`\. "
+                r"Pass a range whose start and end are both selectable\."
+            ),
         ):
             st.date_input(
                 "period",
@@ -1564,6 +1569,44 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         )
         assert result == (date(2024, 3, 8), date(2024, 3, 11))
         assert st.session_state.period == (date(2024, 3, 8), date(2024, 3, 11))
+
+    def test_keyed_range_keeps_datetime_endpoints_on_exact_allowlist(self) -> None:
+        """Datetime Session State endpoints still match exact enabled_dates."""
+        st.session_state.period = (
+            datetime(2024, 3, 8, 9, 30, 0),
+            datetime(2024, 3, 11, 17, 0, 0),
+        )
+        result = st.date_input(
+            "period",
+            key="period",
+            value=(date(2024, 3, 8), date(2024, 3, 11)),
+            enabled_dates=[date(2024, 3, 8), date(2024, 3, 11)],
+        )
+        assert result == (
+            datetime(2024, 3, 8, 9, 30, 0),
+            datetime(2024, 3, 11, 17, 0, 0),
+        )
+        assert st.session_state.period == (
+            datetime(2024, 3, 8, 9, 30, 0),
+            datetime(2024, 3, 11, 17, 0, 0),
+        )
+
+    def test_keyed_range_resets_datetime_endpoint_on_exact_disabled_date(
+        self,
+    ) -> None:
+        """A datetime endpoint on an exact disabled holiday resets the range."""
+        st.session_state.period = (
+            datetime(2024, 3, 8, 9, 30, 0),
+            datetime(2024, 3, 11, 17, 0, 0),
+        )
+        result = st.date_input(
+            "period",
+            key="period",
+            value=(date(2024, 3, 8), date(2024, 3, 12)),
+            disabled_dates=[date(2024, 3, 11)],
+        )
+        assert result == (date(2024, 3, 8), date(2024, 3, 12))
+        assert st.session_state.period == (date(2024, 3, 8), date(2024, 3, 12))
 
     def test_keyed_today_preserves_range_mode_on_unavailable_reset(self) -> None:
         """Unavailable stored range with value='today' stays in range mode."""

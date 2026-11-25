@@ -610,7 +610,8 @@ def _raise_unavailable_value_error(
     """Raise when an explicit ``value`` is blocked by availability."""
     if is_range:
         raise StreamlitAPIException(
-            f"The `value` {value} is not selectable because of `{param_name}`. "
+            f"The range `value` endpoint {value} is not selectable because of "
+            f"`{param_name}`. "
             "Pass a range whose start and end are both selectable.",
             error_id="date-input-value-unavailable",
         )
@@ -1096,7 +1097,10 @@ def _validate_date_availability(
     if parsed_values.is_range and isinstance(current_value, tuple):
         if len(current_value) == 0:
             return current_value, False
-        dates_to_check = cast("tuple[date, ...]", current_value)
+        # Normalize datetime/Timestamp endpoints so exact_dates membership
+        # matches (``datetime`` never equals ``date``). Return the original
+        # tuple when every normalized endpoint is available.
+        dates_to_check = tuple(_to_date(d) for d in current_value)
     elif not parsed_values.is_range and isinstance(current_value, date):
         dates_to_check = (_to_date(current_value),)
     else:
@@ -2543,9 +2547,10 @@ class TimeWidgetsMixin:
 
             For a range ``value``, only the start and end dates must be
             selectable (or just the start of a partial range); the range may
-            span unavailable days. Range quick-select presets shrink to the
-            nearest selectable start and end within ``min_value`` and
-            ``max_value``, and presets with no selectable range are hidden.
+            span unavailable days. In the range calendar, quick-select options
+            such as "Past Week" shrink to the nearest selectable start and end
+            within ``min_value`` and ``max_value``. Options with no selectable
+            range are hidden.
 
             A weekday name always means the same day of the week, whatever the
             user's locale or first day of the week. If a keyed widget's current

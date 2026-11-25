@@ -601,8 +601,8 @@ describe("quick-select availability snapping", () => {
     return day === 6 || day === 7
   }
 
-  it("snaps Past Week on Saturday to Mon after first Sat through Fri before second", () => {
-    // Saturday 2024-03-16: Past Week is Sat 03-09 → Sat 03-16.
+  it("snaps a Saturday-to-Saturday Past Week preset to Monday through Friday", () => {
+    // On Saturday 2024-03-16, Past Week spans Saturday 03-09 to Saturday 03-16.
     const preset = {
       id: "pastWeek",
       label: "Past Week",

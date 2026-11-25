@@ -1372,18 +1372,22 @@ def test_unavailable_range_calendar_picker_rendering(
     date_input.get_by_test_id("stDateInputCalendarButton").click()
     calendar = themed_app.get_by_test_id("stDateInputCalendar")
     expect(calendar).to_be_visible()
+    # Snapshot the day grid only so quick-select visibility (tied to today vs
+    # min/max) cannot flip the image after 2026.
+    calendar_grid = calendar.get_by_role("grid")
+    expect(calendar_grid).to_be_visible()
     # The Friday-to-Monday selection's highlight band skips the unavailable weekend.
     expect(
-        calendar.get_by_role("button", name=re.compile(r"Saturday, March 9"))
+        calendar_grid.get_by_role("button", name=re.compile(r"Saturday, March 9"))
     ).to_have_attribute("data-unavailable", "true")
     expect(
-        calendar.get_by_role(
+        calendar_grid.get_by_role(
             "button",
             name=re.compile(r"Friday, March 8, 2024 selected"),
         )
     ).to_be_visible()
     assert_snapshot(
-        calendar,
+        calendar_grid,
         name="st_date_input-unavailable_range_calendar",
     )
 
@@ -1435,10 +1439,8 @@ def test_unavailable_range_endpoint_not_selectable(app: Page):
         "Value weekdays only range: (datetime.date(2024, 3, 8), datetime.date(2024, 3, 11))",
     )
 
-    # Start a new range on Friday and complete on the following Monday,
-    # crossing the unavailable weekend. Selected-range aria-labels include
-    # both endpoints, so match the trailing "…, 2024 selected" form that is
-    # unique to the start cell (not the end cell's label).
+    # Only the start cell's label ends in "2024 selected", so this regex skips
+    # the end cell.
     friday = calendar.get_by_role(
         "button",
         name=re.compile(r"Friday, March 8, 2024 selected"),

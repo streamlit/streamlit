@@ -310,8 +310,8 @@ export function snapQuickSelectPreset(
     return null
   }
 
-  // Bound walks to the preset window: any start after `end` (or end before
-  // `start`) is dropped by the compare check below anyway.
+  // Search only inside the preset window. The start search stops at `end` and
+  // the end search stops at the snapped start, so any found start has an end.
   const snappedStart = findAvailableOnOrAfter(
     start,
     minDate,
@@ -327,7 +327,7 @@ export function snapQuickSelectPreset(
     maxDate,
     isDateUnavailable
   )
-  if (!snappedEnd || snappedStart.compare(snappedEnd) > 0) {
+  if (!snappedEnd) {
     return null
   }
 

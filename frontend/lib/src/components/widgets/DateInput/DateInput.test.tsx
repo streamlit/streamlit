@@ -7509,31 +7509,38 @@ describe("DateInput no-op interactions", () => {
 
   it("snaps Past Week quick-select when weekends are unavailable on Saturday", async () => {
     const user = userEvent.setup()
-    // Saturday 2024-03-16 so Past Week is Sat→Sat and snaps Mon→Fri.
+    // On Saturday 2024-03-16, Past Week spans Saturday to Saturday and snaps
+    // to Monday through Friday.
     vi.setSystemTime(new Date(2024, 2, 16))
-    const { setStringArrayValueSpy, props } = renderWithRerunSpy({
-      isRange: true,
-      default: ["2024-03-08", "2024-03-15"],
-      min: "2020-01-01",
-      max: "2024-12-31",
-      availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
-      filterWeekdays: [6, 7],
-    })
+    try {
+      const { setStringArrayValueSpy, props } = renderWithRerunSpy({
+        isRange: true,
+        default: ["2024-03-08", "2024-03-15"],
+        min: "2020-01-01",
+        max: "2024-12-31",
+        availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
+        filterWeekdays: [6, 7],
+      })
 
-    const region = screen.getByTestId("stDateInput")
-    await user.click(getRangeDateSegments(region, "start").year)
-    const quickSelect = await screen.findByRole("button", {
-      name: /quick select/i,
-    })
-    await user.click(quickSelect)
-    await user.click(await screen.findByRole("option", { name: "Past Week" }))
-    await flushScheduledRerun()
+      const region = screen.getByTestId("stDateInput")
+      await user.click(getRangeDateSegments(region, "start").year)
+      const quickSelect = await screen.findByRole("button", {
+        name: /quick select/i,
+      })
+      await user.click(quickSelect)
+      await user.click(
+        await screen.findByRole("option", { name: "Past Week" })
+      )
+      await flushScheduledRerun()
 
-    expect(setStringArrayValueSpy).toHaveBeenCalledWith(
-      props.element.id,
-      ["2024-03-11", "2024-03-15"],
-      expect.objectContaining({ fromUser: true })
-    )
+      expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2024-03-11", "2024-03-15"],
+        expect.objectContaining({ fromUser: true })
+      )
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("does not commit or rerun when re-picking the selected calendar date", async () => {
