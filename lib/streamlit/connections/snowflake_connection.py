@@ -25,7 +25,7 @@ import sys
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from streamlit import logger
-from streamlit.connections import BaseConnection
+from streamlit.connections import BaseConnection, query_telemetry
 from streamlit.connections.util import running_in_sis
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
@@ -149,7 +149,8 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             params: Any = None,
         ) -> DataFrame:
             cur = self._instance.cursor()
-            cur.execute(sql, params=params, **kwargs)
+            with query_telemetry.record_query("snowflake_connector"):
+                cur.execute(sql, params=params, **kwargs)
             return cur.fetch_pandas_all()  # type: ignore
 
         # We modify our helper function's `__qualname__` here to work around default
@@ -354,11 +355,14 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         from snowflake.snowpark.session import Session  # type:ignore[import]
 
         if running_in_sis():
-            return get_active_session()
-
-        return cast(
-            "Session", Session.builder.configs({"connection": self._instance}).create()
-        )
+            session = get_active_session()
+        else:
+            session = cast(
+                "Session",
+                Session.builder.configs({"connection": self._instance}).create(),
+            )
+        query_telemetry.watch_snowpark_session(session)
+        return session
 
     def close(self) -> None:
         """Closes the underlying Snowflake connection."""
@@ -698,6 +702,7 @@ class SnowflakeConnection(BaseSnowflakeConnection):
             )
 
             session = get_active_session()
+            query_telemetry.watch_snowpark_session(session)
 
             if hasattr(session, "connection"):
                 return session.connection
