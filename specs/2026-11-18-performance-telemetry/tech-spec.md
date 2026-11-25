@@ -81,7 +81,6 @@ class RunStats:  # one per run, shared by all its threads
 
 
 class ThreadRunStats:  # written only by its own thread
-    counts_cpu: bool  # CPU time: the script thread's record or a fragment run's
     command_time: float  # listed commands on this thread
     command_cpu_time: float  # CPU time: listed commands on this thread
     cache: ThreadCacheStats
@@ -360,7 +359,7 @@ All the run fields are `optional`, so a run that only waits reports a real 0. Th
 
 #### Attribution
 
-- **Commands.** `gather_metrics` reads the thread's clock around each listed command and adds the difference to the thread's `ThreadRunStats`. `command_cpu_time` sums only the records whose thread's CPU time is also reported, `counts_cpu`: the script thread's record and each fragment run's. So user code CPU time never subtracts CPU time it didn't add. Commands without a listed time, because they're past the tracking limits or raise anything other than a rerun request, count as user code, matching wall time. Nested commands count toward the outer command.
+- **Commands.** `gather_metrics` reads the thread's clock around each listed command and adds the difference to the thread's `ThreadRunStats`. `command_cpu_time` sums only the records whose thread's CPU time is also reported: the script thread's record and each fragment run's. The profile builder runs on the script thread, so it takes the script thread's record from `current_thread_stats()` and each fragment run's from its `ParallelFragmentRunStats`. So user code CPU time never subtracts CPU time it didn't add. Commands without a listed time, because they're past the tracking limits or raise anything other than a rerun request, count as user code, matching wall time. Nested commands count toward the outer command.
 - **Parallel fragments.** `recording_run()` reads the worker's clock when the fragment starts and when it ends, and stores the difference in the fragment's `ParallelFragmentRunStats`. `parallel_fragment_cpu_time` is summed from those entries when the profile is built, so no separate total is kept. The time is stored before the coordinator counts the worker as finished, so it's complete once `join()` or `drain()` returns. A parallel fragment nested in another has its own run on its own worker. A fragment without `parallel=True` counts toward the thread that runs it.
 - **Fragment reruns** run on the script thread, so their CPU time is in `script_cpu_time` and `parallel_fragment_cpu_time` is 0.
 - **Attached threads** are only in `process_cpu_time`, including their listed commands. Process CPU time also includes library thread pools, such as NumPy, Polars and DuckDB, the server itself and, on a shared server, other sessions.
