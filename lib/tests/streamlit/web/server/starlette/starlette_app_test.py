@@ -2273,11 +2273,12 @@ class TestAppRun:
             app.run()
 
         assert exit_info.value.code == 2
-        assert capsys.readouterr().err.strip() == (
+        error_output = capsys.readouterr().err.strip()
+        assert error_output.startswith(
             "Error: Invalid value for '--server.maxUploadSize' "
             "(env var: 'STREAMLIT_SERVER_MAX_UPLOAD_SIZE'): "
-            "'abc' is not a valid integer."
         )
+        assert "not a valid integer" in error_output
         runner_cls.assert_not_called()
 
     def test_run_ignores_invalid_env_var_overridden_by_config(

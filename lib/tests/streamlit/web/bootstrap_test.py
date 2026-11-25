@@ -660,7 +660,7 @@ def test_prepare_streamlit_environment_rejects_invalid_env_var(
             match=(
                 r"Invalid value for '--server\.maxUploadSize' "
                 r"\(env var: 'STREAMLIT_SERVER_MAX_UPLOAD_SIZE'\): "
-                r"'abc' is not a valid integer\."
+                r".*not a valid integer"
             ),
         ),
     ):

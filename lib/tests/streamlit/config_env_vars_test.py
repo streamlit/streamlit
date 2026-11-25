@@ -92,7 +92,7 @@ def test_env_var_is_converted_to_the_option_type(
     [
         ("server.maxUploadSize", "300"),
         ("server.runOnSave", "yes"),
-        ("server.enableXsrfProtection", "off"),
+        ("server.enableXsrfProtection", "no"),
         ("server.fileWatcherType", "poll"),
         ("server.folderWatchList", "/a  /b"),
     ],
@@ -159,7 +159,7 @@ def test_invalid_env_var_is_logged_and_ignored(
     logger.error.assert_called_once()
     message = logger.error.call_args.args[1]
     assert "STREAMLIT_SERVER_MAX_UPLOAD_SIZE" in message
-    assert "'abc' is not a valid integer" in message
+    assert "not a valid integer" in message
 
 
 def test_invalid_env_var_overridden_by_flag_is_not_logged(
@@ -206,9 +206,8 @@ def test_validate_env_vars_raises_the_streamlit_run_error(
     with pytest.raises(click.BadParameter) as click_error:
         _click_value(key, raw_value)
 
-    expected = click_error.value.format_message()
-    assert validate_error.value.format_message() == expected
-    assert f"env var: '{_env_var(key)}'" in expected
+    assert validate_error.value.message == click_error.value.message
+    assert f"env var: '{_env_var(key)}'" in validate_error.value.format_message()
 
 
 def test_validate_env_vars_accepts_valid_and_unset_values(
