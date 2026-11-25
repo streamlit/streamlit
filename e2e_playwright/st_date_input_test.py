@@ -1372,8 +1372,8 @@ def test_unavailable_range_calendar_picker_rendering(
     date_input.get_by_test_id("stDateInputCalendarButton").click()
     calendar = themed_app.get_by_test_id("stDateInputCalendar")
     expect(calendar).to_be_visible()
-    # Snapshot the day grid only so quick-select visibility (tied to today vs
-    # min/max) cannot flip the image after 2026.
+    # Snapshot only the day grid: the quick-select row depends on today's date
+    # relative to min/max, so including it would make the image change over time.
     calendar_grid = calendar.get_by_role("grid")
     expect(calendar_grid).to_be_visible()
     # The Friday-to-Monday selection's highlight band skips the unavailable weekend.
@@ -1424,8 +1424,22 @@ def test_unavailable_range_endpoint_not_selectable(app: Page):
     calendar = app.get_by_test_id("stDateInputCalendar")
     saturday = calendar.get_by_role("button", name=re.compile(r"Saturday, March 9"))
     expect(saturday).to_have_attribute("data-unavailable", "true")
+    friday_selected = calendar.get_by_role(
+        "button",
+        name=re.compile(r"Friday, March 8, 2024 selected"),
+    )
     saturday.click(force=True)
+    # Selecting a date closes the popover; an ignored unavailable click must
+    # leave it open. Assert selection state sync (not only markdown) so a bad
+    # commit cannot race past expect_markdown.
     expect(calendar).to_be_visible()
+    expect(friday_selected).to_be_visible()
+    expect(
+        calendar.get_by_role(
+            "button",
+            name=re.compile(r"Saturday, March 9, 2024 selected"),
+        )
+    ).to_have_count(0)
     expect_markdown(
         app,
         "Value weekdays only range: (datetime.date(2024, 3, 8), datetime.date(2024, 3, 11))",
@@ -1434,6 +1448,13 @@ def test_unavailable_range_endpoint_not_selectable(app: Page):
     saturday.focus()
     app.keyboard.press("Enter")
     expect(calendar).to_be_visible()
+    expect(friday_selected).to_be_visible()
+    expect(
+        calendar.get_by_role(
+            "button",
+            name=re.compile(r"Saturday, March 9, 2024 selected"),
+        )
+    ).to_have_count(0)
     expect_markdown(
         app,
         "Value weekdays only range: (datetime.date(2024, 3, 8), datetime.date(2024, 3, 11))",
@@ -1441,10 +1462,7 @@ def test_unavailable_range_endpoint_not_selectable(app: Page):
 
     # Only the start cell's label ends in "2024 selected", so this regex skips
     # the end cell.
-    friday = calendar.get_by_role(
-        "button",
-        name=re.compile(r"Friday, March 8, 2024 selected"),
-    )
+    friday = friday_selected
     friday.click()
     wait_for_app_run(app)
     expect_markdown(app, "Value weekdays only range: (datetime.date(2024, 3, 8),)")

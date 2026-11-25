@@ -1608,6 +1608,18 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         assert result == (date(2024, 3, 8), date(2024, 3, 12))
         assert st.session_state.period == (date(2024, 3, 8), date(2024, 3, 12))
 
+    def test_keyed_range_resets_non_date_string_endpoints(self) -> None:
+        """ISO-string Session State endpoints reset instead of crashing."""
+        st.session_state.period = ("2024-03-08", "2024-03-11")
+        result = st.date_input(
+            "period",
+            key="period",
+            value=(date(2024, 3, 8), date(2024, 3, 11)),
+            disabled_dates=["saturday", "sunday"],
+        )
+        assert result == (date(2024, 3, 8), date(2024, 3, 11))
+        assert st.session_state.period == (date(2024, 3, 8), date(2024, 3, 11))
+
     def test_keyed_today_preserves_range_mode_on_unavailable_reset(self) -> None:
         """Unavailable stored range with value='today' stays in range mode."""
 
@@ -1633,8 +1645,8 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.date_input
         assert c.is_range is True
 
-    def test_range_serde_rejects_unavailable_endpoint(self) -> None:
-        """Serde rejects a range wire value with an unavailable endpoint."""
+    def test_range_serde_unavailable_endpoint_reverts_to_default(self) -> None:
+        """Serde returns the default range for a wire value with an unavailable endpoint."""
         values = _DateInputValues(
             value=(date(2024, 3, 8), date(2024, 3, 11)),
             is_range=True,
@@ -1658,7 +1670,7 @@ class DateInputAvailabilityTest(DeltaGeneratorTestCase):
     def test_today_empty_allowlist_resolves_to_empty_range_when_range_mode(
         self,
     ) -> None:
-        """Keyed today + empty allowlist + stored range resets to ()."""
+        """A keyed ``value="today"`` widget with an empty allowlist resets a stored range to ``()``."""
 
         class FixedDateTime(datetime):
             @classmethod

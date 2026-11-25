@@ -1097,9 +1097,12 @@ def _validate_date_availability(
     if parsed_values.is_range and isinstance(current_value, tuple):
         if len(current_value) == 0:
             return current_value, False
-        # Normalize datetime/Timestamp endpoints so exact_dates membership
-        # matches (``datetime`` never equals ``date``). Return the original
-        # tuple when every normalized endpoint is available.
+        # Non-date endpoints (e.g. ISO strings) can't be checked; reset like
+        # the single-date type-mismatch branch. ``datetime`` / Timestamp are
+        # subclasses of ``date``, so they pass this guard and still need
+        # ``_to_date`` for exact_dates membership.
+        if not all(isinstance(d, date) for d in current_value):
+            return _default_date_widget_return(parsed_values), True
         dates_to_check = tuple(_to_date(d) for d in current_value)
     elif not parsed_values.is_range and isinstance(current_value, date):
         dates_to_check = (_to_date(current_value),)
@@ -2543,7 +2546,7 @@ class TimeWidgetsMixin:
             tuple, set, Series, Index, NumPy array). Cannot be set together
             with ``disabled_dates``. When this is set, every other date is
             unavailable. An empty collection makes every date unavailable;
-            pass ``value=None`` (or an empty range) in that case.
+            pass ``value=None`` (or ``value=()`` for a range) in that case.
 
             For a range ``value``, only the start and end dates must be
             selectable (or just the start of a partial range); the range may
@@ -2732,6 +2735,18 @@ class TimeWidgetsMixin:
         ...     disabled_dates=["saturday", "sunday", date(2026, 12, 25)],
         ... )
         >>> st.write("Selected:", d)
+
+        **Example 6: Reporting range that may span unavailable days**
+
+        >>> from datetime import date
+        >>> import streamlit as st
+        >>>
+        >>> period = st.date_input(
+        ...     "Reporting period",
+        ...     value=(date(2026, 8, 24), date(2026, 8, 28)),
+        ...     disabled_dates=["saturday", "sunday", date(2026, 9, 7)],
+        ... )
+        >>> st.write("Selected:", period)
 
         """
         ctx = get_script_run_ctx()

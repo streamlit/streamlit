@@ -7507,7 +7507,7 @@ describe("DateInput no-op interactions", () => {
     )
   })
 
-  it("snaps Past Week quick-select when weekends are unavailable on Saturday", async () => {
+  it("snaps the Past Week preset to Monday through Friday when today is a Saturday and weekends are unavailable", async () => {
     const user = userEvent.setup()
     // On Saturday 2024-03-16, Past Week spans Saturday to Saturday and snaps
     // to Monday through Friday.

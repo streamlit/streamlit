@@ -1342,8 +1342,9 @@ function RangeDateInput({
           setDisplayStart(start)
           setDisplayEnd(end)
           if (hasUnavailableEndpoint([start, end])) {
-            // Same dirty staging as emitRangeSelection: keep form submit from
-            // accepting the previous complete range behind this display.
+            // Stage the rejected range as a dirty edit, as emitRangeSelection
+            // does, so a required form blocks submit instead of sending the
+            // previous range.
             validateBothFields(start, end)
             onEdit([start, end].map(calendarDateToIso))
             return
