@@ -915,7 +915,16 @@ def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
     writer = pa.RecordBatchStreamWriter(sink, table.schema)
     writer.write_table(table)
     writer.close()
-    return cast("bytes", sink.getvalue().to_pybytes())
+    arrow_bytes = cast("bytes", sink.getvalue().to_pybytes())
+
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        record_arrow_bytes,
+    )
+
+    # Every fresh Arrow serialization passes through here. Elements replayed
+    # by an st.cache_data hit aren't serialized again, so they aren't recorded.
+    record_arrow_bytes(len(arrow_bytes))
+    return arrow_bytes
 
 
 def get_arrow_conversion_errors() -> tuple[type[BaseException], ...]:

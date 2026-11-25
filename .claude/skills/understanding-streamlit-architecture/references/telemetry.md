@@ -24,6 +24,7 @@ The proto field comments are the source of truth for each field's meaning. The f
 | Run type | `is_fragment_run` | Whether the run was fragment-only. |
 | Cache | `cache_usage` | For `st.cache_data` and `st.cache_resource` separately, the run's cached calls, hits, misses, stale hits and waits; the time spent computing on misses, waiting for another caller's computation and on other cache overhead; and how much concurrent async calls counted more than once. See [Cache totals](#cache-totals). |
 | Parallel fragments | `parallel_fragment_usage` | Each `parallel=True` fragment run's start, wall-clock, command and cache times, and how long the script thread waited for them. Unset when none ran. See [Parallel fragments](#parallel-fragments). |
+| Data size | `arrow_bytes` | Bytes of the Arrow data the run serialized for dataframes, data editors, tables, Arrow-backed charts and custom component dataframe arguments. `optional`, so 0 is still sent. See [Data size](#data-size). |
 | Server process | `server_uptime_seconds` | Seconds since the runtime started, read at the start of the run. `optional`, so 0 is still sent. |
 | | `agent_api_usage` | Agent API counts since the process started. Unset while every count is zero. |
 | Errors | `uncaught_exception` | The exception type name, with a suffix only from fixed categories (see `format_uncaught_exception`). |
@@ -33,7 +34,7 @@ The proto field comments are the source of truth for each field's meaning. The f
 
 ### The `pageProfile` event
 
-`handlePageProfileMsg` in `frontend/app/src/App.tsx` spreads `PageProfile.toObject()` into a `pageProfile` event and adds browser-side values: `numPages`, `pageScriptHash`, `activeTheme`, `browserInfo` and `totalLoadTime`. `totalLoadTime` is in microseconds, from handling the run's `NewSession` message to handling its `PageProfile` message.
+`handlePageProfileMsg` in `frontend/app/src/App.tsx` spreads `PageProfile.toObject()` into a `pageProfile` event and adds browser-side values: `numPages`, `pageScriptHash`, `activeTheme`, `browserInfo`, `totalLoadTime` and `receivedMessages`. `totalLoadTime` is in microseconds, from handling the run's `NewSession` message to handling its `PageProfile` message. `receivedMessages` covers the same messages (see [Data size](#data-size)).
 
 `MetricsManager.buildEventProto` (`frontend/app/src/MetricsManager.ts`) adds fields that every event carries, including:
 
@@ -54,7 +55,7 @@ Other usage events are `viewReport` (once per page load), `updateReport` (each `
 - **`"postMessage"`**: each event goes to the host window as a `METRICS_EVENT` message.
 - **An HTTPS URL**: that URL instead of the defaults. A non-HTTPS URL is rejected, which turns sending off.
 
-Dev builds of the frontend (`IS_DEV_ENV`) log events to the console instead of sending them. `make debug` passes `--browser.gatherUsageStats=false`, so it produces no page profiles. To check new fields end to end, run the app with `uv run streamlit run` and inspect the `page_profile` ForwardMsg or the event.
+Dev builds of the frontend (`IS_DEV_ENV`) log events to the console instead of sending them. `make debug` passes `--browser.gatherUsageStats=false`, so it produces no page profiles. To check new fields end to end, run the app with `uv run streamlit run` and inspect the `page_profile` ForwardMsg or the event. A source checkout runs in development mode, which rejects `--server.port`, so also pass `--global.developmentMode=false` to choose a port.
 
 ## Run timing
 
@@ -113,6 +114,23 @@ Fragments with `parallel=True` run on worker threads alongside the main script, 
 The first `_MAX_PARALLEL_FRAGMENT_RUNS` (25) runs to start are listed, and later ones are added together into `overflow`. `run_count` and the cache counts in `cache_usage` cover every run. `wait_time` is how long the script thread waited for the fragments after the script ended. Normally that's `ParallelFragmentCoordinator.join()`. When the script ends early, for example with `st.stop()`, a rerun or an uncaught exception, it's `drain()`. If `join()` itself raises, both count, because `drain()` runs after it.
 
 The fragments' commands and cached calls are also in the top-level `commands` and `cache_usage`. Here, cache time means compute, wait and overhead time minus the async overlap time. A fragment's user code time is its `exec_time` minus its command and cache times. The main script's is `exec_time - prep_time - wait_time`, minus the top-level command and cache times less the fragments'. Threads that a fragment attaches with `add_script_run_ctx` count toward the main script. Their time usually overlaps `wait_time`, while the script thread waits for the fragment, so subtracting both can make the main script's user code time negative. A nested parallel fragment is a run of its own, and its parent doesn't wait for it.
+
+## Data size
+
+Two values describe how much data a run sends, each measured where it's already known:
+
+- **`arrow_bytes`, on the server**, is the Arrow data the run serialized for dataframes, data editors, tables, Arrow-backed charts and custom component dataframe arguments. Plotly and pydeck charts send JSON, so they aren't included. `convert_arrow_table_to_arrow_bytes` (`lib/streamlit/dataframe_util.py`) serializes every Arrow payload and adds its size to the calling thread's `ThreadRunStats`. It counts a payload even if the browser already has it, so it measures what the run puts on the page rather than what's transferred.
+- **`receivedMessages`, in the browser**, is the bytes of the ForwardMsgs received from the run's `NewSession` through its `PageProfile`. `WebsocketConnection` passes each message's encoded size to `onMessage`, plus the cached copy's size for a cache reference, and `ReceivedMessagesTracker` (`frontend/app/src/util/ReceivedMessagesTracker.ts`) adds them up. It's measured in the browser because only the browser knows which references it resolved from its cache.
+
+Both are encoded sizes before WebSocket compression, so the bytes transferred can be fewer. Neither side counts anything while usage stats are off. What counts toward a run:
+
+- **Fragment-only runs** count only the fragment's own data and messages.
+- **Parallel fragments and attached threads:** parallel fragments and threads attached with `add_script_run_ctx` record Arrow payloads into their own `ThreadRunStats`, which count toward the run. Their messages arrive within the run's window, so `receivedMessages` counts them too.
+- **Runs that end early** with `st.rerun()`, `st.stop()`, `st.switch_page()` or an uncaught exception count what they serialized and sent before they ended.
+- **Messages after the `PageProfile`**, such as `ScriptFinished`, count toward no run.
+- **Not counted by `arrow_bytes`:** elements replayed by an `st.cache_data` hit, which aren't serialized again. `receivedMessages` still counts them.
+- **Not counted by either:** lazy dataframe chunks after the first, which are serialized without a `ScriptRunContext` and fetched over HTTP; and media files.
+- **Static app replay** (`StaticConnection`) passes no message sizes, so `receivedMessages` reports zeros.
 
 ## Server metrics
 

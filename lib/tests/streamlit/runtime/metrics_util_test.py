@@ -28,12 +28,13 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, mock_open, patch
 
 import pandas as pd
+import pyarrow as pa
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
 import streamlit.components.v1 as components
-from streamlit import config
+from streamlit import config, dataframe_util
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.connections import SQLConnection
 from streamlit.errors import (
@@ -1957,3 +1958,130 @@ def test_create_page_profile_message_sets_installed_agents(
     ):
         msg = metrics_util.create_page_profile_message([], 0, 0)
     assert list(msg.page_profile.installed_agents) == detected
+
+
+def _arrow_payloads(deltas: list[Any]) -> list[bytes]:
+    """Return the Arrow payloads of the dataframe, table and Vega-Lite chart
+    elements in ``deltas``, as sent to the browser.
+    """
+    payloads: list[bytes] = []
+    for delta in deltas:
+        element = delta.new_element
+        element_type = element.WhichOneof("type")
+        if element_type in {"dataframe", "table"}:
+            payloads.append(getattr(element, element_type).arrow_data.data)
+        elif element_type == "vega_lite_chart":
+            chart = element.vega_lite_chart
+            payloads.extend(dataset.data.data for dataset in chart.datasets)
+            if chart.data.data:
+                payloads.append(chart.data.data)
+    return payloads
+
+
+def _arrow_rows(payload: bytes) -> int:
+    return pa.ipc.open_stream(payload).read_all().num_rows
+
+
+class PageProfileArrowBytesTest(DeltaGeneratorTestCase):
+    """``arrow_bytes`` reports the Arrow payloads that the run's elements sent."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        ctx.reset()
+        ctx.gather_usage_stats = True
+
+    def _arrow_bytes(self) -> int:
+        return metrics_util.create_page_profile_message(
+            [], 0, 0
+        ).page_profile.arrow_bytes
+
+    def test_reports_arrow_bytes_across_elements(self) -> None:
+        """Dataframes, data editors, tables and charts all count, each payload
+        once.
+        """
+        st.dataframe(pd.DataFrame({"a": range(10)}))
+        st.data_editor(pd.DataFrame({"a": range(20), "b": range(20)}))
+        st.table(pd.DataFrame({"a": range(3)}))
+        st.line_chart(pd.DataFrame({"a": range(500), "b": range(500)}))
+
+        payloads = _arrow_payloads(self.get_all_deltas_from_queue())
+        assert len(payloads) == 4
+        assert self._arrow_bytes() == sum(len(payload) for payload in payloads)
+
+    def test_a_new_run_counts_only_its_own_payloads(self) -> None:
+        """Resetting the context for a new run drops the previous run's bytes."""
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        st.dataframe(pd.DataFrame({"a": range(100)}))
+        ctx.reset()
+        st.dataframe(pd.DataFrame({"a": range(3)}))
+
+        payloads = _arrow_payloads(self.get_all_deltas_from_queue())
+        assert self._arrow_bytes() == len(payloads[-1])
+
+    def test_reports_zero_for_a_run_without_data(self) -> None:
+        """A run without Arrow payloads still sends ``arrow_bytes`` as 0."""
+        st.markdown("No data here")
+
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+
+        assert msg.page_profile.HasField("arrow_bytes")
+        assert msg.page_profile.arrow_bytes == 0
+
+    def test_counts_nothing_while_usage_stats_are_off(self) -> None:
+        """No thread records Arrow bytes while usage stats are off."""
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        ctx.gather_usage_stats = False
+
+        st.dataframe(pd.DataFrame({"a": range(10)}))
+
+        stats = ctx.shared.stats.all_thread_stats()
+        assert all(thread.arrow_bytes == 0 for thread in stats)
+
+    def test_counts_payloads_from_attached_threads_toward_the_run(self) -> None:
+        """A thread attached with ``add_script_run_ctx`` records into its own
+        stats, which count toward the run's totals.
+        """
+        df = pd.DataFrame({"a": range(50)})
+        thread = threading.Thread(target=lambda: st.dataframe(df))
+        add_script_run_ctx(thread)
+        thread.start()
+        thread.join()
+
+        (payload,) = _arrow_payloads(self.get_all_deltas_from_queue())
+        assert self._arrow_bytes() == len(payload)
+
+    def test_ignores_payloads_serialized_outside_a_script_run(self) -> None:
+        """Payloads serialized on a thread without a ``ScriptRunContext``, such
+        as lazily loaded dataframe chunks, don't count toward any run.
+        """
+        df = pd.DataFrame({"a": range(10)})
+        thread = threading.Thread(
+            target=lambda: dataframe_util.convert_pandas_df_to_arrow_bytes(df)
+        )
+        with patch(
+            "streamlit.runtime.scriptrunner_utils.script_run_context._LOGGER"
+        ) as logger_mock:
+            thread.start()
+            thread.join()
+
+        assert self._arrow_bytes() == 0
+        # The missing context is expected, not a recording failure.
+        logger_mock.debug.assert_not_called()
+
+    def test_recording_failures_dont_reach_the_element(self) -> None:
+        """If recording raises, the element is still sent with its data."""
+        df = pd.DataFrame({"a": range(10)})
+        with patch(
+            "streamlit.runtime.scriptrunner_utils.run_stats.RunStats."
+            "current_thread_stats",
+            side_effect=RuntimeError("boom"),
+        ):
+            st.dataframe(df)
+
+        (payload,) = _arrow_payloads(self.get_all_deltas_from_queue())
+        assert _arrow_rows(payload) == 10
+        assert self._arrow_bytes() == 0

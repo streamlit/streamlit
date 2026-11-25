@@ -92,8 +92,27 @@ message MetricsEvent {
   // 52-55 are held for planned CPU-time fields.
   // Same as PageProfile.parallel_fragment_usage.
   ParallelFragmentUsage parallel_fragment_usage = 56;
+  // 57-61 are held for planned query-time, rerun-reason and render-timing
+  // fields.
+  // Same as PageProfile.arrow_bytes.
+  optional int64 arrow_bytes = 62;
+  // Messages the browser received for this script run. Not in PageProfile,
+  // because only the browser measures it.
+  ReceivedMessages received_messages = 63;
 
-  // Next ID: 57
+  // Next ID: 64
+}
+
+// ForwardMsgs the browser received for one script run, from its NewSession
+// through its PageProfile. Sizes are encoded bytes.
+message ReceivedMessages {
+  // Total size of the messages received. A reference to a cached message
+  // counts at the reference's size.
+  int64 bytes = 1;
+  // How many of those messages were references to a cached message.
+  int64 cached_messages = 2;
+  // Total size of the cached messages those references resolved to.
+  int64 cached_bytes = 3;
 }
 
 message BrowserInfo {
