@@ -433,21 +433,6 @@ Only Navigation Timing, `requestAnimationFrame`, `IntersectionObserver` and the 
 
 Apps served from localhost, loopback addresses, `0.0.0.0` or private-network IPs create no tracker, and neither do apps with usage stats off. They pay one context read and no-op effects per element. With a tracker, each new or changed element adds a context provider, an empty probe and a few `performance.now()` calls, about 7 µs per element on a first load. No element re-renders for render timing, and observers and timers exist only while a run is measured.
 
-### Field numbers
-
-Each addition lands on its own, so field numbers are assigned here and don't depend on the order they land in:
-
-| Addition | `PageProfile` | `MetricsEvent` |
-|---|---|---|
-| Cache usage, server uptime | 16, 17 | 50, 51 |
-| CPU time | 18–21 | 52–55 |
-| Parallel fragment breakdown | 22 | 56 |
-| Query time | 23 | 57 |
-| Rerun reason | 24, 25 | 58, 59 |
-| Render timing (`run_index`, `render_timing`) | None, browser only | 60, 61 |
-
-In `CacheUsage`, `async_overlap_time` is 3. In `ParallelFragmentRun`, 1–6 hold the foundation's times, 7–9 query time, 10 CPU time and 11 `cache_async_overlap_time`. Per-function cache stats and data size take the next free numbers when they're designed.
-
 ### Known limitations
 
 - **Concurrent threads add up.** Times from different threads are added together, so the totals can exceed wall-clock time. Parallel fragments report their share. Threads that user code attaches have no breakdown, so in apps that use them, subtracting their times from `exec_time` can give a negative user code time.
