@@ -387,11 +387,11 @@ Rerun reason has no overlap with other times, so it uses none of the covered-spa
 
 1. **When a rerun is requested.** Each requester sets a reason on `RerunData`: `st.rerun()`, a file change, a fragment's `run_every` timer, or a request from the browser, which counts as a manual rerun.
 2. **When requests are coalesced.** `ScriptRequests` merges requests that arrive before the run starts. `RerunReason.combine` keeps the reason that comes first in the product spec's order.
-3. **When the run starts.** The script runner upgrades the reason if a higher-precedence one applies:
+3. **When the run starts.** The script runner checks these conditions, and when several apply, the first in this order wins, as in the product spec. Any of them outranks the reason set when the rerun was requested, such as `rerun`:
    - `initial_load` if the session has no current page yet;
    - `navigation` if the page changes;
-   - `query_params_change` if the incoming query string differs from the session's query params, so params the script itself wrote don't count;
-   - `widget_interaction` if `_call_callbacks` finds a changed widget.
+   - `widget_interaction` if `_call_callbacks` finds a changed widget;
+   - `query_params_change` if the incoming query string differs from the session's query params, so params the script itself wrote don't count.
 
    Runs with no reason, such as `AppTest` reruns, report `unknown`.
 
