@@ -1254,7 +1254,7 @@ def test_evicted_module_is_dropped_from_shared_paths(
 def test_deleted_module_file_is_not_watched_by_new_session(
     mock_path_watcher: MagicMock,
 ) -> None:
-    """A cached path whose file was deleted is skipped instead of failing to watch."""
+    """A new session skips a cached path whose file has been deleted."""
     with tempfile.TemporaryDirectory() as tmp_dir:
         script_path = os.path.join(tmp_dir, "app.py")
         module_path = os.path.realpath(os.path.join(tmp_dir, "helper.py"))
@@ -1277,6 +1277,63 @@ def test_deleted_module_file_is_not_watched_by_new_session(
 
     assert _watched_module_paths(second) == set()
     assert module_path not in [c.args[0] for c in mock_path_watcher.call_args_list]
+
+
+@patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+@patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+def test_module_scanned_while_its_file_is_missing_is_watched_once_restored(
+    _mock_path_watcher: MagicMock,
+) -> None:
+    """A file missing mid-save during the first scan is picked up when it returns."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        script_path = os.path.join(tmp_dir, "app.py")
+        module_path = os.path.realpath(os.path.join(tmp_dir, "helper.py"))
+        pathlib.Path(script_path).touch()
+        helper = types.ModuleType("helper")
+        helper.__file__ = module_path
+
+        with (
+            patch("sys.modules", {"helper": helper}),
+            _count_module_path_scans() as scan,
+        ):
+            first = local_sources_watcher.LocalSourcesWatcher(PagesManager(script_path))
+            first.update_watched_modules()
+            assert _watched_module_paths(first) == set()
+
+            pathlib.Path(module_path).touch()
+            second = local_sources_watcher.LocalSourcesWatcher(
+                PagesManager(script_path)
+            )
+            second.update_watched_modules()
+
+            assert scan.call_count == 2
+
+    assert _watched_module_paths(second) == {module_path}
+
+
+@patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+@patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+def test_entry_without_weakref_support_is_rescanned_by_each_session(
+    _mock_path_watcher: MagicMock,
+) -> None:
+    """A sys.modules entry that can't be weakly referenced doesn't break the cache."""
+    modules = {"blocked": None, "DUMMY_MODULE_1": DUMMY_MODULE_1}
+    with patch("sys.modules", modules), _count_module_path_scans() as scan:
+        sessions = [
+            local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+            for _ in range(2)
+        ]
+        for lsw in sessions:
+            lsw.update_watched_modules()
+
+        assert [c.args[0] for c in scan.call_args_list] == [
+            None,
+            DUMMY_MODULE_1,
+            None,
+        ]
+
+    for lsw in sessions:
+        assert _watched_module_paths(lsw) == {DUMMY_MODULE_1_FILE}
 
 
 @patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
@@ -1331,7 +1388,7 @@ def test_shared_paths_respect_changed_pythonpath(
 
 @patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
 @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
-def test_namespace_package_paths_are_not_shared(
+def test_namespace_package_is_rescanned_by_each_session(
     _mock_path_watcher: MagicMock,
 ) -> None:
     """Namespace packages are rescanned because their __path__ can change."""

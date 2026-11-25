@@ -300,7 +300,8 @@ class LocalSourcesWatcher:
     ) -> None:
         for name, paths in module_paths.items():
             for path in paths:
-                # The shared paths may predate a file's deletion.
+                # Cached paths can outlive their files, so skip files that no
+                # longer exist.
                 if self._file_is_new(path) and _is_valid_path(path):
                     self._register_watcher(path, name)
 
@@ -312,23 +313,24 @@ class _WatchablePathSettings(NamedTuple):
 
 
 class _CachedModulePaths(NamedTuple):
-    module_ref: Callable[[], object]
+    module_ref: weakref.ref[Any]
     paths: frozenset[str]
 
 
 class _WatchableModulePaths:
     """Process-wide cache of the source paths each loaded module could be watched at.
 
-    Every session's watcher needs the same paths, and finding them (resolving
-    and globbing every path of every loaded module) is expensive for apps with
-    many imports. Caching them per module lets a new session look them up
-    instead of rescanning ``sys.modules``, while each session still registers
-    its own watchers.
+    Finding these paths (resolving and globbing every path of every loaded
+    module) is expensive, and every session needs the same result. New
+    sessions look them up here instead of rescanning ``sys.modules``; each
+    session still registers its own watchers.
 
     An entry belongs to the module object it was computed for, so a module
     that is evicted and re-imported under the same name is examined again.
-    Namespace packages are never cached because their ``__path__`` can grow
-    as ``sys.path`` changes.
+    These are rescanned on every lookup instead of cached: namespace packages,
+    whose ``__path__`` can grow as ``sys.path`` changes; modules whose source
+    file is missing, which may be mid-save; and ``sys.modules`` entries that
+    can't be weakly referenced.
     """
 
     def __init__(self) -> None:
@@ -369,11 +371,16 @@ class _WatchableModulePaths:
             self._entries = {}
 
     def _remember(self, name: str, module: Any, paths: frozenset[str]) -> None:
+        """Cache ``paths`` for ``module`` unless they can't be safely reused."""
         try:
             module_ref = weakref.ref(module)
         except TypeError:
             module_ref = None
-        if module_ref is None or _has_namespace_path(module):
+        if (
+            module_ref is None
+            or _has_namespace_path(module)
+            or _has_missing_source(module)
+        ):
             self._entries.pop(name, None)
         else:
             self._entries[name] = _CachedModulePaths(module_ref, paths)
@@ -398,11 +405,33 @@ def _find_watchable_paths(
     )
 
 
+def _is_namespace_path(path: object) -> bool:
+    # The type is _NamespacePath through Python 3.14 and NamespacePath on 3.15+.
+    return type(path).__name__ in {"_NamespacePath", "NamespacePath"}
+
+
 def _has_namespace_path(module: Any) -> bool:
     try:
-        return type(module.__path__).__name__ in {"_NamespacePath", "NamespacePath"}
+        return _is_namespace_path(module.__path__)
+    except Exception:
+        # Arbitrary sys.modules entries can raise anything on attribute access;
+        # those aren't namespace packages.
+        return False
+
+
+def _has_missing_source(module: Any) -> bool:
+    """Whether a file or directory the module says it was loaded from is missing.
+
+    This happens briefly while an editor saves by deleting and recreating a file.
+    """
+    try:
+        declared = [getattr(module, "__file__", None)]
+        spec = getattr(module, "__spec__", None)
+        if spec is not None and getattr(spec, "has_location", False):
+            declared.append(spec.origin)
     except Exception:
         return False
+    return any(isinstance(path, str) and not _is_valid_path(path) for path in declared)
 
 
 def _queue_evictions(changed_path: str, module_names: set[str]) -> None:
@@ -464,14 +493,13 @@ def get_module_paths(module: ModuleType) -> set[str]:
         ),
         # https://www.python.org/dev/peps/pep-0420/
         # Namespace packages expose a path object whose _path lists the
-        # package locations. The type is _NamespacePath through 3.14 and
-        # NamespacePath on 3.15+.
+        # package locations.
         lambda m: (
             cast("list[str | None]", list(m.__path__._path))  # ty: ignore[invalid-argument-type]
             if hasattr(m, "__path__")
             # This check prevents issues with torch classes:
             # https://github.com/streamlit/streamlit/issues/10992
-            and type(m.__path__).__name__ in {"_NamespacePath", "NamespacePath"}
+            and _is_namespace_path(m.__path__)
             and hasattr(m.__path__, "_path")
             else list[str | None]()
         ),

@@ -18,6 +18,7 @@ import asyncio
 import contextvars
 import gc
 import os
+import sys
 import threading
 import unittest
 from typing import TYPE_CHECKING, Any, cast
@@ -1887,6 +1888,7 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch_config_options({"server.fileWatcherType": "poll"}),
+            patch.dict(sys.modules, {dummy_module.__name__: dummy_module}),
             patch(
                 "streamlit.watcher.local_sources_watcher.PathWatcher"
             ) as mock_path_watcher,
