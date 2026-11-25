@@ -336,8 +336,6 @@ export class RenderTimingTracker {
 
   private run?: RunMeasurement
 
-  private isListeningForVisibility = false
-
   private isDisposed = false
 
   constructor({ onReport, environment }: RenderTimingTrackerOptions) {
@@ -359,7 +357,10 @@ export class RenderTimingTracker {
       this.wasHiddenBeforeFirstRun = this.env.isPageHidden()
       // The first run is measured from navigation start, so watch for the
       // page being hidden from now on.
-      this.listenForVisibility()
+      document.addEventListener(
+        "visibilitychange",
+        this.handleVisibilityChange
+      )
     })
   }
 
@@ -431,7 +432,6 @@ export class RenderTimingTracker {
     })
     this.pendingRequestAt = undefined
     this.run = run
-    this.listenForVisibility()
   }
 
   /**
@@ -482,7 +482,10 @@ export class RenderTimingTracker {
         this.release(this.run)
         this.run = undefined
       }
-      this.stopListeningForVisibility()
+      document.removeEventListener(
+        "visibilitychange",
+        this.handleVisibilityChange
+      )
     } catch (error) {
       LOG.error("Failed to release render timing resources:", error)
     }
@@ -763,10 +766,7 @@ export class RenderTimingTracker {
         : this.buildRenderTiming(run, run.scriptFinishedAt, reason, now)
 
     this.release(run)
-    if (this.run === run) {
-      this.run = undefined
-      this.stopListeningForVisibility()
-    }
+    if (this.run === run) this.run = undefined
 
     // A run without a PageProfile message has no pageProfile event to join.
     if (renderTiming) {
@@ -874,20 +874,5 @@ export class RenderTimingTracker {
         }
       }
     })
-  }
-
-  private listenForVisibility(): void {
-    if (this.isListeningForVisibility) return
-    this.isListeningForVisibility = true
-    document.addEventListener("visibilitychange", this.handleVisibilityChange)
-  }
-
-  private stopListeningForVisibility(): void {
-    if (!this.isListeningForVisibility) return
-    this.isListeningForVisibility = false
-    document.removeEventListener(
-      "visibilitychange",
-      this.handleVisibilityChange
-    )
   }
 }

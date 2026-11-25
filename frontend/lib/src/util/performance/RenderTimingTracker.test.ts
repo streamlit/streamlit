@@ -976,19 +976,25 @@ describe("RenderTimingTracker", () => {
       expect(browser.observer.observed.size).toBe(0)
     })
 
-    it("stops listening for visibility changes between runs", async () => {
-      const removeListener = vi.spyOn(document, "removeEventListener")
+    it("ignores the page being hidden between runs", async () => {
       tracker.runStarted(RUN_ID)
       await finishScript(20)
       browser.paintUntilIdle()
+      browser.setHidden(true)
+      browser.setHidden(false)
 
-      expect(removeListener).toHaveBeenCalledWith(
-        "visibilitychange",
-        expect.any(Function)
-      )
+      tracker.runStarted("second-run")
+      await finishScript(40)
+      browser.paintUntilIdle()
+
+      expect(reports.map(report => report.renderTiming.wasHidden)).toEqual([
+        false,
+        false,
+      ])
     })
 
-    it("stops measuring when disposed", async () => {
+    it("stops measuring and listening when disposed", async () => {
+      const removeListener = vi.spyOn(document, "removeEventListener")
       tracker.runStarted(RUN_ID)
       tracker.dispose()
       tracker.rerunRequested()
@@ -997,6 +1003,10 @@ describe("RenderTimingTracker", () => {
       await flushMicrotasks()
       browser.paintUntilIdle()
       expect(reports).toHaveLength(0)
+      expect(removeListener).toHaveBeenCalledWith(
+        "visibilitychange",
+        expect.any(Function)
+      )
     })
   })
 })

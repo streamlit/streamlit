@@ -32,17 +32,7 @@ export function useElementLoadState(
   kind: ElementLoadKind,
   isLoaded: boolean
 ): void {
-  const handle = useContext(ElementTimingContext)
-  const slotId = useId()
-
-  useLayoutEffect(() => {
-    if (!handle || isLoaded) return
-
-    handle.setLoading(slotId, kind, true)
-    return () => {
-      handle.setLoading(slotId, kind, false)
-    }
-  }, [handle, slotId, kind, isLoaded])
+  useElementLoadCallback(kind, isLoaded ? null : true)
 }
 
 /**

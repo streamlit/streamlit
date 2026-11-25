@@ -119,7 +119,6 @@ import {
   notUndefined,
   preserveEmbedQueryParams,
   type PresetThemeName,
-  RenderTimingContext,
   type RenderTimingReport,
   RenderTimingTracker,
   ScriptRunState,
@@ -3112,6 +3111,9 @@ export class App extends PureComponent<Props, State> {
         showErrorLinks={this.state.showErrorLinks}
         disableDataExport={this.state.disableDataExport}
         backendOperationClient={this.backendOperationClient}
+        renderTimingTracker={
+          this.state.isRenderTimingEnabled ? this.renderTimingTracker : null
+        }
         // In-error "install skills" callout. Gated on the server's
         // recommendation plus localhost/embed (consistent with the exception
         // box's own AI-links gate), not-yet-installed-this-session, and not
@@ -3152,98 +3154,89 @@ export class App extends PureComponent<Props, State> {
             }
             data-test-connection-state={connectionState}
           >
-            <RenderTimingContext.Provider
-              value={
-                this.state.isRenderTimingEnabled
-                  ? this.renderTimingTracker
-                  : null
+            <AppView
+              endpoints={this.endpoints}
+              sendMessageToHost={this.hostCommunicationMgr.sendMessageToHost}
+              elements={elements}
+              widgetMgr={this.widgetMgr}
+              uploadClient={this.uploadClient}
+              navigationPosition={effectiveNavigationPosition}
+              wideMode={userSettings.wideMode}
+              embedded={isEmbed()}
+              showPadding={showPadding}
+              disableScrolling={disableScrolling}
+              addScriptFinishedHandler={this.addScriptFinishedHandler}
+              removeScriptFinishedHandler={this.removeScriptFinishedHandler}
+              widgetsDisabled={
+                inputsDisabled || connectionState !== ConnectionState.CONNECTED
               }
-            >
-              <AppView
-                endpoints={this.endpoints}
-                sendMessageToHost={this.hostCommunicationMgr.sendMessageToHost}
-                elements={elements}
-                widgetMgr={this.widgetMgr}
-                uploadClient={this.uploadClient}
-                navigationPosition={effectiveNavigationPosition}
-                wideMode={userSettings.wideMode}
-                embedded={isEmbed()}
-                showPadding={showPadding}
-                disableScrolling={disableScrolling}
-                addScriptFinishedHandler={this.addScriptFinishedHandler}
-                removeScriptFinishedHandler={this.removeScriptFinishedHandler}
-                widgetsDisabled={
-                  inputsDisabled ||
-                  connectionState !== ConnectionState.CONNECTED
-                }
-                showToolbar={showToolbar}
-                disableFullscreenMode={libConfig.disableFullscreenMode}
-                componentRegistry={this.componentRegistry}
-                skillsNudge={
-                  this.state.showSkillsNudge ? (
-                    <SkillsNudgeToast
-                      onInstall={this.handleToastInstall}
-                      onSnooze={this.handleSkillsNudgeSnooze}
-                      onDontShowAgain={this.handleSkillsNudgeDontShowAgain}
-                      onClose={this.handleSkillsNudgeClose}
+              showToolbar={showToolbar}
+              disableFullscreenMode={libConfig.disableFullscreenMode}
+              componentRegistry={this.componentRegistry}
+              skillsNudge={
+                this.state.showSkillsNudge ? (
+                  <SkillsNudgeToast
+                    onInstall={this.handleToastInstall}
+                    onSnooze={this.handleSkillsNudgeSnooze}
+                    onDontShowAgain={this.handleSkillsNudgeDontShowAgain}
+                    onClose={this.handleSkillsNudgeClose}
+                  />
+                ) : undefined
+              }
+              topRightContent={
+                <>
+                  {!hideTopBar && (
+                    <StatusWidget
+                      connectionState={connectionState}
+                      scriptRunState={scriptRunState}
+                      rerunScript={this.rerunScript}
+                      stopScript={this.stopScript}
+                      allowRunOnSave={allowRunOnSave}
+                      showScriptChangedActions={scriptChangedOnDisk}
                     />
-                  ) : undefined
-                }
-                topRightContent={
-                  <>
-                    {!hideTopBar && (
-                      <StatusWidget
-                        connectionState={connectionState}
-                        scriptRunState={scriptRunState}
-                        rerunScript={this.rerunScript}
-                        stopScript={this.stopScript}
-                        allowRunOnSave={allowRunOnSave}
-                        showScriptChangedActions={scriptChangedOnDisk}
-                      />
-                    )}
-                    {!hideTopBar && (
-                      <ToolbarActions
-                        hostToolbarItems={hostToolbarItems}
-                        sendMessageToHost={
-                          this.hostCommunicationMgr.sendMessageToHost
-                        }
-                        metricsMgr={this.metricsMgr}
-                      />
-                    )}
-                    {this.showDeployButton() && !scriptChangedOnDisk && (
-                      <DeployButton onClick={this.deployButtonClicked} />
-                    )}
-                    {!hideTopBar && (
-                      <MainMenu
-                        isServerConnected={this.isServerConnected()}
-                        quickRerunCallback={this.rerunScript}
-                        clearCacheCallback={this.openClearCacheDialog}
-                        aboutCallback={this.aboutCallback}
-                        printCallback={this.printCallback}
-                        screencastCallback={this.screencastCallback}
-                        screenCastState={this.props.screenCast.currentState}
-                        hostMenuItems={hostMenuItems}
-                        developmentMode={developmentMode}
-                        sendMessageToHost={
-                          this.hostCommunicationMgr.sendMessageToHost
-                        }
-                        menuItems={menuItems}
-                        metricsMgr={this.metricsMgr}
-                        toolbarMode={this.state.toolbarMode}
-                        runOnSave={this.state.userSettings.runOnSave}
-                        onRunOnSaveChange={this.handleRunOnSaveChange}
-                        allowRunOnSave={allowRunOnSave && developmentMode}
-                        streamlitVersion={
-                          this.sessionInfo.isSet
-                            ? this.sessionInfo.current.streamlitVersion
-                            : undefined
-                        }
-                      />
-                    )}
-                  </>
-                }
-              />
-            </RenderTimingContext.Provider>
+                  )}
+                  {!hideTopBar && (
+                    <ToolbarActions
+                      hostToolbarItems={hostToolbarItems}
+                      sendMessageToHost={
+                        this.hostCommunicationMgr.sendMessageToHost
+                      }
+                      metricsMgr={this.metricsMgr}
+                    />
+                  )}
+                  {this.showDeployButton() && !scriptChangedOnDisk && (
+                    <DeployButton onClick={this.deployButtonClicked} />
+                  )}
+                  {!hideTopBar && (
+                    <MainMenu
+                      isServerConnected={this.isServerConnected()}
+                      quickRerunCallback={this.rerunScript}
+                      clearCacheCallback={this.openClearCacheDialog}
+                      aboutCallback={this.aboutCallback}
+                      printCallback={this.printCallback}
+                      screencastCallback={this.screencastCallback}
+                      screenCastState={this.props.screenCast.currentState}
+                      hostMenuItems={hostMenuItems}
+                      developmentMode={developmentMode}
+                      sendMessageToHost={
+                        this.hostCommunicationMgr.sendMessageToHost
+                      }
+                      menuItems={menuItems}
+                      metricsMgr={this.metricsMgr}
+                      toolbarMode={this.state.toolbarMode}
+                      runOnSave={this.state.userSettings.runOnSave}
+                      onRunOnSaveChange={this.handleRunOnSaveChange}
+                      allowRunOnSave={allowRunOnSave && developmentMode}
+                      streamlitVersion={
+                        this.sessionInfo.isSet
+                          ? this.sessionInfo.current.streamlitVersion
+                          : undefined
+                      }
+                    />
+                  )}
+                </>
+              }
+            />
             {renderedDialog}
           </StyledApp>
         </GlobalHotkeys>

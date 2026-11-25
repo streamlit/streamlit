@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useContext } from "react"
+import { type ComponentProps, useContext } from "react"
 
 import { render, screen } from "@testing-library/react"
 
@@ -22,11 +22,44 @@ import {
   createFormsData,
   LibConfigContext,
   lightTheme,
+  RenderTimingContext,
+  RenderTimingTracker,
   ScriptRunState,
 } from "@streamlit/lib"
 import { Config, PageConfig } from "@streamlit/protobuf"
 
 import StreamlitContextProvider from "./StreamlitContextProvider"
+
+const getProps = (): ComponentProps<typeof StreamlitContextProvider> => ({
+  isFullScreen: false,
+  setFullScreen: vi.fn(),
+  locale: "en-US",
+  mapboxToken: undefined,
+  enforceDownloadInNewTab: undefined,
+  resourceCrossOriginMode: undefined,
+  showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+  disableDataExport: false,
+  pageLinkBaseUrl: "",
+  currentPageScriptHash: "",
+  onPageChange: vi.fn(),
+  navSections: [],
+  appPages: [],
+  initialSidebarState: PageConfig.SidebarState.AUTO,
+  appLogo: null,
+  sidebarChevronDownshift: 0,
+  expandSidebarNav: false,
+  hideSidebarNav: false,
+  activeTheme: lightTheme,
+  setTheme: vi.fn(),
+  availableThemes: [],
+  stopScript: vi.fn(),
+  scriptRunState: ScriptRunState.NOT_RUNNING,
+  scriptRunId: "script-run-id",
+  fragmentIdsThisRun: [],
+  scriptRunFinishedSequence: 0,
+  scriptRunFinishedFragmentIds: [],
+  formsData: createFormsData(),
+})
 
 const ContextConsumer = (): React.ReactElement => {
   const { disableDataExport } = useContext(LibConfigContext)
@@ -39,40 +72,38 @@ const ContextConsumer = (): React.ReactElement => {
 describe("StreamlitContextProvider", () => {
   it("forwards disableDataExport to LibConfigContext", () => {
     render(
-      <StreamlitContextProvider
-        isFullScreen={false}
-        setFullScreen={vi.fn()}
-        locale="en-US"
-        mapboxToken={undefined}
-        enforceDownloadInNewTab={undefined}
-        resourceCrossOriginMode={undefined}
-        showErrorLinks={Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO}
-        disableDataExport={true}
-        pageLinkBaseUrl=""
-        currentPageScriptHash=""
-        onPageChange={vi.fn()}
-        navSections={[]}
-        appPages={[]}
-        initialSidebarState={PageConfig.SidebarState.AUTO}
-        appLogo={null}
-        sidebarChevronDownshift={0}
-        expandSidebarNav={false}
-        hideSidebarNav={false}
-        activeTheme={lightTheme}
-        setTheme={vi.fn()}
-        availableThemes={[]}
-        stopScript={vi.fn()}
-        scriptRunState={ScriptRunState.NOT_RUNNING}
-        scriptRunId="script-run-id"
-        fragmentIdsThisRun={[]}
-        scriptRunFinishedSequence={0}
-        scriptRunFinishedFragmentIds={[]}
-        formsData={createFormsData()}
-      >
+      <StreamlitContextProvider {...getProps()} disableDataExport={true}>
         <ContextConsumer />
       </StreamlitContextProvider>
     )
 
     expect(screen.getByTestId("disable-data-export")).toHaveTextContent("true")
+  })
+
+  it("provides the render timing tracker, or null without one", () => {
+    const tracker = new RenderTimingTracker({ onReport: vi.fn() })
+    const TrackerConsumer = (): React.ReactElement => {
+      const provided = useContext(RenderTimingContext)
+      return (
+        <span data-testid="tracker">
+          {provided === null ? "none" : String(provided === tracker)}
+        </span>
+      )
+    }
+
+    const { rerender } = render(
+      <StreamlitContextProvider {...getProps()}>
+        <TrackerConsumer />
+      </StreamlitContextProvider>
+    )
+    expect(screen.getByTestId("tracker")).toHaveTextContent("none")
+
+    rerender(
+      <StreamlitContextProvider {...getProps()} renderTimingTracker={tracker}>
+        <TrackerConsumer />
+      </StreamlitContextProvider>
+    )
+    expect(screen.getByTestId("tracker")).toHaveTextContent("true")
+    tracker.dispose()
   })
 })
