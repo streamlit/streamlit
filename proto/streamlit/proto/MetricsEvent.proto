@@ -89,7 +89,14 @@ message MetricsEvent {
   CacheUsage cache_usage = 50;
   // Same as PageProfile.server_uptime_seconds.
   optional int64 server_uptime_seconds = 51;
-  // 52-55 are held for planned CPU-time fields.
+  // Same as PageProfile.script_cpu_time.
+  optional int64 script_cpu_time = 52;
+  // Same as PageProfile.command_cpu_time.
+  optional int64 command_cpu_time = 53;
+  // Same as PageProfile.parallel_fragment_cpu_time.
+  optional int64 parallel_fragment_cpu_time = 54;
+  // Same as PageProfile.process_cpu_time.
+  optional int64 process_cpu_time = 55;
   // Same as PageProfile.parallel_fragment_usage.
   ParallelFragmentUsage parallel_fragment_usage = 56;
   // 57-61 are held for planned query-time, rerun-reason and render-timing

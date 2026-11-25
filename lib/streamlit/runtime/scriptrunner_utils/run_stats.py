@@ -24,12 +24,48 @@ from __future__ import annotations
 
 import contextlib
 import threading
-from typing import TYPE_CHECKING
+import time
+from typing import TYPE_CHECKING, Final
 
+from streamlit.logger import get_logger
 from streamlit.runtime.scriptrunner_utils.cache_run_stats import ThreadCacheStats
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
+
+_LOGGER: Final = get_logger(__name__)
+
+
+def _resolve_thread_cpu_clock() -> Callable[[], float] | None:
+    """Return ``time.thread_time``, or None if the platform doesn't support it."""
+    thread_time: Callable[[], float] | None = getattr(time, "thread_time", None)
+    if thread_time is None:
+        return None
+    try:
+        thread_time()
+    except OSError:
+        return None
+    return thread_time
+
+
+# None on platforms without a per-thread CPU clock, where no CPU times are
+# recorded.
+_thread_cpu_clock: Final = _resolve_thread_cpu_clock()
+
+
+def read_thread_cpu_time() -> float | None:
+    """Return the calling thread's CPU time in seconds.
+
+    Returns None on platforms without a per-thread CPU clock, or if reading it
+    fails, so a failed read never reaches the app.
+    """
+    if _thread_cpu_clock is None:
+        return None
+    try:
+        return _thread_cpu_clock()
+    except Exception as ex:
+        _LOGGER.debug("Failed to read the thread CPU clock", exc_info=ex)
+        return None
 
 
 class ThreadRunStats:
@@ -37,12 +73,26 @@ class ThreadRunStats:
     worker thread, during one script run.
     """
 
-    __slots__ = ("arrow_bytes", "cache", "command_time")
+    __slots__ = (
+        "arrow_bytes",
+        "cache",
+        "command_cpu_time",
+        "command_time",
+        "counts_cpu",
+    )
 
     def __init__(self) -> None:
         # Time of listed commands that ran on this thread. The page profile
         # reports it only for parallel fragment runs.
         self.command_time = 0.0
+        # Whether the page profile reports this record's CPU time: true for the
+        # script thread's record and each parallel fragment run's. Only these
+        # records count toward command_cpu_time, so user code CPU time never
+        # subtracts CPU time it didn't add.
+        self.counts_cpu = False
+        # CPU time of listed commands that ran on this thread. None after a CPU
+        # clock read failed, which leaves the run's CPU fields unset.
+        self.command_cpu_time: float | None = 0.0
         self.cache = ThreadCacheStats()
         # Total size in bytes of the Arrow payloads this thread serialized.
         self.arrow_bytes = 0

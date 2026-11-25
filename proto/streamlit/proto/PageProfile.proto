@@ -59,7 +59,38 @@ message PageProfile {
   // started. Low values mean this process started recently, so its in-memory
   // caches are empty. Optional, so that 0 is still sent.
   optional int64 server_uptime_seconds = 17;
-  // 18-21 are held for planned CPU-time fields.
+
+  // CPU time during this run, in microseconds, from the end of prep until the
+  // page profile is built: the span of exec_time minus prep_time. Comparing it
+  // with wall-clock time separates computing from waiting on queries, APIs,
+  // sleeps or locks. Waiting for the GIL counts as waiting, not CPU time.
+  //
+  // User code CPU time is script_cpu_time + parallel_fragment_cpu_time -
+  // command_cpu_time, matching user code wall time. Fragment reruns run on the
+  // script thread, so their CPU time is in script_cpu_time.
+  //
+  // The four are set together, or all left unset when the platform has no
+  // per-thread CPU clock or reading it fails. On Windows, CPU clocks advance in
+  // steps of about 15.6 ms, so short spans often read 0 and only aggregates are
+  // meaningful.
+  //
+  // CPU time of the script thread.
+  optional int64 script_cpu_time = 18;
+  // CPU time of the commands in `commands` that ran on the script thread or in
+  // a parallel fragment run. Commands on threads attached with
+  // add_script_run_ctx are only in process_cpu_time. Like command times, it
+  // leaves out commands beyond the tracking limits (_MAX_TRACKED_COMMANDS and
+  // _MAX_TRACKED_PER_COMMAND in metrics_util.py) and calls that raised an
+  // exception other than a rerun, so their CPU time counts as user code.
+  optional int64 command_cpu_time = 19;
+  // CPU time of all parallel fragment runs, on their worker threads, including
+  // runs combined into ParallelFragmentUsage.overflow. Summed across runs, so
+  // it can exceed wall-clock time.
+  optional int64 parallel_fragment_cpu_time = 20;
+  // CPU time of the whole server process, which also counts threads attached
+  // with add_script_run_ctx, library thread pools (for example NumPy, Polars or
+  // DuckDB), the server itself and, on a shared server, other sessions.
+  optional int64 process_cpu_time = 21;
   // Parallel fragments that ran during this script run. Unset when none ran.
   ParallelFragmentUsage parallel_fragment_usage = 22;
   // 23-25 are held for planned query-time and rerun-reason fields.
@@ -169,7 +200,11 @@ message ParallelFragmentRun {
   int64 cache_compute_time = 4;
   int64 cache_wait_time = 5;
   int64 cache_overhead_time = 6;
-  // 7-10 are held for planned query-time and CPU-time fields.
+  // 7-9 are held for planned query-time fields.
+  // CPU time of the worker thread during the run, compared with exec_time to
+  // split the run into computing and waiting. Unset when the CPU clock can't be
+  // read, including for the overflow entry when any of its runs is unset.
+  optional int64 cpu_time = 10;
   // The run's CacheUsage.async_overlap_time.
   int64 cache_async_overlap_time = 11;
 }

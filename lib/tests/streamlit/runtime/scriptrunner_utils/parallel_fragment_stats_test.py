@@ -14,10 +14,13 @@
 
 from __future__ import annotations
 
+import itertools
 import threading
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from streamlit.runtime.scriptrunner_utils import run_stats as run_stats_module
 from streamlit.runtime.scriptrunner_utils.parallel_fragment_stats import (
     ParallelFragmentUsageStats,
 )
@@ -100,3 +103,54 @@ def test_wait_time_accumulates_across_waits() -> None:
     stats.add_wait_time(0.5)
 
     assert stats.wait_time == 0.75
+
+
+def test_recording_run_records_the_workers_cpu_time() -> None:
+    """A run stores its worker's CPU time, even when the fragment raises, and
+    its stats count toward the run's command CPU time.
+    """
+    stats = ParallelFragmentUsageStats(RunStats())
+
+    with (
+        patch.object(
+            run_stats_module,
+            "_thread_cpu_clock",
+            MagicMock(side_effect=itertools.count(step=0.25)),
+        ),
+        pytest.raises(RuntimeError),
+        stats.recording_run() as run,
+    ):
+        assert run.cpu_time is None
+        raise RuntimeError
+
+    assert run.cpu_time == 0.25
+    assert run.stats.counts_cpu
+
+
+@pytest.mark.parametrize(
+    "clock_readings",
+    [
+        pytest.param([RuntimeError("clock"), 1.0], id="at start"),
+        pytest.param([0.0, RuntimeError("clock")], id="at end"),
+    ],
+)
+def test_recording_run_cpu_clock_failure_doesnt_reach_the_fragment(
+    clock_readings: list[float | Exception],
+) -> None:
+    """A failed CPU clock read leaves the run's CPU time unset without
+    replacing the fragment's error or skipping its end time.
+    """
+    stats = ParallelFragmentUsageStats(RunStats())
+
+    with (
+        patch.object(
+            run_stats_module, "_thread_cpu_clock", MagicMock(side_effect=clock_readings)
+        ),
+        pytest.raises(ValueError, match="fragment"),
+        stats.recording_run(),
+    ):
+        raise ValueError("fragment")
+
+    (run,) = stats.runs
+    assert run.end is not None
+    assert run.cpu_time is None
