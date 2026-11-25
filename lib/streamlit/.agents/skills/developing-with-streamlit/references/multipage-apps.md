@@ -152,7 +152,7 @@ st.Page("app_pages/admin/settings.py", title="Settings", url_path="admin_setting
 
 ## Switching pages from code
 
-Use the navigation menu for regular navigation and `st.page_link` for a link to a specific page. To switch pages when a user clicks a button, call `st.switch_page` from the button's `on_click` callback:
+Use the navigation menu for regular navigation and `st.page_link` for any other link to a page. Reach for `st.switch_page` only when you need a button or the switch depends on app logic. To switch pages when a user clicks a button, call `st.switch_page` from the button's `on_click` callback:
 
 ```python
 # GOOD: goes straight to the target page

@@ -379,15 +379,19 @@ def switch_page(  # type: ignore[misc]
     architecture. Arbitrary Python scripts and URLs can't be passed to
     ``st.switch_page``.
 
+    If you only need a link to another page, use ``st.page_link`` instead. It
+    switches pages without running the current page again. Use
+    ``st.switch_page`` when you need a button, or when the switch depends on
+    your app's logic.
+
     To switch pages when a user clicks a button, call ``st.switch_page`` from
     the button's ``on_click`` callback. Streamlit then goes straight to the
     new page. If you call ``st.switch_page`` inside an ``if st.button(...)``
     block instead, Streamlit first reruns the current page up to that call and
     only then switches, which is slower and can briefly show the current page
-    again. For a plain link to another page, use ``st.page_link``.
-    Calling ``st.switch_page`` in the body of your script is the right choice
-    when the switch depends on your app's logic, such as redirecting a user who
-    isn't logged in.
+    again. Calling ``st.switch_page`` in the body of your script is the right
+    choice when the switch depends on your app's logic, such as redirecting a
+    user who isn't logged in.
 
     Parameters
     ----------
