@@ -1563,6 +1563,28 @@ class ScriptRunnerTest(unittest.TestCase):
         patched_thread_cpu_clock.assert_not_called()
 
     @parameterized.expand([(True,), (False,)])
+    @patch(
+        "streamlit.runtime.scriptrunner.script_runner.query_telemetry.install_hooks_for_run"
+    )
+    def test_query_hooks_are_installed_only_when_gathering_usage_stats(
+        self,
+        gather_usage_stats: bool,
+        patched_install_hooks_for_run: MagicMock,
+    ):
+        """Each run that sends a page profile installs the query hooks for the
+        libraries the app has imported.
+        """
+        with testutil.patch_config_options(
+            {"browser.gatherUsageStats": gather_usage_stats}
+        ):
+            scriptrunner = TestScriptRunner("good_script.py")
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+        assert patched_install_hooks_for_run.call_count == int(gather_usage_stats)
+
+    @parameterized.expand([(True,), (False,)])
     @patch("streamlit.runtime.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_runtime_error(self, show_error_details: bool):
         """Tests that we correctly handle scripts with runtime errors."""

@@ -40,6 +40,10 @@ from streamlit.proto.PageProfile_pb2 import (
 from streamlit.runtime.agent import usage as agent_usage
 from streamlit.runtime.scriptrunner_utils.cache_run_stats import RunCacheTotals
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.query_run_stats import (
+    QueryTotals,
+    ThreadQueryStats,
+)
 from streamlit.runtime.scriptrunner_utils.run_stats import read_thread_cpu_time
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     FragmentThreadState,
@@ -891,12 +895,36 @@ def _sum_if_all_set(values: Iterable[float | None]) -> float | None:
     return total
 
 
+def _fill_query_usage(page_profile: PageProfile, ctx: ScriptRunContext) -> None:
+    """Copy the run's query totals onto the profile."""
+    query_stats = ThreadQueryStats.combine(
+        stats.query for stats in ctx.shared.stats.all_thread_stats()
+    )
+    query_usage = page_profile.query_usage
+    for totals, usage in (
+        (query_stats.snowflake_connector, query_usage.snowflake_connector),
+        (query_stats.sqlalchemy, query_usage.sqlalchemy),
+        (query_stats.snowpark, query_usage.snowpark),
+    ):
+        if totals.queries == 0:
+            continue
+        usage.queries = totals.queries
+        usage.failed = totals.failed
+        usage.describe_queries = totals.describe_queries
+        usage.queries_in_cache = totals.queries_in_cache
+        usage.queries_in_commands = totals.queries_in_commands
+        usage.time = to_microseconds(totals.time)
+        usage.time_in_cache = to_microseconds(totals.time_in_cache)
+        usage.time_in_commands = to_microseconds(totals.time_in_commands)
+
+
 def _set_parallel_fragment_run_times(
     entry: ParallelFragmentRun,
     exec_time: float,
     command_time: float,
     cpu_time: float | None,
     cache: RunCacheTotals,
+    queries: QueryTotals,
 ) -> None:
     data, resource = cache.cache_data, cache.cache_resource
     entry.exec_time = to_microseconds(exec_time)
@@ -911,6 +939,9 @@ def _set_parallel_fragment_run_times(
         data.overhead_time + resource.overhead_time
     )
     entry.cache_async_overlap_time = to_microseconds(cache.async_overlap_time)
+    entry.query_time = to_microseconds(queries.time)
+    entry.query_time_in_cache = to_microseconds(queries.time_in_cache)
+    entry.query_time_in_commands = to_microseconds(queries.time_in_commands)
 
 
 def _fill_parallel_fragment_usage(
@@ -933,21 +964,24 @@ def _fill_parallel_fragment_usage(
     overflow_exec_time = 0.0
     overflow_command_time = 0.0
     overflow_cache = RunCacheTotals()
+    overflow_queries = QueryTotals()
     for index, run in enumerate(runs):
         run_cache = RunCacheTotals()
         run.stats.cache.add_to(run_cache, now)
         all_runs_cache.add(run_cache)
+        run_queries = run.stats.query.all_sources()
         exec_time = (run.end if run.end is not None else now) - run.start
         command_time = run.stats.command_time
         if index < _MAX_PARALLEL_FRAGMENT_RUNS:
             entry = usage.runs.add(start_time=to_microseconds(run.start - run_start))
             _set_parallel_fragment_run_times(
-                entry, exec_time, command_time, run.cpu_time, run_cache
+                entry, exec_time, command_time, run.cpu_time, run_cache, run_queries
             )
         else:
             overflow_exec_time += exec_time
             overflow_command_time += command_time
             overflow_cache.add(run_cache)
+            overflow_queries.add(run_queries)
     if len(runs) > _MAX_PARALLEL_FRAGMENT_RUNS:
         _set_parallel_fragment_run_times(
             usage.overflow,
@@ -955,6 +989,7 @@ def _fill_parallel_fragment_usage(
             overflow_command_time,
             _sum_if_all_set(run.cpu_time for run in runs[_MAX_PARALLEL_FRAGMENT_RUNS:]),
             overflow_cache,
+            overflow_queries,
         )
     _copy_cache_totals(all_runs_cache, usage.cache_usage)
 
@@ -1070,6 +1105,7 @@ def create_page_profile_message(
             stats.arrow_bytes for stats in ctx.shared.stats.all_thread_stats()
         )
         _fill_cache_usage(page_profile, ctx, now)
+        _fill_query_usage(page_profile, ctx)
         if run_start is not None:
             _fill_parallel_fragment_usage(page_profile, ctx, run_start, now)
         if cpu_start is not None:

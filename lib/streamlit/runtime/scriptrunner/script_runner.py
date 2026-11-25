@@ -25,6 +25,7 @@ from timeit import default_timer as timer
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from streamlit import config, runtime, util
+from streamlit.connections import query_telemetry
 from streamlit.errors import FragmentStorageKeyError
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
@@ -669,6 +670,8 @@ class ScriptRunner:
                 if ctx.gather_usage_stats
                 else None
             )
+            if ctx.gather_usage_stats:
+                query_telemetry.install_hooks_for_run()
             # Clear widget state on page change. This normally happens implicitly
             # in the script run cleanup steps, but doing it explicitly ensures
             # it happens even if a script run was interrupted.

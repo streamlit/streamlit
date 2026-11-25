@@ -99,8 +99,9 @@ message MetricsEvent {
   optional int64 process_cpu_time = 55;
   // Same as PageProfile.parallel_fragment_usage.
   ParallelFragmentUsage parallel_fragment_usage = 56;
-  // 57-61 are held for planned query-time, rerun-reason and render-timing
-  // fields.
+  // Same as PageProfile.query_usage.
+  QueryUsage query_usage = 57;
+  // 58-61 are held for planned rerun-reason and render-timing fields.
   // Same as PageProfile.arrow_bytes.
   optional int64 arrow_bytes = 62;
   // Messages the browser received for this script run. Not in PageProfile,

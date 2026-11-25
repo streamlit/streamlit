@@ -23,8 +23,9 @@ The proto field comments are the source of truth for each field's meaning. The f
 | Run timing | `exec_time`, `prep_time` | Microseconds. See [Run timing](#run-timing). |
 | Run type | `is_fragment_run` | Whether the run was fragment-only. |
 | Cache | `cache_usage` | For `st.cache_data` and `st.cache_resource` separately, the run's cached calls, hits, misses, stale hits and waits; the time spent computing on misses, waiting for another caller's computation and on other cache overhead; and how much concurrent async calls counted more than once. See [Cache totals](#cache-totals). |
-| Parallel fragments | `parallel_fragment_usage` | Each `parallel=True` fragment run's start, wall-clock, CPU, command and cache times, and how long the script thread waited for them. Unset when none ran. See [Parallel fragments](#parallel-fragments). |
+| Parallel fragments | `parallel_fragment_usage` | Each `parallel=True` fragment run's start, wall-clock, CPU, command, cache and query times, and how long the script thread waited for them. Unset when none ran. See [Parallel fragments](#parallel-fragments). |
 | CPU time | `script_cpu_time`, `command_cpu_time`, `parallel_fragment_cpu_time`, `process_cpu_time` | Microseconds of CPU time of the script thread, listed commands, parallel fragment runs and the whole process. `optional`, so 0 is still sent. See [CPU time](#cpu-time). |
+| Queries | `query_usage` | For the Snowflake connector, SQLAlchemy and Snowpark separately, the run's queries, failures and describe queries, and their time, with the count and time inside listed commands and cached functions. Unset when no query was recorded. See [Query totals](#query-totals). |
 | Data size | `arrow_bytes` | Bytes of the Arrow data the run serialized for dataframes, data editors, tables, Arrow-backed charts and custom component dataframe arguments. `optional`, so 0 is still sent. See [Data size](#data-size). |
 | Server process | `server_uptime_seconds` | Seconds since the runtime started, read at the start of the run. `optional`, so 0 is still sent. |
 | | `agent_api_usage` | Agent API counts since the process started. Unset while every count is zero. |
@@ -70,7 +71,7 @@ All server times are wall-clock times in microseconds, except the CPU times (see
   - Commands past the tracking limits aren't listed, and a command that raises anything other than a rerun request is listed with time 0. Both stay inside `exec_time` and aren't subtracted, so their time counts as user code.
   - Work that happens inside a command counts as command time, for example a lazy Snowpark DataFrame passed to `st.dataframe` runs its query inside the command, and `st.write_stream` consumes its generator.
   - Cached function calls count as user code, except the cache write, which is tracked as a command (`_cache_data_object` or `_cache_resource_object`). Their times are reported separately in `cache_usage` and leave out listed command time, so subtracting them as well leaves the time spent outside the cache. Like command times, cache times from threads that ran at the same time are added together, so they can exceed wall-clock time. See [Cache totals](#cache-totals).
-  - Queries count as user code too: `st.connection` times only creating or fetching the connection.
+  - Queries count as user code too: `st.connection` times only creating or fetching the connection. Recorded query times are reported separately in `query_usage`, which says how much of each time is already inside listed command time or cache time. See [Query totals](#query-totals).
 
 `totalLoadTime` is an optimistic lower bound on what the user waits for. It leaves out loading the page and JavaScript, opening the WebSocket, the time between a widget interaction and the run starting, and drawing after the `PageProfile` message arrives.
 
@@ -84,7 +85,7 @@ All server times are wall-clock times in microseconds, except the CPU times (see
 - Sets `in_listed_command` in `ThreadState` while a listed command runs, and reports the command's time to the run's cache totals when it ends. See [Cache totals](#cache-totals).
 - Swallows any telemetry error, logging it at debug level, so telemetry can't break the app.
 
-`SharedRunState` (`lib/streamlit/runtime/scriptrunner_utils/shared_run_state.py`) holds the per-run telemetry state shared by the script thread and its workers. `reset()` clears that state at the start of each run, before any parallel fragment workers start, and workers keep the same `SharedRunState`. It replaces `stats` with a new `RunStats`, and `parallel_fragments` with a new `ParallelFragmentUsageStats`, so a cached call or fragment still running from the previous run finishes into that run's totals.
+`SharedRunState` (`lib/streamlit/runtime/scriptrunner_utils/shared_run_state.py`) holds the per-run telemetry state shared by the script thread and its workers. `reset()` clears that state at the start of each run, before any parallel fragment workers start, and workers keep the same `SharedRunState`. It replaces `stats` with a new `RunStats`, and `parallel_fragments` with a new `ParallelFragmentUsageStats`, so a cached call, query or fragment still running from the previous run finishes into that run's totals.
 
 ## Cache totals
 
@@ -103,19 +104,37 @@ Async cached calls awaited concurrently on one event loop each count the wall-cl
 
 The overlap is measured only within one thread. Times from different threads are added together, so when cached calls on several threads run at the same time, the totals can exceed the time the run took. `parallel_fragment_usage` reports the parallel fragments' share. Other threads the app attaches have no such breakdown, so subtracting their cache times from `exec_time` can give a negative user code time.
 
-Each thread records into its own `ThreadRunStats` (`lib/streamlit/runtime/scriptrunner_utils/run_stats.py`) without a lock, which keeps a cache hit's added cost to one or two microseconds. The record holds the thread's listed command time and its `ThreadCacheStats`, and new per-thread values belong there too. A thread takes `RunStats`'s lock only once per run, to register, and a parallel fragment once per fragment run. `create_page_profile_message` combines the threads' totals. A thread the script doesn't join can still be adding to its totals while they're read, so its calls can be partly included.
+Each thread records into its own `ThreadRunStats` (`lib/streamlit/runtime/scriptrunner_utils/run_stats.py`) without a lock, which keeps a cache hit's added cost to one or two microseconds. The record holds the thread's listed command time, its `ThreadCacheStats` and its `ThreadQueryStats`, and new per-thread values belong there too. A thread takes `RunStats`'s lock only once per run, to register, and a parallel fragment once per fragment run. `create_page_profile_message` combines the threads' totals. A thread the script doesn't join can still be adding to its totals while they're read, so its calls can be partly included.
 
 ## Parallel fragments
 
 Fragments with `parallel=True` run on worker threads alongside the main script, and only in full runs. When the run gathers usage stats, `_run_parallel_fragment` (`fragment.py`) records each one with `ParallelFragmentUsageStats.recording_run` (`lib/streamlit/runtime/scriptrunner_utils/parallel_fragment_stats.py`). For each fragment run, `parallel_fragment_usage` reports:
 
 - When it started, measured from the start of the script run, and its wall-clock time. A run still going when the page profile is built counts up to then.
-- The time of its listed commands, and its cache compute, wait, overhead and async overlap times. `RunStats.recording_into` gives the worker thread the fragment run's own `ThreadRunStats` while the fragment runs, because one worker thread can run several fragments one after another. Threads the fragment attaches get their own records, so only the worker counts toward the fragment.
+- The time of its listed commands, its cache compute, wait, overhead and async overlap times, and its query time with the parts inside recorded cached calls and listed commands, summed across query sources. `RunStats.recording_into` gives the worker thread the fragment run's own `ThreadRunStats` while the fragment runs, because one worker thread can run several fragments one after another. Threads the fragment attaches get their own records, so only the worker counts toward the fragment.
 - Its worker thread's CPU time. See [CPU time](#cpu-time).
 
 The first `_MAX_PARALLEL_FRAGMENT_RUNS` (25) runs to start are listed, and later ones are added together into `overflow`. `run_count` and the cache counts in `cache_usage` cover every run. `wait_time` is how long the script thread waited for the fragments after the script ended. Normally that's `ParallelFragmentCoordinator.join()`. When the script ends early, for example with `st.stop()`, a rerun or an uncaught exception, it's `drain()`. If `join()` itself raises, both count, because `drain()` runs after it.
 
-The fragments' commands and cached calls are also in the top-level `commands` and `cache_usage`. Here, cache time means compute, wait and overhead time minus the async overlap time. A fragment's user code time is its `exec_time` minus its command and cache times. The main script's is `exec_time - prep_time - wait_time`, minus the top-level command and cache times less the fragments'. Threads that a fragment attaches with `add_script_run_ctx` count toward the main script. Their time usually overlaps `wait_time`, while the script thread waits for the fragment, so subtracting both can make the main script's user code time negative. A nested parallel fragment is a run of its own, and its parent doesn't wait for it.
+The fragments' commands, cached calls and queries are also in the top-level `commands`, `cache_usage` and `query_usage`. Here, cache time means compute, wait and overhead time minus the async overlap time. A fragment's user code time is its `exec_time` minus its command and cache times. Its `query_time - query_time_in_cache - query_time_in_commands` is the part of that spent in queries. The main script's is `exec_time - prep_time - wait_time`, minus the top-level command and cache times less the fragments'. Threads that a fragment attaches with `add_script_run_ctx` count toward the main script. Their time usually overlaps `wait_time`, while the script thread waits for the fragment, so subtracting both can make the main script's user code time negative. A nested parallel fragment is a run of its own, and its parent doesn't wait for it.
+
+## Query totals
+
+`lib/streamlit/connections/query_telemetry.py` records queries into each thread's `ThreadQueryStats` (`lib/streamlit/runtime/scriptrunner_utils/query_run_stats.py`), like the cache totals. It never changes the cursors, engines or sessions an app gets, so it records only these paths (its module docstring has the details):
+
+- **Snowflake connector**: `SnowflakeConnection.query()`, timed around its own `execute` call. The connector has no query hook, so queries on the app's own cursors, such as from `.cursor()`, `raw_connection` or `write_pandas`, aren't recorded.
+- **SQLAlchemy**: execute events on the `SQLConnection` engine. Engines the app creates aren't recorded.
+- **Snowpark**: a query listener on sessions from `SnowflakeConnection.session()` and the active session. It's notified only after a query finishes, so these queries are counted but not timed. It's added only when thread-safe sessions are on (the `PYTHON_SNOWPARK_ENABLE_THREAD_SAFE_SESSION` parameter), because otherwise Snowpark's listener lock does nothing and adding a listener could break a query another thread is running.
+
+How queries are counted:
+
+- **What's timed**: only the driver's execute call, not fetching results.
+- **Cache hits and retries**: a cache hit runs no query, so nothing is recorded for it. Each retry counts as its own query.
+- **Overlap with commands and cache**: each query also counts, with its time, toward at most one overlap total: `*_in_commands` if it ran inside a listed command, otherwise `*_in_cache` if a recorded cached call was open on its thread (`ThreadCacheStats.is_in_call`). That's the test command time uses, so it matches everything the call's times include: its computation, the cache's own work such as `hash_funcs`, and in async code, other tasks' queries while it awaits. Analysis can then subtract query time without counting it twice.
+- **Failed commands**: the overlap is decided when the query runs. A listed command that raises is listed with time 0, and its time stays in user code, but its queries still count in `*_in_commands`. In runs where a command fails, part of the user code time can be query time.
+- **Snowpark**: queries are attributed the same way, without times. A Snowpark query counts toward the run that's current when it finishes, so one still running on an attached thread across a rerun counts toward the next run. The active session is watched from the start of a run, so a session the script creates or first gets with Snowpark directly, rather than through `SnowflakeConnection.session()`, is watched only from the next run.
+- **Attached threads**: threads a cached function attaches with `add_script_run_ctx` record their queries as their own, so those are counted twice: as queries and in the outer call's compute time.
+- **Usage stats off**: nothing is installed when `browser.gatherUsageStats` is off.
 
 ## CPU time
 

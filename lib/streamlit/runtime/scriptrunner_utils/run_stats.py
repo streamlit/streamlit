@@ -15,9 +15,9 @@
 """Per-thread page profile values recorded during a script run.
 
 Each thread that records something during a run gets its own
-``ThreadRunStats``, written only by that thread, so recording a command or a
-cached call takes no lock. The page profile adds the threads' values together
-when it's built.
+``ThreadRunStats``, written only by that thread, so recording a command, a
+cached call or a query takes no lock. The page profile adds the threads'
+values together when it's built.
 """
 
 from __future__ import annotations
@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING, Final
 
 from streamlit.logger import get_logger
 from streamlit.runtime.scriptrunner_utils.cache_run_stats import ThreadCacheStats
+from streamlit.runtime.scriptrunner_utils.query_run_stats import ThreadQueryStats
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
@@ -76,7 +77,7 @@ class ThreadRunStats:
     worker thread, during one script run.
     """
 
-    __slots__ = ("arrow_bytes", "cache", "command_cpu_time", "command_time")
+    __slots__ = ("arrow_bytes", "cache", "command_cpu_time", "command_time", "query")
 
     def __init__(self) -> None:
         # Time of listed commands that ran on this thread. The page profile
@@ -86,6 +87,7 @@ class ThreadRunStats:
         # clock read failed, which leaves the run's CPU fields unset.
         self.command_cpu_time: float | None = 0.0
         self.cache = ThreadCacheStats()
+        self.query = ThreadQueryStats()
         # Total size in bytes of the Arrow payloads this thread serialized.
         self.arrow_bytes = 0
 

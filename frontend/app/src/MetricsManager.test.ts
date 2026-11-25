@@ -498,6 +498,43 @@ describe("metrics helpers", () => {
     expect(withoutCpuTimes).not.toHaveProperty("processCpuTime")
   })
 
+  it("buildEventProto forwards queryUsage through toJSON - pageProfile", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    const withUsage = mm
+      .buildEventProto(
+        "pageProfile",
+        decodedPageProfile({
+          queryUsage: {
+            snowflakeConnector: {
+              queries: 3,
+              failed: 1,
+              queriesInCache: 2,
+              time: 3000,
+              timeInCache: 2500,
+            },
+          },
+        })
+      )
+      .toJSON()
+    const withoutUsage = mm
+      .buildEventProto("pageProfile", decodedPageProfile({ execTime: 5 }))
+      .toJSON()
+
+    // Unset sources and zero values are left out.
+    expect(withUsage.queryUsage).toStrictEqual({
+      snowflakeConnector: {
+        queries: "3",
+        failed: "1",
+        queriesInCache: "2",
+        time: "3000",
+        timeInCache: "2500",
+      },
+    })
+    expect(withoutUsage).not.toHaveProperty("queryUsage")
+  })
+
   it("buildEventProto forwards arrowBytes and receivedMessages through toJSON - pageProfile", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
