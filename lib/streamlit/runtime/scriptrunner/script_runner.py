@@ -993,11 +993,15 @@ class ScriptRunner:
 
             if ctx.gather_usage_stats:
                 try:
+                    exec_time = to_microseconds(timer() - start_time)
+                    # Read with exec_time, so building the profile stays out of
+                    # the CPU times.
+                    cpu_end = read_cpu_clocks() if cpu_start is not None else None
                     # Create and send page profile information
                     ctx.enqueue(
                         create_page_profile_message(
                             commands=ctx.shared.tracked_commands,
-                            exec_time=to_microseconds(timer() - start_time),
+                            exec_time=exec_time,
                             prep_time=to_microseconds(prep_time),
                             uncaught_exception=(
                                 format_uncaught_exception(uncaught_exception)
@@ -1007,6 +1011,7 @@ class ScriptRunner:
                             server_uptime_seconds=server_uptime_seconds,
                             run_start=start_time,
                             cpu_start=cpu_start,
+                            cpu_end=cpu_end,
                         )
                     )
                 except Exception as ex:

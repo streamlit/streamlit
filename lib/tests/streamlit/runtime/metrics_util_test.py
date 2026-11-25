@@ -1728,8 +1728,8 @@ def _fake_cpu_clock() -> MagicMock:
 def _record_attached_thread_command_cpu_time(
     ctx: ScriptRunContext, command_cpu_time: float | None
 ) -> None:
-    """Record command CPU time on a thread that doesn't count toward CPU time,
-    like one attached with ``add_script_run_ctx``.
+    """Record command CPU time on a thread outside the script thread and
+    parallel fragment runs, like one attached with ``add_script_run_ctx``.
     """
 
     def record() -> None:
@@ -1746,19 +1746,18 @@ def _create_profile_with_cpu_times(
     """Build a profile whose CPU clocks advanced by 2s on the script thread and
     5s in the process.
     """
-    end_clocks = (
-        metrics_util.CpuClocks(thread=3.0, process=7.0) if can_read_end_clocks else None
-    )
-    with (
-        patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx),
-        patch.object(metrics_util, "read_cpu_clocks", return_value=end_clocks),
-    ):
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
         return metrics_util.create_page_profile_message(
             [],
             0,
             0,
             run_start=time.perf_counter(),
             cpu_start=metrics_util.CpuClocks(thread=1.0, process=2.0),
+            cpu_end=(
+                metrics_util.CpuClocks(thread=3.0, process=7.0)
+                if can_read_end_clocks
+                else None
+            ),
         ).page_profile
 
 

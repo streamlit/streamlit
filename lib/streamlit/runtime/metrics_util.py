@@ -566,10 +566,8 @@ class CpuClocks(NamedTuple):
 
 
 def read_cpu_clocks() -> CpuClocks | None:
-    """Read the calling thread's and the process's CPU clocks.
-
-    Returns None if either can't be read, which leaves the run's CPU fields
-    unset.
+    """Read the calling thread's and the process's CPU clocks, or return None if
+    either can't be read.
     """
     thread = read_thread_cpu_time()
     if thread is None:
@@ -995,18 +993,20 @@ def _fill_parallel_fragment_usage(
 
 
 def _fill_cpu_times(
-    page_profile: PageProfile, ctx: ScriptRunContext, cpu_start: CpuClocks
+    page_profile: PageProfile,
+    ctx: ScriptRunContext,
+    cpu_start: CpuClocks,
+    cpu_end: CpuClocks | None,
 ) -> None:
-    """Set the run's CPU fields from ``cpu_start`` until now.
+    """Set the run's CPU fields from ``cpu_start`` to ``cpu_end``.
 
-    Must run on the script thread, because the script thread's CPU time and
-    stats are read from the calling thread. ``command_cpu_time`` adds up only
-    the script thread's and the parallel fragment runs' commands, whose CPU
-    time the other fields also report. Leaves the fields all unset if any CPU
-    time they add up is missing, because a clock read failed or a parallel
-    fragment run hadn't finished.
+    Must run on the script thread, because it reads that thread's command
+    stats. ``command_cpu_time`` counts only commands on the script thread and
+    in parallel fragment runs, because only those threads' CPU time is in
+    ``script_cpu_time`` or ``parallel_fragment_cpu_time``. Leaves the fields all
+    unset if any CPU time they add up is missing, because a clock read failed
+    or a parallel fragment run hadn't finished.
     """
-    cpu_end = read_cpu_clocks()
     runs = ctx.shared.parallel_fragments.runs
     command_cpu_time = _sum_if_all_set(
         [
@@ -1038,14 +1038,15 @@ def create_page_profile_message(
     server_uptime_seconds: int | None = None,
     run_start: float | None = None,
     cpu_start: CpuClocks | None = None,
+    cpu_end: CpuClocks | None = None,
 ) -> ForwardMsg:
     """Create and return the full PageProfile ForwardMsg.
 
     ``run_start`` is the ``time.perf_counter()`` value when the script run
     started. Without it, the profile has no ``parallel_fragment_usage``.
-    ``cpu_start`` holds the CPU clocks read on the script thread when prep ended.
-    Without it, the profile has no CPU times. With it, this must run on the
-    script thread.
+    ``cpu_start`` and ``cpu_end`` hold the CPU clocks read on the script thread
+    when prep ended and when ``exec_time`` was measured. Without ``cpu_start``,
+    the profile has no CPU times. With it, this must run on the script thread.
     """
     msg = ForwardMsg()
     page_profile = msg.page_profile
@@ -1109,7 +1110,7 @@ def create_page_profile_message(
         if run_start is not None:
             _fill_parallel_fragment_usage(page_profile, ctx, run_start, now)
         if cpu_start is not None:
-            _fill_cpu_times(page_profile, ctx, cpu_start)
+            _fill_cpu_times(page_profile, ctx, cpu_start, cpu_end)
 
     # Skill/agent detection lives in ``streamlit.web.skills`` (co-located with
     # the installer it must stay aligned with); imported lazily to avoid a

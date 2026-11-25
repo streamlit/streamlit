@@ -142,16 +142,16 @@ The CPU times split a run's time into computing and waiting on queries, APIs, sl
 
 How they're recorded:
 
-- **The run.** `script_runner.py` calls `read_cpu_clocks` (`metrics_util.py`) when prep ends, which reads `time.thread_time()` and `time.process_time()` on the script thread. `create_page_profile_message` reads both again, so it must run on the script thread.
-- **Commands.** `gather_metrics` reads the thread's clock around each listed command and adds the difference to the thread's `ThreadRunStats.command_cpu_time`.
-- **Parallel fragments.** `recording_run` reads the worker's clock when a fragment starts and ends, and stores the difference on its `ParallelFragmentRunStats`. It does this before the worker finishes, so the time is complete once `join()` or `drain()` returns. `parallel_fragment_cpu_time` is the sum across runs, including those combined into `overflow`.
+- **The run.** `script_runner.py` calls `read_cpu_clocks` (`metrics_util.py`) when prep ends, which reads `time.thread_time()` and `time.process_time()` on the script thread. It reads both again when `exec_time` is measured, before building the profile, so building it isn't counted. `create_page_profile_message` reads the script thread's `ThreadRunStats`, so it must run on the script thread.
+- **Commands.** `gather_metrics` reads the thread's clock around each listed command and adds the difference to the thread's `ThreadRunStats.command_cpu_time`. The CPU span starts after the command's argument telemetry is built, while its wall time starts before, so that work counts toward the command's wall time but toward user code CPU time. With at most 400 listed commands, this is a few milliseconds at most.
+- **Parallel fragments.** `recording_run` reads the worker's clock when a fragment starts and ends, and stores the difference on its `ParallelFragmentRunStats`. The worker stores it before it returns, so the time is complete once `join()` or `drain()` returns. `parallel_fragment_cpu_time` is the sum across runs, including those combined into `overflow`.
 
 What counts:
 
 - **Commands.** `command_cpu_time` adds up only the script thread's `ThreadRunStats` and each parallel fragment run's. Threads attached with `add_script_run_ctx` are only in `process_cpu_time`, including their commands, because their CPU time isn't in `script_cpu_time` and subtracting it would make user code CPU time too low. Commands without a listed time, because they're past the tracking limits or raise anything other than a rerun request, count as user code, as their wall time does. Nested commands count toward the outer command.
 - **Fragments.** Fragment-only runs run on the script thread, so their CPU time is in `script_cpu_time` and `parallel_fragment_cpu_time` is 0. A fragment nested in a parallel fragment counts toward that fragment's run.
 - **The process.** `process_cpu_time` also counts library thread pools (for example NumPy, Polars or DuckDB), the server itself and, on a shared server, other sessions.
-- **The GIL.** Waiting for it counts as waiting, not CPU time, so these fields can't show GIL contention.
+- **The GIL.** Waiting for it doesn't advance a thread's CPU clock, so it counts as waiting. Contention between parallel fragments shows up as their `cpu_time` values adding up to about the wall time they overlap.
 
 Limits:
 

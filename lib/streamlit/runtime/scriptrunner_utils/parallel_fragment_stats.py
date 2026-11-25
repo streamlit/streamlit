@@ -77,7 +77,7 @@ class ParallelFragmentUsageStats:
 
         While the fragment runs, the worker records into the fragment run's own
         stats. Those stats still count toward the script run's top-level totals.
-        It stores the run's CPU time before the worker finishes, so the time is
+        The worker stores the run's CPU time before it returns, so the time is
         complete once the coordinator's ``join()`` or ``drain()`` returns.
         """
         with self._lock:

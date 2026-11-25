@@ -60,9 +60,9 @@ message PageProfile {
   // caches are empty. Optional, so that 0 is still sent.
   optional int64 server_uptime_seconds = 17;
 
-  // CPU time during this run, in microseconds, over the span of exec_time minus
-  // prep_time. The four are set together, or all unset when CPU time couldn't
-  // be measured.
+  // CPU times in microseconds, measured from the end of prep_time until
+  // exec_time ends. All four are set together, or all are unset when CPU time
+  // couldn't be measured.
   //
   // CPU time of the script thread.
   optional int64 script_cpu_time = 18;
