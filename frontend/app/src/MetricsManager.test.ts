@@ -505,6 +505,111 @@ describe("metrics helpers", () => {
     ).not.toHaveProperty("runIndex")
   })
 
+  it("buildEventProto forwards CPU times through toJSON - pageProfile", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    const withCpuTimes = mm
+      .buildEventProto(
+        "pageProfile",
+        decodedPageProfile({
+          scriptCpuTime: 1500,
+          commandCpuTime: 0,
+          parallelFragmentCpuTime: 700,
+          processCpuTime: 2500,
+          parallelFragmentUsage: {
+            runs: [{ execTime: 900, cpuTime: 700 }],
+            runCount: 1,
+          },
+        })
+      )
+      .toJSON()
+    const withoutCpuTimes = mm
+      .buildEventProto("pageProfile", decodedPageProfile({ execTime: 5 }))
+      .toJSON()
+
+    // The fields are optional, so a CPU time of 0 is still sent.
+    expect(withCpuTimes).toMatchObject({
+      scriptCpuTime: "1500",
+      commandCpuTime: "0",
+      parallelFragmentCpuTime: "700",
+      processCpuTime: "2500",
+    })
+    expect(withCpuTimes.parallelFragmentUsage.runs).toStrictEqual([
+      { execTime: "900", cpuTime: "700" },
+    ])
+    expect(withoutCpuTimes).not.toHaveProperty("scriptCpuTime")
+    expect(withoutCpuTimes).not.toHaveProperty("commandCpuTime")
+    expect(withoutCpuTimes).not.toHaveProperty("parallelFragmentCpuTime")
+    expect(withoutCpuTimes).not.toHaveProperty("processCpuTime")
+  })
+
+  it("buildEventProto forwards queryUsage through toJSON - pageProfile", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    const withUsage = mm
+      .buildEventProto(
+        "pageProfile",
+        decodedPageProfile({
+          queryUsage: {
+            snowflakeConnector: {
+              queries: 3,
+              failed: 1,
+              queriesInCache: 2,
+              time: 3000,
+              timeInCache: 2500,
+            },
+          },
+        })
+      )
+      .toJSON()
+    const withoutUsage = mm
+      .buildEventProto("pageProfile", decodedPageProfile({ execTime: 5 }))
+      .toJSON()
+
+    // Unset sources and zero values are left out.
+    expect(withUsage.queryUsage).toStrictEqual({
+      snowflakeConnector: {
+        queries: "3",
+        failed: "1",
+        queriesInCache: "2",
+        time: "3000",
+        timeInCache: "2500",
+      },
+    })
+    expect(withoutUsage).not.toHaveProperty("queryUsage")
+  })
+
+  it("buildEventProto forwards arrowBytes and receivedMessages through toJSON - pageProfile", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    const withData = mm
+      .buildEventProto("pageProfile", {
+        ...decodedPageProfile({ arrowBytes: 5_000 }),
+        receivedMessages: {
+          bytes: 6_000,
+          cachedMessages: 1,
+          cachedBytes: 3_000,
+        },
+      })
+      .toJSON()
+    const withoutData = mm
+      .buildEventProto("pageProfile", decodedPageProfile({ arrowBytes: 0 }))
+      .toJSON()
+
+    expect(withData.arrowBytes).toBe("5000")
+    expect(withData.receivedMessages).toStrictEqual({
+      bytes: "6000",
+      cachedMessages: "1",
+      cachedBytes: "3000",
+    })
+    // The field is optional, so a run without data still sends 0.
+    expect(withoutData.arrowBytes).toBe("0")
+    expect(withoutData).not.toHaveProperty("receivedMessages")
+  })
+
   it("buildEventProto populates expected fields - menuClick", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })

@@ -39,6 +39,7 @@ import {
   ConnectionState,
   type ErrorDetails,
   mockEndpoints,
+  type ReceivedMessageSize,
 } from "@streamlit/connection"
 import {
   AppRoot,
@@ -459,9 +460,9 @@ type ForwardMsgType =
   | NewSession.$Properties
   | PageConfig.$Properties
   | PageInfo.$Properties
-  | PageProfile.$Properties
   | ParentMessage.$Properties
   | PageNotFound.$Properties
+  | PageProfile.$Properties
   | StopAutoRerun.$Properties
   | Omit<SessionEvent, "toJSON">
   | Omit<SessionStatus, "toJSON">
@@ -469,7 +470,8 @@ type ForwardMsgType =
 function sendForwardMessage(
   type: keyof ForwardMsg,
   message: ForwardMsgType,
-  metadata: ForwardMsgMetadata.$Properties | null = null
+  metadata: ForwardMsgMetadata.$Properties | null = null,
+  size?: ReceivedMessageSize
 ): void {
   act(() => {
     const fwMessage = new ForwardMsg()
@@ -479,7 +481,7 @@ function sendForwardMessage(
       fwMessage.metadata = new ForwardMsgMetadata(cloneDeep(metadata))
     }
 
-    getMockConnectionManagerProp("onMessage")(fwMessage)
+    getMockConnectionManagerProp("onMessage")(fwMessage, size)
   })
 }
 
@@ -860,6 +862,59 @@ describe("App", () => {
       ])
       expect(getEnqueueCalls("renderTiming")).toEqual([])
     })
+  })
+
+  it("adds the messages received for the run to the pageProfile event", () => {
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    const newSession = {
+      ...NEW_SESSION_JSON,
+      config: { ...NEW_SESSION_JSON.config, gatherUsageStats: true },
+    }
+
+    sendForwardMessage(
+      "newSession",
+      newSession,
+      { run: RUN_IDENTITY_JSON },
+      { byteLength: 2_000 }
+    )
+    sendForwardMessage("pageConfigChanged", {}, null, {
+      byteLength: 40,
+      cachedByteLength: 30_000,
+    })
+    sendForwardMessage("pageProfile", {}, null, { byteLength: 60 })
+
+    expect(metricsManager.enqueue).toHaveBeenCalledWith(
+      "pageProfile",
+      expect.objectContaining({
+        receivedMessages: {
+          bytes: 2_100,
+          cachedMessages: 1,
+          cachedBytes: 30_000,
+        },
+      })
+    )
+
+    // The next run counts only its own messages.
+    sendForwardMessage("pageConfigChanged", {}, null, { byteLength: 9_999 })
+    sendForwardMessage(
+      "newSession",
+      newSession,
+      { run: RUN_IDENTITY_JSON },
+      { byteLength: 1_500 }
+    )
+    sendForwardMessage("pageProfile", {}, null, { byteLength: 50 })
+
+    expect(metricsManager.enqueue).toHaveBeenLastCalledWith(
+      "pageProfile",
+      expect.objectContaining({
+        receivedMessages: {
+          bytes: 1_550,
+          cachedMessages: 0,
+          cachedBytes: 0,
+        },
+      })
+    )
   })
 
   it("reruns when the user presses 'r'", async () => {

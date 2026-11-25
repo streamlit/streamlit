@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.shared.react18_utils import take_stable_snapshot
 from e2e_playwright.shared.toolbar_utils import (
     assert_fullscreen_toolbar_button_interactions,
 )
@@ -47,8 +48,12 @@ def test_vega_lite_chart_fullscreen(app: Page, assert_snapshot: ImageCompareFunc
         widget_toolbar.get_by_role("button", name="Close fullscreen")
     ).to_be_visible()
 
-    assert_snapshot(
+    # The chart is resized asynchronously when entering fullscreen, so wait for
+    # the DOM to settle before taking the snapshot.
+    take_stable_snapshot(
         app,
+        app,
+        assert_snapshot=assert_snapshot,
         name="st_layouts_container_directions_fullscreen_elements-vega_lite_chart-fullscreen_expanded",
     )
 
@@ -56,8 +61,11 @@ def test_vega_lite_chart_fullscreen(app: Page, assert_snapshot: ImageCompareFunc
 
     expect(widget_toolbar.get_by_role("button", name="Fullscreen")).to_be_visible()
 
-    assert_snapshot(
+    # The chart is resized asynchronously when leaving fullscreen.
+    take_stable_snapshot(
+        app,
         fullscreen_wrapper,
+        assert_snapshot=assert_snapshot,
         name="st_layouts_container_directions_fullscreen_elements-vega_lite_chart-fullscreen_collapsed",
     )
 

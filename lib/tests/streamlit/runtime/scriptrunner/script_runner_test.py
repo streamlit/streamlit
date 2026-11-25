@@ -81,6 +81,7 @@ if TYPE_CHECKING:
     from streamlit.proto.Delta_pb2 import Delta
     from streamlit.proto.Element_pb2 import Element
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+    from streamlit.proto.PageProfile_pb2 import PageProfile
 
 text_utf = "complete! 👨‍🎤"
 text_utf2 = "complete2! 👨‍🎤"
@@ -92,6 +93,9 @@ text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
 # and can outlast these tests' waits under coverage. This timeout is only
 # slack for a busy runner.
 _CACHE_WAITER_THREAD_TIMEOUT_SECS = 5
+# CPU clocks advance in steps of about 15.6 ms on Windows, so readings from
+# different clocks can differ by a step.
+_CPU_CLOCK_SLACK_US = 20_000
 
 
 def _create_widget(id: str, states: WidgetStates) -> WidgetState:
@@ -1458,6 +1462,126 @@ class ScriptRunnerTest(unittest.TestCase):
         else:
             uptime_seconds.assert_not_called()
             patched_create_page_profile_message.assert_not_called()
+
+    def _run_and_get_page_profile(self, script_name: str) -> PageProfile:
+        """Run the script with usage stats on and return its page profile."""
+        with testutil.patch_config_options({"browser.gatherUsageStats": True}):
+            scriptrunner = TestScriptRunner(script_name)
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        (page_profile,) = (
+            msg.page_profile
+            for msg in scriptrunner.forward_msgs()
+            if msg.HasField("page_profile")
+        )
+        return page_profile
+
+    def test_cpu_bound_script_reports_script_cpu_time(self) -> None:
+        """A busy loop's CPU time counts toward the script and the process."""
+        profile = self._run_and_get_page_profile("cpu_busy_loop.py")
+        script_wall_time = profile.exec_time - profile.prep_time
+
+        assert profile.script_cpu_time >= 200_000
+        # A thread can't use more CPU time than the wall-clock time it ran for.
+        assert profile.script_cpu_time <= script_wall_time + _CPU_CLOCK_SLACK_US
+        assert profile.process_cpu_time >= profile.script_cpu_time - _CPU_CLOCK_SLACK_US
+        assert profile.command_cpu_time == 0
+        assert profile.HasField("parallel_fragment_cpu_time")
+        assert profile.parallel_fragment_cpu_time == 0
+
+    def test_command_cpu_time_is_separate_from_user_code(self) -> None:
+        """CPU time inside a listed command counts as command CPU time, so
+        user code CPU time (script minus command) leaves it out.
+        """
+        profile = self._run_and_get_page_profile("cpu_in_command.py")
+
+        assert [command.name for command in profile.commands] == [
+            "external:__main__:burn_cpu"
+        ]
+        assert profile.command_cpu_time >= 200_000
+        assert profile.script_cpu_time >= profile.command_cpu_time
+        assert profile.script_cpu_time - profile.command_cpu_time < 50_000
+
+    def test_attached_thread_cpu_time_is_only_in_process_cpu_time(self) -> None:
+        """A listed command on an attached thread isn't in command_cpu_time,
+        because its thread's CPU time isn't in script_cpu_time either. The
+        script thread, which only waits for it, reports almost no CPU time.
+        """
+        profile = self._run_and_get_page_profile("cpu_in_attached_thread.py")
+
+        assert [command.name for command in profile.commands] == [
+            "external:__main__:burn_cpu"
+        ]
+        assert profile.commands[0].time >= 200_000
+        assert profile.HasField("command_cpu_time")
+        assert profile.command_cpu_time == 0
+        assert profile.script_cpu_time < 50_000
+        assert profile.process_cpu_time >= 200_000 - _CPU_CLOCK_SLACK_US
+
+    def test_parallel_fragment_cpu_time_is_reported_per_run(self) -> None:
+        """Each parallel fragment run reports its worker's CPU time, including a
+        nested fragment it runs inline, and the runs add up to
+        parallel_fragment_cpu_time, which the script thread leaves out.
+        """
+        profile = self._run_and_get_page_profile("cpu_parallel_fragments.py")
+        runs = profile.parallel_fragment_usage.runs
+
+        assert len(runs) == 2
+        for run in runs:
+            assert run.cpu_time >= 100_000
+            assert run.cpu_time <= run.exec_time + _CPU_CLOCK_SLACK_US
+        # Each run rounds down to whole microseconds on its own.
+        assert sum(run.cpu_time for run in runs) == pytest.approx(
+            profile.parallel_fragment_cpu_time, abs=len(runs)
+        )
+        assert profile.script_cpu_time < 50_000
+        assert (
+            profile.process_cpu_time
+            >= profile.script_cpu_time
+            + profile.parallel_fragment_cpu_time
+            - _CPU_CLOCK_SLACK_US
+        )
+
+    @patch("streamlit.runtime.scriptrunner_utils.run_stats._thread_cpu_clock")
+    def test_cpu_clocks_are_not_read_without_usage_stats(
+        self, patched_thread_cpu_clock: MagicMock
+    ) -> None:
+        """With usage stats off, neither the script thread nor parallel
+        fragment workers read the CPU clock.
+        """
+        with testutil.patch_config_options({"browser.gatherUsageStats": False}):
+            scriptrunner = TestScriptRunner("cpu_parallel_fragments.py")
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        patched_thread_cpu_clock.assert_not_called()
+
+    @parameterized.expand([(True,), (False,)])
+    @patch(
+        "streamlit.runtime.scriptrunner.script_runner.query_telemetry.install_hooks_for_run"
+    )
+    def test_query_hooks_are_installed_only_when_gathering_usage_stats(
+        self,
+        gather_usage_stats: bool,
+        patched_install_hooks_for_run: MagicMock,
+    ):
+        """Each run that sends a page profile installs the query hooks for the
+        libraries the app has imported.
+        """
+        with testutil.patch_config_options(
+            {"browser.gatherUsageStats": gather_usage_stats}
+        ):
+            scriptrunner = TestScriptRunner("good_script.py")
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+        assert patched_install_hooks_for_run.call_count == int(gather_usage_stats)
 
     @parameterized.expand([(True,), (False,)])
     @patch("streamlit.runtime.runtime.Runtime.exists", MagicMock(return_value=True))

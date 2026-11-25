@@ -18,22 +18,24 @@ import builtins
 import contextlib
 import contextvars
 import inspect
+import itertools
 import sys
 import threading
 import time
 import unittest
 from collections import Counter
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 from unittest.mock import MagicMock, mock_open, patch
 
 import pandas as pd
+import pyarrow as pa
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
 import streamlit.components.v1 as components
-from streamlit import config
+from streamlit import config, dataframe_util
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.connections import SQLConnection
 from streamlit.errors import (
@@ -59,6 +61,7 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
     magic_funcs,
 )
+from streamlit.runtime.scriptrunner_utils import run_stats
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
@@ -76,6 +79,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
     from pathlib import Path
 
+    from streamlit.proto.PageProfile_pb2 import PageProfile
     from streamlit.runtime.scriptrunner_utils.parallel_fragment_stats import (
         ParallelFragmentRunStats,
     )
@@ -1493,9 +1497,47 @@ def test_create_page_profile_message_reports_cache_usage() -> None:
     assert usage.async_overlap_time == 125_000
 
 
-def test_create_page_profile_message_leaves_cache_usage_and_uptime_unset() -> None:
-    """``cache_usage`` and ``server_uptime_seconds`` stay unset without cached
-    calls or a known uptime.
+def test_create_page_profile_message_reports_query_usage() -> None:
+    """``query_usage`` carries the run's totals per query source, in
+    microseconds.
+    """
+    ctx = create_mock_script_run_ctx()
+    query_stats = ctx.shared.stats.current_thread_stats().query
+    totals = query_stats.snowflake_connector
+    # Distinct values, so that copying one field into another fails.
+    totals.queries = 15
+    totals.failed = 1
+    totals.describe_queries = 3
+    totals.queries_in_cache = 4
+    totals.queries_in_commands = 5
+    totals.time = 2.5
+    totals.time_in_cache = 1.0
+    totals.time_in_commands = 0.5
+    query_stats.snowpark.queries = 2
+    query_stats.snowpark.queries_in_cache = 1
+
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+
+    usage = msg.page_profile.query_usage
+    assert not usage.HasField("sqlalchemy")
+    connector = usage.snowflake_connector
+    assert connector.queries == 15
+    assert connector.failed == 1
+    assert connector.describe_queries == 3
+    assert connector.queries_in_cache == 4
+    assert connector.queries_in_commands == 5
+    assert connector.time == 2_500_000
+    assert connector.time_in_cache == 1_000_000
+    assert connector.time_in_commands == 500_000
+    assert usage.snowpark.queries == 2
+    assert usage.snowpark.queries_in_cache == 1
+    assert usage.snowpark.time == 0
+
+
+def test_create_page_profile_message_leaves_usage_and_uptime_unset() -> None:
+    """``cache_usage``, ``query_usage`` and ``server_uptime_seconds`` stay unset
+    without cached calls, queries or a known uptime.
     """
     ctx = create_mock_script_run_ctx()
 
@@ -1503,6 +1545,7 @@ def test_create_page_profile_message_leaves_cache_usage_and_uptime_unset() -> No
         msg = metrics_util.create_page_profile_message([], 0, 0)
 
     assert not msg.page_profile.HasField("cache_usage")
+    assert not msg.page_profile.HasField("query_usage")
     assert not msg.page_profile.HasField("server_uptime_seconds")
 
 
@@ -1513,8 +1556,12 @@ def _record_parallel_fragment_run(
     compute_time: float = 0.0,
     wait_time: float = 0.0,
     async_overlap_time: float = 0.0,
+    query_time: float = 0.0,
 ) -> ParallelFragmentRunStats:
-    """Record a finished parallel fragment run with one cached call of each type."""
+    """Record a finished parallel fragment run with one cached call of each type,
+    and a query from each of two sources taking ``query_time`` between them:
+    three quarters of it in cache, and a quarter in commands.
+    """
     with ctx.shared.parallel_fragments.recording_run() as run:
         thread_stats = ctx.shared.stats.current_thread_stats()
         thread_stats.command_time = command_time
@@ -1526,6 +1573,15 @@ def _record_parallel_fragment_run(
         stats.cache_resource.calls = 1
         stats.cache_resource.wait_time = wait_time
         stats.cache_resource.overhead_time = 0.001
+        query_stats = thread_stats.query
+        query_stats.sqlalchemy.queries = 1
+        query_stats.sqlalchemy.queries_in_cache = 1
+        query_stats.sqlalchemy.time = query_time * 0.75
+        query_stats.sqlalchemy.time_in_cache = query_time * 0.75
+        query_stats.snowflake_connector.queries = 1
+        query_stats.snowflake_connector.queries_in_commands = 1
+        query_stats.snowflake_connector.time = query_time * 0.25
+        query_stats.snowflake_connector.time_in_commands = query_time * 0.25
     return run
 
 
@@ -1534,7 +1590,11 @@ def test_create_page_profile_message_reports_parallel_fragments() -> None:
     ctx = create_mock_script_run_ctx()
     run_start = time.perf_counter()
     first = _record_parallel_fragment_run(
-        ctx, command_time=0.25, compute_time=1.5, async_overlap_time=0.125
+        ctx,
+        command_time=0.25,
+        compute_time=1.5,
+        async_overlap_time=0.125,
+        query_time=1.0,
     )
     second = _record_parallel_fragment_run(ctx, wait_time=0.5)
     ctx.shared.parallel_fragments.add_wait_time(0.75)
@@ -1568,6 +1628,15 @@ def test_create_page_profile_message_reports_parallel_fragments() -> None:
     assert usage.cache_usage.async_overlap_time == 125_000
     assert msg.page_profile.cache_usage.cache_data.calls == 2
     assert msg.page_profile.cache_usage.async_overlap_time == 125_000
+    # Query sources are combined, and the run totals still include the queries.
+    assert (
+        first_entry.query_time,
+        first_entry.query_time_in_cache,
+        first_entry.query_time_in_commands,
+    ) == (1_000_000, 750_000, 250_000)
+    assert second_entry.query_time == 0
+    assert msg.page_profile.query_usage.sqlalchemy.queries == 2
+    assert msg.page_profile.query_usage.sqlalchemy.time == 750_000
     assert second.end is not None
 
 
@@ -1577,7 +1646,10 @@ def test_create_page_profile_message_adds_parallel_fragments_past_the_limit() ->
     run_start = time.perf_counter()
     for command_time in (0.25, 0.5, 1.0):
         _record_parallel_fragment_run(
-            ctx, command_time=command_time, async_overlap_time=command_time / 2
+            ctx,
+            command_time=command_time,
+            async_overlap_time=command_time / 2,
+            query_time=command_time,
         )
 
     with (
@@ -1592,6 +1664,9 @@ def test_create_page_profile_message_adds_parallel_fragments_past_the_limit() ->
     assert usage.overflow.command_time == 1_500_000
     assert usage.overflow.cache_overhead_time == 4_000
     assert usage.overflow.cache_async_overlap_time == 750_000
+    assert usage.overflow.query_time == 1_500_000
+    assert usage.overflow.query_time_in_cache == 1_125_000
+    assert usage.overflow.query_time_in_commands == 375_000
     assert usage.overflow.start_time == 0
     assert usage.cache_usage.cache_data.calls == 3
 
@@ -1609,6 +1684,7 @@ def test_create_page_profile_message_reports_unfinished_parallel_fragment() -> N
 
     (entry,) = msg.page_profile.parallel_fragment_usage.runs
     assert 0 < entry.exec_time <= metrics_util.to_microseconds(built - run.start)
+    assert not entry.HasField("cpu_time")
 
 
 @pytest.mark.parametrize(
@@ -1634,6 +1710,279 @@ def test_create_page_profile_message_sends_zero_uptime() -> None:
 
     assert msg.page_profile.HasField("server_uptime_seconds")
     assert msg.page_profile.server_uptime_seconds == 0
+
+
+_CPU_FIELDS: Final = (
+    "script_cpu_time",
+    "command_cpu_time",
+    "parallel_fragment_cpu_time",
+    "process_cpu_time",
+)
+
+
+def _fake_cpu_clock() -> MagicMock:
+    """A thread CPU clock that advances one second per reading."""
+    return MagicMock(side_effect=itertools.count())
+
+
+def _record_attached_thread_command_cpu_time(
+    ctx: ScriptRunContext, command_cpu_time: float | None
+) -> None:
+    """Record command CPU time on a thread outside the script thread and
+    parallel fragment runs, like one attached with ``add_script_run_ctx``.
+    """
+
+    def record() -> None:
+        ctx.shared.stats.current_thread_stats().command_cpu_time = command_cpu_time
+
+    thread = threading.Thread(target=record)
+    thread.start()
+    _join_threads([thread])
+
+
+def _create_profile_with_cpu_times(
+    ctx: ScriptRunContext, *, can_read_end_clocks: bool = True
+) -> PageProfile:
+    """Build a profile whose CPU clocks advanced by 2s on the script thread and
+    5s in the process.
+    """
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
+        return metrics_util.create_page_profile_message(
+            [],
+            0,
+            0,
+            run_start=time.perf_counter(),
+            cpu_start=metrics_util.CpuClocks(thread=1.0, process=2.0),
+            cpu_end=(
+                metrics_util.CpuClocks(thread=3.0, process=7.0)
+                if can_read_end_clocks
+                else None
+            ),
+        ).page_profile
+
+
+def test_create_page_profile_message_reports_cpu_times() -> None:
+    """Command CPU time adds up the script thread's and fragment runs' records,
+    leaving out attached threads, even one whose clock read failed. Each
+    fragment run reports its own CPU time.
+    """
+    ctx = create_mock_script_run_ctx()
+    ctx.shared.stats.current_thread_stats().command_cpu_time = 0.25
+    _record_attached_thread_command_cpu_time(ctx, 4.0)
+    _record_attached_thread_command_cpu_time(ctx, None)
+    with patch.object(run_stats, "_thread_cpu_clock", _fake_cpu_clock()):
+        with ctx.shared.parallel_fragments.recording_run():
+            ctx.shared.stats.current_thread_stats().command_cpu_time = 0.5
+        _record_parallel_fragment_run(ctx)
+
+    profile = _create_profile_with_cpu_times(ctx)
+
+    assert profile.script_cpu_time == 2_000_000
+    assert profile.command_cpu_time == 750_000
+    assert profile.parallel_fragment_cpu_time == 2_000_000
+    assert profile.process_cpu_time == 5_000_000
+    assert [run.cpu_time for run in profile.parallel_fragment_usage.runs] == [
+        1_000_000,
+        1_000_000,
+    ]
+
+
+def test_create_page_profile_message_sends_zero_cpu_times() -> None:
+    """A run without commands or parallel fragments still sends 0."""
+    profile = _create_profile_with_cpu_times(create_mock_script_run_ctx())
+
+    assert profile.HasField("command_cpu_time")
+    assert profile.command_cpu_time == 0
+    assert profile.HasField("parallel_fragment_cpu_time")
+    assert profile.parallel_fragment_cpu_time == 0
+
+
+def test_create_page_profile_message_leaves_cpu_times_unset_without_start() -> None:
+    """Without the CPU clocks from the run's start, no CPU field is set."""
+    profile = metrics_util.create_page_profile_message([], 0, 0).page_profile
+
+    for field in _CPU_FIELDS:
+        assert not profile.HasField(field)
+
+
+@pytest.mark.parametrize(
+    "missing",
+    ["end clocks", "script command", "fragment run"],
+)
+def test_create_page_profile_message_leaves_cpu_times_unset_when_one_is_missing(
+    missing: str,
+) -> None:
+    """The CPU fields are set together, so one missing CPU time leaves them all
+    unset.
+    """
+    ctx = create_mock_script_run_ctx()
+    if missing == "script command":
+        ctx.shared.stats.current_thread_stats().command_cpu_time = None
+    if missing == "fragment run":
+        with patch.object(run_stats, "_thread_cpu_clock", None):
+            _record_parallel_fragment_run(ctx)
+
+    profile = _create_profile_with_cpu_times(
+        ctx, can_read_end_clocks=missing != "end clocks"
+    )
+
+    for field in _CPU_FIELDS:
+        assert not profile.HasField(field)
+
+
+def test_create_page_profile_message_adds_overflow_cpu_times() -> None:
+    """Runs past the limit add their CPU times into ``overflow``, which is
+    unset when any of them has none.
+    """
+    ctx = create_mock_script_run_ctx()
+    with patch.object(run_stats, "_thread_cpu_clock", _fake_cpu_clock()):
+        for _ in range(3):
+            _record_parallel_fragment_run(ctx)
+
+    with patch.object(metrics_util, "_MAX_PARALLEL_FRAGMENT_RUNS", 1):
+        profile = _create_profile_with_cpu_times(ctx)
+        with patch.object(run_stats, "_thread_cpu_clock", None):
+            _record_parallel_fragment_run(ctx)
+        profile_with_missing = _create_profile_with_cpu_times(ctx)
+
+    usage = profile.parallel_fragment_usage
+    assert [run.cpu_time for run in usage.runs] == [1_000_000]
+    assert usage.overflow.cpu_time == 2_000_000
+    assert profile.parallel_fragment_cpu_time == 3_000_000
+    usage_with_missing = profile_with_missing.parallel_fragment_usage
+    assert usage_with_missing.run_count == 4
+    assert not usage_with_missing.overflow.HasField("cpu_time")
+
+
+def test_gather_metrics_records_command_cpu_time(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """Each listed command adds the CPU time between its start and end to its
+    thread's stats, and a nested command adds nothing on top of the outer one.
+    """
+
+    @metrics_util.gather_metrics("inner")
+    def inner() -> None:
+        pass
+
+    @metrics_util.gather_metrics("outer")
+    def outer() -> None:
+        inner()
+
+    with patch.object(run_stats, "_thread_cpu_clock", _fake_cpu_clock()):
+        outer()
+        outer()
+
+    assert _command_names(tracking_ctx) == ["outer", "outer"]
+    assert tracking_ctx.shared.stats.current_thread_stats().command_cpu_time == 2.0
+
+
+def test_gather_metrics_records_command_cpu_time_on_rerun(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """A command stopped by a rerun still records its CPU time, like its time."""
+
+    @metrics_util.gather_metrics("raises_rerun")
+    def raises_rerun() -> None:
+        raise RerunException(None)
+
+    with (
+        patch.object(run_stats, "_thread_cpu_clock", _fake_cpu_clock()),
+        pytest.raises(RerunException),
+    ):
+        raises_rerun()
+
+    assert tracking_ctx.shared.stats.current_thread_stats().command_cpu_time == 1.0
+
+
+def test_gather_metrics_skips_command_cpu_time_on_other_exceptions(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """A command that raises records neither its time nor its CPU time."""
+
+    @metrics_util.gather_metrics("raises")
+    def raises() -> None:
+        raise ValueError("boom")
+
+    with (
+        patch.object(run_stats, "_thread_cpu_clock", _fake_cpu_clock()),
+        pytest.raises(ValueError, match="boom"),
+    ):
+        raises()
+
+    assert tracking_ctx.shared.tracked_commands[0].time == 0
+    assert tracking_ctx.shared.stats.current_thread_stats().command_cpu_time == 0.0
+
+
+def test_gather_metrics_skips_command_cpu_time_beyond_per_command_limit(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """Calls left out of the listed commands don't read the CPU clock, so
+    command CPU time covers the same calls as the command times.
+    """
+
+    @metrics_util.gather_metrics("repeated")
+    def repeated() -> None:
+        pass
+
+    clock = _fake_cpu_clock()
+    with (
+        patch.object(metrics_util, "_MAX_TRACKED_PER_COMMAND", 2),
+        patch.object(run_stats, "_thread_cpu_clock", clock),
+    ):
+        for _ in range(5):
+            repeated()
+
+    assert _command_names(tracking_ctx) == ["repeated", "repeated"]
+    assert clock.call_count == 4
+    assert tracking_ctx.shared.stats.current_thread_stats().command_cpu_time == 2.0
+
+
+@pytest.mark.parametrize(
+    "clock_readings",
+    [
+        pytest.param([RuntimeError("clock"), 1.0], id="at start"),
+        pytest.param([0.0, RuntimeError("clock")], id="at end"),
+    ],
+)
+def test_gather_metrics_cpu_clock_failure_doesnt_reach_the_command(
+    tracking_ctx: ScriptRunContext, clock_readings: list[Any]
+) -> None:
+    """A failed CPU clock read leaves the command's result and time unchanged,
+    and marks the thread's command CPU time as missing.
+    """
+
+    @metrics_util.gather_metrics("command")
+    def command() -> str:
+        return "result"
+
+    with patch.object(
+        run_stats, "_thread_cpu_clock", MagicMock(side_effect=clock_readings)
+    ):
+        assert command() == "result"
+
+    stats = tracking_ctx.shared.stats.current_thread_stats()
+    assert stats.command_time > 0
+    assert stats.command_cpu_time is None
+
+
+def test_read_cpu_clocks_gives_none_if_either_clock_fails() -> None:
+    """A missing or failing thread or process clock gives None."""
+    with (
+        patch.object(run_stats, "_thread_cpu_clock", MagicMock(return_value=1.5)),
+        patch.object(metrics_util.time, "process_time", return_value=2.5),
+    ):
+        assert metrics_util.read_cpu_clocks() == metrics_util.CpuClocks(1.5, 2.5)
+    with patch.object(
+        run_stats, "_thread_cpu_clock", MagicMock(side_effect=RuntimeError)
+    ):
+        assert metrics_util.read_cpu_clocks() is None
+    with patch.object(
+        metrics_util.time, "process_time", side_effect=RuntimeError("clock")
+    ):
+        assert metrics_util.read_cpu_clocks() is None
+    with patch.object(run_stats, "_thread_cpu_clock", None):
+        assert metrics_util.read_cpu_clocks() is None
 
 
 def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:
@@ -1957,3 +2306,130 @@ def test_create_page_profile_message_sets_installed_agents(
     ):
         msg = metrics_util.create_page_profile_message([], 0, 0)
     assert list(msg.page_profile.installed_agents) == detected
+
+
+def _arrow_payloads(deltas: list[Any]) -> list[bytes]:
+    """Return the Arrow payloads of the dataframe, table and Vega-Lite chart
+    elements in ``deltas``, as sent to the browser.
+    """
+    payloads: list[bytes] = []
+    for delta in deltas:
+        element = delta.new_element
+        element_type = element.WhichOneof("type")
+        if element_type in {"dataframe", "table"}:
+            payloads.append(getattr(element, element_type).arrow_data.data)
+        elif element_type == "vega_lite_chart":
+            chart = element.vega_lite_chart
+            payloads.extend(dataset.data.data for dataset in chart.datasets)
+            if chart.data.data:
+                payloads.append(chart.data.data)
+    return payloads
+
+
+def _arrow_rows(payload: bytes) -> int:
+    return pa.ipc.open_stream(payload).read_all().num_rows
+
+
+class PageProfileArrowBytesTest(DeltaGeneratorTestCase):
+    """``arrow_bytes`` reports the Arrow payloads that the run's elements sent."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        ctx.reset()
+        ctx.gather_usage_stats = True
+
+    def _arrow_bytes(self) -> int:
+        return metrics_util.create_page_profile_message(
+            [], 0, 0
+        ).page_profile.arrow_bytes
+
+    def test_reports_arrow_bytes_across_elements(self) -> None:
+        """Dataframes, data editors, tables and charts all count, each payload
+        once.
+        """
+        st.dataframe(pd.DataFrame({"a": range(10)}))
+        st.data_editor(pd.DataFrame({"a": range(20), "b": range(20)}))
+        st.table(pd.DataFrame({"a": range(3)}))
+        st.line_chart(pd.DataFrame({"a": range(500), "b": range(500)}))
+
+        payloads = _arrow_payloads(self.get_all_deltas_from_queue())
+        assert len(payloads) == 4
+        assert self._arrow_bytes() == sum(len(payload) for payload in payloads)
+
+    def test_a_new_run_counts_only_its_own_payloads(self) -> None:
+        """Resetting the context for a new run drops the previous run's bytes."""
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        st.dataframe(pd.DataFrame({"a": range(100)}))
+        ctx.reset()
+        st.dataframe(pd.DataFrame({"a": range(3)}))
+
+        payloads = _arrow_payloads(self.get_all_deltas_from_queue())
+        assert self._arrow_bytes() == len(payloads[-1])
+
+    def test_reports_zero_for_a_run_without_data(self) -> None:
+        """A run without Arrow payloads still sends ``arrow_bytes`` as 0."""
+        st.markdown("No data here")
+
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+
+        assert msg.page_profile.HasField("arrow_bytes")
+        assert msg.page_profile.arrow_bytes == 0
+
+    def test_counts_nothing_while_usage_stats_are_off(self) -> None:
+        """No thread records Arrow bytes while usage stats are off."""
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        ctx.gather_usage_stats = False
+
+        st.dataframe(pd.DataFrame({"a": range(10)}))
+
+        stats = ctx.shared.stats.all_thread_stats()
+        assert all(thread.arrow_bytes == 0 for thread in stats)
+
+    def test_counts_payloads_from_attached_threads_toward_the_run(self) -> None:
+        """A thread attached with ``add_script_run_ctx`` records into its own
+        stats, which count toward the run's totals.
+        """
+        df = pd.DataFrame({"a": range(50)})
+        thread = threading.Thread(target=lambda: st.dataframe(df))
+        add_script_run_ctx(thread)
+        thread.start()
+        thread.join()
+
+        (payload,) = _arrow_payloads(self.get_all_deltas_from_queue())
+        assert self._arrow_bytes() == len(payload)
+
+    def test_ignores_payloads_serialized_outside_a_script_run(self) -> None:
+        """Payloads serialized on a thread without a ``ScriptRunContext``, such
+        as lazily loaded dataframe chunks, don't count toward any run.
+        """
+        df = pd.DataFrame({"a": range(10)})
+        thread = threading.Thread(
+            target=lambda: dataframe_util.convert_pandas_df_to_arrow_bytes(df)
+        )
+        with patch(
+            "streamlit.runtime.scriptrunner_utils.script_run_context._LOGGER"
+        ) as logger_mock:
+            thread.start()
+            thread.join()
+
+        assert self._arrow_bytes() == 0
+        # The missing context is expected, not a recording failure.
+        logger_mock.debug.assert_not_called()
+
+    def test_recording_failures_dont_reach_the_element(self) -> None:
+        """If recording raises, the element is still sent with its data."""
+        df = pd.DataFrame({"a": range(10)})
+        with patch(
+            "streamlit.runtime.scriptrunner_utils.run_stats.RunStats."
+            "current_thread_stats",
+            side_effect=RuntimeError("boom"),
+        ):
+            st.dataframe(df)
+
+        (payload,) = _arrow_payloads(self.get_all_deltas_from_queue())
+        assert _arrow_rows(payload) == 10
+        assert self._arrow_bytes() == 0

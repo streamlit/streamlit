@@ -106,6 +106,11 @@ export class ForwardMsgCache {
     return Array.from(this.messages.keys())
   }
 
+  /** Encoded size in bytes of the cached message, or undefined if not cached. */
+  public getCachedMessageByteLength(hash: string): number | undefined {
+    return this.messages.get(hash)?.encodedMsg.byteLength
+  }
+
   /**
    * Process a ForwardMsg, "de-referencing" it if it's a reference to
    * a cached message.

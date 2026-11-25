@@ -89,22 +89,45 @@ message MetricsEvent {
   CacheUsage cache_usage = 50;
   // Same as PageProfile.server_uptime_seconds.
   optional int64 server_uptime_seconds = 51;
-  // 52-55 are held for planned CPU-time fields.
+  // Same as PageProfile.script_cpu_time.
+  optional int64 script_cpu_time = 52;
+  // Same as PageProfile.command_cpu_time.
+  optional int64 command_cpu_time = 53;
+  // Same as PageProfile.parallel_fragment_cpu_time.
+  optional int64 parallel_fragment_cpu_time = 54;
+  // Same as PageProfile.process_cpu_time.
+  optional int64 process_cpu_time = 55;
   // Same as PageProfile.parallel_fragment_usage.
   ParallelFragmentUsage parallel_fragment_usage = 56;
-
-  // 57-59 are held for planned query-time and rerun-reason fields.
-
+  // Same as PageProfile.query_usage.
+  QueryUsage query_usage = 57;
+  // 58-59 are held for planned rerun-reason fields.
   // Index of the script run within this page load, starting at 0 for the
   // first run after the page loads. Set on pageProfile and renderTiming
   // events; together with session_id it joins the two events of one run.
   // Unset when render timing isn't measured (local apps, usage stats off).
   optional int64 run_index = 60;
-
   // Render Timing Event field:
   RenderTiming render_timing = 61;
+  // Same as PageProfile.arrow_bytes.
+  optional int64 arrow_bytes = 62;
+  // Messages the browser received for this script run. Not in PageProfile,
+  // because only the browser measures it.
+  ReceivedMessages received_messages = 63;
 
-  // Next ID: 62
+  // Next ID: 64
+}
+
+// ForwardMsgs the browser received for one script run, from its NewSession
+// through its PageProfile. Sizes are encoded bytes.
+message ReceivedMessages {
+  // Total size of the messages received. A reference to a cached message
+  // counts at the reference's size.
+  int64 bytes = 1;
+  // How many of those messages were references to a cached message.
+  int64 cached_messages = 2;
+  // Total size of the cached messages those references resolved to.
+  int64 cached_bytes = 3;
 }
 
 // Browser-side timing of one script run, sent in a renderTiming event once

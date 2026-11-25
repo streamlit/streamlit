@@ -326,3 +326,19 @@ it("re-caching an existing message refreshes its scriptRunCount", () => {
   cache.incrementRunCount(1, [])
   expect(getCachedMessage("refresh-hash")).toEqual(msg)
 })
+
+it("returns the encoded size of a cached message", async () => {
+  const { cache } = createCache()
+
+  const msg = ForwardMsg.fromObject({
+    hash: "sized",
+    delta: { newElement: { text: { body: "x".repeat(500) } } },
+    metadata: { cacheable: true },
+  })
+  const encodedMsg = ForwardMsg.encode(msg).finish()
+  await cache.processMessagePayload(msg, encodedMsg)
+
+  expect(cache.getCachedMessageByteLength("sized")).toBe(encodedMsg.byteLength)
+  expect(encodedMsg.byteLength).toBeGreaterThan(500)
+  expect(cache.getCachedMessageByteLength("missing")).toBeUndefined()
+})

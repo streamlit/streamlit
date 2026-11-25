@@ -67,6 +67,7 @@ import {
   isHostConfigBypassEnabled,
   type LibConfig,
   parseUriIntoBaseParts,
+  type ReceivedMessageSize,
   type StreamlitEndpoints,
 } from "@streamlit/connection"
 import {
@@ -172,6 +173,7 @@ import {
   includeIfDefined,
   reconcileHostConfigValues,
 } from "./util/hostConfigHelpers"
+import { ReceivedMessagesTracker } from "./util/ReceivedMessagesTracker"
 import {
   getFinishedRun,
   getRunIdentity,
@@ -330,6 +332,8 @@ export class App extends PureComponent<Props, State> {
   private readonly sessionInfo = new SessionInfo()
 
   private readonly metricsMgr = new MetricsManager(this.sessionInfo)
+
+  private readonly receivedMessagesTracker = new ReceivedMessagesTracker()
 
   /**
    * Measures browser render timing for renderTiming metrics events while the
@@ -1155,7 +1159,9 @@ export class App extends PureComponent<Props, State> {
   /**
    * Callback when we get a message from the server.
    */
-  handleMessage = (msgProto: ForwardMsg): void => {
+  handleMessage = (msgProto: ForwardMsg, size?: ReceivedMessageSize): void => {
+    this.receivedMessagesTracker.recordMessage(msgProto, size)
+
     // We don't have an immutableProto here, so we can't use
     // the dispatchOneOf helper
 
@@ -1411,6 +1417,7 @@ export class App extends PureComponent<Props, State> {
         (performance.now() - this.state.latestRunTime) * 1000
       ),
       browserInfo,
+      receivedMessages: this.receivedMessagesTracker.getRunTotals(),
       ...(runIndex !== undefined && { runIndex }),
     })
   }
