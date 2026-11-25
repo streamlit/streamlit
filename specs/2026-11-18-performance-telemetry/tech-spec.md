@@ -238,6 +238,7 @@ Following `$44 Contain Failures`, each hook that runs inside or around user code
 
 | Hook | Runs | If telemetry raises |
 |---|---|---|
+| `start_call` | Before every cached call, to decide whether the run records it | The call runs with a timer that only updates the function's server metrics, so it's missing from the run totals. |
 | `CacheCallTimer` | When a recorded cached call opens, around its compute and wait phases, and in `finish()`, a `finally` around the call | The call is missing from the run totals. The function's result or error is unchanged, and the thread's later cached calls are still recorded. |
 | `_record_command_time` | After a command returns or raises `RerunException` | The command's time is missing from some destinations. |
 | `recording_run()` in `_run_parallel_fragment` | Around each parallel fragment | The fragment runs without an entry. |
@@ -514,7 +515,6 @@ A single `parallel_fragment_cpu_time` needs no change to the per-fragment entrie
 
 ## Open questions
 
-1. **Guarding `start_call`.** `start_call` runs before every cached call and isn't wrapped in a guard. Its checks are attribute reads and a thread-local lookup, and the lookup appends the thread's stats to `_threads` under a lock once per run. A guard would cost little and would let a failure there fall back to a metrics-only timer.
-2. **Attached threads in fragment entries.** Whether analysis needs a fragment's attached threads in its entry, which would need the locking described in [Alternatives considered](#count-a-fragments-attached-threads-toward-the-fragment).
-3. **Per-function cache stats.** Where the random ID is stored, the cap per run, and which functions are kept past it: for example, the ones with the most cache time in the run.
-4. **Data size for cached messages.** Whether a message sent as a reference to the browser's cached copy counts its full size, its reference's size or both, and whether compressed sizes are available without extra work.
+1. **Attached threads in fragment entries.** Whether analysis needs a fragment's attached threads in its entry, which would need the locking described in [Alternatives considered](#count-a-fragments-attached-threads-toward-the-fragment).
+2. **Per-function cache stats.** Where the random ID is stored, the cap per run, and which functions are kept past it: for example, the ones with the most cache time in the run.
+3. **Data size for cached messages.** Whether a message sent as a reference to the browser's cached copy counts its full size, its reference's size or both, and whether compressed sizes are available without extra work.
