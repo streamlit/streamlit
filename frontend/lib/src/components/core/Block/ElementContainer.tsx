@@ -133,7 +133,9 @@ export const ElementContainer = memo(function ElementContainer({
     >
       <Suspense
         fallback={
-          <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
+          <ErrorBoundary>
+            <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
+          </ErrorBoundary>
         }
       >
         {/* The tree has the same shape whether or not render timing is on, so

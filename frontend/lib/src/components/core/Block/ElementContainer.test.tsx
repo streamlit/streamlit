@@ -36,6 +36,7 @@ import {
   ElementTimingContext,
   RenderTimingContext,
 } from "~lib/components/core/RenderTimingContext"
+import type * as SkeletonStyles from "~lib/components/elements/Skeleton/styled-components"
 import { useElementLoadState } from "~lib/hooks/useElementLoadState"
 import { render } from "~lib/test_util"
 import {
@@ -46,6 +47,20 @@ import {
 import { ElementContainer } from "./ElementContainer"
 import { ElementContainerConfig, PrintLayout } from "./ElementContainerConfig"
 import { RetainedElementContext } from "./RetainedElementContext"
+
+const skeleton = vi.hoisted(() => ({ shouldThrow: false }))
+
+vi.mock(
+  "~lib/components/elements/Skeleton/styled-components",
+  async importOriginal => {
+    const actual = await importOriginal<typeof SkeletonStyles>()
+    const SquareSkeleton: typeof actual.SquareSkeleton = (props => {
+      if (skeleton.shouldThrow) throw new Error("Skeleton error")
+      return <actual.SquareSkeleton {...props} />
+    }) as typeof actual.SquareSkeleton
+    return { ...actual, SquareSkeleton }
+  }
+)
 
 // Helper to create a mock element node
 const createMockElementNode = (
@@ -340,6 +355,37 @@ describe("ElementContainer", () => {
       )
 
       expect(screen.getByTestId("stSkeleton")).toBeVisible()
+    })
+
+    it("contains an error in the skeleton to its own element", () => {
+      vi.spyOn(console, "error").mockImplementation(() => {})
+      skeleton.shouldThrow = true
+      const LazyComponent = lazy(
+        () => new Promise<{ default: ComponentType }>(() => {})
+      )
+
+      render(
+        <>
+          <ElementContainer
+            node={mockNode}
+            config={ElementContainerConfig.DEFAULT}
+            isStale={false}
+          >
+            <LazyComponent />
+          </ElementContainer>
+          <ElementContainer
+            node={createMockElementNode("text")}
+            config={ElementContainerConfig.DEFAULT}
+            isStale={false}
+          >
+            <div>sibling</div>
+          </ElementContainer>
+        </>
+      )
+      skeleton.shouldThrow = false
+
+      expect(screen.getByText("Skeleton error")).toBeVisible()
+      expect(screen.getByText("sibling")).toBeVisible()
     })
   })
 
