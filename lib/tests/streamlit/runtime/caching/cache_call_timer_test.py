@@ -803,6 +803,7 @@ def test_cached_calls_from_hash_funcs_are_not_recorded(
 @pytest.mark.parametrize(
     "failing_step",
     [
+        "streamlit.runtime.caching.cache_call_timer.get_script_run_ctx",
         "streamlit.runtime.scriptrunner_utils.cache_run_stats.ThreadCacheStats.open_call",
         "streamlit.runtime.scriptrunner_utils.cache_run_stats.ThreadCacheStats.leave_cache_code",
         "streamlit.runtime.scriptrunner_utils.cache_run_stats.ThreadCacheStats.enter_cache_code",
@@ -810,6 +811,7 @@ def test_cached_calls_from_hash_funcs_are_not_recorded(
         "streamlit.runtime.scriptrunner_utils.cache_run_stats.ThreadCacheStats.close_call",
     ],
     ids=[
+        "starting the call",
         "opening the call",
         "leaving cache code",
         "entering cache code",
@@ -863,6 +865,28 @@ def test_failure_adding_a_call_still_records_later_calls(
     assert (stats.is_in_call, stats.is_in_cache_code) == (False, False)
     assert load(2) == 2
     assert _cache_totals_for(ctx, "cache_data").calls == 1
+
+
+def test_failure_looking_up_run_stats_still_updates_server_metrics(
+    ctx: ScriptRunContext,
+) -> None:
+    """A call whose run stats can't be looked up still updates its server
+    metrics, but isn't added to the run's totals.
+    """
+
+    @st.cache_data(show_spinner=False)
+    def load() -> int:
+        return 1
+
+    with patch(
+        "streamlit.runtime.scriptrunner_utils.run_stats.RunStats.current_thread_stats",
+        side_effect=RuntimeError("bug"),
+    ):
+        assert load() == 1
+        assert load() == 1
+
+    assert _server_counts(load)[:3] == (1, 1, 1)
+    assert _cache_totals_for(ctx, "cache_data").calls == 0
 
 
 def test_parallel_worker_calls_are_added_to_the_run(ctx: ScriptRunContext) -> None:

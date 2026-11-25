@@ -262,23 +262,30 @@ def start_call(cache_type: CacheType, metrics: FunctionCacheMetrics) -> CacheCal
     """
     if in_cached_function.get():
         return CacheCallTimer(metrics)
-    ctx = get_script_run_ctx(suppress_warning=True)
-    if ctx is None or not ctx.gather_usage_stats:
-        return CacheCallTimer(metrics)
     try:
-        if ThreadState.get().in_listed_command:
+        ctx = get_script_run_ctx(suppress_warning=True)
+        if ctx is None or not ctx.gather_usage_stats:
             return CacheCallTimer(metrics)
-    except RuntimeError:
-        # A thread with a ScriptRunContext but no ThreadState.
+        try:
+            if ThreadState.get().in_listed_command:
+                return CacheCallTimer(metrics)
+        except RuntimeError:
+            # A thread with a ScriptRunContext but no ThreadState.
+            return CacheCallTimer(metrics)
+        thread_stats = ctx.shared.stats.current_thread_stats().cache
+        # Skip calls made while another call on this thread hashes its arguments
+        # or reads its result, such as from hash_funcs; that call's overhead
+        # covers them.
+        if thread_stats.is_in_cache_code:
+            return CacheCallTimer(metrics)
+        totals = (
+            thread_stats.cache_resource
+            if cache_type is CacheType.RESOURCE
+            else thread_stats.cache_data
+        )
+    except Exception as ex:
+        # The call still runs and updates the server metrics, but isn't added
+        # to the run's totals.
+        _LOGGER.debug("Failed to record a cached call", exc_info=ex)
         return CacheCallTimer(metrics)
-    thread_stats = ctx.shared.stats.current_thread_stats().cache
-    # Skip calls made while another call on this thread hashes its arguments or
-    # reads its result, such as from hash_funcs; that call's overhead covers them.
-    if thread_stats.is_in_cache_code:
-        return CacheCallTimer(metrics)
-    totals = (
-        thread_stats.cache_resource
-        if cache_type is CacheType.RESOURCE
-        else thread_stats.cache_data
-    )
     return CacheCallTimer(metrics, thread_stats, totals)
