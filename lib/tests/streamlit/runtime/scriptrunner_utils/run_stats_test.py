@@ -95,6 +95,10 @@ def test_recording_into_affects_only_the_calling_thread() -> None:
         pytest.param(
             MagicMock(thread_time=MagicMock(side_effect=OSError)), id="failing"
         ),
+        pytest.param(
+            MagicMock(thread_time=MagicMock(side_effect=RuntimeError)),
+            id="unexpected error",
+        ),
     ],
 )
 def test_resolve_thread_cpu_clock_handles_unsupported_platforms(

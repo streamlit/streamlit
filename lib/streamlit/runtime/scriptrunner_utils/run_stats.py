@@ -37,13 +37,16 @@ _LOGGER: Final = get_logger(__name__)
 
 
 def _resolve_thread_cpu_clock() -> Callable[[], float] | None:
-    """Return ``time.thread_time``, or None if the platform doesn't support it."""
+    """Return ``time.thread_time``, or None if the platform doesn't support it.
+
+    Runs at import, so any failure must give None rather than fail the import.
+    """
     thread_time: Callable[[], float] | None = getattr(time, "thread_time", None)
     if thread_time is None:
         return None
     try:
         thread_time()
-    except OSError:
+    except Exception:
         return None
     return thread_time
 

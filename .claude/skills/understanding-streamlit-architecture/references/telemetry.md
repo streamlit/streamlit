@@ -138,7 +138,7 @@ Limits:
 
 - The four run fields are set together. They're all unset when the platform has no per-thread CPU clock or a clock read fails. Every read is guarded, and a failed one marks its value as missing instead of raising. A fragment run with a failed read has no `cpu_time`, and neither does `overflow` if it includes that run.
 - On Windows, CPU clocks advance in steps of about 15.6 ms, so short spans often read 0 and only aggregates are meaningful.
-- A listed command adds about 0.4 µs: two clock reads and an add. No clock is read while usage stats are off.
+- A listed command adds about 0.4 µs: two clock reads and an add. While usage stats are off, the only clock read is one at import that checks the platform supports `time.thread_time()`.
 
 ## Data size
 
