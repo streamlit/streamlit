@@ -110,7 +110,7 @@ Query time is reported per client library, because each one is hooked differentl
 |---|---|
 | Snowflake connector | The query `SnowflakeConnection.query()` runs |
 | SQLAlchemy | The engine behind `SQLConnection`, including its `session` |
-| Snowpark | Sessions from `SnowflakeConnection.session()`, and the active session, on Snowpark 1.26 and later |
+| Snowpark | Sessions from `SnowflakeConnection.session()`, and the active session, on Snowpark 1.26 and later with thread-safe sessions on |
 
 For each source, the run counts its queries, including how many failed and how many only looked up a result's shape (describe, which only Snowpark reports). It also reports how long the driver's execute call blocked. The time stops when the execute call returns, so fetching the results isn't included. A query that a cache hit makes unnecessary never runs, so it isn't recorded.
 
@@ -130,6 +130,7 @@ Known gaps:
 - **Snowpark query times.** Snowpark tells query listeners about a query only after it finishes, without its duration, so Snowpark queries are counted but not timed. Timing them needs Snowpark's listeners to report each query's duration. Snowpark also doesn't report some failures, such as failed async jobs.
 - **Snowflake connector queries outside `query()`.** The connector has no hook for when a query starts and finishes, so recording them would mean replacing or wrapping the cursor the app gets. That risks breaking queries on connector versions or platforms Streamlit isn't tested on, such as the connector inside Streamlit in Snowflake warehouse runtimes, so these aren't recorded: queries on a cursor from `SnowflakeConnection.cursor()` or `raw_connection`, `write_pandas`, `execute_string`, `execute_stream`, and connections the app opens itself. Recording them needs a query start and finish hook in the connector.
 - **SQLAlchemy engines the app creates.** Events are installed only on the `SQLConnection` engine, so engines the app creates with `create_engine` aren't recorded.
+- **Snowpark without thread-safe sessions.** When thread-safe sessions are off, Snowpark doesn't guard its listeners, so adding one to a session other threads are using could break a query. Those sessions aren't recorded. Recording them safely needs a supported, thread-safe way to register a listener in Snowpark.
 - **Other paths that aren't recorded.** Snowpark sessions the app creates, other than the active session; plain DB-API drivers; and custom `BaseConnection` classes.
 
 ### Rerun reason
