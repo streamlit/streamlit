@@ -23,7 +23,8 @@ The proto field comments are the source of truth for each field's meaning. The f
 | Run timing | `exec_time`, `prep_time` | Microseconds. See [Run timing](#run-timing). |
 | Run type | `is_fragment_run` | Whether the run was fragment-only. |
 | Cache | `cache_usage` | For `st.cache_data` and `st.cache_resource` separately, the run's cached calls, hits, misses, stale hits and waits; the time spent computing on misses, waiting for another caller's computation and on other cache overhead; and how much concurrent async calls counted more than once. See [Cache totals](#cache-totals). |
-| Parallel fragments | `parallel_fragment_usage` | Each `parallel=True` fragment run's start, wall-clock, command and cache times, and how long the script thread waited for them. Unset when none ran. See [Parallel fragments](#parallel-fragments). |
+| Parallel fragments | `parallel_fragment_usage` | Each `parallel=True` fragment run's start, wall-clock, CPU, command and cache times, and how long the script thread waited for them. Unset when none ran. See [Parallel fragments](#parallel-fragments). |
+| CPU time | `script_cpu_time`, `command_cpu_time`, `parallel_fragment_cpu_time`, `process_cpu_time` | Microseconds of CPU time of the script thread, listed commands, parallel fragment runs and the whole process. `optional`, so 0 is still sent. See [CPU time](#cpu-time). |
 | Data size | `arrow_bytes` | Bytes of the Arrow data the run serialized for dataframes, data editors, tables, Arrow-backed charts and custom component dataframe arguments. `optional`, so 0 is still sent. See [Data size](#data-size). |
 | Server process | `server_uptime_seconds` | Seconds since the runtime started, read at the start of the run. `optional`, so 0 is still sent. |
 | | `agent_api_usage` | Agent API counts since the process started. Unset while every count is zero. |
@@ -59,7 +60,7 @@ Dev builds of the frontend (`IS_DEV_ENV`) log events to the console instead of s
 
 ## Run timing
 
-All server times are wall-clock times in microseconds. `exec_time` and `prep_time` are measured on the script thread, and each command's time on the thread that called it:
+All server times are wall-clock times in microseconds, except the CPU times (see [CPU time](#cpu-time)). `exec_time` and `prep_time` are measured on the script thread, and each command's time on the thread that called it:
 
 - **`exec_time`** runs from the start of the run until the page profile is built. That includes widget callbacks, the script or fragments, and joining parallel fragment workers.
 - **`prep_time`** is the part of `exec_time` before the script starts: resolving the page, cleaning up widget state and compiling the script. Callbacks run after it.
@@ -110,10 +111,34 @@ Fragments with `parallel=True` run on worker threads alongside the main script, 
 
 - When it started, measured from the start of the script run, and its wall-clock time. A run still going when the page profile is built counts up to then.
 - The time of its listed commands, and its cache compute, wait, overhead and async overlap times. `RunStats.recording_into` gives the worker thread the fragment run's own `ThreadRunStats` while the fragment runs, because one worker thread can run several fragments one after another. Threads the fragment attaches get their own records, so only the worker counts toward the fragment.
+- Its worker thread's CPU time. See [CPU time](#cpu-time).
 
 The first `_MAX_PARALLEL_FRAGMENT_RUNS` (25) runs to start are listed, and later ones are added together into `overflow`. `run_count` and the cache counts in `cache_usage` cover every run. `wait_time` is how long the script thread waited for the fragments after the script ended. Normally that's `ParallelFragmentCoordinator.join()`. When the script ends early, for example with `st.stop()`, a rerun or an uncaught exception, it's `drain()`. If `join()` itself raises, both count, because `drain()` runs after it.
 
 The fragments' commands and cached calls are also in the top-level `commands` and `cache_usage`. Here, cache time means compute, wait and overhead time minus the async overlap time. A fragment's user code time is its `exec_time` minus its command and cache times. The main script's is `exec_time - prep_time - wait_time`, minus the top-level command and cache times less the fragments'. Threads that a fragment attaches with `add_script_run_ctx` count toward the main script. Their time usually overlaps `wait_time`, while the script thread waits for the fragment, so subtracting both can make the main script's user code time negative. A nested parallel fragment is a run of its own, and its parent doesn't wait for it.
+
+## CPU time
+
+The CPU times split a run's time into computing and waiting on queries, APIs, sleeps or locks. All four run fields cover the same span as `exec_time - prep_time`, so user code CPU time is `script_cpu_time + parallel_fragment_cpu_time - command_cpu_time`, which lines up with user code wall time. Comparing a parallel fragment run's `cpu_time` with its `exec_time` splits that run the same way.
+
+How they're recorded:
+
+- **The run.** `script_runner.py` calls `start_run_cpu_times` (`metrics_util.py`) when prep ends, which reads `time.thread_time()` and `time.process_time()` on the script thread. `create_page_profile_message` reads both again.
+- **Commands.** `gather_metrics` reads the thread's clock around each listed command and adds the difference to the thread's `ThreadRunStats.command_cpu_time`.
+- **Parallel fragments.** `recording_run` reads the worker's clock when a fragment starts and ends, and stores the difference on its `ParallelFragmentRunStats`. It does this before the worker finishes, so the time is complete once `join()` or `drain()` returns. `parallel_fragment_cpu_time` is the sum across runs, including those combined into `overflow`.
+
+What counts:
+
+- **Commands.** `command_cpu_time` adds up only the records marked `counts_cpu`: the script thread's and each parallel fragment run's. Threads attached with `add_script_run_ctx` are only in `process_cpu_time`, including their commands, because their CPU time isn't in `script_cpu_time` and subtracting it would make user code CPU time too low. Commands without a listed time, because they're past the tracking limits or raise anything other than a rerun request, count as user code, as their wall time does. Nested commands count toward the outer command.
+- **Fragments.** Fragment-only runs run on the script thread, so their CPU time is in `script_cpu_time` and `parallel_fragment_cpu_time` is 0. A fragment nested in a parallel fragment counts toward that fragment's run.
+- **The process.** `process_cpu_time` also counts library thread pools (for example NumPy, Polars or DuckDB), the server itself and, on a shared server, other sessions.
+- **The GIL.** Waiting for it counts as waiting, not CPU time, so these fields can't show GIL contention.
+
+Limits:
+
+- The four run fields are set together. They're all unset when the platform has no per-thread CPU clock or a clock read fails. Every read is guarded, and a failed one marks its value as missing instead of raising. A fragment run with a failed read has no `cpu_time`, and neither does `overflow` if it includes that run.
+- On Windows, CPU clocks advance in steps of about 15.6 ms, so short spans often read 0 and only aggregates are meaningful.
+- A listed command adds about 0.4 µs: two clock reads and an add. No clock is read while usage stats are off.
 
 ## Data size
 
@@ -157,7 +182,7 @@ Rules for new page profile fields:
 - **Measure where the value is already known.** Don't add a serialization pass or a lock to the hot path to get a number. Keep overhead negligible next to the work being measured, for example a cache hit's argument hashing.
 - **Respect `browser.gatherUsageStats`.** Collect nothing when it's off, on the server and in the browser.
 - **Never affect the app.** Catch and log telemetry errors, as `gather_metrics` does, and don't change behavior to make something measurable.
-- **Say how it adds up.** Document in the proto comment how a new time relates to `exec_time`, `prep_time` and command times, which threads count, and how it avoids counting the same time twice.
+- **Say how it adds up.** Document in this file how a new time relates to `exec_time`, `prep_time` and command times, which threads count, and how it avoids counting the same time twice. Keep the proto comment to what the field represents.
 - **Keep existing meanings.** Don't change the meaning of an existing field or rename event keys. `MetricsManager.send` notes that the event schema changes only when the data team asks.
 
 Plumbing for a new field:
