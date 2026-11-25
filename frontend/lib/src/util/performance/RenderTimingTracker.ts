@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
+import { getLogger } from "loglevel"
+
 import type { RenderTiming } from "@streamlit/protobuf"
+
+const LOG = getLogger("RenderTimingTracker")
 
 /** Asynchronous work an element can wait on before it is fully drawn. */
 export type ElementLoadKind = "draw" | "media"
@@ -310,6 +314,11 @@ export class ElementTimingHandle {
  * A run is measured from its NewSession until it fully loads, is cut short
  * (page hidden, or superseded by another run) or times out. Observers and
  * timers only exist while a run is measured.
+ *
+ * Telemetry must never affect the app, so no method throws. If anything
+ * fails, including a scheduled callback or the report handler, the error is
+ * logged and the tracker disposes itself: nothing more is measured or
+ * reported for the rest of the page load.
  */
 export class RenderTimingTracker {
   private readonly env: RenderTimingEnvironment
@@ -332,12 +341,26 @@ export class RenderTimingTracker {
   private isDisposed = false
 
   constructor({ onReport, environment }: RenderTimingTrackerOptions) {
-    this.env = { ...DEFAULT_ENVIRONMENT, ...environment }
+    const env = { ...DEFAULT_ENVIRONMENT, ...environment }
+    // Callbacks the browser runs later are guarded like direct calls.
+    this.env = {
+      ...env,
+      afterNextPaint: callback => {
+        env.afterNextPaint(() => this.guard(callback))
+      },
+      createIntersectionObserver: callback =>
+        env.createIntersectionObserver((entries, observer) => {
+          this.guard(() => callback(entries, observer))
+        }),
+    }
     this.onReport = onReport
-    this.wasHiddenBeforeFirstRun = this.env.isPageHidden()
-    // The first run is measured from navigation start, so watch for the page
-    // being hidden from now on.
-    this.listenForVisibility()
+    this.wasHiddenBeforeFirstRun = false
+    this.guard(() => {
+      this.wasHiddenBeforeFirstRun = this.env.isPageHidden()
+      // The first run is measured from navigation start, so watch for the
+      // page being hidden from now on.
+      this.listenForVisibility()
+    })
   }
 
   createElementHandle(): ElementTimingHandle {
@@ -346,27 +369,33 @@ export class RenderTimingTracker {
 
   /** Called when the frontend app mounts. */
   appMounted(): void {
-    this.appShellReadyAt ??= this.env.now()
+    this.guard(() => {
+      this.appShellReadyAt ??= this.env.now()
+    })
   }
 
   /** Called when the browser sends a rerun request. */
   rerunRequested(): void {
-    if (this.isDisposed) return
-
-    this.pendingRequestAt ??= this.env.now()
-    const { run } = this
-    if (run && !run.isFinalized) {
-      run.wasSuperseded = true
-      if (run.scriptFinishedAt !== undefined) {
-        this.finalize(run, "cutShort")
+    this.guard(() => {
+      this.pendingRequestAt ??= this.env.now()
+      const { run } = this
+      if (run && !run.isFinalized) {
+        run.wasSuperseded = true
+        if (run.scriptFinishedAt !== undefined) {
+          this.finalize(run, "cutShort")
+        }
       }
-    }
+    })
   }
 
   /** Called when a NewSession message starts a run. */
   runStarted(scriptRunId: string): void {
-    if (this.isDisposed) return
+    this.guard(() => {
+      this.startRun(scriptRunId)
+    })
+  }
 
+  private startRun(scriptRunId: string): void {
     const now = this.env.now()
     if (this.run && !this.run.isFinalized) {
       this.run.wasSuperseded = true
@@ -411,6 +440,10 @@ export class RenderTimingTracker {
    * measured.
    */
   scriptFinished(): number | undefined {
+    return this.guard(() => this.finishScript())
+  }
+
+  private finishScript(): number | undefined {
     const { run } = this
     if (!run || run.isFinalized || run.scriptFinishedAt !== undefined) {
       return undefined
@@ -420,30 +453,39 @@ export class RenderTimingTracker {
     // Deferred so the caller's pageProfile event goes out before this run's
     // renderTiming event.
     queueMicrotask(() => {
-      if (run.isFinalized) return
-      if (run.wasHidden || run.wasSuperseded) {
-        this.finalize(run, "cutShort")
-        return
-      }
-      // eslint-disable-next-line no-restricted-globals -- Non-React class managing the run's timeout.
-      run.timeoutId = setTimeout(() => {
-        // Every element can be ready while the settle frames never paint,
-        // such as in a window the browser stopped rendering.
-        this.finalize(run, this.isComplete(run) ? "complete" : "timedOut")
-      }, RENDER_TIMING_TIMEOUT_MS)
-      this.evaluate(run)
+      this.guard(() => {
+        if (run.isFinalized) return
+        if (run.wasHidden || run.wasSuperseded) {
+          this.finalize(run, "cutShort")
+          return
+        }
+        // eslint-disable-next-line no-restricted-globals -- Non-React class managing the run's timeout.
+        run.timeoutId = setTimeout(() => {
+          this.guard(() => {
+            // Every element can be ready while the settle frames never
+            // paint, such as in a window the browser stopped rendering.
+            this.finalize(run, this.isComplete(run) ? "complete" : "timedOut")
+          })
+        }, RENDER_TIMING_TIMEOUT_MS)
+        this.evaluate(run)
+      })
     })
     return run.runIndex
   }
 
   /** Stops measuring and releases observers, listeners and timers. */
   dispose(): void {
+    if (this.isDisposed) return
     this.isDisposed = true
-    if (this.run) {
-      this.release(this.run)
-      this.run = undefined
+    try {
+      if (this.run) {
+        this.release(this.run)
+        this.run = undefined
+      }
+      this.stopListeningForVisibility()
+    } catch (error) {
+      LOG.error("Failed to release render timing resources:", error)
     }
-    this.stopListeningForVisibility()
   }
 
   registerElement(
@@ -452,7 +494,63 @@ export class RenderTimingTracker {
     version: unknown,
     isContent: boolean
   ): void {
-    this.removeRecord(handle)
+    this.guard(() => {
+      this.addRecord(handle, scriptRunId, version, isContent)
+    })
+  }
+
+  handleTargetChanged(handle: ElementTimingHandle): void {
+    this.guard(() => {
+      const record = this.getMeasuredRecord(handle)
+      if (record) this.observe(record)
+    })
+  }
+
+  handleContentCommitted(handle: ElementTimingHandle): void {
+    this.guard(() => {
+      this.markContentCommitted(handle)
+    })
+  }
+
+  handleLoadingChanged(
+    handle: ElementTimingHandle,
+    slot: string,
+    kind: ElementLoadKind,
+    isLoading: boolean
+  ): void {
+    this.guard(() => {
+      this.updateLoading(handle, slot, kind, isLoading)
+    })
+  }
+
+  removeRecord(handle: ElementTimingHandle): void {
+    this.guard(() => {
+      this.deleteRecord(handle)
+    })
+  }
+
+  /**
+   * Runs the action, and on any error logs it and disposes the tracker, so
+   * a failure stops render timing instead of reaching the app.
+   */
+  private guard<T>(action: () => T): T | undefined {
+    if (this.isDisposed) return undefined
+    try {
+      return action()
+    } catch (error) {
+      LOG.error("Render timing stopped after an error:", error)
+      this.dispose()
+      return undefined
+    }
+  }
+
+  private addRecord(
+    handle: ElementTimingHandle,
+    scriptRunId: string,
+    version: unknown,
+    isContent: boolean
+  ): void {
+    this.deleteRecord(handle)
 
     const { run } = this
     if (!run || run.isFinalized || run.scriptRunId !== scriptRunId) return
@@ -481,12 +579,7 @@ export class RenderTimingTracker {
     this.scheduleReadyCheck(record)
   }
 
-  handleTargetChanged(handle: ElementTimingHandle): void {
-    const record = this.getMeasuredRecord(handle)
-    if (record) this.observe(record)
-  }
-
-  handleContentCommitted(handle: ElementTimingHandle): void {
+  private markContentCommitted(handle: ElementTimingHandle): void {
     const record = this.getMeasuredRecord(handle)
     if (
       !record ||
@@ -500,7 +593,7 @@ export class RenderTimingTracker {
     this.scheduleReadyCheck(record)
   }
 
-  handleLoadingChanged(
+  private updateLoading(
     handle: ElementTimingHandle,
     slot: string,
     kind: ElementLoadKind,
@@ -526,7 +619,7 @@ export class RenderTimingTracker {
     }
   }
 
-  removeRecord(handle: ElementTimingHandle): void {
+  private deleteRecord(handle: ElementTimingHandle): void {
     const { record } = handle
     if (!record) return
 
@@ -767,18 +860,20 @@ export class RenderTimingTracker {
   }
 
   private readonly handleVisibilityChange = (): void => {
-    if (!this.env.isPageHidden()) return
+    this.guard(() => {
+      if (!this.env.isPageHidden()) return
 
-    if (this.nextRunIndex === 0) {
-      this.wasHiddenBeforeFirstRun = true
-    }
-    const { run } = this
-    if (run && !run.isFinalized) {
-      run.wasHidden = true
-      if (run.scriptFinishedAt !== undefined) {
-        this.finalize(run, "cutShort")
+      if (this.nextRunIndex === 0) {
+        this.wasHiddenBeforeFirstRun = true
       }
-    }
+      const { run } = this
+      if (run && !run.isFinalized) {
+        run.wasHidden = true
+        if (run.scriptFinishedAt !== undefined) {
+          this.finalize(run, "cutShort")
+        }
+      }
+    })
   }
 
   private listenForVisibility(): void {

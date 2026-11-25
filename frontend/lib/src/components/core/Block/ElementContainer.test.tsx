@@ -23,6 +23,7 @@ import {
 } from "react"
 
 import { act, screen } from "@testing-library/react"
+import { getLogger } from "loglevel"
 import { describe, expect, it, vi } from "vitest"
 
 import type { ElementNode } from "~lib/AppNode"
@@ -539,6 +540,31 @@ describe("ElementContainer", () => {
         fullyLoadedMs: 150,
         timedOut: false,
       })
+      tracker.dispose()
+    })
+
+    it("keeps rendering elements when the tracker fails", async () => {
+      vi.spyOn(getLogger("RenderTimingTracker"), "error").mockImplementation(
+        () => {}
+      )
+      const tracker = new RenderTimingTracker({
+        onReport: vi.fn(),
+        environment: {
+          now: () => {
+            throw new Error("clock failed")
+          },
+        },
+      })
+      tracker.runStarted(mockNode.scriptRunId)
+
+      const { unmount } = renderTimed(
+        tracker,
+        <DrawingChart isDrawn={false} />
+      )
+      await finishScript(tracker)
+
+      expect(screen.getByText("chart")).toBeVisible()
+      expect(() => unmount()).not.toThrow()
       tracker.dispose()
     })
 

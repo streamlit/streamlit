@@ -14,13 +14,23 @@
  * limitations under the License.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { getLogger } from "loglevel"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type MockInstance,
+  vi,
+} from "vitest"
 
 import {
   type ElementTimingHandle,
   RENDER_TIMING_TIMEOUT_MS,
   type RenderTimingReport,
   RenderTimingTracker,
+  type RenderTimingTrackerOptions,
 } from "./RenderTimingTracker"
 
 const RUN_ID = "run-1"
@@ -841,6 +851,91 @@ describe("RenderTimingTracker", () => {
 
       expect(reports).toHaveLength(1)
       expect(reports[0].renderTiming.timedOut).toBe(false)
+    })
+  })
+
+  describe("failures", () => {
+    let logError: MockInstance
+
+    beforeEach(() => {
+      logError = vi
+        .spyOn(getLogger("RenderTimingTracker"), "error")
+        .mockImplementation(() => {})
+    })
+
+    const replaceTracker = (
+      options: Partial<RenderTimingTrackerOptions>
+    ): void => {
+      tracker.dispose()
+      browser.observers = []
+      tracker = new RenderTimingTracker({
+        onReport: report => reports.push(report),
+        environment: browser.environment,
+        ...options,
+      })
+    }
+
+    const expectStoppedMeasuring = async (): Promise<void> => {
+      expect(logError).toHaveBeenCalledOnce()
+      expect(browser.observer.observed.size).toBe(0)
+      tracker.runStarted("later-run")
+      commitElement({ scriptRunId: "later-run" })
+      await finishScript(1000)
+      browser.paintUntilIdle()
+      expect(browser.observers).toHaveLength(1)
+      expect(reports).toEqual([])
+    }
+
+    it("stops measuring without throwing when an element call fails", async () => {
+      let isClockBroken = false
+      replaceTracker({
+        environment: {
+          ...browser.environment,
+          now: () => {
+            if (isClockBroken) throw new Error("clock failed")
+            return browser.time
+          },
+        },
+      })
+      tracker.runStarted(RUN_ID)
+      commitElement()
+
+      isClockBroken = true
+      expect(() => commitElement()).not.toThrow()
+      isClockBroken = false
+
+      await expectStoppedMeasuring()
+    })
+
+    it("stops measuring when a callback run after a paint fails", async () => {
+      replaceTracker({
+        environment: {
+          ...browser.environment,
+          getViewportSize: () => {
+            throw new Error("viewport failed")
+          },
+        },
+      })
+      tracker.runStarted(RUN_ID)
+      commitElement()
+
+      expect(() => browser.paint(10)).not.toThrow()
+
+      await expectStoppedMeasuring()
+    })
+
+    it("stops measuring when the report handler fails", async () => {
+      replaceTracker({
+        onReport: () => {
+          throw new Error("handler failed")
+        },
+      })
+      tracker.runStarted(RUN_ID)
+      await finishScript(10)
+
+      expect(() => browser.paintUntilIdle()).not.toThrow()
+
+      await expectStoppedMeasuring()
     })
   })
 
