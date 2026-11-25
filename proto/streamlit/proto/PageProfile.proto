@@ -59,7 +59,21 @@ message PageProfile {
   // started. Low values mean this process started recently, so its in-memory
   // caches are empty. Optional, so that 0 is still sent.
   optional int64 server_uptime_seconds = 17;
-  // 18-21 are held for planned CPU-time fields.
+
+  // CPU times in microseconds, measured from the end of prep_time until
+  // exec_time ends. All four are set together, or all are unset when CPU time
+  // couldn't be measured.
+  //
+  // CPU time of the script thread.
+  optional int64 script_cpu_time = 18;
+  // CPU time of the commands in `commands` that ran on the script thread or in
+  // a parallel fragment run.
+  optional int64 command_cpu_time = 19;
+  // CPU time of all parallel fragment runs, including runs combined into
+  // ParallelFragmentUsage.overflow.
+  optional int64 parallel_fragment_cpu_time = 20;
+  // CPU time of the whole server process.
+  optional int64 process_cpu_time = 21;
   // Parallel fragments that ran during this script run. Unset when none ran.
   ParallelFragmentUsage parallel_fragment_usage = 22;
   // Database queries during this script run. Unset when no query was recorded.
@@ -221,7 +235,8 @@ message ParallelFragmentRun {
   int64 query_time = 7;
   int64 query_time_in_cache = 8;
   int64 query_time_in_commands = 9;
-  // 10 is held for a planned CPU-time field.
+  // CPU time of the run's worker thread. Unset when it couldn't be measured.
+  optional int64 cpu_time = 10;
   // The run's CacheUsage.async_overlap_time.
   int64 cache_async_overlap_time = 11;
 }

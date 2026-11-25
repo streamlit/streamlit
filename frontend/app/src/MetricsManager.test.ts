@@ -459,6 +459,45 @@ describe("metrics helpers", () => {
     expect(withoutUsage).not.toHaveProperty("parallelFragmentUsage")
   })
 
+  it("buildEventProto forwards CPU times through toJSON - pageProfile", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    const withCpuTimes = mm
+      .buildEventProto(
+        "pageProfile",
+        decodedPageProfile({
+          scriptCpuTime: 1500,
+          commandCpuTime: 0,
+          parallelFragmentCpuTime: 700,
+          processCpuTime: 2500,
+          parallelFragmentUsage: {
+            runs: [{ execTime: 900, cpuTime: 700 }],
+            runCount: 1,
+          },
+        })
+      )
+      .toJSON()
+    const withoutCpuTimes = mm
+      .buildEventProto("pageProfile", decodedPageProfile({ execTime: 5 }))
+      .toJSON()
+
+    // The fields are optional, so a CPU time of 0 is still sent.
+    expect(withCpuTimes).toMatchObject({
+      scriptCpuTime: "1500",
+      commandCpuTime: "0",
+      parallelFragmentCpuTime: "700",
+      processCpuTime: "2500",
+    })
+    expect(withCpuTimes.parallelFragmentUsage.runs).toStrictEqual([
+      { execTime: "900", cpuTime: "700" },
+    ])
+    expect(withoutCpuTimes).not.toHaveProperty("scriptCpuTime")
+    expect(withoutCpuTimes).not.toHaveProperty("commandCpuTime")
+    expect(withoutCpuTimes).not.toHaveProperty("parallelFragmentCpuTime")
+    expect(withoutCpuTimes).not.toHaveProperty("processCpuTime")
+  })
+
   it("buildEventProto forwards queryUsage through toJSON - pageProfile", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })

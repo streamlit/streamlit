@@ -18,13 +18,14 @@ import builtins
 import contextlib
 import contextvars
 import inspect
+import itertools
 import sys
 import threading
 import time
 import unittest
 from collections import Counter
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 from unittest.mock import MagicMock, mock_open, patch
 
 import pandas as pd
@@ -60,6 +61,7 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
     magic_funcs,
 )
+from streamlit.runtime.scriptrunner_utils import run_stats
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
@@ -77,6 +79,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
     from pathlib import Path
 
+    from streamlit.proto.PageProfile_pb2 import PageProfile
     from streamlit.runtime.scriptrunner_utils.parallel_fragment_stats import (
         ParallelFragmentRunStats,
     )
@@ -1681,6 +1684,7 @@ def test_create_page_profile_message_reports_unfinished_parallel_fragment() -> N
 
     (entry,) = msg.page_profile.parallel_fragment_usage.runs
     assert 0 < entry.exec_time <= metrics_util.to_microseconds(built - run.start)
+    assert not entry.HasField("cpu_time")
 
 
 @pytest.mark.parametrize(
@@ -1706,6 +1710,279 @@ def test_create_page_profile_message_sends_zero_uptime() -> None:
 
     assert msg.page_profile.HasField("server_uptime_seconds")
     assert msg.page_profile.server_uptime_seconds == 0
+
+
+_CPU_FIELDS: Final = (
+    "script_cpu_time",
+    "command_cpu_time",
+    "parallel_fragment_cpu_time",
+    "process_cpu_time",
+)
+
+
+def _fake_cpu_clock() -> MagicMock:
+    """A thread CPU clock that advances one second per reading."""
+    return MagicMock(side_effect=itertools.count())
+
+
+def _record_attached_thread_command_cpu_time(
+    ctx: ScriptRunContext, command_cpu_time: float | None
+) -> None:
+    """Record command CPU time on a thread outside the script thread and
+    parallel fragment runs, like one attached with ``add_script_run_ctx``.
+    """
+
+    def record() -> None:
+        ctx.shared.stats.current_thread_stats().command_cpu_time = command_cpu_time
+
+    thread = threading.Thread(target=record)
+    thread.start()
+    _join_threads([thread])
+
+
+def _create_profile_with_cpu_times(
+    ctx: ScriptRunContext, *, can_read_end_clocks: bool = True
+) -> PageProfile:
+    """Build a profile whose CPU clocks advanced by 2s on the script thread and
+    5s in the process.
+    """
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
+        return metrics_util.create_page_profile_message(
+            [],
+            0,
+            0,
+            run_start=time.perf_counter(),
+            cpu_start=metrics_util.CpuClocks(thread=1.0, process=2.0),
+            cpu_end=(
+                metrics_util.CpuClocks(thread=3.0, process=7.0)
+                if can_read_end_clocks
+                else None
+            ),
+        ).page_profile
+
+
+def test_create_page_profile_message_reports_cpu_times() -> None:
+    """Command CPU time adds up the script thread's and fragment runs' records,
+    leaving out attached threads, even one whose clock read failed. Each
+    fragment run reports its own CPU time.
+    """
+    ctx = create_mock_script_run_ctx()
+    ctx.shared.stats.current_thread_stats().command_cpu_time = 0.25
+    _record_attached_thread_command_cpu_time(ctx, 4.0)
+    _record_attached_thread_command_cpu_time(ctx, None)
+    with patch.object(run_stats, "_thread_cpu_clock", _fake_cpu_clock()):
+        with ctx.shared.parallel_fragments.recording_run():
+            ctx.shared.stats.current_thread_stats().command_cpu_time = 0.5
+        _record_parallel_fragment_run(ctx)
+
+    profile = _create_profile_with_cpu_times(ctx)
+
+    assert profile.script_cpu_time == 2_000_000
+    assert profile.command_cpu_time == 750_000
+    assert profile.parallel_fragment_cpu_time == 2_000_000
+    assert profile.process_cpu_time == 5_000_000
+    assert [run.cpu_time for run in profile.parallel_fragment_usage.runs] == [
+        1_000_000,
+        1_000_000,
+    ]
+
+
+def test_create_page_profile_message_sends_zero_cpu_times() -> None:
+    """A run without commands or parallel fragments still sends 0."""
+    profile = _create_profile_with_cpu_times(create_mock_script_run_ctx())
+
+    assert profile.HasField("command_cpu_time")
+    assert profile.command_cpu_time == 0
+    assert profile.HasField("parallel_fragment_cpu_time")
+    assert profile.parallel_fragment_cpu_time == 0
+
+
+def test_create_page_profile_message_leaves_cpu_times_unset_without_start() -> None:
+    """Without the CPU clocks from the run's start, no CPU field is set."""
+    profile = metrics_util.create_page_profile_message([], 0, 0).page_profile
+
+    for field in _CPU_FIELDS:
+        assert not profile.HasField(field)
+
+
+@pytest.mark.parametrize(
+    "missing",
+    ["end clocks", "script command", "fragment run"],
+)
+def test_create_page_profile_message_leaves_cpu_times_unset_when_one_is_missing(
+    missing: str,
+) -> None:
+    """The CPU fields are set together, so one missing CPU time leaves them all
+    unset.
+    """
+    ctx = create_mock_script_run_ctx()
+    if missing == "script command":
+        ctx.shared.stats.current_thread_stats().command_cpu_time = None
+    if missing == "fragment run":
+        with patch.object(run_stats, "_thread_cpu_clock", None):
+            _record_parallel_fragment_run(ctx)
+
+    profile = _create_profile_with_cpu_times(
+        ctx, can_read_end_clocks=missing != "end clocks"
+    )
+
+    for field in _CPU_FIELDS:
+        assert not profile.HasField(field)
+
+
+def test_create_page_profile_message_adds_overflow_cpu_times() -> None:
+    """Runs past the limit add their CPU times into ``overflow``, which is
+    unset when any of them has none.
+    """
+    ctx = create_mock_script_run_ctx()
+    with patch.object(run_stats, "_thread_cpu_clock", _fake_cpu_clock()):
+        for _ in range(3):
+            _record_parallel_fragment_run(ctx)
+
+    with patch.object(metrics_util, "_MAX_PARALLEL_FRAGMENT_RUNS", 1):
+        profile = _create_profile_with_cpu_times(ctx)
+        with patch.object(run_stats, "_thread_cpu_clock", None):
+            _record_parallel_fragment_run(ctx)
+        profile_with_missing = _create_profile_with_cpu_times(ctx)
+
+    usage = profile.parallel_fragment_usage
+    assert [run.cpu_time for run in usage.runs] == [1_000_000]
+    assert usage.overflow.cpu_time == 2_000_000
+    assert profile.parallel_fragment_cpu_time == 3_000_000
+    usage_with_missing = profile_with_missing.parallel_fragment_usage
+    assert usage_with_missing.run_count == 4
+    assert not usage_with_missing.overflow.HasField("cpu_time")
+
+
+def test_gather_metrics_records_command_cpu_time(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """Each listed command adds the CPU time between its start and end to its
+    thread's stats, and a nested command adds nothing on top of the outer one.
+    """
+
+    @metrics_util.gather_metrics("inner")
+    def inner() -> None:
+        pass
+
+    @metrics_util.gather_metrics("outer")
+    def outer() -> None:
+        inner()
+
+    with patch.object(run_stats, "_thread_cpu_clock", _fake_cpu_clock()):
+        outer()
+        outer()
+
+    assert _command_names(tracking_ctx) == ["outer", "outer"]
+    assert tracking_ctx.shared.stats.current_thread_stats().command_cpu_time == 2.0
+
+
+def test_gather_metrics_records_command_cpu_time_on_rerun(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """A command stopped by a rerun still records its CPU time, like its time."""
+
+    @metrics_util.gather_metrics("raises_rerun")
+    def raises_rerun() -> None:
+        raise RerunException(None)
+
+    with (
+        patch.object(run_stats, "_thread_cpu_clock", _fake_cpu_clock()),
+        pytest.raises(RerunException),
+    ):
+        raises_rerun()
+
+    assert tracking_ctx.shared.stats.current_thread_stats().command_cpu_time == 1.0
+
+
+def test_gather_metrics_skips_command_cpu_time_on_other_exceptions(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """A command that raises records neither its time nor its CPU time."""
+
+    @metrics_util.gather_metrics("raises")
+    def raises() -> None:
+        raise ValueError("boom")
+
+    with (
+        patch.object(run_stats, "_thread_cpu_clock", _fake_cpu_clock()),
+        pytest.raises(ValueError, match="boom"),
+    ):
+        raises()
+
+    assert tracking_ctx.shared.tracked_commands[0].time == 0
+    assert tracking_ctx.shared.stats.current_thread_stats().command_cpu_time == 0.0
+
+
+def test_gather_metrics_skips_command_cpu_time_beyond_per_command_limit(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """Calls left out of the listed commands don't read the CPU clock, so
+    command CPU time covers the same calls as the command times.
+    """
+
+    @metrics_util.gather_metrics("repeated")
+    def repeated() -> None:
+        pass
+
+    clock = _fake_cpu_clock()
+    with (
+        patch.object(metrics_util, "_MAX_TRACKED_PER_COMMAND", 2),
+        patch.object(run_stats, "_thread_cpu_clock", clock),
+    ):
+        for _ in range(5):
+            repeated()
+
+    assert _command_names(tracking_ctx) == ["repeated", "repeated"]
+    assert clock.call_count == 4
+    assert tracking_ctx.shared.stats.current_thread_stats().command_cpu_time == 2.0
+
+
+@pytest.mark.parametrize(
+    "clock_readings",
+    [
+        pytest.param([RuntimeError("clock"), 1.0], id="at start"),
+        pytest.param([0.0, RuntimeError("clock")], id="at end"),
+    ],
+)
+def test_gather_metrics_cpu_clock_failure_doesnt_reach_the_command(
+    tracking_ctx: ScriptRunContext, clock_readings: list[Any]
+) -> None:
+    """A failed CPU clock read leaves the command's result and time unchanged,
+    and marks the thread's command CPU time as missing.
+    """
+
+    @metrics_util.gather_metrics("command")
+    def command() -> str:
+        return "result"
+
+    with patch.object(
+        run_stats, "_thread_cpu_clock", MagicMock(side_effect=clock_readings)
+    ):
+        assert command() == "result"
+
+    stats = tracking_ctx.shared.stats.current_thread_stats()
+    assert stats.command_time > 0
+    assert stats.command_cpu_time is None
+
+
+def test_read_cpu_clocks_gives_none_if_either_clock_fails() -> None:
+    """A missing or failing thread or process clock gives None."""
+    with (
+        patch.object(run_stats, "_thread_cpu_clock", MagicMock(return_value=1.5)),
+        patch.object(metrics_util.time, "process_time", return_value=2.5),
+    ):
+        assert metrics_util.read_cpu_clocks() == metrics_util.CpuClocks(1.5, 2.5)
+    with patch.object(
+        run_stats, "_thread_cpu_clock", MagicMock(side_effect=RuntimeError)
+    ):
+        assert metrics_util.read_cpu_clocks() is None
+    with patch.object(
+        metrics_util.time, "process_time", side_effect=RuntimeError("clock")
+    ):
+        assert metrics_util.read_cpu_clocks() is None
+    with patch.object(run_stats, "_thread_cpu_clock", None):
+        assert metrics_util.read_cpu_clocks() is None
 
 
 def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:

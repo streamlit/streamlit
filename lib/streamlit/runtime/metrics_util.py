@@ -22,9 +22,9 @@ import sys
 import threading
 import time
 import uuid
-from collections.abc import Callable, Sequence, Sized
+from collections.abc import Callable, Iterable, Sequence, Sized
 from functools import lru_cache, wraps
-from typing import Any, Final, TypeVar, cast, overload
+from typing import Any, Final, NamedTuple, TypeVar, cast, overload
 
 from streamlit import config, file_util, type_util, util
 from streamlit.errors import LocalizableStreamlitException, StreamlitAPIException
@@ -44,6 +44,7 @@ from streamlit.runtime.scriptrunner_utils.query_run_stats import (
     QueryTotals,
     ThreadQueryStats,
 )
+from streamlit.runtime.scriptrunner_utils.run_stats import read_thread_cpu_time
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     FragmentThreadState,
     ScriptRunContext,
@@ -557,6 +558,28 @@ def to_microseconds(seconds: float) -> int:
     return int(seconds * 1_000_000)
 
 
+class CpuClocks(NamedTuple):
+    """CPU clock readings, in seconds."""
+
+    thread: float
+    process: float
+
+
+def read_cpu_clocks() -> CpuClocks | None:
+    """Read the calling thread's and the process's CPU clocks, or return None if
+    either can't be read.
+    """
+    thread = read_thread_cpu_time()
+    if thread is None:
+        return None
+    try:
+        process = time.process_time()
+    except Exception as ex:
+        _LOGGER.debug("Failed to read the process CPU clock", exc_info=ex)
+        return None
+    return CpuClocks(thread, process)
+
+
 def _is_streamlit_import_module(module: str) -> bool:
     """Return whether an import namespace is relevant to Streamlit internals."""
     return any(
@@ -640,13 +663,14 @@ def _record_command_time(
     seconds: float,
     *,
     is_command_listed: bool,
+    cpu_start: float | None,
 ) -> None:
     """Set a tracked command's time, and report it if the command is listed.
 
-    Adds the time to the calling thread's stats. On a parallel fragment worker
-    those stats belong to the fragment run, which is how that run's command time
-    is totaled. A recorded cached call open on the thread also leaves the time
-    out of its cache times.
+    Adds the time, and the CPU time since ``cpu_start``, to the calling
+    thread's stats. On a parallel fragment worker those stats belong to the
+    fragment run, which is how that run's command times are totaled. A recorded
+    cached call open on the thread also leaves the time out of its cache times.
     """
     try:
         command_telemetry.time = to_microseconds(seconds)
@@ -655,6 +679,13 @@ def _record_command_time(
         stats = ctx.shared.stats.current_thread_stats()
         stats.command_time += seconds
         stats.cache.record_tracked_command_time(seconds)
+        cpu_end = read_thread_cpu_time()
+        # A missing reading marks the thread's command CPU time as missing,
+        # which leaves the run's CPU fields unset.
+        if cpu_start is None or cpu_end is None:
+            stats.command_cpu_time = None
+        elif stats.command_cpu_time is not None:
+            stats.command_cpu_time += cpu_end - cpu_start
     except Exception as ex:
         # This runs after the command returns or raises RerunException, so
         # telemetry must never replace its result.
@@ -780,6 +811,7 @@ def gather_metrics(
                 # Always capture all exceptions since we want to make sure that
                 # the telemetry never causes any issues.
                 _LOGGER.debug("Failed to collect command telemetry", exc_info=ex)
+        cpu_start = read_thread_cpu_time() if is_command_listed else None
         try:
             result = non_optional_func(*args, **kwargs)
         except RerunException:
@@ -791,6 +823,7 @@ def gather_metrics(
                     command_telemetry,
                     timer() - exec_start,
                     is_command_listed=is_command_listed,
+                    cpu_start=cpu_start,
                 )
             raise
         finally:
@@ -806,6 +839,7 @@ def gather_metrics(
                 command_telemetry,
                 timer() - exec_start,
                 is_command_listed=is_command_listed,
+                cpu_start=cpu_start,
             )
 
         return result
@@ -849,6 +883,16 @@ def _fill_cache_usage(
     _copy_cache_totals(totals, page_profile.cache_usage)
 
 
+def _sum_if_all_set(values: Iterable[float | None]) -> float | None:
+    """Return the sum of ``values``, or None if any of them is None."""
+    total = 0.0
+    for value in values:
+        if value is None:
+            return None
+        total += value
+    return total
+
+
 def _fill_query_usage(page_profile: PageProfile, ctx: ScriptRunContext) -> None:
     """Copy the run's query totals onto the profile."""
     query_stats = ThreadQueryStats.combine(
@@ -876,12 +920,15 @@ def _set_parallel_fragment_run_times(
     entry: ParallelFragmentRun,
     exec_time: float,
     command_time: float,
+    cpu_time: float | None,
     cache: RunCacheTotals,
     queries: QueryTotals,
 ) -> None:
     data, resource = cache.cache_data, cache.cache_resource
     entry.exec_time = to_microseconds(exec_time)
     entry.command_time = to_microseconds(command_time)
+    if cpu_time is not None:
+        entry.cpu_time = to_microseconds(cpu_time)
     entry.cache_compute_time = to_microseconds(
         data.compute_time + resource.compute_time
     )
@@ -926,7 +973,7 @@ def _fill_parallel_fragment_usage(
         if index < _MAX_PARALLEL_FRAGMENT_RUNS:
             entry = usage.runs.add(start_time=to_microseconds(run.start - run_start))
             _set_parallel_fragment_run_times(
-                entry, exec_time, command_time, run_cache, run_queries
+                entry, exec_time, command_time, run.cpu_time, run_cache, run_queries
             )
         else:
             overflow_exec_time += exec_time
@@ -938,10 +985,48 @@ def _fill_parallel_fragment_usage(
             usage.overflow,
             overflow_exec_time,
             overflow_command_time,
+            _sum_if_all_set(run.cpu_time for run in runs[_MAX_PARALLEL_FRAGMENT_RUNS:]),
             overflow_cache,
             overflow_queries,
         )
     _copy_cache_totals(all_runs_cache, usage.cache_usage)
+
+
+def _fill_cpu_times(
+    page_profile: PageProfile,
+    ctx: ScriptRunContext,
+    cpu_start: CpuClocks,
+    cpu_end: CpuClocks | None,
+) -> None:
+    """Set the run's CPU fields from ``cpu_start`` to ``cpu_end``.
+
+    Must run on the script thread, because it reads that thread's command
+    stats. ``command_cpu_time`` counts only commands on the script thread and
+    in parallel fragment runs, because only those threads' CPU time is in
+    ``script_cpu_time`` or ``parallel_fragment_cpu_time``. Leaves the fields all
+    unset if any CPU time they add up is missing, because a clock read failed
+    or a parallel fragment run hadn't finished.
+    """
+    runs = ctx.shared.parallel_fragments.runs
+    command_cpu_time = _sum_if_all_set(
+        [
+            ctx.shared.stats.current_thread_stats().command_cpu_time,
+            *(run.stats.command_cpu_time for run in runs),
+        ]
+    )
+    parallel_fragment_cpu_time = _sum_if_all_set(run.cpu_time for run in runs)
+    if (
+        cpu_end is None
+        or command_cpu_time is None
+        or parallel_fragment_cpu_time is None
+    ):
+        return
+    page_profile.script_cpu_time = to_microseconds(cpu_end.thread - cpu_start.thread)
+    page_profile.command_cpu_time = to_microseconds(command_cpu_time)
+    page_profile.parallel_fragment_cpu_time = to_microseconds(
+        parallel_fragment_cpu_time
+    )
+    page_profile.process_cpu_time = to_microseconds(cpu_end.process - cpu_start.process)
 
 
 def create_page_profile_message(
@@ -952,11 +1037,16 @@ def create_page_profile_message(
     *,
     server_uptime_seconds: int | None = None,
     run_start: float | None = None,
+    cpu_start: CpuClocks | None = None,
+    cpu_end: CpuClocks | None = None,
 ) -> ForwardMsg:
     """Create and return the full PageProfile ForwardMsg.
 
     ``run_start`` is the ``time.perf_counter()`` value when the script run
     started. Without it, the profile has no ``parallel_fragment_usage``.
+    ``cpu_start`` and ``cpu_end`` hold the CPU clocks read on the script thread
+    when prep ended and when ``exec_time`` was measured. Without ``cpu_start``,
+    the profile has no CPU times. With it, this must run on the script thread.
     """
     msg = ForwardMsg()
     page_profile = msg.page_profile
@@ -1019,6 +1109,8 @@ def create_page_profile_message(
         _fill_query_usage(page_profile, ctx)
         if run_start is not None:
             _fill_parallel_fragment_usage(page_profile, ctx, run_start, now)
+        if cpu_start is not None:
+            _fill_cpu_times(page_profile, ctx, cpu_start, cpu_end)
 
     # Skill/agent detection lives in ``streamlit.web.skills`` (co-located with
     # the installer it must stay aligned with); imported lazily to avoid a

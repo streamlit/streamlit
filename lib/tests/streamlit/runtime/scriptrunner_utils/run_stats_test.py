@@ -15,10 +15,16 @@
 from __future__ import annotations
 
 import threading
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from streamlit.runtime.scriptrunner_utils.run_stats import RunStats, ThreadRunStats
+from streamlit.runtime.scriptrunner_utils import run_stats as run_stats_module
+from streamlit.runtime.scriptrunner_utils.run_stats import (
+    RunStats,
+    ThreadRunStats,
+    read_thread_cpu_time,
+)
 
 
 def test_each_thread_gets_its_own_stats() -> None:
@@ -80,3 +86,39 @@ def test_recording_into_affects_only_the_calling_thread() -> None:
         thread.join()
 
     assert other[0] is not swapped
+
+
+@pytest.mark.parametrize(
+    "time_module",
+    [
+        pytest.param(MagicMock(spec=[]), id="missing"),
+        pytest.param(
+            MagicMock(thread_time=MagicMock(side_effect=OSError)), id="failing"
+        ),
+        pytest.param(
+            MagicMock(thread_time=MagicMock(side_effect=RuntimeError)),
+            id="unexpected error",
+        ),
+    ],
+)
+def test_resolve_thread_cpu_clock_handles_unsupported_platforms(
+    time_module: MagicMock,
+) -> None:
+    """A missing or failing ``time.thread_time`` disables CPU times."""
+    with patch.object(run_stats_module, "time", time_module):
+        assert run_stats_module._resolve_thread_cpu_clock() is None
+
+
+@pytest.mark.parametrize(
+    "clock",
+    [
+        pytest.param(None, id="no clock"),
+        pytest.param(MagicMock(side_effect=RuntimeError("clock")), id="failing"),
+    ],
+)
+def test_read_thread_cpu_time_gives_none_without_a_working_clock(
+    clock: MagicMock | None,
+) -> None:
+    """A missing clock or a failed read gives None instead of raising."""
+    with patch.object(run_stats_module, "_thread_cpu_clock", clock):
+        assert read_thread_cpu_time() is None
