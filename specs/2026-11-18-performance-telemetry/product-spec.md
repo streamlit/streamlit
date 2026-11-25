@@ -55,12 +55,12 @@ exec_time
 ├── prep_time
 ├── command time: the sum of commands[].time
 │   └── can include query time (time_in_commands)
-└── user code: exec_time − prep_time − command time
+├── parallel fragment wait: the main script waiting for its fragments
+└── user code: exec_time − prep_time − command time − parallel fragment wait
     ├── cache time: overhead + wait + miss compute − async overlap
     │   └── can include query time (time_in_cache)
     ├── query time outside cached calls and commands:
     │   time − time_in_cache − time_in_commands
-    ├── parallel fragment wait: the main script waiting for its fragments
     └── everything else
 ```
 
