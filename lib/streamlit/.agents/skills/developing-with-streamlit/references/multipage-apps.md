@@ -150,6 +150,24 @@ Every page needs a URL pathname that is unique across the whole `st.navigation` 
 st.Page("app_pages/admin/settings.py", title="Settings", url_path="admin_settings")
 ```
 
+## Switching pages from code
+
+Use the navigation menu for regular navigation and `st.page_link` for a link to a specific page. To switch pages when a user clicks a button, call `st.switch_page` from the button's `on_click` callback:
+
+```python
+# GOOD: goes straight to the target page
+st.button("Open settings", on_click=st.switch_page, args=("app_pages/settings.py",))
+```
+
+```python
+# BAD: reruns the current page up to this line before switching, which is slower
+# and can briefly show the current page again
+if st.button("Open settings"):
+    st.switch_page("app_pages/settings.py")
+```
+
+Call `st.switch_page` in the script body only when the switch depends on app logic and no callback exists, such as redirecting a user who isn't logged in.
+
 ## Page modules
 
 ```python
