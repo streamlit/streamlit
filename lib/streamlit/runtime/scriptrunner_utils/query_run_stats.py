@@ -79,7 +79,7 @@ class ThreadQueryStats:
         self.sqlalchemy.add(other.sqlalchemy)
         self.snowpark.add(other.snowpark)
 
-    def combined(self) -> QueryTotals:
+    def all_sources(self) -> QueryTotals:
         """Return the totals of all sources added together."""
         combined = QueryTotals()
         combined.add(self.snowflake_connector)

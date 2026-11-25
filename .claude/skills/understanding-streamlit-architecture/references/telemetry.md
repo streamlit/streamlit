@@ -124,7 +124,15 @@ The fragments' commands, cached calls and queries are also in the top-level `com
 - **SQLAlchemy**: execute events on the `SQLConnection` engine. Engines the app creates aren't recorded.
 - **Snowpark**: a query listener on sessions from `SnowflakeConnection.session()` and the active session. It's notified only after a query finishes, so these queries are counted but not timed. It's added only when thread-safe sessions are on (the `PYTHON_SNOWPARK_ENABLE_THREAD_SAFE_SESSION` parameter), because otherwise Snowpark's listener lock does nothing and adding a listener could break a query another thread is running.
 
-Times cover only the driver's execute call, not fetching results. A cache hit runs no query, so nothing is recorded for it, and each retry counts as its own query. Each query is also counted, with its time, in `*_in_commands` if it ran inside a listed command, or else in `*_in_cache` if a recorded cached call was open on its thread (`ThreadCacheStats.is_in_call`), so analysis can subtract it without counting it twice. That's the test command time uses, so it matches everything the call's times include: its computation, the cache's own work such as `hash_funcs`, and in async code, other tasks' queries while it awaits. Snowpark queries are attributed the same way, without times. Threads a cached function attaches with `add_script_run_ctx` record their queries as their own, so those are counted twice: as queries and in the outer call's compute time. Nothing is installed when `browser.gatherUsageStats` is off.
+How queries are counted:
+
+- **What's timed**: only the driver's execute call, not fetching results.
+- **Cache hits and retries**: a cache hit runs no query, so nothing is recorded for it. Each retry counts as its own query.
+- **Overlap with commands and cache**: each query also counts, with its time, toward at most one overlap total: `*_in_commands` if it ran inside a listed command, otherwise `*_in_cache` if a recorded cached call was open on its thread (`ThreadCacheStats.is_in_call`). That's the test command time uses, so it matches everything the call's times include: its computation, the cache's own work such as `hash_funcs`, and in async code, other tasks' queries while it awaits. Analysis can then subtract query time without counting it twice.
+- **Failed commands**: the overlap is decided when the query runs. A listed command that raises is listed with time 0, and its time stays in user code, but its queries still count in `*_in_commands`. In runs where a command fails, part of the user code time can be query time.
+- **Snowpark**: queries are attributed the same way, without times. A Snowpark query counts toward the run that's current when it finishes, so one still running on an attached thread across a rerun counts toward the next run. The active session is watched from the start of a run, so a session the script creates or first gets with Snowpark directly, rather than through `SnowflakeConnection.session()`, is watched only from the next run.
+- **Attached threads**: threads a cached function attaches with `add_script_run_ctx` record their queries as their own, so those are counted twice: as queries and in the outer call's compute time.
+- **Usage stats off**: nothing is installed when `browser.gatherUsageStats` is off.
 
 ## Data size
 

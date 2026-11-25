@@ -24,6 +24,7 @@ from streamlit.runtime.scriptrunner_utils.run_stats import RunStats
 
 
 def test_combine_adds_every_threads_totals_per_source() -> None:
+    """``combine`` adds each source's totals across every thread."""
     run_stats = RunStats()
     main = run_stats.current_thread_stats().query
     main.sqlalchemy.queries = 2
@@ -48,7 +49,8 @@ def test_combine_adds_every_threads_totals_per_source() -> None:
     assert totals.snowflake_connector == QueryTotals()
 
 
-def test_combined_adds_every_source() -> None:
+def test_all_sources_adds_every_source() -> None:
+    """``all_sources`` adds the totals of every source together."""
     stats = ThreadQueryStats()
     stats.snowflake_connector.time = 0.5
     stats.snowflake_connector.time_in_cache = 0.25
@@ -57,7 +59,7 @@ def test_combined_adds_every_source() -> None:
     stats.snowpark.queries = 2
     stats.snowpark.queries_in_cache = 1
 
-    assert stats.combined() == QueryTotals(
+    assert stats.all_sources() == QueryTotals(
         queries=2,
         queries_in_cache=1,
         time=0.75,

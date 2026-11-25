@@ -77,8 +77,8 @@ message PageProfile {
 // Query time is part of user code time, except the parts in time_in_cache and
 // time_in_commands. Times from threads that ran at the same time are added
 // together, so they can exceed wall-clock time.
-// lib/streamlit/connections/query_telemetry.py lists which queries are
-// recorded.
+// Which queries are recorded is listed in
+// lib/streamlit/connections/query_telemetry.py.
 message QueryUsage {
   // Unset when no Snowflake connector query was recorded.
   QuerySourceUsage snowflake_connector = 1;

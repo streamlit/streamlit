@@ -53,8 +53,9 @@ class SharedRunState:
         self._tracked_commands_counter: collections.Counter[str] = collections.Counter()
 
         # reset() replaces these rather than clearing them, so a cached call,
-        # query or parallel fragment still running from the previous run
-        # finishes into that run's totals.
+        # timed query or parallel fragment still running from the previous run
+        # finishes into that run's totals. A Snowpark query is counted on the
+        # run that receives its callback.
         self.stats = RunStats()
         self.parallel_fragments = ParallelFragmentUsageStats(self.stats)
 

@@ -225,7 +225,7 @@ def _totals(ctx: ScriptRunContext, source: QuerySource) -> QueryTotals:
 def _all_queries(ctx: ScriptRunContext) -> QueryTotals:
     return ThreadQueryStats.combine(
         stats.query for stats in ctx.shared.stats.all_thread_stats()
-    ).combined()
+    ).all_sources()
 
 
 def _counts(totals: QueryTotals) -> tuple[int, int, int]:
@@ -643,6 +643,7 @@ def test_sqlalchemy_error_records_failed_query(
 def test_sqlalchemy_events_without_context_record_nothing(
     ctx: ScriptRunContext,
 ) -> None:
+    """SQLAlchemy events with no execution context record nothing and don't raise."""
     query_telemetry._before_cursor_execute(None, object(), "", {}, None, False)
     query_telemetry._after_cursor_execute(None, object(), "", {}, None, False)
     query_telemetry._handle_sqlalchemy_error(
@@ -666,6 +667,7 @@ def fake_sqlalchemy(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
 def test_sqlalchemy_hooks_are_installed_on_the_given_engine(
     ctx: ScriptRunContext, fake_sqlalchemy: MagicMock
 ) -> None:
+    """The execute and error events are registered on the given engine only."""
     engine = object()
 
     query_telemetry.install_sqlalchemy_hooks(engine)  # type: ignore[arg-type]
@@ -680,6 +682,7 @@ def test_sqlalchemy_hooks_are_installed_on_the_given_engine(
 def test_sqlalchemy_hooks_are_not_installed_without_usage_stats(
     ctx: ScriptRunContext, fake_sqlalchemy: MagicMock
 ) -> None:
+    """No SQLAlchemy events are registered when usage stats are off."""
     with patch_config_options({"browser.gatherUsageStats": False}):
         query_telemetry.install_sqlalchemy_hooks(object())  # type: ignore[arg-type]
 
@@ -689,6 +692,7 @@ def test_sqlalchemy_hooks_are_not_installed_without_usage_stats(
 def test_sqlalchemy_hook_install_failure_is_swallowed(
     ctx: ScriptRunContext, fake_sqlalchemy: MagicMock
 ) -> None:
+    """A failure registering SQLAlchemy events doesn't raise."""
     fake_sqlalchemy.listen.side_effect = RuntimeError("no events")
 
     query_telemetry.install_sqlalchemy_hooks(object())  # type: ignore[arg-type]
@@ -779,6 +783,7 @@ def test_old_snowpark_is_not_watched(
 def test_snowpark_session_is_not_watched_without_usage_stats(
     ctx: ScriptRunContext, snowpark: types.ModuleType
 ) -> None:
+    """No listener is added to a Snowpark session when usage stats are off."""
     session = FakeSnowparkSession()
     with patch_config_options({"browser.gatherUsageStats": False}):
         query_telemetry.watch_snowpark_session(session)  # type: ignore[arg-type]

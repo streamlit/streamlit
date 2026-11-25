@@ -920,7 +920,7 @@ def _fill_parallel_fragment_usage(
         run_cache = RunCacheTotals()
         run.stats.cache.add_to(run_cache, now)
         all_runs_cache.add(run_cache)
-        run_queries = run.stats.query.combined()
+        run_queries = run.stats.query.all_sources()
         exec_time = (run.end if run.end is not None else now) - run.start
         command_time = run.stats.command_time
         if index < _MAX_PARALLEL_FRAGMENT_RUNS:

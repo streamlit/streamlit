@@ -37,9 +37,11 @@ Queries are recorded only on threads attached to a script run that gathers
 usage stats. An instrumentation failure is logged at debug level and never
 changes a query's result or error.
 
-A query inside a listed command also counts toward ``queries_in_commands``,
-or else, inside a recorded cached call, toward ``queries_in_cache``, so
-analysis can subtract it from those times without counting it twice.
+Each query also counts toward at most one overlap total:
+``queries_in_commands`` if it ran inside a listed command, otherwise
+``queries_in_cache`` if a recorded cached call was open on its thread. That
+lets analysis subtract query time from command and cache times without
+counting it twice.
 """
 
 from __future__ import annotations
@@ -85,7 +87,8 @@ _watched_snowpark_connections: weakref.WeakSet[Any] = weakref.WeakSet()
 
 
 class QueryTimer:
-    """Times one query and adds it to the current thread's run totals.
+    """Times one query and adds it to the totals for the run that was current
+    when it started.
 
     Use ``start_query()`` to create one, and call ``finish()`` once when the
     query ends.
@@ -141,9 +144,9 @@ def _count_query(
         totals.queries_in_cache += 1
 
 
-def _overlapping_times(thread_stats: ThreadRunStats) -> tuple[bool, bool]:
-    """Return whether a query on the calling thread is inside a listed command,
-    and if it isn't, whether it's inside a recorded cached call.
+def _query_overlap(thread_stats: ThreadRunStats) -> tuple[bool, bool]:
+    """Return ``(in_command, in_cache)`` for a query starting on the calling
+    thread. ``in_cache`` is True only if the query isn't in a listed command.
 
     A cached call's times leave out the listed commands it runs, while a
     command's time includes everything it runs, so a query inside both counts
@@ -154,7 +157,8 @@ def _overlapping_times(thread_stats: ThreadRunStats) -> tuple[bool, bool]:
     try:
         in_listed_command = ThreadState.get().in_listed_command
     except RuntimeError:
-        # A thread with a ScriptRunContext but no ThreadState.
+        # This thread has a script run context and no ThreadState, so it is not
+        # inside a listed command.
         in_listed_command = False
     if in_listed_command:
         return True, False
@@ -179,7 +183,7 @@ def start_query(source: QuerySource) -> QueryTimer | None:
     if ctx is None:
         return None
     thread_stats = ctx.shared.stats.current_thread_stats()
-    in_command, in_cache = _overlapping_times(thread_stats)
+    in_command, in_cache = _query_overlap(thread_stats)
     totals = thread_stats.query.totals_for(source)
     return QueryTimer(totals, in_command=in_command, in_cache=in_cache)
 
@@ -192,12 +196,15 @@ def record_untimed_query(
 ) -> None:
     """Count a finished query whose time isn't known, if the page profile
     records it.
+
+    The query counts toward the run that is current on the calling thread when
+    the query finishes, which can be a later run than the one it started in.
     """
     ctx = _recording_run_ctx()
     if ctx is None:
         return
     thread_stats = ctx.shared.stats.current_thread_stats()
-    in_command, in_cache = _overlapping_times(thread_stats)
+    in_command, in_cache = _query_overlap(thread_stats)
     _count_query(
         thread_stats.query.totals_for(source),
         failed=failed,
@@ -320,7 +327,9 @@ def _record_snowpark_query(args: tuple[Any, ...], kwargs: dict[str, Any]) -> Non
         query_record = args[0] if args else kwargs.get("query_record")
         record_untimed_query(
             "snowpark",
-            # Snowpark passes the exception only for some failures.
+            # Snowpark doesn't forward ``is_error`` to ``_notify``, and passes
+            # ``exception`` only from ``execute_and_notify_query_listener``, so
+            # async and batch-insert failures count as queries but not as failed.
             failed="exception" in kwargs,
             is_describe=bool(getattr(query_record, "is_describe", False)),
         )
@@ -401,7 +410,10 @@ def _watch_active_snowpark_session() -> None:
 def install_hooks_for_run() -> None:
     """Watch the active Snowpark session, if the app has imported Snowpark.
 
-    Call this at the start of each script run that gathers usage stats.
+    Call this at the start of each script run that gathers usage stats. It runs
+    before the script, so a session the script creates or first gets with
+    Snowpark directly, rather than through ``SnowflakeConnection.session()``, is
+    watched only from the next run start.
     """
     try:
         if "snowflake.snowpark" in sys.modules:

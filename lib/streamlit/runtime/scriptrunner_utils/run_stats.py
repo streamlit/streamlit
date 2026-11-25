@@ -16,8 +16,8 @@
 
 Each thread that records something during a run gets its own
 ``ThreadRunStats``, written only by that thread, so recording a command, a
-cached call or a query takes no lock. The page profile adds the threads' values together
-when it's built.
+cached call or a query takes no lock. The page profile adds the threads'
+values together when it's built.
 """
 
 from __future__ import annotations
