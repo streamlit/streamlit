@@ -67,66 +67,45 @@ message PageProfile {
 }
 
 // Database queries during one script run: counts, and times in microseconds.
-// A query is recorded when it runs on a thread attached to the script run and
-// finishes before the page profile is built. Queries saved by a cache hit
-// never run, so they aren't recorded. Each retry is a separate query.
-// Query times are part of user code time, except where they overlap other
-// recorded times, which time_in_cache and time_in_commands report. Like
-// command times, times from threads that ran at the same time are added
-// together and can exceed wall-clock time; ParallelFragmentUsage reports the
-// share of parallel fragments.
+// Query time is part of user code time, except the parts in time_in_cache and
+// time_in_commands. Times from threads that ran at the same time are added
+// together, so they can exceed wall-clock time.
 // lib/streamlit/connections/query_telemetry.py lists which queries are
 // recorded.
 message QueryUsage {
-  // Queries that SnowflakeConnection.query() runs. Queries the app runs on a
-  // cursor, including one from SnowflakeConnection.cursor(), aren't recorded.
-  // Unset when no such query was recorded.
+  // Unset when no Snowflake connector query was recorded.
   QuerySourceUsage snowflake_connector = 1;
-  // Queries on the engine behind a SQLConnection, including its session.
-  // Engines the app creates itself aren't recorded.
-  // Unset when no such query was recorded.
+  // Unset when no SQLAlchemy query was recorded.
   QuerySourceUsage sqlalchemy = 2;
-  // Snowpark sessions from SnowflakeConnection.session(), and the active
-  // Snowpark session, on Snowpark 1.26 and later. Snowpark reports queries
-  // only after they finish, so their times aren't measured, but they're
-  // counted in queries_in_cache and queries_in_commands.
-  // Unset when no such query was recorded.
+  // Snowpark queries are counted but not timed, so their times are 0.
+  // Unset when no Snowpark query was recorded.
   QuerySourceUsage snowpark = 3;
 }
 
-// Recorded queries from one source, with times in microseconds. A query that
-// overlaps other recorded times is counted in queries_in_commands if it ran
-// inside a listed command, or else in queries_in_cache if it ran while a
-// recorded cached call was open on its thread, never in both, so that
+// Recorded queries from one source, with times in microseconds. A query is
+// counted in at most one of queries_in_cache and queries_in_commands, so
 // time - time_in_cache - time_in_commands is the query time that's otherwise
 // part of user code.
 message QuerySourceUsage {
-  // All recorded queries, including failed and describe queries.
+  // All queries, including failed and describe queries.
   int64 queries = 1;
-  // Queries that raised an error. Snowpark reports only some failures, so
-  // some failed Snowpark queries are counted only in queries.
+  // Queries that raised an error. Undercounts Snowpark, which doesn't report
+  // every failure.
   int64 failed = 2;
   // Queries that only look up the shape of a result, such as the ones Snowpark
   // runs to work out a DataFrame's columns.
   int64 describe_queries = 3;
-  // Queries while a recorded cached call was open on the same thread: mostly
-  // the cached function's computation, but also the cache's own work, such as
-  // a hash_funcs function, and in async code, other tasks' queries while the
-  // call awaits. Threads a cached function attaches with add_script_run_ctx
-  // record their queries as their own, so their time is also in the cached
-  // call's compute_time.
+  // Queries during a recorded cached call, whose time cache_usage already
+  // includes.
   int64 queries_in_cache = 4;
-  // Queries inside a listed command.
+  // Queries inside a listed command, whose time the command's time already
+  // includes.
   int64 queries_in_commands = 5;
-  // Time blocked in the driver's execute call: sending the query and waiting
-  // for it to finish. Fetching the results afterwards isn't included.
+  // Time waiting for the queries to run, not including fetching their results.
   int64 time = 6;
-  // Time of the queries in queries_in_cache, which cache_usage already counts
-  // in its compute, wait or overhead time.
+  // Time of the queries in queries_in_cache.
   int64 time_in_cache = 7;
-  // Time of the queries in queries_in_commands, which those commands' times
-  // already count. For example, a lazy DataFrame passed to st.dataframe runs
-  // its query inside the command.
+  // Time of the queries in queries_in_commands.
   int64 time_in_commands = 8;
 }
 
