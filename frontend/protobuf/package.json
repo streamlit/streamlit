@@ -26,6 +26,6 @@
   "devDependencies": {
     "protobufjs": "^8.8.1",
     "protobufjs-cli": "^2.7.1",
-    "typesync": "^0.14.3"
+    "typesync": "^0.15.0"
   }
 }
