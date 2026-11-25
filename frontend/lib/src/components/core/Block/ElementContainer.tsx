@@ -50,9 +50,9 @@ export interface ElementContainerProps {
 }
 
 /**
- * Commits after the element it follows inside the same Suspense boundary, so
- * it tells render timing when the element's code has loaded and its content
- * is in the DOM.
+ * Tells render timing when the element's code has loaded and its content is
+ * in the DOM. It renders after the element inside the same Suspense boundary,
+ * so its layout effect runs only once the element itself has committed.
  */
 function ElementContentCommitted({
   handle,
@@ -70,8 +70,8 @@ function ElementContentCommitted({
 /**
  * Wrapper component that encapsulates the element container layers:
  * - StyledElementContainerLayoutWrapper (layout styling)
- * - ErrorBoundary (error handling)
  * - Suspense (lazy loading fallback)
+ * - ErrorBoundary (error handling)
  *
  * Used in each case block of RawElementNodeRenderer to wrap elements
  * with their specific configuration.
@@ -131,25 +131,25 @@ export const ElementContainer = memo(function ElementContainer({
       node={node}
       config={config}
     >
-      <ErrorBoundary>
-        <Suspense
-          fallback={
-            <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
-          }
-        >
-          {timingHandle ? (
-            <ElementTimingContext.Provider value={timingHandle}>
-              {children}
-              <ElementContentCommitted
-                handle={timingHandle}
-                version={node.element}
-              />
-            </ElementTimingContext.Provider>
-          ) : (
-            children
+      <Suspense
+        fallback={
+          <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
+        }
+      >
+        {/* The tree has the same shape whether or not render timing is on, so
+            turning it on or off doesn't remount the element. */}
+        <ElementTimingContext.Provider value={timingHandle}>
+          {/* Inside Suspense, so an element that fails to render still lets
+              the probe commit, and its error message counts as its content. */}
+          <ErrorBoundary>{children}</ErrorBoundary>
+          {timingHandle && (
+            <ElementContentCommitted
+              handle={timingHandle}
+              version={node.element}
+            />
           )}
-        </Suspense>
-      </ErrorBoundary>
+        </ElementTimingContext.Provider>
+      </Suspense>
       {hasPendingSkeleton && <PendingSkeletonOverlay />}
     </StyledElementContainerLayoutWrapper>
   )

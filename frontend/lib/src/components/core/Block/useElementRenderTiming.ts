@@ -36,7 +36,10 @@ interface ElementRenderTiming {
 
 /**
  * Registers an element container with the app's render timing tracker each
- * time it commits a new or changed element payload.
+ * time it commits a new or changed element payload. Payloads are compared by
+ * identity: `AppRoot` keeps the existing payload object when an element's
+ * hash is unchanged, so an element the script sends again unchanged doesn't
+ * register again.
  */
 export function useElementRenderTiming(
   node: ElementNode

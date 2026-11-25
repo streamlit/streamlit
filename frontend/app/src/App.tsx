@@ -244,8 +244,11 @@ interface State {
   hostToolbarItems: IToolbarItem[]
   hostHideSidebarNav: boolean
   sidebarChevronDownshift: number
-  // Whether elements report to the render timing tracker. Turned on once the
-  // first NewSession confirms usage stats are gathered.
+  /**
+   * Whether elements report to the render timing tracker.
+   * `handleInitialization` turns this on once a NewSession confirms that
+   * usage stats are gathered.
+   */
   isRenderTimingEnabled: boolean
   pageLinkBaseUrl: string
   queryParams: string

@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { type ComponentType, lazy, type ReactElement, useContext } from "react"
+import {
+  type ComponentType,
+  lazy,
+  type ReactElement,
+  useContext,
+  useEffect,
+} from "react"
 
 import { act, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
@@ -511,6 +517,56 @@ describe("ElementContainer", () => {
       paintUntilIdle()
 
       expect(reports[0].renderTiming.fullyLoadedMs).toBe(300)
+      tracker.dispose()
+    })
+
+    it("reports an element that fails to render once its error is painted", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {})
+      const ThrowingElement = (): never => {
+        throw new Error("Test component error")
+      }
+      const { tracker, reports, setTime, paintUntilIdle } =
+        createTimedTracker()
+      tracker.runStarted(mockNode.scriptRunId)
+      setTime(100)
+      renderTimed(tracker, <ThrowingElement />)
+      await finishScript(tracker)
+      setTime(150)
+      paintUntilIdle()
+
+      expect(screen.getByText("Test component error")).toBeVisible()
+      expect(reports[0].renderTiming).toMatchObject({
+        fullyLoadedMs: 150,
+        timedOut: false,
+      })
+      tracker.dispose()
+    })
+
+    it("doesn't remount the element when render timing turns off", () => {
+      const tracker = new RenderTimingTracker({ onReport: vi.fn() })
+      const onMount = vi.fn()
+      function MountCounter(): ReactElement {
+        useEffect(onMount, [])
+        return <div>Content</div>
+      }
+      const renderWithTracker = (
+        value: RenderTimingTracker | null
+      ): ReactElement => (
+        <RenderTimingContext.Provider value={value}>
+          <ElementContainer
+            node={mockNode}
+            config={ElementContainerConfig.DEFAULT}
+            isStale={false}
+          >
+            <MountCounter />
+          </ElementContainer>
+        </RenderTimingContext.Provider>
+      )
+
+      const { rerender } = render(renderWithTracker(tracker))
+      rerender(renderWithTracker(null))
+
+      expect(onMount).toHaveBeenCalledTimes(1)
       tracker.dispose()
     })
   })

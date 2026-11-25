@@ -138,6 +138,10 @@ message ReceivedMessages {
 // start for the first run of a page load (run_index 0), otherwise the time
 // the browser sent the rerun request. Milestones that weren't reached are
 // unset.
+//
+// New or changed elements are those the run sent with content different
+// from what the page already showed. Elements the script sends again
+// unchanged keep their payload and don't count.
 message RenderTiming {
   // First run only: when the frontend app mounted, after the HTML and
   // JavaScript were downloaded and run.
@@ -157,10 +161,10 @@ message RenderTiming {
   // run was hidden, superseded or timed out.
   optional int64 fully_loaded_ms = 5;
 
-  // What the time between script_finished_ms and fully_loaded_ms (or the
-  // timeout) waited on. Each is the total time during that gap when at least
-  // one visible element was waiting on that kind of work, so the two can
-  // overlap. The rest of the gap includes charts and the dataframe grid
+  // Time after script_finished_ms (until fully_loaded_ms, or the timeout)
+  // that visible elements spent waiting on each kind of work. Each field is
+  // the time at least one visible element was waiting, so the two can
+  // overlap. The rest of the gap is mostly charts and the dataframe grid
   // drawing.
   // Code-split element bundles loading.
   int64 code_loading_ms = 6;
@@ -179,9 +183,12 @@ message RenderTiming {
   // representative.
   bool was_hidden = 11;
   // Another rerun was requested or started before this run fully loaded.
+  // That includes run_every fragment reruns, which can supersede a slow
+  // first load.
   bool was_superseded = 12;
   // Visible elements didn't finish loading within the timeout after the
-  // script finished.
+  // script finished. An element that fails to render counts as loaded once
+  // its error message is painted.
   bool timed_out = 13;
   // Number of visible elements that hadn't finished loading at the timeout.
   int32 timed_out_elements = 14;

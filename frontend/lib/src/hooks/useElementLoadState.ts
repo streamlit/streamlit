@@ -49,8 +49,10 @@ export function useElementLoadState(
  * Like `useElementLoadState`, for work that finishes in an event handler
  * (such as an image's `load` event), without adding state or re-renders.
  * The work identified by `workKey` (for example the image URL) counts as
- * pending from when it commits until the returned callback is called. Pass
- * null when the element has no such work.
+ * pending from when it commits until the returned callback is called, and
+ * again whenever `workKey` changes. Pass a constant (such as `true`) for work
+ * that happens once per mount; it then isn't tracked again when the element's
+ * payload changes. Pass null or undefined when the element has no such work.
  *
  * Does nothing when render timing isn't measured.
  */
@@ -62,7 +64,7 @@ export function useElementLoadCallback(
   const slotId = useId()
 
   useLayoutEffect(() => {
-    if (!handle || workKey === null) return
+    if (!handle || workKey === null || workKey === undefined) return
 
     handle.setLoading(slotId, kind, true)
     return () => {

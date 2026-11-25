@@ -79,7 +79,10 @@ interface LoadInterval extends PendingLoad {
 interface ElementRecord {
   readonly run: RunMeasurement
   readonly handle: ElementTimingHandle
-  /** The element payload this record measures. */
+  /**
+   * The element proto object this record measures, compared by identity to
+   * detect a new payload.
+   */
   readonly version: unknown
   readonly isContent: boolean
   readonly registeredAt: number
@@ -122,9 +125,16 @@ interface RunMeasurement {
   readonly recordsToCheck: Set<ElementRecord>
   isReadyCheckScheduled: boolean
   observer?: IntersectionObserver
+  /**
+   * Read after the run's first paint, while layout is clean. A run reported
+   * before then reads it when it's reported.
+   */
   viewportSize?: { width: number; height: number }
   timeoutId?: ReturnType<typeof setTimeout>
-  /** Bumped on every change that can affect whether the run is complete. */
+  /**
+   * Incremented on every change that can affect completion. `evaluate`
+   * compares it across two frames to detect that the run has settled.
+   */
   changeCount: number
   isSettling: boolean
   isFinalized: boolean
@@ -312,7 +322,7 @@ export class RenderTimingTracker {
 
   private nextRunIndex = 0
 
-  /** When the earliest rerun request not yet followed by a run was sent. */
+  /** Time of the earliest rerun request since the last run started. */
   private pendingRequestAt?: number
 
   private run?: RunMeasurement

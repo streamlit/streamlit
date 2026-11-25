@@ -179,12 +179,15 @@ describe("useElementLoadCallback", () => {
     expect(handle.loadingSlots.size).toBe(1)
   })
 
-  it("doesn't report work for a null work key", () => {
-    const handle = tracker.createElementHandle()
-    renderWithHandle(handle, null)
+  it.each([null, undefined])(
+    "doesn't report work for a %s work key",
+    workKey => {
+      const handle = tracker.createElementHandle()
+      renderWithHandle(handle, workKey)
 
-    expect(handle.loadingSlots.size).toBe(0)
-  })
+      expect(handle.loadingSlots.size).toBe(0)
+    }
+  )
 
   it("clears pending work when the element unmounts", () => {
     const handle = tracker.createElementHandle()
