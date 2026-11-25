@@ -326,7 +326,7 @@ export class App extends PureComponent<Props, State> {
 
   private readonly metricsMgr = new MetricsManager(this.sessionInfo)
 
-  private readonly receivedMessages = new ReceivedMessagesTracker()
+  private readonly receivedMessagesTracker = new ReceivedMessagesTracker()
 
   private readonly sessionEventDispatcher = new SessionEventDispatcher()
 
@@ -1136,7 +1136,7 @@ export class App extends PureComponent<Props, State> {
    * Callback when we get a message from the server.
    */
   handleMessage = (msgProto: ForwardMsg, size?: ReceivedMessageSize): void => {
-    this.receivedMessages.recordMessage(msgProto, size)
+    this.receivedMessagesTracker.recordMessage(msgProto, size)
 
     // We don't have an immutableProto here, so we can't use
     // the dispatchOneOf helper
@@ -1392,7 +1392,7 @@ export class App extends PureComponent<Props, State> {
         (performance.now() - this.state.latestRunTime) * 1000
       ),
       browserInfo,
-      receivedMessages: this.receivedMessages.getRunTotals(),
+      receivedMessages: this.receivedMessagesTracker.getRunTotals(),
     })
   }
 

@@ -64,9 +64,10 @@ message PageProfile {
   ParallelFragmentUsage parallel_fragment_usage = 22;
   // 23-25 are held for planned query-time and rerun-reason fields.
   // Bytes of the Arrow payloads serialized during this script run, for
-  // dataframes, tables, Arrow-backed charts and similar elements, including
-  // payloads the browser already has cached. Plotly and pydeck charts send
-  // JSON and aren't included. Optional, so that 0 is still sent.
+  // dataframes, data editors, tables, Arrow-backed charts and custom component
+  // dataframe arguments, including payloads the browser already has cached.
+  // Plotly and pydeck charts send JSON and aren't included. Optional, so that
+  // 0 is still sent.
   optional int64 arrow_bytes = 26;
 }
 

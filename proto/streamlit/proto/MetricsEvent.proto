@@ -106,11 +106,12 @@ message MetricsEvent {
 // ForwardMsgs the browser received for one script run, from its NewSession
 // through its PageProfile. Sizes are encoded bytes.
 message ReceivedMessages {
-  // A reference to a cached message counts at the reference's size.
+  // Total size of the messages received. A reference to a cached message
+  // counts at the reference's size.
   int64 bytes = 1;
-  // Messages sent as references to messages the browser had cached, and the
-  // total size of the cached messages.
+  // How many of those messages were references to a cached message.
   int64 cached_messages = 2;
+  // Total size of the cached messages those references resolved to.
   int64 cached_bytes = 3;
 }
 

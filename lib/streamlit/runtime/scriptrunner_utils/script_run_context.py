@@ -555,7 +555,7 @@ def get_run_yield_check() -> Callable[[], None] | None:
 
 
 def record_arrow_bytes(num_bytes: int) -> None:
-    """Add a serialized Arrow payload to the current run's page profile.
+    """Add a serialized Arrow payload's size to the current run's page profile.
 
     Payloads serialized without a ``ScriptRunContext``, such as lazily loaded
     dataframe chunks after the first, aren't counted.

@@ -920,7 +920,8 @@ def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
         record_arrow_bytes,
     )
 
-    # Every Arrow payload sent to the browser is serialized here.
+    # Every fresh Arrow serialization passes through here. Elements replayed
+    # by an st.cache_data hit aren't serialized again, so they aren't recorded.
     record_arrow_bytes(len(arrow_bytes))
     return arrow_bytes
 
