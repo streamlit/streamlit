@@ -289,9 +289,9 @@ This only holds if `CachedFunc` never awaits outside its wait and compute phases
 
 Async cached calls that are awaited at the same time each count the wall-clock time they share, so their sum can exceed the time that passed. Rather than change the calls' times, `ThreadCacheStats` reports the excess as `async_overlap_time`, which analysis subtracts from cache time:
 
-- A group starts when a call opens on the thread while another is open, and ends when no call is open.
+- A group forms when a call opens on the thread while another is open, and ends when no call is open. Its span starts when the earliest of the open calls started, not when the group forms, so it covers the whole of every call it counts.
 - The group adds up the compute, wait and overhead time, for both cache types, of the calls that finish while it's open.
-- When the group closes, its span is its wall-clock time minus the listed command time on the thread during it, because the calls' own times already leave that out. Whatever the calls' total exceeds the span by is added to `async_overlap_time`.
+- When the group closes, its span is the wall-clock time from that start minus the listed command time on the thread during it, because the calls' own times already leave that out. Whatever the calls' total exceeds the span by is added to `async_overlap_time`.
 - A group still open when the profile is built is measured up to then.
 
 Calls that don't overlap add nothing. Calls on different threads are never compared, because times from concurrent threads are added together anyway (see [Known limitations](#known-limitations)). The run reports `CacheUsage.async_overlap_time`, and each fragment entry its `cache_async_overlap_time`.
