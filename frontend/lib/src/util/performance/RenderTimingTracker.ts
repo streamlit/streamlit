@@ -102,6 +102,12 @@ interface RunMeasurement {
   readonly appShellReadyAt?: number
   readonly connectedAt?: number
   scriptFinishedAt?: number
+  /**
+   * Earliest paint of content that was in the viewport. Kept on the run
+   * because an element that changes during the run, such as streamed text,
+   * replaces its record.
+   */
+  firstContentAt?: number
   wasHidden: boolean
   wasSuperseded: boolean
   readonly records: Set<ElementRecord>
@@ -164,6 +170,19 @@ function updateRecord(record: ElementRecord, change: () => void): void {
   const wasWaiting = isWaitingOn(record)
   change()
   record.run.waitingCount += Number(isWaitingOn(record)) - Number(wasWaiting)
+}
+
+/** Records the record's paint as the run's first content if it's earliest. */
+function noteFirstContent(record: ElementRecord): void {
+  const { run, readyAt } = record
+  if (
+    !record.isContent ||
+    !record.wasEverIntersecting ||
+    readyAt === undefined
+  ) {
+    return
+  }
+  run.firstContentAt = Math.min(run.firstContentAt ?? readyAt, readyAt)
 }
 
 function getBucket(size: number, bounds: number[]): number {
@@ -560,6 +579,7 @@ export class RenderTimingTracker {
         record.isIntersecting = entry.isIntersecting
       })
       record.wasEverIntersecting ||= entry.isIntersecting
+      noteFirstContent(record)
     }
     run.changeCount++
     this.evaluate(run)
@@ -592,6 +612,7 @@ export class RenderTimingTracker {
         updateRecord(pending, () => {
           pending.readyAt = paintedAt
         })
+        noteFirstContent(pending)
         hasNewReady = true
       }
       run.recordsToCheck.clear()
@@ -683,13 +704,6 @@ export class RenderTimingTracker {
         : undefined
     const gapEnd = fullyLoadedAt ?? now
 
-    const contentReadyTimes = records
-      .filter(record => record.isContent && record.wasEverIntersecting)
-      .map(record => record.readyAt)
-      .filter((readyAt): readyAt is number => readyAt !== undefined)
-    const firstContentAt =
-      contentReadyTimes.length > 0 ? Math.min(...contentReadyTimes) : undefined
-
     const mediaLoadingMs = Math.round(
       getUnionLength(
         visible.flatMap(record => [
@@ -727,7 +741,7 @@ export class RenderTimingTracker {
     return {
       appShellReadyMs: toRunTime(run.appShellReadyAt),
       connectedMs: toRunTime(run.connectedAt),
-      firstContentMs: toRunTime(firstContentAt),
+      firstContentMs: toRunTime(run.firstContentAt),
       scriptFinishedMs: toRunTime(scriptFinishedAt),
       fullyLoadedMs: toRunTime(fullyLoadedAt),
       codeLoadingMs,

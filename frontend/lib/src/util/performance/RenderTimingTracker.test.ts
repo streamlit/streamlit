@@ -336,6 +336,40 @@ describe("RenderTimingTracker", () => {
       expect(reports[0].renderTiming.visibleElements).toBe(1)
     })
 
+    it("keeps the first paint of an element that changes during the run", async () => {
+      tracker.runStarted(RUN_ID)
+      browser.time = 100
+      const streamed = commitElement()
+      browser.observer.report(streamed.target, true)
+      browser.paint(120)
+      for (const chunkTime of [200, 300]) {
+        browser.time = chunkTime
+        commitElement({ handle: streamed.handle })
+        browser.observer.report(streamed.target, true)
+        browser.paint(chunkTime + 20)
+      }
+      await finishScript(400)
+      browser.paintUntilIdle()
+
+      expect(reports[0].renderTiming).toMatchObject({
+        firstContentMs: 120,
+        fullyLoadedMs: 400,
+        visibleElements: 1,
+      })
+    })
+
+    it("counts content painted before the observer reports it", async () => {
+      tracker.runStarted(RUN_ID)
+      const { target } = commitElement()
+      browser.paint(100)
+      browser.time = 150
+      browser.observer.report(target, true)
+      await finishScript(200)
+      browser.paintUntilIdle()
+
+      expect(reports[0].renderTiming.firstContentMs).toBe(100)
+    })
+
     it("ignores elements of other runs", async () => {
       tracker.runStarted(RUN_ID)
       const stale = commitElement({ scriptRunId: "previous-run" })
