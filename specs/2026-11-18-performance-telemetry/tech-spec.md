@@ -379,7 +379,7 @@ Per-function stats are recorded in `CacheCallTimer.finish()`, with the same rule
 - **A random ID per function and server process**, created when the function's `FunctionCacheMetrics` entry is created in the process-wide registry, so it's stable for the life of the process and reveals nothing about the function.
 - **A cap per run**, applied when the profile is built.
 
-How the ID is stored, the cap, and which functions are kept past it are still open (see [Open questions](#open-questions)).
+How the ID is stored, the cap, and which functions are kept past it are still open (see [Open questions](#open-questions)). They, and the proto fields, are settled in this spec before per-function stats are implemented.
 
 ### Rerun reason
 
@@ -408,7 +408,7 @@ Each count is measured where it's already known, so none needs a second serializ
 
 The server doesn't count message bytes (see [Count message bytes on the server](#count-message-bytes-on-the-server)).
 
-What's counted when a message is sent as a reference to a copy the browser has cached, and whether compressed sizes are available, are still open (see [Open questions](#open-questions)).
+A message sent as a reference to a copy the browser has cached counts toward bytes received at the reference's size, and the size of the cached message it resolved to is reported separately. Sizes are encoded message sizes. The browser doesn't see WebSocket compression, so compressed sizes aren't reported.
 
 ### Render timing
 
@@ -502,4 +502,3 @@ A single `parallel_fragment_cpu_time` needs no change to the per-fragment entrie
 
 1. **Attached threads in fragment entries.** Whether analysis needs a fragment's attached threads in its entry, which would need the locking described in [Alternatives considered](#count-a-fragments-attached-threads-toward-the-fragment).
 2. **Per-function cache stats.** Where the random ID is stored, the cap per run, and which functions are kept past it: for example, the ones with the most cache time in the run.
-3. **Data size for cached messages.** Whether a message sent as a reference to the browser's cached copy counts its full size, its reference's size or both, and whether compressed sizes are available without extra work.

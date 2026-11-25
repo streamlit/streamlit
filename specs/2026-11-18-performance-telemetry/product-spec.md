@@ -156,7 +156,7 @@ For widget interactions, the run also records the type of the widget that starte
 
 Data size shows whether slow runs are the ones that send a lot of data, for example whether SiS apps are slow because they send more, and whether that data is dataframes and charts. Each run reports three totals, in bytes:
 
-- **Bytes received**: the messages the browser received for the run. Compared with the run's load time, it shows how much of a slow run's time could be transfer.
+- **Bytes received**: the messages the browser received for the run, with a message from the browser's cache counted at the size of its reference. Compared with the run's load time, it shows how much of a slow run's time could be transfer. Sizes are message sizes before WebSocket compression, so the bytes transferred can be smaller.
 - **Bytes from the browser's cache**: messages the browser already had from an earlier run, which the server sent as short references instead, and how many there were. They explain runs that put a lot of data on the page but transfer little, such as most reruns.
 - **Arrow bytes**: the dataframes, tables and charts the run serialized, counted even when the browser already has them. Their share of the run's data says whether advice about data volume applies, such as aggregating before charting, paginating, or loading dataframes lazily.
 
@@ -182,7 +182,6 @@ Each addition describes its fields in `PageProfile.proto` (or `MetricsEvent.prot
 
 1. **Unrecorded query paths.** Which of the [paths that aren't recorded](#query-time) are common enough in real apps to instrument, and whether fetching results should be timed. The safest way to close the largest gaps is in the Snowflake libraries: a query start and finish hook in the connector, and query durations in Snowpark's query listeners. A Streamlit API for queries that `query()` doesn't fit, such as statements without results or uncached reads, would also record more of them.
 2. **Per-function payload.** The cap on per-function cache entries trades payload size against coverage of apps with many cached functions.
-3. **Bytes on the wire.** WebSocket compression makes transferred bytes smaller than message sizes. Data size will report message sizes unless the compressed size is available without extra work.
 
 ## Out of scope
 
