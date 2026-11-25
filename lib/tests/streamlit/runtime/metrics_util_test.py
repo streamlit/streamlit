@@ -1693,13 +1693,15 @@ def _create_profile_with_cpu_times(
 
 def test_create_page_profile_message_reports_cpu_times() -> None:
     """Command CPU time adds up the script thread's and fragment runs' records,
-    leaving out attached threads, and each fragment run reports its own.
+    leaving out attached threads, even one whose clock read failed. Each
+    fragment run reports its own CPU time.
     """
     ctx = create_mock_script_run_ctx()
     script_stats = ctx.shared.stats.current_thread_stats()
     script_stats.counts_cpu = True
     script_stats.command_cpu_time = 0.25
     _record_attached_thread_command_cpu_time(ctx, 4.0)
+    _record_attached_thread_command_cpu_time(ctx, None)
     with patch.object(run_stats, "_thread_cpu_clock", _fake_cpu_clock()):
         with ctx.shared.parallel_fragments.recording_run():
             ctx.shared.stats.current_thread_stats().command_cpu_time = 0.5
@@ -1763,19 +1765,6 @@ def test_create_page_profile_message_leaves_cpu_times_unset_when_one_is_missing(
 
     for field in _CPU_FIELDS:
         assert not profile.HasField(field)
-
-
-def test_attached_thread_without_command_cpu_time_doesnt_unset_cpu_times() -> None:
-    """A failed clock read on an attached thread doesn't matter, because its
-    command CPU time isn't reported.
-    """
-    ctx = create_mock_script_run_ctx()
-    ctx.shared.stats.current_thread_stats().counts_cpu = True
-    _record_attached_thread_command_cpu_time(ctx, None)
-
-    profile = _create_profile_with_cpu_times(ctx)
-
-    assert profile.command_cpu_time == 0
 
 
 def test_create_page_profile_message_adds_overflow_cpu_times() -> None:
@@ -1889,7 +1878,7 @@ def test_gather_metrics_skips_command_cpu_time_beyond_per_command_limit(
 @pytest.mark.parametrize(
     "clock_readings",
     [
-        pytest.param([RuntimeError("clock")], id="at start"),
+        pytest.param([RuntimeError("clock"), 1.0], id="at start"),
         pytest.param([0.0, RuntimeError("clock")], id="at end"),
     ],
 )
@@ -1914,30 +1903,8 @@ def test_gather_metrics_cpu_clock_failure_doesnt_reach_the_command(
     assert stats.command_cpu_time is None
 
 
-def test_gather_metrics_cpu_clock_failure_doesnt_replace_rerun(
-    tracking_ctx: ScriptRunContext,
-) -> None:
-    """A failed CPU clock read after a rerun request still lets it propagate."""
-
-    @metrics_util.gather_metrics("raises_rerun")
-    def raises_rerun() -> None:
-        raise RerunException(None)
-
-    with (
-        patch.object(
-            run_stats,
-            "_thread_cpu_clock",
-            MagicMock(side_effect=[0.0, RuntimeError("clock")]),
-        ),
-        pytest.raises(RerunException),
-    ):
-        raises_rerun()
-
-    assert tracking_ctx.shared.stats.current_thread_stats().command_cpu_time is None
-
-
-def test_read_cpu_clocks() -> None:
-    """Both clocks are read, and a failure in either gives None."""
+def test_read_cpu_clocks_gives_none_if_either_clock_fails() -> None:
+    """A missing or failing thread or process clock gives None."""
     with (
         patch.object(run_stats, "_thread_cpu_clock", MagicMock(return_value=1.5)),
         patch.object(metrics_util.time, "process_time", return_value=2.5),

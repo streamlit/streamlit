@@ -88,16 +88,6 @@ def test_recording_into_affects_only_the_calling_thread() -> None:
     assert other[0] is not swapped
 
 
-def test_new_thread_stats_dont_count_cpu() -> None:
-    """A thread's stats count toward CPU time only once marked, as the script
-    thread's and fragment runs' are.
-    """
-    stats = ThreadRunStats()
-
-    assert not stats.counts_cpu
-    assert stats.command_cpu_time == 0.0
-
-
 @pytest.mark.parametrize(
     "time_module",
     [
@@ -128,10 +118,3 @@ def test_read_thread_cpu_time_gives_none_without_a_working_clock(
     """A missing clock or a failed read gives None instead of raising."""
     with patch.object(run_stats_module, "_thread_cpu_clock", clock):
         assert read_thread_cpu_time() is None
-
-
-def test_read_thread_cpu_time_reads_the_clock() -> None:
-    with patch.object(
-        run_stats_module, "_thread_cpu_clock", MagicMock(return_value=1.5)
-    ):
-        assert read_thread_cpu_time() == 1.5

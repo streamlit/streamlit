@@ -579,11 +579,10 @@ def read_cpu_clocks() -> CpuClocks | None:
 
 
 def start_run_cpu_times(ctx: ScriptRunContext) -> CpuClocks | None:
-    """Start the script run's CPU times on the script thread.
+    """Read the CPU clocks when prep ends, and mark the script thread's stats as
+    counting toward ``command_cpu_time``.
 
-    Marks the script thread's stats as counting toward ``command_cpu_time`` and
-    returns the CPU clocks to pass to ``create_page_profile_message``, or None
-    if they can't be read.
+    Returns None if a clock can't be read.
     """
     try:
         ctx.shared.stats.current_thread_stats().counts_cpu = True
@@ -693,6 +692,8 @@ def _record_command_time(
         stats.command_time += seconds
         stats.cache.record_tracked_command_time(seconds)
         cpu_end = read_thread_cpu_time()
+        # A missing reading marks the thread's command CPU time as missing,
+        # which leaves the run's CPU fields unset.
         if cpu_start is None or cpu_end is None:
             stats.command_cpu_time = None
         elif stats.command_cpu_time is not None:
@@ -1013,7 +1014,7 @@ def create_page_profile_message(
 
     ``run_start`` is the ``time.perf_counter()`` value when the script run
     started. Without it, the profile has no ``parallel_fragment_usage``.
-    ``cpu_start`` is the CPU clocks read on the script thread when prep ended.
+    ``cpu_start`` holds the CPU clocks read on the script thread when prep ended.
     Without it, the profile has no CPU times.
     """
     msg = ForwardMsg()

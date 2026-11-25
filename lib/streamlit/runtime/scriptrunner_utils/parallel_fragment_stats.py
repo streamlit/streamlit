@@ -54,6 +54,8 @@ class ParallelFragmentRunStats:
         self.end: float | None = None
         # What the worker thread records while the fragment runs.
         self.stats = ThreadRunStats()
+        # The run reports its worker's CPU time, so its commands' CPU time
+        # counts toward command_cpu_time.
         self.stats.counts_cpu = True
         # The worker thread's CPU time from start to end. None until the
         # fragment finishes, or if the CPU clock can't be read.
@@ -78,7 +80,7 @@ class ParallelFragmentUsageStats:
 
         While the fragment runs, the worker records into the fragment run's own
         stats. Those stats still count toward the script run's top-level totals.
-        The run's CPU time is stored before the worker finishes, so it's
+        It stores the run's CPU time before the worker finishes, so the time is
         complete once the coordinator's ``join()`` or ``drain()`` returns.
         """
         with self._lock:

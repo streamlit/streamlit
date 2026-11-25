@@ -1489,16 +1489,9 @@ class ScriptRunnerTest(unittest.TestCase):
         assert profile.script_cpu_time <= script_wall_time + _CPU_CLOCK_SLACK_US
         assert profile.script_cpu_time >= script_wall_time / 2
         assert profile.process_cpu_time >= profile.script_cpu_time - _CPU_CLOCK_SLACK_US
-        assert profile.command_cpu_time < 50_000
+        assert profile.command_cpu_time == 0
         assert profile.HasField("parallel_fragment_cpu_time")
         assert profile.parallel_fragment_cpu_time == 0
-
-    def test_waiting_script_reports_little_cpu_time(self):
-        """Sleeping takes wall-clock time but almost no CPU time."""
-        profile = self._run_and_get_page_profile("cpu_sleep.py")
-
-        assert profile.exec_time - profile.prep_time >= 200_000
-        assert profile.script_cpu_time < 50_000
 
     def test_command_cpu_time_is_separate_from_user_code(self):
         """CPU time inside a listed command counts as command CPU time, so
@@ -1515,7 +1508,8 @@ class ScriptRunnerTest(unittest.TestCase):
 
     def test_attached_thread_cpu_time_is_only_in_process_cpu_time(self):
         """A listed command on an attached thread isn't in command_cpu_time,
-        because its thread's CPU time isn't in script_cpu_time either.
+        because its thread's CPU time isn't in script_cpu_time either. The
+        script thread, which only waits for it, reports almost no CPU time.
         """
         profile = self._run_and_get_page_profile("cpu_in_attached_thread.py")
 
@@ -1523,6 +1517,7 @@ class ScriptRunnerTest(unittest.TestCase):
             "external:__main__:burn_cpu"
         ]
         assert profile.commands[0].time >= 200_000
+        assert profile.HasField("command_cpu_time")
         assert profile.command_cpu_time == 0
         assert profile.script_cpu_time < 50_000
         assert profile.process_cpu_time >= 200_000 - _CPU_CLOCK_SLACK_US

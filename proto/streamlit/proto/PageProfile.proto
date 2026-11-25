@@ -203,7 +203,7 @@ message ParallelFragmentRun {
   // 7-9 are held for planned query-time fields.
   // CPU time of the worker thread during the run, compared with exec_time to
   // split the run into computing and waiting. Unset when the CPU clock can't be
-  // read, including for the overflow entry when any of its runs is unset.
+  // read. The overflow entry is unset if any of its runs is.
   optional int64 cpu_time = 10;
   // The run's CacheUsage.async_overlap_time.
   int64 cache_async_overlap_time = 11;

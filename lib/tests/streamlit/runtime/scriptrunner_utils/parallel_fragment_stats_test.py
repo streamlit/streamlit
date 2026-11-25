@@ -107,7 +107,7 @@ def test_wait_time_accumulates_across_waits() -> None:
 
 def test_recording_run_records_the_workers_cpu_time() -> None:
     """A run stores its worker's CPU time, even when the fragment raises, and
-    its stats count toward the run's command CPU time.
+    its stats count toward the script run's ``command_cpu_time``.
     """
     stats = ParallelFragmentUsageStats(RunStats())
 
