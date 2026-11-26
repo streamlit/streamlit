@@ -38,6 +38,8 @@ METRICS_URL = "https://metrics.render-timing.test/events"
 DEFAULT_METRICS_URL = re.compile(
     r"^https://(data\.streamlit\.io|webhooks\.fivetran\.com)/"
 )
+# Every element in the app. Its grid layout fits the test viewport.
+EXPECTED_VISIBLE_ELEMENTS = 11
 CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
@@ -133,10 +135,11 @@ def test_reports_render_timing_for_each_run(
         assert milestone in timing, milestone
     assert int(timing["firstContentMs"]) <= int(timing["fullyLoadedMs"])
     assert int(timing["scriptFinishedMs"]) <= int(timing["fullyLoadedMs"])
-    assert timing["visibleElements"] == 5
+    assert timing["visibleElements"] == EXPECTED_VISIBLE_ELEMENTS
     assert timing["viewportWidthBucket"] == 1280
     assert timing["viewportHeightBucket"] == 720
     assert timing["timedOut"] is False
+    assert timing["timedOutElements"] == 0
     assert timing["wasHidden"] is False
     assert timing["wasSuperseded"] is False
 
