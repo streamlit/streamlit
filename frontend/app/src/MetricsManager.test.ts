@@ -758,17 +758,25 @@ it("tracks events immediately after initialized", async () => {
   expect(mm.track.mock.calls.length).toBe(3)
 })
 
-it("only sends renderTiming events with keepalive", async () => {
+it("only sends renderTiming events with keepalive while the page is hidden", async () => {
+  const visibilityState = vi.spyOn(document, "visibilityState", "get")
   const mm = getMetricsManager()
   mm.track = MetricsManager.prototype.track
   await mm.initialize({ gatherUsageStats: true })
   fetch.mockClear()
 
-  mm.enqueue("pageProfile", {})
+  visibilityState.mockReturnValue("visible")
   mm.enqueue("renderTiming", { renderTiming: {} })
+  visibilityState.mockReturnValue("hidden")
+  mm.enqueue("renderTiming", { renderTiming: {} })
+  mm.enqueue("pageProfile", {})
 
-  expect(fetch.mock.calls[0][0].keepalive).toBe(false)
-  expect(fetch.mock.calls[1][0].keepalive).toBe(true)
+  expect(fetch.mock.calls.map(([request]) => request.keepalive)).toEqual([
+    false,
+    true,
+    false,
+  ])
+  visibilityState.mockRestore()
 })
 
 it("tracks host data when in an iFrame", async () => {

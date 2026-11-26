@@ -366,10 +366,15 @@ export class MetricsManager {
     } else if (this.metricsUrl === "postMessage") {
       this.postMessageEvent(evName, data)
     } else {
-      // renderTiming events are often sent as the page is hidden or closed,
-      // so let them outlive the page.
+      // A renderTiming event sent while the page is hidden may be the page's
+      // last request, so let it outlive the page. Other requests skip
+      // keepalive, since some browsers drop keepalive requests that need a
+      // CORS preflight.
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-      this.track(data, evName === "renderTiming")
+      this.track(
+        data,
+        evName === "renderTiming" && document.visibilityState === "hidden"
+      )
     }
   }
 
