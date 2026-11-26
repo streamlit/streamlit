@@ -206,9 +206,9 @@ message RenderTiming {
   // rerun request, so the user's whole wait is input_delay_ms plus a
   // milestone. It covers delays before the request is sent, such as widget
   // debounces and a busy main thread. Each input counts toward one request
-  // at most. Unset for automatic reruns (such as run_every fragments),
-  // history navigation and reruns the host requests, including when one of
-  // these joins a user's pending rerun request. Also unset when no uncounted
+  // at most. Unset for automatic reruns (such as run_every fragments) and
+  // history navigation, including when one of these joins a user's pending
+  // rerun request. Also unset when no uncounted
   // input happened in the 2 seconds before the request, such as for
   // hover-driven chart selections or inputs inside an iframe.
   optional int64 input_delay_ms = 15;

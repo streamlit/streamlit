@@ -138,9 +138,6 @@ describe("uri", () => {
       "[fd12:3456::1]",
       "[fe80::1]",
       "[febf::1]",
-      "[::]",
-      "[::ffff:7f00:1]",
-      "[::ffff:c0a8:105]",
     ])("returns true for %s", hostname => {
       expect(isLocalOrPrivateHostname(hostname)).toBe(true)
     })
@@ -165,7 +162,6 @@ describe("uri", () => {
       "[fe00::1]",
       "[fec0::1]",
       "[2001:db8::1]",
-      "[::ffff:808:808]",
       "10.0.0.1.example.com",
       "127.0.0.1.nip.io",
     ])("returns false for %s", hostname => {

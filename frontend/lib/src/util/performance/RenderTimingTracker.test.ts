@@ -152,9 +152,13 @@ describe("RenderTimingTracker", () => {
       environment: browser.environment,
     })
 
+  /** Each container's DOM node, which stays the same across commits. */
+  const containers = new WeakMap<ElementTimingHandle, Element>()
+
   /**
    * Mounts an element the way ElementContainer does: commits its content
-   * (the probe runs before the container's layout effect) and registers it.
+   * (ElementContentCommitted runs before the container's layout effect) and
+   * registers it.
    */
   const commitElement = ({
     handle = tracker.createElementHandle(),
@@ -173,12 +177,12 @@ describe("RenderTimingTracker", () => {
     target: Element
     version: object
   } => {
-    const target = handle.target ?? document.createElement("div")
+    const target = containers.get(handle) ?? document.createElement("div")
+    containers.set(handle, target)
     if (isContentLoaded) {
       handle.contentCommitted(version)
     }
-    handle.setTarget(target)
-    handle.elementCommitted(scriptRunId, version, type)
+    handle.elementCommitted(scriptRunId, version, type, target)
     return { handle, target, version }
   }
 

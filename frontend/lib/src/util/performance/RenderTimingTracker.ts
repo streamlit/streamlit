@@ -124,7 +124,8 @@ interface ElementRecord {
   readonly loadIntervals: LoadInterval[]
   /** When the element was painted with no pending work. */
   readyAt?: number
-  target?: Element
+  /** The container's DOM node, observed for viewport visibility. */
+  readonly target: Element
   /** Undefined until the IntersectionObserver first reports the element. */
   isIntersecting?: boolean
   wasEverIntersecting: boolean
@@ -291,9 +292,6 @@ export class ElementTimingHandle {
   /** The record of the element in the measured run, if any. */
   record?: ElementRecord
 
-  /** The container's DOM node used for viewport visibility tracking. */
-  target?: Element
-
   /** Asynchronous work currently pending in the element, by slot id. */
   readonly loadingSlots = new Map<string, ElementLoadKind>()
 
@@ -309,20 +307,17 @@ export class ElementTimingHandle {
     this.tracker = tracker
   }
 
-  /** Sets the container's DOM node, which decides whether it's visible. */
-  setTarget(target: Element | null): void {
-    this.target = target ?? undefined
-    this.tracker.handleTargetChanged(this)
-  }
-
   /**
    * Called each time the container commits. Registers the element with the
-   * measured run if it belongs to the run and its payload is new.
+   * measured run if it belongs to the run and its payload is new. `target`
+   * is the container's DOM node, whose visibility decides whether the
+   * element counts.
    */
   elementCommitted(
     scriptRunId: string,
     version: unknown,
-    elementType: string
+    elementType: string,
+    target: Element
   ): void {
     if (version === this.committedVersion) return
     this.committedVersion = version
@@ -330,7 +325,8 @@ export class ElementTimingHandle {
       this,
       scriptRunId,
       version,
-      !NON_CONTENT_ELEMENT_TYPES.has(elementType)
+      !NON_CONTENT_ELEMENT_TYPES.has(elementType),
+      target
     )
   }
 
@@ -447,8 +443,8 @@ export class RenderTimingTracker {
   /**
    * Called when the browser sends a rerun request. Set `canFollowInput:
    * false` when no page input caused the request, such as an automatic
-   * fragment rerun, history navigation or a rerun the host requested. This
-   * also clears input delay from a request already waiting for its run.
+   * fragment rerun or history navigation. This also clears input delay from
+   * a request already waiting for its run.
    */
   rerunRequested({
     canFollowInput = true,
@@ -593,17 +589,11 @@ export class RenderTimingTracker {
     handle: ElementTimingHandle,
     scriptRunId: string,
     version: unknown,
-    isContent: boolean
+    isContent: boolean,
+    target: Element
   ): void {
     this.guard(() => {
-      this.addRecord(handle, scriptRunId, version, isContent)
-    })
-  }
-
-  handleTargetChanged(handle: ElementTimingHandle): void {
-    this.guard(() => {
-      const record = this.getMeasuredRecord(handle)
-      if (record) this.observe(record)
+      this.addRecord(handle, scriptRunId, version, isContent, target)
     })
   }
 
@@ -649,7 +639,8 @@ export class RenderTimingTracker {
     handle: ElementTimingHandle,
     scriptRunId: string,
     version: unknown,
-    isContent: boolean
+    isContent: boolean,
+    target: Element
   ): void {
     this.deleteRecord(handle)
 
@@ -666,6 +657,7 @@ export class RenderTimingTracker {
       contentCommittedAt: handle.contentVersion === version ? now : undefined,
       pendingLoads: new Map(),
       loadIntervals: [],
+      target,
       wasEverIntersecting: false,
     }
     handle.loadingSlots.forEach((kind, slot) => {
@@ -676,7 +668,16 @@ export class RenderTimingTracker {
     // Not yet reported by the IntersectionObserver.
     run.waitingCount++
     run.changeCount++
-    this.observe(record)
+    run.recordsByTarget.set(target, record)
+    if (run.observer) {
+      run.observer.observe(target)
+    } else {
+      // Without IntersectionObserver every element counts as visible.
+      updateRecord(record, () => {
+        record.isIntersecting = true
+      })
+      record.wasEverIntersecting = true
+    }
     this.scheduleReadyCheck(record)
   }
 
@@ -729,10 +730,8 @@ export class RenderTimingTracker {
     run.records.delete(record)
     run.recordsToCheck.delete(record)
     if (isWaitingOn(record)) run.waitingCount--
-    if (record.target) {
-      run.recordsByTarget.delete(record.target)
-      run.observer?.unobserve(record.target)
-    }
+    run.recordsByTarget.delete(record.target)
+    run.observer?.unobserve(record.target)
     if (!run.isFinalized) {
       run.changeCount++
       this.scheduleCompletionCheck(run)
@@ -744,30 +743,6 @@ export class RenderTimingTracker {
   ): ElementRecord | undefined {
     const { record } = handle
     return record && !record.run.isFinalized ? record : undefined
-  }
-
-  private observe(record: ElementRecord): void {
-    const { run, handle } = record
-    if (!handle.target || record.target === handle.target) return
-
-    if (record.target) {
-      run.recordsByTarget.delete(record.target)
-      run.observer?.unobserve(record.target)
-    }
-    record.target = handle.target
-    run.recordsByTarget.set(record.target, record)
-    if (run.observer) {
-      updateRecord(record, () => {
-        record.isIntersecting = undefined
-      })
-      run.observer.observe(record.target)
-    } else {
-      // Without IntersectionObserver every element counts as visible.
-      updateRecord(record, () => {
-        record.isIntersecting = true
-      })
-      record.wasEverIntersecting = true
-    }
   }
 
   private handleIntersections(

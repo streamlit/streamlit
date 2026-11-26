@@ -6418,33 +6418,6 @@ describe("App", () => {
       })
     })
 
-    it.each([
-      { type: "RERUN_SCRIPT" },
-      { type: "REQUEST_PAGE_CHANGE", pageScriptHash: "hash1" },
-      { type: "UPDATE_FROM_QUERY_PARAMS", queryParams: "?a=b" },
-    ] as const)(
-      "doesn't attribute a $type rerun to the user's last input",
-      message => {
-        vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
-        const rerunRequested = vi.spyOn(
-          RenderTimingTracker.prototype,
-          "rerunRequested"
-        )
-        try {
-          prepareHostCommunicationManager()
-          getMockConnectionManager(true)
-
-          fireWindowPostMessage(message)
-
-          expect(rerunRequested).toHaveBeenCalledWith({
-            canFollowInput: false,
-          })
-        } finally {
-          rerunRequested.mockRestore()
-        }
-      }
-    )
-
     it("changes scriptRunState and triggers rerunScript when scriptRerunRequested message has been received", () => {
       const hostCommunicationMgr = prepareHostCommunicationManager()
 

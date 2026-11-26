@@ -53,10 +53,15 @@ export function useElementRenderTiming(
   const { element, scriptRunId } = node
 
   useLayoutEffect(() => {
-    if (!handle) return
+    const container = containerRef.current
+    if (!handle || !container) return
 
-    handle.setTarget(containerRef.current)
-    handle.elementCommitted(scriptRunId, element, element.type ?? "")
+    handle.elementCommitted(
+      scriptRunId,
+      element,
+      element.type ?? "",
+      container
+    )
   }, [handle, element, scriptRunId])
 
   useEffect(() => {
