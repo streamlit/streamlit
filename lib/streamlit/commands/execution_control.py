@@ -385,13 +385,12 @@ def switch_page(  # type: ignore[misc]
     your app's logic.
 
     To switch pages when a user clicks a button, call ``st.switch_page`` from
-    the button's ``on_click`` callback. Streamlit then goes straight to the
-    new page. If you call ``st.switch_page`` inside an ``if st.button(...)``
-    block instead, Streamlit first reruns the current page up to that call and
-    only then switches, which is slower and can briefly show the current page
-    again. Calling ``st.switch_page`` in the body of your script is the right
-    choice when the switch depends on your app's logic, such as redirecting a
-    user who isn't logged in.
+    the button's ``on_click`` callback so Streamlit goes straight to the new
+    page. Calling it inside an ``if st.button(...)`` block makes Streamlit
+    rerun the current page up to that call first, which is slower and can
+    briefly show the current page again. Call ``st.switch_page`` in the body
+    of your script only when the switch depends on your app's logic, such as
+    redirecting a user who isn't logged in.
 
     Parameters
     ----------
@@ -460,6 +459,8 @@ def switch_page(  # type: ignore[misc]
 
     The following example shows how to pass query parameters when switching to a
     different page. This example uses ``st.navigation`` to create a multipage app.
+    To link to a page with query parameters without a button, use
+    ``st.page_link`` with its ``query_params`` parameter instead.
 
     .. code-block:: text
 
@@ -487,9 +488,19 @@ def switch_page(  # type: ignore[misc]
 
     **Example 3: Switching pages based on app logic**
 
-    When the switch depends on your app's logic, no callback is involved, so
-    call ``st.switch_page`` in the body of the page. The following example
-    sends users to a login page until they have signed in:
+    When the switch depends on your app's state rather than a user action,
+    call ``st.switch_page`` in the body of the page. The following
+    ``dashboard.py`` page sends users to a login page until they have signed
+    in. ``login.py`` must be a page in ``st.navigation``. Put this check in a
+    page file, not in the entrypoint file, because the entrypoint runs before
+    every page, including ``login.py``.
+
+    .. code-block:: text
+
+        your-repository/
+        ├── dashboard.py
+        ├── login.py
+        └── your_app.py
 
     >>> import streamlit as st
     >>>

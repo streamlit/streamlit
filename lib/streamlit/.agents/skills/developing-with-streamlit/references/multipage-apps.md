@@ -152,7 +152,7 @@ st.Page("app_pages/admin/settings.py", title="Settings", url_path="admin_setting
 
 ## Switching pages from code
 
-Use the navigation menu for regular navigation and `st.page_link` for any other link to a page. Reach for `st.switch_page` only when you need a button or the switch depends on app logic. To switch pages when a user clicks a button, call `st.switch_page` from the button's `on_click` callback:
+Use `st.navigation` and `st.Page` to define the app's navigation, and `st.page_link` for additional links to a page. Use `st.switch_page` only when you need a button or the switch depends on app logic. To switch pages when a user clicks a button, call `st.switch_page` from the button's `on_click` callback:
 
 ```python
 # GOOD: goes straight to the target page
@@ -166,7 +166,7 @@ if st.button("Open settings"):
     st.switch_page("app_pages/settings.py")
 ```
 
-Call `st.switch_page` in the script body only when the switch depends on app logic and no callback exists, such as redirecting a user who isn't logged in.
+Do any work in the callback, then call `st.switch_page` there. Call `st.switch_page` in the script body only for redirects that no widget triggers, such as sending a user who isn't logged in to a login page. Don't put that redirect in the entrypoint file, because it runs before every page, including the login page.
 
 ## Page modules
 
