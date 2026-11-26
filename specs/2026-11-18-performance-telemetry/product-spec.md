@@ -38,6 +38,22 @@ Each addition exists to answer one of these questions about slow runs:
 | Why did the run start, and which kind of widget started it? | Rerun reason |
 | What did the user actually wait for, and what was the browser doing meanwhile? | Render timing |
 
+### Additions
+
+| Addition | What it adds | Measured in |
+|---|---|---|
+| Cache usage | Per cache type: calls, hits, misses, stale hits, waits, and compute, wait and overhead time; how much overlapping async calls counted more than once | Server |
+| Server uptime | Seconds since the server process started, at the start of the run | Server |
+| Per-function cache stats | The same counts and times per cached function, plus the count and time of the queries it ran, identified by a random ID per server process and capped per run | Server |
+| CPU time | CPU time of the script thread, inside commands and of the whole process. Each parallel fragment's CPU time is part of the parallel fragment breakdown | Server |
+| Parallel fragment breakdown | Per parallel fragment: start, wall, command, CPU, query, and cache compute, wait, overhead and async overlap time, capped per run; cache counts across all parallel fragments; how long the main script waited for them | Server |
+| Rerun reason | Why the run started, such as a first load, a page change, a widget interaction or a fragment timer, and for a widget interaction, the type of widget, such as a slider or chart selection (see [Rerun reason](#rerun-reason)) | Server |
+| Render timing | When the user's screen reached each loading milestone, the delay from the user's input to a rerun request, what it waited on after the script finished, the number of visible elements, a viewport size bucket, and flags for hidden, superseded and timed-out runs. No per-element render or paint times (see [Render timing](#render-timing)) | Browser |
+| Data size | Bytes the browser received, the count and bytes of messages served from its message cache, and Arrow bytes for dataframes, tables and charts (see [Data size](#data-size)) | Server and browser |
+| Query time | Per client library: query, failure and describe counts, and execute time, with the count and time inside cached calls and commands | Server |
+
+Each addition describes its fields in `PageProfile.proto` (or `MetricsEvent.proto` for browser-only values), and documents its attribution rules in the telemetry reference when it lands.
+
 ### Principles
 
 Every addition follows three principles:
@@ -86,7 +102,7 @@ The top-level command, cache and query totals still cover the whole run, so the 
 
 The first 25 fragment runs to start get an entry, and later ones are added together into one overflow entry. Each entry adds about 145 bytes to the usage event's JSON, and only runs with parallel fragments send any, so the worst case adds about 4 KB. No fragment IDs or names are sent.
 
-In the browser, render timing records when the screen reached each loading milestone for the user, measured from navigation start (for a first load) or from sending the rerun request (for a rerun). It doesn't time rendering or painting itself, such as how long React takes to render an element or a chart type takes to draw. Those costs are fixed for a given input and are measured by performance suite benchmarks. The milestones depend on what a real app shows, its network and the user's device, which benchmarks can't reproduce:
+In the browser, render timing records when the screen reached each loading milestone for the user, measured from navigation start (for a first load) or from sending the rerun request (for a rerun). For a rerun, it also records the input delay from the user's last input to the request, such as a widget's debounce, so the user's whole wait for a milestone is the input delay plus the milestone. See [Render timing](#render-timing) for what each milestone means and why it's measured:
 
 ```
 app shell ready → connected → first content → script finished → fully loaded
@@ -95,12 +111,8 @@ app shell ready → connected → first content → script finished → fully lo
 ```
 
 - **Script finished** is the end point of today's `totalLoadTime`, so the two can be compared.
-- **Fully loaded** waits only for elements the user can see. Content in collapsed expanders, unselected tabs or a closed sidebar doesn't count.
-- **Visible elements and viewport size** say how much fully loaded waited for. The number of visible elements separates a screen full of charts from one with a single table, which the `commands` list can't do because it counts every call, including content off screen. The viewport size bucket explains why that number varies, since a larger screen shows more of the page. The size is rounded into buckets so exact dimensions aren't sent. Together they add a few bytes per run.
 - **The time after the script**, from script finished to fully loaded, reports how long the screen was waiting on element code or media (images, video and iframes) to load. Each is the time when at least one visible element was waiting on it, not the time of any one element, so the two can overlap. The rest of that time includes drawing charts and dataframes, which performance suite benchmarks measure. Drawing time depends somewhat on the data, so it could be split out later if analysis needs it.
 - **Parallel fragments** are included. A full run waits for its parallel fragments to finish before it sends its `PageProfile` message, and their elements belong to that run, so its milestones cover them.
-
-Fully loaded happens after the `PageProfile` message arrives, so render timing is a separate `renderTiming` event. It's joined to the run's `pageProfile` event by session ID and a per-page-load run index.
 
 ### Query time
 
@@ -162,26 +174,48 @@ Data size shows whether slow runs are the ones that send a lot of data, for exam
 
 Rows, the largest payload and message counts aren't reported, because none of the questions above needs them.
 
-### Additions
+### Render timing
 
-| Addition | What it adds | Measured in |
+`totalLoadTime` starts when a run's first message reaches the browser and stops when its `PageProfile` message is handled. By the time it starts on a first load, the user has already waited for the page to download and connect. On a rerun, they've waited for their interaction to reach the server. After it stops, the page often keeps loading: element code, images and charts can still be on their way. Render timing measures what the user waits for as five milestones, plus a split of the time after the script and, for reruns, the delay before the request. Each stage answers its own questions about the user's experience:
+
+| Stage | Reached when | Questions it answers |
 |---|---|---|
-| Cache usage | Per cache type: calls, hits, misses, stale hits, waits, and compute, wait and overhead time; how much overlapping async calls counted more than once | Server |
-| Server uptime | Seconds since the server process started, at the start of the run | Server |
-| Per-function cache stats | The same counts and times per cached function, plus the count and time of the queries it ran, identified by a random ID per server process and capped per run | Server |
-| CPU time | CPU time of the script thread, inside commands and of the whole process. Each parallel fragment's CPU time is part of the parallel fragment breakdown | Server |
-| Parallel fragment breakdown | Per parallel fragment: start, wall, command, CPU, query, and cache compute, wait, overhead and async overlap time, capped per run; cache counts across all parallel fragments; how long the main script waited for them | Server |
-| Rerun reason | Why the run started, such as a first load, a page change, a widget interaction or a fragment timer, and for a widget interaction, the type of widget, such as a slider or chart selection (see [Rerun reason](#rerun-reason)) | Server |
-| Render timing | When the user's screen reached each loading milestone, what it waited on after the script finished, the number of visible elements, a viewport size bucket, and flags for hidden, superseded and timed-out runs. No per-element render or paint times | Browser |
-| Data size | Bytes the browser received, the count and bytes of messages served from its message cache, and Arrow bytes for dataframes, tables and charts (see [Data size](#data-size)) | Server and browser |
-| Query time | Per client library: query, failure and describe counts, and execute time, with the count and time inside cached calls and commands | Server |
+| Input delay (reruns only) | The rerun request was sent, measured from the user's last input before it: a click, key press, pointer release, file drop or changed value. Unset for automatic reruns, history navigation, and when no input happened in the 2 seconds before the request. | Do widget debounces or a busy browser delay interactions before the server even hears about them, and for which widget types? Together with the rerun reason, how long do users wait from an interaction to its result, compared with a responsiveness target? |
+| App shell ready (first loads only) | The page's HTML and JavaScript have downloaded and run, and the app has mounted. Until then, the user sees a blank page. | Are first loads slow before Streamlit has even connected to the server? How much does that depend on the hosting platform, and on whether the browser already has Streamlit's code from an earlier visit? |
+| Connected (first loads only) | The WebSocket is open and the session has started. The user sees Streamlit's loading skeleton. | How much of a first load is spent connecting and setting up the session? Is it slower on some platforms or network paths, such as behind a proxy? |
+| First content | The first element from the script has finished drawing on screen. Placeholders, skeletons and loading indicators such as `st.spinner` don't count. For a rerun, it's the first changed element. | How long do users look at a blank page, a skeleton or stale content before the app shows something? Do apps show content while their script is still running, or only at the end? Would advice like showing a title before loading data help, and for how many apps? |
+| Script finished | The run's `PageProfile` message has been handled, the same end point as `totalLoadTime`. For a rerun, it's measured from the rerun request rather than from the run's first message. | How long does it take from a user's interaction until the run starts, which `totalLoadTime` leaves out? How much of a first load comes before the script runs, compared with the script itself? |
+| Fully loaded | Every element the user can see has finished loading and drawing. Content in collapsed expanders, unselected tabs, a closed sidebar or below the fold doesn't count. | How long did the user actually wait for the page? How much does the page keep loading after the script has finished? How far does `totalLoadTime` understate the wait, and for which apps? |
+| Time after the script | From script finished to fully loaded, split into the time spent waiting on element code, on media and, for the rest, on drawing (see [How the times fit together](#how-the-times-fit-together)). | When the page keeps loading after the script, is it waiting on Streamlit's element code, on images, video and iframes, or on charts and dataframes drawing? Is element code loading slow mainly on first loads, or also on reruns that show an element type for the first time? |
 
-Each addition describes its fields in `PageProfile.proto` (or `MetricsEvent.proto` for browser-only values), and documents its attribution rules in the telemetry reference when it lands.
+**Visible elements and viewport size** say how much fully loaded waited for. The number of visible elements separates a screen full of charts from one with a single table, which the `commands` list can't do because it counts every call, including content off screen. The viewport size bucket explains why that number varies, since a larger screen shows more of the page. The size is rounded into buckets so exact dimensions aren't sent. Together they add a few bytes per run.
+
+- Are slow pages the ones that show the most at once?
+- Do users on large screens wait longer because more of the page is visible?
+
+**Runs that don't show a real wait are flagged.** Pages in a background tab don't draw, so a run is flagged if the page was hidden while it loaded. It's also flagged if another run started before it finished loading, or if visible elements didn't finish within a timeout after the script finished. Analysis can leave these runs out.
+
+- How often do users interact before the page has finished loading?
+- How often do visible elements never finish loading?
+
+**Why benchmarks can't measure this.** The performance suite runs fixed apps on fixed hardware against a local server, so it measures costs that are fixed for a given input, such as the size of Streamlit's JavaScript or how long a chart type takes to draw a given dataset. Render timing doesn't time rendering or painting itself for that reason. The milestones depend on things benchmarks can't reproduce:
+
+- the network between real users and where the app is hosted, such as SiS, Community Cloud or a server behind a corporate proxy;
+- users' devices, and whether their browser already has Streamlit's code from an earlier visit;
+- what real apps show and in what order, such as how early the script writes something and how many charts fill the first screen;
+- how people use apps: their screen sizes, switching tabs while a page loads, and interacting before it has finished.
+
+Benchmarks also can't say how common a problem is. Telemetry shows which milestone takes longest for the most users, so product work goes where it helps most. For example, if element code loading dominates, the fix is smaller or preloaded element bundles. If connecting dominates, it's faster session setup. If first content comes late, it's guidance on showing content early. Telemetry then shows the effect once the change ships.
+
+Apps served from a local address, such as `localhost` or a private-network IP, don't record render timing, because they measure a developer's machine rather than the people using the app.
+
+App shell ready, connected and script finished are known when the run's `PageProfile` message arrives, so they're sent on the run's `pageProfile` event. The rest is known only once the page has loaded or the run is cut short, so it's sent in a separate `renderTiming` event, joined to the `pageProfile` event by session ID and a per-page-load run index. Holding back the `pageProfile` event until then would risk losing the server's numbers for the slow loads that users abandon.
 
 ### Open questions
 
 1. **Unrecorded query paths.** Which of the [paths that aren't recorded](#query-time) are common enough in real apps to instrument, and whether fetching results should be timed. The safest way to close the largest gaps is in the Snowflake libraries: a query start and finish hook in the connector, and query durations in Snowpark's query listeners. A Streamlit API for queries that `query()` doesn't fit, such as statements without results or uncached reads, would also record more of them.
 2. **Per-function payload.** The cap on per-function cache entries trades payload size against coverage of apps with many cached functions.
+3. **When first content is reached.** [First content](#render-timing) counts an element once it has finished drawing. Counting it when it first appears on screen, such as a chart's empty frame, would show the end of the blank page sooner. The two differ when the first visible elements are charts or images that are still loading.
 
 ## Out of scope
 

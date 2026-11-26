@@ -412,26 +412,218 @@ A message sent as a reference to a copy the browser has cached counts toward byt
 
 ### Render timing
 
-Render timing is measured only in the browser and sent as its own `renderTiming` event, because fully loaded happens after the `PageProfile` message arrives. Holding back the `pageProfile` event instead would lose it whenever a slow page is closed while loading, which is the case that matters most.
+Render timing is measured only in the browser. App shell ready, connected and script finished are known when the run's `PageProfile` message is handled, so they're fields on the `pageProfile` event. The rest is sent as its own `renderTiming` event, because fully loaded happens later. Holding back the `pageProfile` event instead would lose it whenever a slow page is closed while loading, which is the case that matters most, and would let a failure in element tracking delay or drop the server's numbers.
 
 #### Joining to the run
 
 A per-page-load `run_index`, 0 for the first run, is set on both the `pageProfile` and `renderTiming` events of a run. Analysis joins them on `sessionId` and `run_index`. A run that never receives its `PageProfile` message sends no `renderTiming` event, because there's nothing to join it to. `renderTiming` is sent with `fetch(..., { keepalive: true })`, so it still goes out while the page is being hidden or closed.
 
-#### Measuring a run
+#### Where the state lives
 
-- **Start.** Milestones are measured from navigation start for the first run, and from when the browser sent the rerun request for later runs.
-- **Elements.** A per-run `RenderTimingTracker` registers each new or changed element through `ElementContainer`. A probe inside the element's `Suspense` boundary marks when its code has loaded, and elements that draw or load asynchronously, such as charts, the dataframe grid, images, video and iframes, report when they finish through two small hooks.
-- **Visibility.** A per-run `IntersectionObserver` decides which elements count toward fully loaded. Hidden content, such as collapsed expanders, unselected tabs, closed popovers and a collapsed sidebar, never intersects the viewport. Elements pushed out of view stop counting, and elements scrolled into view start.
-- **Completion.** A run is fully loaded once its script has finished and every visible element is ready, after two more frames without changes, so late layout shifts are included.
-- **After the script.** Code loading and media loading are each the union of the matching intervals of visible elements, clipped to the time from script finished to fully loaded, so ten images loading in parallel count once.
-- **Exclusions.** A run is sent early with `was_hidden` if the page is hidden, or `was_superseded` if another rerun starts first. A run not fully loaded 30 seconds after its script finished is sent with `timed_out` and the number of elements still loading.
+`App` owns one `RenderTimingTracker` per page load, outside React. It measures one run at a time. Each element container gets an `ElementTimingHandle`, and each new or changed element in the measured run gets an `ElementRecord`:
 
-Only Navigation Timing, `requestAnimationFrame`, `IntersectionObserver` and the Page Visibility API are used. Largest Contentful Paint and Element Timing aren't, because some browsers lack them and they ignore canvas, which the dataframe grid and several chart libraries draw into.
+```ts
+class RenderTimingTracker {  // created in App.componentDidMount, unless the app is served from a local address
+  run?: RunMeasurement  // the run being measured
+  pendingRequestAt?: number  // the earliest rerun request not yet followed by a run
+  pendingInputDelayMs?: number  // input delay of that request
+  lastInputAt?: number  // the latest user input not yet counted toward a request
+}
+
+interface RunMeasurement {
+  runIndex: number  // 0 for the first run of the page load
+  scriptRunId: string  // only elements from this run register
+  startAt: number  // 0 (navigation start) for run 0, otherwise pendingRequestAt
+  inputDelayMs?: number  // reruns only; see Input delay
+  appShellReadyAt?: number  // run 0 only
+  connectedAt?: number  // run 0 only
+  scriptFinishedAt?: number
+  firstContentAt?: number  // earliest paint of content in the viewport
+  records: Set<ElementRecord>
+  waitingCount: number  // records the run is still waiting on, kept current on every change
+  recordsToCheck: Set<ElementRecord>  // records to check for readiness after the next paint
+  observer: IntersectionObserver  // one per run, disconnected when the run is reported
+  changeCount: number  // bumped by anything that can change whether the run is complete
+  wasHidden: boolean
+  wasSuperseded: boolean
+}
+
+class ElementTimingHandle {  // one per ElementContainer, for as long as it's mounted
+  record?: ElementRecord  // set while the container's element is part of the measured run
+  committedVersion?: unknown  // the element payload last committed
+  loadingSlots: Map<string, "code" | "draw" | "media">  // async work currently pending in the element
+}
+
+interface ElementRecord {  // one per new or changed element in the run
+  registeredAt: number
+  contentCommittedAt?: number  // its code had loaded and its content was in the DOM
+  pendingLoads: Map<string, { kind: "code" | "draw" | "media"; start: number }>
+  loadIntervals: { kind: "code" | "draw" | "media"; start: number; end: number }[]
+  readyAt?: number  // painted with nothing pending
+  isContent: boolean  // false for st.empty, st.space, spinners, progress bars and skeletons
+  isIntersecting?: boolean  // undefined until the observer first reports it
+  wasEverIntersecting: boolean
+}
+```
+
+The tracker is provided through `RenderTimingContext`, but only once the first `NewSession` confirms that usage stats are on. If they're off, the tracker is disposed and the context stays `null`.
+
+#### Run lifecycle
+
+`App` calls the tracker at four points, which set the milestones that need no element tracking:
+
+```ts
+componentDidMount()     → tracker.appMounted()                // app shell ready
+sendRerunBackMsg()      → tracker.rerunRequested({ canFollowInput })  // the next run's start and input delay; supersedes a run still loading
+handleNewSession()      → tracker.runStarted(scriptRunId)     // connected, for run 0; reports a run still loading as superseded
+handlePageProfileMsg()  → tracker.scriptFinished()           // script finished; returns the run index and milestones for the pageProfile event
+```
+
+`scriptFinished()` returns the run index and the app shell ready, connected and script finished times at once, so they're set on the `pageProfile` event. It defers the rest of its work to a microtask, so the `pageProfile` event is always sent before the run's `renderTiming` event. It then starts the 30-second timeout and checks whether the run is already complete.
+
+#### Input delay
+
+A rerun's milestones start at the rerun request, so they leave out the time between the user's input and the request: widget debounces, such as the 150 ms debounce Vega-Lite chart selections had before [#17666](https://github.com/streamlit/streamlit/pull/17666), and input handlers waiting on a busy main thread. `input_delay_ms` reports that time, so the user's whole wait for a milestone is `input_delay_ms` plus the milestone.
+
+The tracker listens on `document`, in the capture phase and passively, for the events that end a discrete interaction: `pointerup`, `click`, `keydown`, `change` and `drop`. It keeps the `timeStamp` of the latest trusted one, which is on the same clock as `performance.now()`. When a rerun request is sent, the time since that input is the request's input delay, and the input is used up, so it counts toward one request at most. Measuring from the last input, such as a brush release or the final keystroke, matches how [#17666](https://github.com/streamlit/streamlit/pull/17666) measured chart selections, and needs no change to any widget. Pointer moves and wheel events are left out because they fire continuously, which would make every delay look short.
+
+The field is unset when:
+
+- **No page input caused the request.** `sendRerunBackMsg` passes `canFollowInput: false` for `isAutoRerun` requests, such as `run_every` fragments, and for history navigation, whose browser buttons aren't page events. These requests don't use up the input, so it still counts toward a user's request that follows.
+- **No unused input happened in the 2 seconds before the request.** An older input is more likely to be unrelated than a real delay. This leaves out interactions the listener can't see: hover- and wheel-driven chart selections, inputs inside iframes such as v1 custom components, and `change` events inside a CCv2 component's shadow root, which don't cross it.
+
+It's a heuristic. An unrelated input shortly before a request, such as a click on empty space just before the host requests a rerun, can still be counted.
+
+#### Registering elements
+
+Every element passes through `ElementContainer`, so it's the one place that registers them:
+
+```tsx
+const { handle, containerRef } = useElementRenderTiming(node)
+// useLayoutEffect on [node.element, node.scriptRunId]:
+//   handle.setTarget(containerRef.current)
+//   handle.elementCommitted(node.scriptRunId, node.element, node.element.type)
+
+<StyledElementContainerLayoutWrapper containerRef={containerRef} ...>
+  <Suspense fallback={<ErrorBoundary><SquareSkeleton /></ErrorBoundary>}>
+    <ElementTimingContext.Provider value={handle}>  {/* null when not measured */}
+      <ErrorBoundary>{children}</ErrorBoundary>
+      {handle && <ElementContentCommitted handle={handle} version={node.element} />}
+    </ElementTimingContext.Provider>
+  </Suspense>
+</StyledElementContainerLayoutWrapper>
+```
+
+- **New or changed elements only.** `elementCommitted` registers an element only if its payload object differs from the last one committed and its `scriptRunId` is the measured run's. `AppRoot` reuses the payload object when an element's hash is unchanged, so an element the server re-sends unchanged doesn't register again.
+- **Element code.** `ElementContentCommitted` is an empty probe after the element inside the same `Suspense` boundary. React commits a boundary's children together, so the probe's layout effect runs only once the element's code-split bundle has loaded and its content is in the DOM. That sets `contentCommittedAt`.
+- **Elements that fail to render.** The `ErrorBoundary` is inside the `Suspense` boundary, so the probe still commits when an element throws, and the element counts as loaded once its error message is painted.
+- **Nothing re-renders.** Handles are created in `useMemo` and records are plain objects, so registering and reporting never set React state. The provider is always rendered, so turning measurement on or off doesn't change the tree's shape or remount elements.
+
+#### Elements that finish later
+
+An element is ready once its content has committed, nothing in it is pending, and a frame has painted. For most elements, that's the first frame after they commit. Elements that draw or load asynchronously report their pending work through two hooks:
+
+```ts
+// Pending while isLoaded is false, for components that already track it in state.
+useElementLoadState(kind: "code" | "draw" | "media", isLoaded: boolean): void
+
+// Pending from when workKey commits until the callback is called, such as from an onLoad handler.
+// Adds no state. Callbacks from an earlier workKey do nothing. Pass null when there's no such work.
+useElementLoadCallback(kind: "code" | "draw" | "media", workKey: unknown): () => void
+```
+
+Each call is a slot, keyed by `useId()`. A slot that's pending when its element registers is carried into the new record. Unmounting a component ends its slots, so an element can't stay pending forever.
+
+| Element | Kind | Signal |
+|---|---|---|
+| Vega-Lite charts | draw | `isViewReady` from `useVegaEmbed` |
+| ECharts | draw | First render, a render error, or a spec that fails to parse |
+| Plotly | draw | Waits for the container width, then `onInitialized` |
+| PyDeck and `st.map` | draw | Deck's `onLoad` |
+| Graphviz | draw | The render promise settles |
+| Dataframe grid | code | The grid's chunk loads behind `LazyDataFrame`'s own Suspense boundary, whose `CodeLoadingSkeleton` fallback keeps the element pending |
+| Dataframe grid | draw | The grid's first `onVisibleRegionChanged`, after it lays out and draws its canvas |
+| Markdown code blocks, Mermaid, math | code | The syntax highlighter, Mermaid and markdown plugins load behind a `CodeLoadingSkeleton` |
+| Images | media | `onLoad` or `onError`, for each image |
+| Video | media | `loadeddata`, `suspend` or `error`, or the YouTube iframe's `onLoad` |
+| `st.iframe` | media | The iframe's `onLoad` |
+| Custom components | media | The component's `COMPONENT_READY` message, which shows its iframe, or the ready warning |
+
+#### Visibility
+
+Each run has one `IntersectionObserver`, which watches the container of every registered element:
+
+- **Fully loaded** counts only elements intersecting the viewport now. Collapsed expanders, unselected tabs, closed popovers and a collapsed sidebar never intersect it. Elements scrolled out of view stop counting, and elements scrolled into view start.
+- **First content** counts elements that intersected it at any point, so scrolling away doesn't remove an element that was already seen.
+- **Waiting for the first report.** A run can't complete until the observer has reported every registered element at least once, so an element isn't treated as hidden before the observer has checked it.
+
+Browsers without `IntersectionObserver` count every element as visible.
+
+#### Completion
+
+```ts
+afterNextPaint(callback) = requestAnimationFrame(() => setTimeout(callback, 0))
+
+// When a record registers, its content commits or a pending slot ends:
+run.recordsToCheck.add(record)
+// At most one check per run per frame covers every record added since the last one:
+afterNextPaint(() => {
+  for (record of run.recordsToCheck)
+    if (contentCommittedAt !== undefined && pendingLoads.size === 0) readyAt = now()
+  run.recordsToCheck.clear()
+})
+
+isWaitingOn(record) = isIntersecting === undefined || (isIntersecting && readyAt === undefined)
+// Every change to isIntersecting or readyAt updates run.waitingCount, so:
+isComplete(run) = run.scriptFinishedAt !== undefined && run.waitingCount === 0
+
+// When isComplete(run), wait two painted frames. If changeCount is unchanged and the
+// run is still complete, report it. Otherwise check again.
+```
+
+The two frames let layout shifts and React commits that were still pending when the run first looked complete take effect, such as an element pushed into view by one above it.
+
+Batching the checks and keeping a count make the work for a run proportional to its number of elements. Without them, each element would queue its own after-paint callback, and each one that became ready after the script finished would scan the run's records, which adds up to about \(n^2/2\) record checks for \(n\) such elements.
+
+#### Computing the fields
+
+`firstContentAt` is kept on the run, set when a content record that has been in the viewport becomes ready. An element that changes during the run, such as text streamed by `st.write_stream`, replaces its record, so the time of its first paint would otherwise be lost. The rest is computed when a run is reported:
+
+```ts
+fullyLoadedAt   = max(scriptFinishedAt, readyAt of every visible record)  // only if complete
+codeLoadingMs   = union of [registeredAt, contentCommittedAt] and "code" intervals over
+                  visible records, clipped to [scriptFinishedAt, fullyLoadedAt or the timeout]
+mediaLoadingMs  = the same union over visible records' "media" intervals
+```
+
+Each `_ms` field is the time minus `startAt`. The unions mean ten images loading in parallel count once.
+
+#### Exclusions
+
+A run is reported early, without `fully_loaded_ms`:
+
+- **`was_hidden`** if the page was hidden while the run was measured. For the first run, that includes the time before it started. A run hidden after its script finished is reported at once.
+- **`was_superseded`** if a rerun was requested or another run started before this one finished loading.
+- **`timed_out`**, with the number of visible elements still loading, if the run wasn't complete 30 seconds after its script finished.
+
+Only Navigation Timing, `requestAnimationFrame`, `IntersectionObserver`, the Page Visibility API and input event timestamps are used. See [Browser paint APIs](#browser-paint-apis) for why Largest Contentful Paint, Element Timing and First Contentful Paint aren't, and [Time loads with Resource Timing](#time-loads-with-resource-timing) for why download times don't decide readiness.
+
+#### Failures
+
+As on the server, telemetry failures never reach the app. The probe and registration run outside the element's `ErrorBoundary`, so an error from the tracker could otherwise unmount the whole app. Every tracker method, including the after-paint and `IntersectionObserver` callbacks and the report handler, catches errors. On the first error it logs the error and disposes itself, so nothing more is measured or reported for the rest of the page load. Unit tests inject a failure into an element call, a paint callback and the report handler, and check that the app keeps rendering.
 
 #### Cost
 
-Apps served from localhost, loopback addresses, `0.0.0.0` or private-network IPs create no tracker, and neither do apps with usage stats off. They pay one context read and no-op effects per element. With a tracker, each new or changed element adds a context provider, an empty probe and a few `performance.now()` calls, about 7 µs per element on a first load. No element re-renders for render timing, and observers and timers exist only while a run is measured.
+Apps served from `localhost` or `.local` names, loopback addresses, `0.0.0.0`, or private, link-local or CGNAT IPv4 and IPv6 addresses create no tracker, and neither do apps with usage stats off. If `MetricsManager` initializes without a destination, for example when the host sets `metricsUrl` to `"off"`, the tracker is disposed and ignores every later call. They pay one context read and no-op effects per element. With a tracker, each new or changed element adds a context provider, an empty probe, a record and one `observe()` call on the run's `IntersectionObserver`. Each run adds one after-paint callback per frame while elements are changing, plus building and sending the `renderTiming` event.
+
+Measured in a production build with Chromium's CPU profiler, counting all time spent in the tracker module, including the browser APIs it calls (median of 7 first loads at 1280×900):
+
+| App | Elements | Tracker time | Share of the page's JavaScript time |
+|---|---|---|---|
+| `e2e_playwright/mega_tester_app.py` | 208 | 3.2 ms | 0.16% |
+| 1,000-element stress app | 1,033 | 6.3 ms | 0.42% |
+
+That's about 6 µs per element, plus about 1 ms per run to build and send the event. Comparing whole-page main-thread time with the tracker on and off gives differences within the noise between loads, about ±15 ms. No element re-renders for render timing, and observers and timers exist only while a run is measured.
 
 ### Known limitations
 
@@ -441,7 +633,9 @@ Apps served from localhost, loopback addresses, `0.0.0.0` or private-network IPs
 - **Unfinished work.** Cached calls still running when the profile is built are left out, and a thread the script doesn't join can be partly included.
 - **The async overlap is a total.** `async_overlap_time` corrects the sum of the cache times, but doesn't say which calls overlapped, so compute, wait and overhead time still overlap each other in async code.
 - **Unrecorded query paths and Snowpark times.** The paths the product spec lists as not recorded stay in user code, and Snowpark queries are counted but not timed.
-- **Profiles of interrupted runs are usually dropped.** A run cut short by a rerun request enqueues its profile, but the next run clears the forward message queue when it starts, and `AppSession._clear_queue` doesn't keep `page_profile` messages. This affects every field and is fixed separately.
+- **Profiles of interrupted runs are usually dropped.** A run cut short by a rerun request enqueues its profile, but the next run clears the forward message queue when it starts, and `AppSession._clear_queue` doesn't keep `page_profile` messages. This affects every field and is fixed separately. Those runs also send no `renderTiming` event.
+- **Async elements without a hook count as ready after their first paint.** Audio, images inside Markdown and custom components v2 don't report pending work, so fully loaded can come before they finish. A new element that draws or loads asynchronously needs one of the two hooks.
+- **Time before Streamlit's page loads isn't covered.** Navigation start is the Streamlit page's own. On SiS, the host's loader around the iframe comes before it.
 
 ## Alternatives considered
 
@@ -498,7 +692,61 @@ A single `parallel_fragment_cpu_time` needs no change to the per-fragment entrie
 
 `ScriptRunContext.enqueue` calls `populate_hash_if_needed`, which serializes every message except references and `initialize` to compute its hash. The server could add each message's size to the enqueuing thread's `ThreadRunStats` there for a few additions per message. That would answer the same question as the browser's received bytes, how much data a run sends, but from what the server queued rather than what arrived: it would include messages cleared from the queue when a rerun starts. The browser's count is the more direct measure, so the server doesn't keep a second one.
 
+### Browser paint APIs
+
+The browser reports some paint milestones itself, but none of them fits:
+
+- **First Contentful Paint** fires for the first pixels of any content, which is Streamlit's own skeleton, not the app's.
+- **Largest Contentful Paint** reports only the largest element, ignores canvas, which the dataframe grid and several chart libraries draw into, stops at the user's first input, and covers only the page load, not reruns.
+- **Element Timing** needs an attribute on each element and is available only in Chromium-based browsers, and it also ignores canvas.
+
+### Time input delay with the Event Timing API
+
+The Event Timing API, which INP is built on, reports each interaction's start and the time to the next paint, and could be matched to the rerun request that followed. It isn't available in every browser Streamlit supports, and its next paint is usually the widget's own feedback rather than the run's result, so it measures less of the wait than render timing does. A document listener works in every browser and gives the input time directly.
+
+### Pass the input time through each widget
+
+Widgets could add the triggering event's timestamp to the `Source` they pass to `WidgetStateManager`, which would attribute each request to its exact input, including hover-driven chart selections. It would touch every widget and every custom component API, and a missing timestamp would go unnoticed. It could still be added later for the few widgets where the document listener's guess is weak.
+
+### Watch the DOM for changes
+
+A `MutationObserver` could find new elements without changing `ElementContainer`. It sees nodes being added, but not when a canvas has been drawn or an image has loaded. It can't tell which run a node belongs to, and it fires for every DOM change, including Streamlit's own UI and animations.
+
+### Wait for a quiet period
+
+Browser monitoring tools such as Datadog RUM and Sentry measure a single-page app's load this way: the page is loaded at its last DOM change or network request before a short window with neither, typically 100 ms to 1 s. The window only delays when the result is sent, not the time reported. It needs no changes to elements and catches async work that no element reports, but it doesn't measure what render timing needs:
+
+- **Canvas drawing is invisible to it.** Drawing into a canvas changes no DOM, so the dataframe grid or a chart can finish drawing after the last change it sees.
+- **It covers the whole page.** Images below the fold and other off-screen content count toward it, and it can't count visible elements.
+- **It gives one number.** It can't split the time after the script into element code, media and drawing.
+- **Some apps never go quiet.** Fragments with `run_every`, spinners and components that poll keep changing the page, so those runs would report a cap instead of a time.
+
+It could still be added later as a fallback for async elements that don't have a hook yet.
+
+### Time loads with Resource Timing
+
+A `PerformanceObserver` for `resource` entries reports when each JavaScript chunk, image, video and iframe download started and finished, including cross-origin ones, with no changes to elements. It could replace the media hooks and time element code downloads directly. It isn't used to decide when an element is ready:
+
+- **Entries are keyed by URL.** Attributing a download to a visible element means mapping URLs back to elements, and one code chunk serves every element of its type.
+- **A download ends when its bytes arrive.** An image still has to be decoded and painted, and an iframe has to render its page.
+- **Some loads leave no entry,** such as images served from the browser's memory cache.
+
+Element signals cover both the download and what follows it. Resource Timing could add detail later, such as how much of code loading was the download rather than running the code.
+
+### Track readiness in React state
+
+Each element could set "ready" in state, or a context could hold a map of ready elements. Either would re-render elements, or every consumer of the context, as they finish loading, which changes the rendering that's being measured. The tracker sits outside React, and hooks write to it from layout effects and event handlers.
+
+### Require every element to report ready
+
+Every element type could call a hook to say it's ready. Most elements are ready as soon as they're painted, so that would add a call to dozens of components that have nothing to report. Instead, elements are ready after their first paint by default, and only those that finish later report pending work. The cost is that a new async element without a hook counts as ready too early (see [Known limitations](#known-limitations)).
+
+### Check visibility by measuring each element
+
+Reading each element's `getBoundingClientRect()` after it's painted would avoid the observer. Each read can force a layout, once per element per frame. It would also have to be repeated on scroll and resize to track elements moving in and out of view. `IntersectionObserver` reports changes asynchronously, with no forced layout.
+
 ## Open questions
 
 1. **Attached threads in fragment entries.** Whether analysis needs a fragment's attached threads in its entry, which would need the locking described in [Alternatives considered](#count-a-fragments-attached-threads-toward-the-fragment).
 2. **Per-function cache stats.** Where the random ID is stored, the cap per run, and which functions are kept past it: for example, the ones with the most cache time in the run.
+3. **Splitting app shell ready.** Navigation Timing already reports when the server's first byte arrived, when the HTML finished downloading and when `DOMContentLoaded` fired. A few more fields per first load would say whether a slow app shell is the network or the device running Streamlit's JavaScript.
