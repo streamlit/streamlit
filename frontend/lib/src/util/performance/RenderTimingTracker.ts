@@ -233,12 +233,8 @@ function updateRecord(record: ElementRecord, change: () => void): void {
   record.run.waitingCount += Number(isWaitingOn(record)) - Number(wasWaiting)
 }
 
-/**
- * Records when the record's content was first shown as the run's first
- * content if it's earliest: its paint, or `scrolledInAt` if it was painted
- * offscreen.
- */
-function noteFirstContent(record: ElementRecord, scrolledInAt?: number): void {
+/** Records the record's paint as the run's first content if it's earliest. */
+function noteFirstContent(record: ElementRecord): void {
   const { run, readyAt } = record
   if (
     !record.isContent ||
@@ -247,8 +243,7 @@ function noteFirstContent(record: ElementRecord, scrolledInAt?: number): void {
   ) {
     return
   }
-  const shownAt = scrolledInAt ?? readyAt
-  run.firstContentAt = Math.min(run.firstContentAt ?? shownAt, shownAt)
+  run.firstContentAt = Math.min(run.firstContentAt ?? readyAt, readyAt)
 }
 
 /** Returns the largest lower bound in `bounds` that `size` reaches. */
@@ -751,17 +746,14 @@ export class RenderTimingTracker {
   ): void {
     if (run.isFinalized) return
 
-    const now = this.env.now()
     for (const entry of entries) {
       const record = run.recordsByTarget.get(entry.target)
       if (!record) continue
-      // One the observer hadn't reported yet was shown when it was painted.
-      const scrolledInAt = record.isIntersecting === false ? now : undefined
       updateRecord(record, () => {
         record.isIntersecting = entry.isIntersecting
       })
       record.wasEverIntersecting ||= entry.isIntersecting
-      if (entry.isIntersecting) noteFirstContent(record, scrolledInAt)
+      noteFirstContent(record)
     }
     run.changeCount++
     this.scheduleCompletionCheck(run)
