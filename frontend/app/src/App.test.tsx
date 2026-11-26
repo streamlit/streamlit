@@ -62,6 +62,7 @@ import {
   lightTheme,
   LocalStore,
   mockSessionInfoProps,
+  RenderTimingTracker,
   RootStyleProvider,
   ScriptRunState,
   SessionInfo,
@@ -805,6 +806,33 @@ describe("App", () => {
           ],
         ])
       })
+    })
+
+    it("doesn't attribute automatic reruns to the user's last input", () => {
+      vi.useFakeTimers()
+      vi.mocked(isEmbed).mockReturnValue(false)
+      vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
+      const rerunRequested = vi.spyOn(
+        RenderTimingTracker.prototype,
+        "rerunRequested"
+      )
+      try {
+        renderApp(getProps())
+        sendMeasuredNewSession()
+
+        act(() => {
+          sendForwardMessage("autoRerun", {
+            interval: 1.0,
+            fragmentId: "myFragmentId",
+          })
+          vi.advanceTimersByTime(1000)
+        })
+
+        expect(rerunRequested).toHaveBeenCalledWith({ canFollowInput: false })
+      } finally {
+        rerunRequested.mockRestore()
+        vi.useRealTimers()
+      }
     })
 
     it("keeps measuring after a StrictMode remount", () => {

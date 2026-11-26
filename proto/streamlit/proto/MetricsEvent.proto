@@ -134,7 +134,8 @@ message ReceivedMessages {
 // every visible element of the run has finished loading, or earlier when the
 // run is hidden, superseded or times out. Durations only; no app content.
 //
-// Fields ending in _ms are milliseconds from the start of the run: navigation
+// Fields ending in _ms, other than input_delay_ms and the *_loading_ms
+// durations, are milliseconds from the start of the run: navigation
 // start for the first run of a page load (run_index 0), otherwise the time
 // the browser sent the rerun request. Milestones that weren't reached are
 // unset.
@@ -196,6 +197,17 @@ message RenderTiming {
   // elements, and elements whose visibility hadn't been reported yet. The
   // latter aren't in visible_elements, so this can be the larger number.
   int32 timed_out_elements = 14;
+
+  // Reruns only: milliseconds from the user's last input in the page (a
+  // pointer release, click, key press, file drop or committed change) to the
+  // rerun request, so the user's whole wait is input_delay_ms plus a
+  // milestone. It covers delays before the request is sent, such as widget
+  // debounces and a busy main thread. Each input counts toward one request
+  // at most. Unset for automatic reruns (such as run_every fragments) and
+  // history navigation, and when no uncounted input happened in the 2
+  // seconds before the request, such as for hover-driven chart selections
+  // or inputs inside an iframe.
+  optional int64 input_delay_ms = 15;
 }
 
 message BrowserInfo {

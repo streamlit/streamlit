@@ -2637,7 +2637,9 @@ export class App extends PureComponent<Props, State> {
       this.historyNavigationEpoch = this.rerunEpoch
     }
 
-    this.renderTimingTracker?.rerunRequested()
+    this.renderTimingTracker?.rerunRequested({
+      canFollowInput: isAutoRerun !== true && isHistoryNavigation !== true,
+    })
     this.sendBackMsg(
       new BackMsg({
         rerunScript: {
