@@ -119,8 +119,6 @@ import {
   notUndefined,
   preserveEmbedQueryParams,
   type PresetThemeName,
-  type RenderTimingReport,
-  RenderTimingTracker,
   ScriptRunState,
   SessionInfo,
   sortThemeInputKeys,
@@ -157,7 +155,6 @@ import {
 } from "@streamlit/protobuf"
 import {
   isLocalhost,
-  isLocalOrPrivateHostname,
   isNullOrUndefined,
   localStorageAvailable,
   notNullOrUndefined,
@@ -243,12 +240,6 @@ interface State {
   hostToolbarItems: IToolbarItem[]
   hostHideSidebarNav: boolean
   sidebarChevronDownshift: number
-  /**
-   * Whether elements report to the render timing tracker.
-   * `handleInitialization` turns this on once a NewSession confirms that
-   * usage stats are gathered.
-   */
-  isRenderTimingEnabled: boolean
   pageLinkBaseUrl: string
   queryParams: string
   deployedAppMetadata: DeployedAppMetadata
@@ -336,13 +327,6 @@ export class App extends PureComponent<Props, State> {
   private readonly metricsMgr = new MetricsManager(this.sessionInfo)
 
   private readonly receivedMessagesTracker = new ReceivedMessagesTracker()
-
-  /**
-   * Measures browser render timing for renderTiming metrics events while the
-   * app is mounted. Null for apps served from a local address, which are left
-   * out of the analysis, and once the server reports that usage stats are off.
-   */
-  private renderTimingTracker: RenderTimingTracker | null = null
 
   private readonly sessionEventDispatcher = new SessionEventDispatcher()
 
@@ -520,7 +504,6 @@ export class App extends PureComponent<Props, State> {
       hostToolbarItems: [],
       hostHideSidebarNav: false,
       sidebarChevronDownshift: 0,
-      isRenderTimingEnabled: false,
       pageLinkBaseUrl: "",
       // Initialize from URL so bound widget params from shared links are
       // preserved on first page navigation (before handlePageInfoChanged fires).
@@ -831,13 +814,6 @@ export class App extends PureComponent<Props, State> {
   }
 
   override componentDidMount(): void {
-    if (!isLocalOrPrivateHostname(window.location.hostname)) {
-      this.renderTimingTracker = new RenderTimingTracker({
-        onReport: report => this.handleRenderTimingReport(report),
-      })
-      this.renderTimingTracker.appMounted()
-    }
-
     // Initialize connection manager here, to avoid
     // "Can't call setState on a component that is not yet mounted." error.
     this.initializeConnectionManager()
@@ -931,8 +907,6 @@ export class App extends PureComponent<Props, State> {
     // happy since connectionManager's type is `ConnectionManager | null`,
     // but at this point it should always be set.
     this.connectionManager?.disconnect()
-    this.renderTimingTracker?.dispose()
-    this.renderTimingTracker = null
 
     this.hostCommunicationMgr.closeHostCommunication()
 
@@ -1407,7 +1381,6 @@ export class App extends PureComponent<Props, State> {
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
     const pageProfileObj = PageProfile.toObject(pageProfile)
     const browserInfo = getBrowserInfo()
-    const runIndex = this.renderTimingTracker?.scriptFinished()
 
     this.metricsMgr.enqueue("pageProfile", {
       ...pageProfileObj,
@@ -1420,24 +1393,7 @@ export class App extends PureComponent<Props, State> {
       ),
       browserInfo,
       receivedMessages: this.receivedMessagesTracker.getRunTotals(),
-      ...(runIndex !== undefined && { runIndex }),
     })
-  }
-
-  private async initializeMetrics(gatherUsageStats: boolean): Promise<void> {
-    await this.metricsMgr.initialize({
-      gatherUsageStats,
-      sendMessageToHost: this.hostCommunicationMgr.sendMessageToHost,
-    })
-    // A metrics config that fails to load can succeed on a reconnect, so
-    // only the host turning metrics off stops the tracker. The disposed
-    // tracker stays in context and ignores every call, so elements don't
-    // re-render.
-    if (this.metricsMgr.isTurnedOffByHost) this.renderTimingTracker?.dispose()
-  }
-
-  handleRenderTimingReport = (report: RenderTimingReport): void => {
-    this.metricsMgr.enqueue("renderTiming", report)
   }
 
   handleAutoRerun = (autoRerun: AutoRerun): void => {
@@ -1642,12 +1598,6 @@ export class App extends PureComponent<Props, State> {
       this.historyNavigationEpoch = null
     }
 
-    const { scriptRunId, fragmentIds: fragmentIdsThisRun } =
-      getNewSessionRunIdentity(metadata)
-    // Before a reconnect replaces the session info, so a run this cuts short
-    // is reported under its own session ID.
-    this.renderTimingTracker?.runStarted(scriptRunId)
-
     // First, handle initialization logic. Each NewSession message has
     // initialization data. If this is the _first_ time we're receiving
     // the NewSession message (or the first time since disconnect), we
@@ -1664,6 +1614,8 @@ export class App extends PureComponent<Props, State> {
       pageScriptHash: newPageScriptHash,
       mainScriptHash,
     } = newSessionProto
+    const { scriptRunId, fragmentIds: fragmentIdsThisRun } =
+      getNewSessionRunIdentity(metadata)
 
     if (!fragmentIdsThisRun.length) {
       // This is a normal rerun, remove all the auto reruns intervals
@@ -1746,14 +1698,10 @@ export class App extends PureComponent<Props, State> {
     )
 
     // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-    this.initializeMetrics(config.gatherUsageStats)
-
-    if (!config.gatherUsageStats) {
-      this.renderTimingTracker?.dispose()
-      this.renderTimingTracker = null
-    } else if (this.renderTimingTracker && !this.state.isRenderTimingEnabled) {
-      this.setState({ isRenderTimingEnabled: true })
-    }
+    this.metricsMgr.initialize({
+      gatherUsageStats: config.gatherUsageStats,
+      sendMessageToHost: this.hostCommunicationMgr.sendMessageToHost,
+    })
 
     // Protobuf typing cannot handle complex types, so we need to cast to what
     // we know it should be
@@ -2641,9 +2589,6 @@ export class App extends PureComponent<Props, State> {
       this.historyNavigationEpoch = this.rerunEpoch
     }
 
-    this.renderTimingTracker?.rerunRequested({
-      canFollowInput: isAutoRerun !== true && isHistoryNavigation !== true,
-    })
     this.sendBackMsg(
       new BackMsg({
         rerunScript: {
@@ -3125,9 +3070,6 @@ export class App extends PureComponent<Props, State> {
         showErrorLinks={this.state.showErrorLinks}
         disableDataExport={this.state.disableDataExport}
         backendOperationClient={this.backendOperationClient}
-        renderTimingTracker={
-          this.state.isRenderTimingEnabled ? this.renderTimingTracker : null
-        }
         // In-error "install skills" callout. Gated on the server's
         // recommendation plus localhost/embed (consistent with the exception
         // box's own AI-links gate), not-yet-installed-this-session, and not

@@ -169,27 +169,6 @@ describe("initialize", () => {
     expect(mm.actuallySendMetrics).toBe(false)
   })
 
-  it.each([
-    ["off", true],
-    ["postMessage", false],
-    [DEFAULT_METRICS_CONFIG, false],
-  ])(
-    "reports whether the host turned metrics off for metricsUrl %j",
-    (metricsConfig, isTurnedOffByHost) => {
-      const mm = getMetricsManager(undefined, metricsConfig)
-
-      expect(mm.isTurnedOffByHost).toBe(isTurnedOffByHost)
-    }
-  )
-
-  it("isn't turned off by the host when the metrics config fails to load", async () => {
-    const mm = getMetricsManager(undefined, "")
-    await mm.initialize({ gatherUsageStats: true })
-
-    expect(mm.actuallySendMetrics).toBe(false)
-    expect(mm.isTurnedOffByHost).toBe(false)
-  })
-
   it("does not call requestDefaultMetricsConfig when metrics config set", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
@@ -480,52 +459,6 @@ describe("metrics helpers", () => {
     expect(withoutUsage).not.toHaveProperty("parallelFragmentUsage")
   })
 
-  it("buildEventProto populates expected fields - renderTiming", async () => {
-    const mm = getMetricsManager()
-    await mm.initialize({ gatherUsageStats: true })
-    mm.setAppHash("mockAppHash")
-
-    const renderTimingProto = mm.buildEventProto("renderTiming", {
-      sessionId: "mockSessionId",
-      runIndex: 2,
-      renderTiming: {
-        scriptFinishedMs: 120,
-        fullyLoadedMs: 300,
-        mediaLoadingMs: 180,
-        visibleElements: 4,
-        wasSuperseded: false,
-      },
-    })
-
-    expect(renderTimingProto.event).toEqual("renderTiming")
-    checkDefaultEventData(renderTimingProto)
-    expect(renderTimingProto.sessionId).toEqual("mockSessionId")
-    expect(renderTimingProto.toJSON()).toMatchObject({
-      runIndex: "2",
-      renderTiming: {
-        scriptFinishedMs: "120",
-        fullyLoadedMs: "300",
-        mediaLoadingMs: "180",
-        visibleElements: 4,
-      },
-    })
-  })
-
-  it("buildEventProto adds runIndex to pageProfile events", async () => {
-    const mm = getMetricsManager()
-    await mm.initialize({ gatherUsageStats: true })
-
-    const pageProfileProto = mm.buildEventProto("pageProfile", {
-      ...PAGE_PROFILE_DATA,
-      runIndex: 3,
-    })
-
-    expect(pageProfileProto.toJSON().runIndex).toEqual("3")
-    expect(
-      mm.buildEventProto("pageProfile", PAGE_PROFILE_DATA).toJSON()
-    ).not.toHaveProperty("runIndex")
-  })
-
   it("buildEventProto forwards CPU times through toJSON - pageProfile", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
@@ -756,27 +689,6 @@ it("tracks events immediately after initialized", async () => {
   expect(mm.track.mock.calls.length).toBe(2)
   mm.enqueue("ev3", { data3: 13 })
   expect(mm.track.mock.calls.length).toBe(3)
-})
-
-it("only sends renderTiming events with keepalive while the page is hidden", async () => {
-  const visibilityState = vi.spyOn(document, "visibilityState", "get")
-  const mm = getMetricsManager()
-  mm.track = MetricsManager.prototype.track
-  await mm.initialize({ gatherUsageStats: true })
-  fetch.mockClear()
-
-  visibilityState.mockReturnValue("visible")
-  mm.enqueue("renderTiming", { renderTiming: {} })
-  visibilityState.mockReturnValue("hidden")
-  mm.enqueue("renderTiming", { renderTiming: {} })
-  mm.enqueue("pageProfile", {})
-
-  expect(fetch.mock.calls.map(([request]) => request.keepalive)).toEqual([
-    false,
-    true,
-    false,
-  ])
-  visibilityState.mockRestore()
 })
 
 it("tracks host data when in an iFrame", async () => {
