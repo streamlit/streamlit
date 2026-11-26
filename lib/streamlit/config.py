@@ -3159,10 +3159,15 @@ def _update_config_with_env_vars(
 
     This should only be called from get_config_options.
 
-    Sensitive options are stored as raw strings. Other options are converted to
-    their declared type, as `streamlit run` does, and an empty value counts as
-    unset. A value that cannot be converted is logged and ignored. Options in
-    `overridden_keys` are skipped because a higher-precedence source sets them.
+    - Sensitive options are stored as raw strings.
+    - Unset or empty variables, and options in `overridden_keys`, are skipped.
+      A higher-precedence source sets the overridden options.
+    - Other options are converted to their declared type, as `streamlit run`
+      does. A value that cannot be converted is logged and ignored.
+
+    Startup validation (`_validate_env_vars`) raises before the server starts.
+    This function only logs and keeps the previous value, so a later config
+    reload cannot crash a running server.
     """
     import click
 
@@ -3178,9 +3183,10 @@ def _update_config_with_env_vars(
         try:
             converted_value = _convert_env_var_value(opt_val, env_var_value)
         except click.BadParameter as exc:
-            # User config error: the message names the variable, so skip the traceback.
+            # Log without a traceback: the message already names the variable
+            # and the bad value.
             _LOGGER.error(  # noqa: TRY400
-                "Ignoring environment variable. %s", exc.format_message()
+                "Ignoring invalid environment variable: %s", exc.format_message()
             )
             continue
         if converted_value != ():
@@ -3190,8 +3196,9 @@ def _update_config_with_env_vars(
 def _validate_env_vars(overridden_keys: Collection[str] = ()) -> None:
     """Raise if an environment variable for a non-sensitive option is invalid.
 
-    Options in `overridden_keys`, or already set by a command-line flag, are
-    skipped because the environment variable has no effect on them.
+    Skips options in `overridden_keys`, and options already loaded from
+    `options_from_flags` (CLI flags or `App.run(config=...)`), because the
+    environment variable has no effect on them.
 
     Raises
     ------

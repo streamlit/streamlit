@@ -16,13 +16,16 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 import click
 import pytest
 
 from streamlit import config
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _env_var(key: str) -> str:
@@ -121,7 +124,7 @@ def test_empty_env_var_is_treated_as_unset(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 def test_flag_overrides_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Flags and `App.run(config=...)` overrides win over env vars."""
+    """A flag override wins over an environment variable."""
     monkeypatch.setenv(_env_var("server.maxUploadSize"), "300")
 
     config.get_config_options(
@@ -132,18 +135,23 @@ def test_flag_overrides_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
     assert config.get_where_defined("server.maxUploadSize") == config._DEFINED_BY_FLAG
 
 
-def test_env_var_overrides_config_file(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_env_var_overrides_config_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """Env vars take precedence over values from config.toml."""
-    monkeypatch.setenv(_env_var("server.maxUploadSize"), "300")
-    config.get_config_options(force_reparse=True)
-    config._update_config_with_toml(
-        "[server]\nmaxUploadSize = 700", "<test definition>"
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("[server]\nmaxUploadSize = 700\n")
+    monkeypatch.setattr(
+        config, "get_config_files", lambda *_args, **_kwargs: [str(config_file)]
     )
-    assert config.get_option("server.maxUploadSize") == 700
+    monkeypatch.setenv(_env_var("server.maxUploadSize"), "300")
 
     config.get_config_options(force_reparse=True)
 
     assert config.get_option("server.maxUploadSize") == 300
+    assert (
+        config.get_where_defined("server.maxUploadSize") == config._DEFINED_BY_ENV_VAR
+    )
 
 
 def test_invalid_env_var_is_logged_and_ignored(
