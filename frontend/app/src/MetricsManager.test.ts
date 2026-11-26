@@ -170,21 +170,26 @@ describe("initialize", () => {
   })
 
   it.each([
-    ["an HTTPS URL", DEFAULT_METRICS_CONFIG, true, true],
-    ["postMessage", "postMessage", true, true],
-    ["off", "off", true, false],
-    ["a URL with usage stats off", DEFAULT_METRICS_CONFIG, false, false],
+    ["off", true],
+    ["postMessage", false],
+    [DEFAULT_METRICS_CONFIG, false],
+    ["", false],
   ])(
-    "reports whether it's active once initialized, for %s",
-    async (_, metricsConfig, gatherUsageStats, isActive) => {
+    "reports whether the host turned metrics off for metricsUrl %j",
+    (metricsConfig, isTurnedOffByHost) => {
       const mm = getMetricsManager(undefined, metricsConfig)
-      expect(mm.isActive).toBe(false)
 
-      await mm.initialize({ gatherUsageStats })
-
-      expect(mm.isActive).toBe(isActive)
+      expect(mm.isTurnedOffByHost).toBe(isTurnedOffByHost)
     }
   )
+
+  it("isn't turned off by the host when the metrics config fails to load", async () => {
+    const mm = getMetricsManager(undefined, "")
+    await mm.initialize({ gatherUsageStats: true })
+
+    expect(mm.actuallySendMetrics).toBe(false)
+    expect(mm.isTurnedOffByHost).toBe(false)
+  })
 
   it("does not call requestDefaultMetricsConfig when metrics config set", async () => {
     const mm = getMetricsManager()

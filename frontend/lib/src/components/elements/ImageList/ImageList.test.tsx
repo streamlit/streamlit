@@ -99,6 +99,23 @@ describe("ImageList Element", () => {
     tracker.dispose()
   })
 
+  it("counts images that loaded before they committed as loaded", () => {
+    const completeSpy = vi
+      .spyOn(HTMLImageElement.prototype, "complete", "get")
+      .mockReturnValue(true)
+    const tracker = new RenderTimingTracker({ onReport: vi.fn() })
+    const handle = tracker.createElementHandle()
+    render(
+      <ElementTimingContext.Provider value={handle}>
+        <ImageList {...getProps()} />
+      </ElementTimingContext.Provider>
+    )
+
+    expect(handle.loadingSlots.size).toBe(0)
+    tracker.dispose()
+    completeSpy.mockRestore()
+  })
+
   describe("Link parameter", () => {
     it("renders image wrapped in link when link is provided", () => {
       const props = getProps({

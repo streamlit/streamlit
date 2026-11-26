@@ -165,10 +165,17 @@ const Image = ({
 
   const src = buildMediaURL(image.url)
   const markImageLoaded = useElementLoadCallback("media", src)
+  const imgRef = useRef<HTMLImageElement>(null)
+  // A cached image can finish loading while a time-sliced render is paused,
+  // before React commits it and can deliver the load event.
+  useLayoutEffect(() => {
+    if (imgRef.current?.complete === true) markImageLoaded()
+  }, [markImageLoaded])
 
   const imageElement = (
     // oxlint-disable-next-line jsx-a11y/alt-text
     <img
+      ref={imgRef}
       style={imgStyle}
       src={src}
       alt={imgAlt}

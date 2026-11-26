@@ -22,8 +22,9 @@ import type {
 } from "~lib/util/performance/RenderTimingTracker"
 
 /**
- * The app's render timing tracker, or null when render timing isn't measured
- * (local apps, or usage stats turned off).
+ * The app's render timing tracker, or null for local apps and when usage
+ * stats are off. A tracker stopped for another reason, such as the host
+ * turning metrics off, stays in context and ignores every call.
  */
 export const RenderTimingContext = createContext<RenderTimingTracker | null>(
   null

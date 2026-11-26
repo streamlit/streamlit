@@ -138,8 +138,8 @@ export const ElementContainer = memo(function ElementContainer({
           </ErrorBoundary>
         }
       >
-        {/* The tree has the same shape whether or not render timing is on, so
-            turning it on or off doesn't remount the element. */}
+        {/* Keep the timing provider mounted in both modes so turning timing
+            on or off doesn't remount the element. */}
         <ElementTimingContext.Provider value={timingHandle}>
           {/* Inside Suspense, so an element that fails to render still lets
               the probe commit, and its error message counts as its content. */}

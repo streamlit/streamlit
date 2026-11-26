@@ -189,9 +189,12 @@ export class MetricsManager {
     this.initialized = true
   }
 
-  /** Whether events are sent anywhere. False until `initialize` resolves. */
-  public get isActive(): boolean {
-    return this.initialized && this.actuallySendMetrics
+  /**
+   * Whether the host turned metrics off with `metricsUrl: "off"`. Unlike a
+   * metrics config that fails to load, that lasts for the page load.
+   */
+  public get isTurnedOffByHost(): boolean {
+    return this.metricsUrl === "off"
   }
 
   public enqueue(

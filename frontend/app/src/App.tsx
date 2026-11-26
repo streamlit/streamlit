@@ -1429,10 +1429,11 @@ export class App extends PureComponent<Props, State> {
       gatherUsageStats,
       sendMessageToHost: this.hostCommunicationMgr.sendMessageToHost,
     })
-    // Metrics can also be off with usage stats on, for example when the host
-    // sets metricsUrl to "off". The disposed tracker stays in context and
-    // ignores every call, so elements don't re-render.
-    if (!this.metricsMgr.isActive) this.renderTimingTracker?.dispose()
+    // A metrics config that fails to load can succeed on a reconnect, so
+    // only the host turning metrics off stops the tracker. The disposed
+    // tracker stays in context and ignores every call, so elements don't
+    // re-render.
+    if (this.metricsMgr.isTurnedOffByHost) this.renderTimingTracker?.dispose()
   }
 
   handleRenderTimingReport = (report: RenderTimingReport): void => {

@@ -40,7 +40,8 @@ export function useElementLoadState(
  * Like `useElementLoadState`, for work that finishes in an event handler
  * (such as an image's `load` event), without adding state or re-renders.
  * The work identified by `workKey` counts as pending from when it commits
- * until the returned callback is called. `workKey` can be:
+ * until the returned callback is called. Pass a primitive, such as a URL or
+ * spec string, since the key is compared by identity. `workKey` can be:
  *
  * - A value that changes with the work, such as an image URL: each new
  *   value is tracked again, and the callbacks of earlier values do nothing.

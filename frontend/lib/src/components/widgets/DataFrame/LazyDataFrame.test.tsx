@@ -105,7 +105,7 @@ describe("LazyDataFrame", () => {
     }
   )
 
-  it("keeps its element loading for render timing until the DataFrame loads", async () => {
+  it("keeps the DataFrame pending for render timing until its lazy component loads", async () => {
     // Imported after resetModules so they share LazyDataFrame's contexts.
     const [
       { LazyDataFrame },

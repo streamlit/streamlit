@@ -21,9 +21,9 @@ import type { RenderTiming } from "@streamlit/protobuf"
 const LOG = getLogger("RenderTimingTracker")
 
 /**
- * Asynchronous work an element can wait on before it is fully drawn: code
- * loading behind the element's own Suspense boundary, a chart library
- * drawing, or media loading.
+ * Asynchronous work an element can wait on before it is fully drawn:
+ * code-split bundle loading behind the element's own Suspense boundary, a
+ * chart library drawing, or media loading.
  */
 export type ElementLoadKind = "code" | "draw" | "media"
 
@@ -278,12 +278,14 @@ function getUnionLength(
  * it commits an element and when the element's content (past its code-split
  * Suspense boundary) commits; the element's components report pending
  * asynchronous work through `setLoading`. Calls can arrive in any order
- * within a React commit.
+ * within a React commit. Only the handle's methods and `RenderTimingTracker`
+ * write its fields; containers and components only call the methods.
  */
 export class ElementTimingHandle {
   /** The record of the element in the measured run, if any. */
   record?: ElementRecord
 
+  /** The container's DOM node used for viewport visibility tracking. */
   target?: Element
 
   /** Asynchronous work currently pending in the element, by slot id. */

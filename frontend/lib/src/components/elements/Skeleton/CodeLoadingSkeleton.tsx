@@ -21,9 +21,10 @@ import { useElementLoadState } from "~lib/hooks/useElementLoadState"
 import { SquareSkeleton } from "./styled-components"
 
 /**
- * Suspense fallback for code that an element loads behind its own Suspense
- * boundary. That boundary hides the load from the element container's, so
- * the skeleton keeps the element pending for render timing while it shows.
+ * Suspense fallback while an element's code-split bundle loads behind the
+ * element's own Suspense boundary. The element container's boundary never
+ * sees that load, so the skeleton keeps the element pending for render
+ * timing.
  */
 export function CodeLoadingSkeleton(
   props: ComponentProps<typeof SquareSkeleton>

@@ -166,7 +166,8 @@ message RenderTiming {
   // that visible elements spent waiting on each kind of work. Each field is
   // the time at least one visible element was waiting, so the two can
   // overlap. The rest of the gap is mostly charts and the dataframe grid
-  // drawing.
+  // drawing. Not waited on: st.audio, Components v2 (including st.pdf), and,
+  // on reruns, dataframes and Plotly and deck.gl charts redrawing.
   // Code-split element bundles loading.
   int64 code_loading_ms = 6;
   // Images, video and iframes (including custom components) loading.

@@ -891,7 +891,25 @@ describe("App", () => {
       expect(getEnqueueCalls("renderTiming")).toEqual([])
     })
 
-    it("stops measuring once metrics resolve as off", async () => {
+    it("keeps measuring when the metrics config fails to load", async () => {
+      vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"))
+      renderApp(getProps())
+
+      sendMeasuredNewSession()
+      await act(async () => {
+        await new Promise(resolve => {
+          setTimeout(resolve, 50)
+        })
+      })
+      sendForwardMessage("pageProfile", { execTime: 5 })
+
+      expect(getEnqueueCalls("pageProfile")).toEqual([
+        ["pageProfile", expect.objectContaining({ runIndex: 0 })],
+      ])
+    })
+
+    it("stops measuring once the host turns metrics off", async () => {
       vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
       renderApp(getProps())
       getStoredValue<MetricsManager>(MetricsManager).setMetricsConfig("off")

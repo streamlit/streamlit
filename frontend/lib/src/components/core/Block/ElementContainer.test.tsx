@@ -357,7 +357,7 @@ describe("ElementContainer", () => {
       expect(screen.getByTestId("stSkeleton")).toBeVisible()
     })
 
-    it("contains an error in the skeleton to its own element", () => {
+    it("keeps a skeleton error within its element container without affecting siblings", () => {
       vi.spyOn(console, "error").mockImplementation(() => {})
       skeleton.shouldThrow = true
       const LazyComponent = lazy(
