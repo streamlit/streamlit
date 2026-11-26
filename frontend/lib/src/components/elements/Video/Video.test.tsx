@@ -103,6 +103,32 @@ describe("Video Element", () => {
     }
   )
 
+  it("waits for a YouTube video again when only its player options change", () => {
+    const tracker = new RenderTimingTracker({ onReport: vi.fn() })
+    const handle = tracker.createElementHandle()
+    const youtubeProps = (startTime: number): VideoProps =>
+      getProps({
+        url: "https://www.youtube.com/embed/_T8LGqJtuGc",
+        type: VideoProto.Type.YOUTUBE_IFRAME,
+        startTime,
+      })
+    const { rerender } = render(
+      <ElementTimingContext.Provider value={handle}>
+        <Video {...youtubeProps(0)} />
+      </ElementTimingContext.Provider>
+    )
+    fireEvent.load(screen.getByTestId("stVideo"))
+    expect(handle.loadingSlots.size).toBe(0)
+
+    rerender(
+      <ElementTimingContext.Provider value={handle}>
+        <Video {...youtubeProps(10)} />
+      </ElementTimingContext.Provider>
+    )
+    expect(handle.loadingSlots.size).toBe(1)
+    tracker.dispose()
+  })
+
   it("counts a video that loaded before it committed as loaded", () => {
     const readyStateSpy = vi
       .spyOn(HTMLMediaElement.prototype, "readyState", "get")

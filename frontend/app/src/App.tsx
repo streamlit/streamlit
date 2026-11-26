@@ -344,6 +344,9 @@ export class App extends PureComponent<Props, State> {
    */
   private renderTimingTracker: RenderTimingTracker | null = null
 
+  /** True while a host message requests a rerun, which no page input caused. */
+  private isHandlingHostRerun = false
+
   private readonly sessionEventDispatcher = new SessionEventDispatcher()
 
   private connectionManager: ConnectionManager | null
@@ -556,24 +559,30 @@ export class App extends PureComponent<Props, State> {
       ) => {
         // HostCommunicationManager omits fragmentId and isAutoRerun; App.sendRerunBackMsg
         // takes those before queryStringOverride.
-        this.sendRerunBackMsg(
-          widgetStates,
-          undefined,
-          pageScriptHash,
-          undefined,
-          queryStringOverride
-        )
+        this.handleHostRerun(() => {
+          this.sendRerunBackMsg(
+            widgetStates,
+            undefined,
+            pageScriptHash,
+            undefined,
+            queryStringOverride
+          )
+        })
       },
       closeModal: this.closeDialog,
       stopScript: this.stopScript,
-      rerunScript: this.rerunScript,
+      rerunScript: () => {
+        this.handleHostRerun(() => this.rerunScript())
+      },
       clearCache: this.clearCache,
       sendAppHeartbeat: this.sendAppHeartbeat,
       setInputsDisabled: inputsDisabled => {
         this.setState({ inputsDisabled })
       },
       themeChanged: this.handleThemeMessage,
-      pageChanged: pageScriptHash => this.onPageChange(pageScriptHash),
+      pageChanged: pageScriptHash => {
+        this.handleHostRerun(() => this.onPageChange(pageScriptHash))
+      },
       isOwnerChanged: isOwner => this.setState({ isOwner }),
       fileUploadClientConfigChanged: config => {
         if (this.endpoints.setFileUploadClientConfig !== undefined) {
@@ -1642,6 +1651,12 @@ export class App extends PureComponent<Props, State> {
       this.historyNavigationEpoch = null
     }
 
+    const { scriptRunId, fragmentIds: fragmentIdsThisRun } =
+      getNewSessionRunIdentity(metadata)
+    // Before a reconnect replaces the session info, so a run this cuts short
+    // is reported under its own session ID.
+    this.renderTimingTracker?.runStarted(scriptRunId)
+
     // First, handle initialization logic. Each NewSession message has
     // initialization data. If this is the _first_ time we're receiving
     // the NewSession message (or the first time since disconnect), we
@@ -1658,9 +1673,6 @@ export class App extends PureComponent<Props, State> {
       pageScriptHash: newPageScriptHash,
       mainScriptHash,
     } = newSessionProto
-    const { scriptRunId, fragmentIds: fragmentIdsThisRun } =
-      getNewSessionRunIdentity(metadata)
-    this.renderTimingTracker?.runStarted(scriptRunId)
 
     if (!fragmentIdsThisRun.length) {
       // This is a normal rerun, remove all the auto reruns intervals
@@ -2482,6 +2494,16 @@ export class App extends PureComponent<Props, State> {
     this.widgetMgr.sendUpdateWidgetsMessage(undefined)
   }
 
+  /** Runs a host message's synchronous rerun request. */
+  private handleHostRerun(requestRerun: () => void): void {
+    this.isHandlingHostRerun = true
+    try {
+      requestRerun()
+    } finally {
+      this.isHandlingHostRerun = false
+    }
+  }
+
   sendLoadGitInfoBackMsg = (): void => {
     if (!this.isServerConnected()) {
       LOG.error("Cannot load git information when disconnected from server.")
@@ -2639,7 +2661,10 @@ export class App extends PureComponent<Props, State> {
     }
 
     this.renderTimingTracker?.rerunRequested({
-      canFollowInput: isAutoRerun !== true && isHistoryNavigation !== true,
+      canFollowInput:
+        isAutoRerun !== true &&
+        isHistoryNavigation !== true &&
+        !this.isHandlingHostRerun,
     })
     this.sendBackMsg(
       new BackMsg({

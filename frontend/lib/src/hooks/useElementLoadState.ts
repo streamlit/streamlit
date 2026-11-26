@@ -27,6 +27,10 @@ import type { ElementLoadKind } from "~lib/util/performance/RenderTimingTracker"
  * pending until every call passes `isLoaded: true`, or until the calling
  * component unmounts.
  *
+ * An element that keeps drawing or loading after it commits must use this
+ * hook or `useElementLoadCallback`. Otherwise render timing counts it as
+ * fully drawn on its first paint, and nothing flags the early time.
+ *
  * Does nothing when render timing isn't measured.
  */
 export function useElementLoadState(

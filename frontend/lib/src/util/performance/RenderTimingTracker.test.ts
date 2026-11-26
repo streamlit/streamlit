@@ -535,6 +535,19 @@ describe("RenderTimingTracker", () => {
       expect(reports[0].renderTiming.firstContentMs).toBe(100)
     })
 
+    it("counts content painted offscreen from when it scrolls into view", async () => {
+      tracker.runStarted(RUN_ID)
+      const { target } = commitElement()
+      browser.observer.report(target, false)
+      browser.paint(100)
+      browser.time = 250
+      browser.observer.report(target, true)
+      await finishScript(300)
+      browser.paintUntilIdle()
+
+      expect(reports[0].renderTiming.firstContentMs).toBe(250)
+    })
+
     it("ignores elements of other runs", async () => {
       tracker.runStarted(RUN_ID)
       const stale = commitElement({ scriptRunId: "previous-run" })

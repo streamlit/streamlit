@@ -48,14 +48,15 @@ export const isLocalhost = (): boolean => {
 
 const IPV4_RE = /^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/
 const IPV6_FIRST_GROUP_RE = /^\[([0-9a-f]{1,4}):/
+const IPV4_MAPPED_IPV6_RE = /^\[::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})\]$/
 
 /**
  * Returns true if the hostname is local to the user's machine or network:
  * - `localhost` and its subdomains, and `.local` (mDNS) names.
- * - Loopback addresses: `127.*` and `[::1]`, plus `0.0.0.0`.
+ * - Loopback addresses: `127.*` and `[::1]`, plus `0.0.0.0` and `[::]`.
  * - Private IPv4 addresses: `10.*`, `172.16.*`-`172.31.*`, `192.168.*`,
  *   link-local `169.254.*`, and shared `100.64.*`-`100.127.*` (CGNAT, used
- *   by VPNs such as Tailscale).
+ *   by VPNs such as Tailscale), including their IPv4-mapped IPv6 forms.
  * - Private IPv6 addresses: unique-local `fc00::/7` and link-local
  *   `fe80::/10`.
  *
@@ -69,9 +70,20 @@ export function isLocalOrPrivateHostname(hostname: string): boolean {
     host.endsWith(".localhost") ||
     host.endsWith(".local") ||
     host === "[::1]" ||
+    host === "[::]" ||
     host === "0.0.0.0"
   ) {
     return true
+  }
+
+  // `URL.hostname` writes IPv4-mapped addresses in hex, e.g. `[::ffff:7f00:1]`.
+  const mappedMatch = IPV4_MAPPED_IPV6_RE.exec(host)
+  if (mappedMatch) {
+    const high = Number.parseInt(mappedMatch[1], 16)
+    const low = Number.parseInt(mappedMatch[2], 16)
+    return isLocalOrPrivateHostname(
+      `${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`
+    )
   }
 
   const ipv6Match = IPV6_FIRST_GROUP_RE.exec(host)

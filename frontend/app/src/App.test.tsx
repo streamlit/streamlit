@@ -768,7 +768,7 @@ describe("App", () => {
   })
 
   describe("render timing", () => {
-    const sendMeasuredNewSession = (gatherUsageStats = true): void => {
+    const sendNewSessionWithUsageStats = (gatherUsageStats = true): void => {
       sendNewSession({
         ...NEW_SESSION_JSON,
         config: { ...NEW_SESSION_JSON.config, gatherUsageStats },
@@ -784,7 +784,7 @@ describe("App", () => {
       vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
       renderApp(getProps())
 
-      sendMeasuredNewSession()
+      sendNewSessionWithUsageStats()
       sendForwardMessage("pageProfile", { execTime: 5 })
 
       expect(getEnqueueCalls("pageProfile")).toEqual([
@@ -818,7 +818,7 @@ describe("App", () => {
       )
       try {
         renderApp(getProps())
-        sendMeasuredNewSession()
+        sendNewSessionWithUsageStats()
 
         act(() => {
           sendForwardMessage("autoRerun", {
@@ -848,7 +848,7 @@ describe("App", () => {
           </StrictMode>
         )
 
-        sendMeasuredNewSession()
+        sendNewSessionWithUsageStats()
         sendForwardMessage("pageProfile", { execTime: 5 })
 
         expect(getEnqueueCalls("pageProfile")).toEqual([
@@ -862,7 +862,7 @@ describe("App", () => {
     it("doesn't measure apps served from a local address", () => {
       renderApp(getProps())
 
-      sendMeasuredNewSession()
+      sendNewSessionWithUsageStats()
       sendForwardMessage("pageProfile", { execTime: 5 })
 
       expect(isLocalOrPrivateHostname).toHaveBeenLastCalledWith(
@@ -877,7 +877,7 @@ describe("App", () => {
       vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
       renderApp(getProps())
 
-      sendMeasuredNewSession(false)
+      sendNewSessionWithUsageStats(false)
       sendForwardMessage("pageProfile", { execTime: 5 })
       await act(async () => {
         await new Promise(resolve => {
@@ -891,12 +891,54 @@ describe("App", () => {
       expect(getEnqueueCalls("renderTiming")).toEqual([])
     })
 
+    it("reports a run cut short by a reconnect under the run's own session", () => {
+      vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
+      renderApp(getProps())
+      const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
+      const sessionIdsOfReports: string[] = []
+      vi.mocked(
+        getStoredValue<MetricsManager>(MetricsManager).enqueue
+      ).mockImplementation(eventName => {
+        if (eventName === "renderTiming") {
+          sessionIdsOfReports.push(sessionInfo.current.sessionId)
+        }
+      })
+
+      sendNewSessionWithUsageStats()
+      sendForwardMessage("pageProfile", { execTime: 5 })
+      sendScriptFinished(ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY)
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: false,
+      })
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.PINGING_SERVER
+        )
+      })
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+      // A run the server starts, such as a rerun on save.
+      sendNewSession(
+        {
+          ...NEW_SESSION_JSON,
+          initialize: { ...NEW_SESSION_JSON.initialize, sessionId: "new" },
+        },
+        { ...RUN_IDENTITY_JSON, scriptRunId: "reconnected_run_id" }
+      )
+
+      expect(sessionIdsOfReports).toEqual(["sessionId"])
+    })
+
     it("keeps measuring when the metrics config fails to load", async () => {
       vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
       vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"))
       renderApp(getProps())
 
-      sendMeasuredNewSession()
+      sendNewSessionWithUsageStats()
       await act(async () => {
         await new Promise(resolve => {
           setTimeout(resolve, 50)
@@ -914,7 +956,7 @@ describe("App", () => {
       renderApp(getProps())
       getStoredValue<MetricsManager>(MetricsManager).setMetricsConfig("off")
 
-      sendMeasuredNewSession()
+      sendNewSessionWithUsageStats()
       await act(async () => {
         await Promise.resolve()
       })
@@ -6375,6 +6417,33 @@ describe("App", () => {
         scriptRunState: ScriptRunState.STOP_REQUESTED,
       })
     })
+
+    it.each([
+      { type: "RERUN_SCRIPT" },
+      { type: "REQUEST_PAGE_CHANGE", pageScriptHash: "hash1" },
+      { type: "UPDATE_FROM_QUERY_PARAMS", queryParams: "?a=b" },
+    ] as const)(
+      "doesn't attribute a $type rerun to the user's last input",
+      message => {
+        vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
+        const rerunRequested = vi.spyOn(
+          RenderTimingTracker.prototype,
+          "rerunRequested"
+        )
+        try {
+          prepareHostCommunicationManager()
+          getMockConnectionManager(true)
+
+          fireWindowPostMessage(message)
+
+          expect(rerunRequested).toHaveBeenCalledWith({
+            canFollowInput: false,
+          })
+        } finally {
+          rerunRequested.mockRestore()
+        }
+      }
+    )
 
     it("changes scriptRunState and triggers rerunScript when scriptRerunRequested message has been received", () => {
       const hostCommunicationMgr = prepareHostCommunicationManager()

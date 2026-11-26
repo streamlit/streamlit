@@ -68,7 +68,41 @@ function Video({
 
   let crossOrigin = useCrossOriginAttribute(url)
 
-  const markVideoLoaded = useElementLoadCallback("media", url)
+  const getYoutubeSrc = (urlArg: string): string => {
+    const youtubeUrl = new URL(urlArg)
+
+    if (startTime && !Number.isNaN(startTime)) {
+      youtubeUrl.searchParams.append("start", startTime.toString())
+    }
+
+    if (endTime && !Number.isNaN(endTime)) {
+      youtubeUrl.searchParams.append("end", endTime.toString())
+    }
+
+    if (loop) {
+      youtubeUrl.searchParams.append("loop", "1")
+      // When using the loop parameter, YouTube requires the playlist parameter to be set to the same video ID
+      const videoId = youtubeUrl.pathname.split("/").pop()
+
+      if (!isNullOrEmptyString(videoId)) {
+        youtubeUrl.searchParams.append("playlist", videoId)
+      }
+    }
+
+    if (autoplay) {
+      youtubeUrl.searchParams.append("autoplay", "1")
+    }
+
+    if (muted) {
+      youtubeUrl.searchParams.append("mute", "1")
+    }
+
+    return youtubeUrl.toString()
+  }
+
+  const youtubeSrc =
+    type === VideoProto.Type.YOUTUBE_IFRAME ? getYoutubeSrc(url) : undefined
+  const markVideoLoaded = useElementLoadCallback("media", youtubeSrc ?? url)
   // A cached video can finish loading while a time-sliced render is paused,
   // before React commits it and can deliver `loadeddata` or `suspend`.
   useLayoutEffect(() => {
@@ -208,38 +242,6 @@ function Video({
     }
   }, [loop, startTime])
 
-  const getYoutubeSrc = (urlArg: string): string => {
-    const youtubeUrl = new URL(urlArg)
-
-    if (startTime && !Number.isNaN(startTime)) {
-      youtubeUrl.searchParams.append("start", startTime.toString())
-    }
-
-    if (endTime && !Number.isNaN(endTime)) {
-      youtubeUrl.searchParams.append("end", endTime.toString())
-    }
-
-    if (loop) {
-      youtubeUrl.searchParams.append("loop", "1")
-      // When using the loop parameter, YouTube requires the playlist parameter to be set to the same video ID
-      const videoId = youtubeUrl.pathname.split("/").pop()
-
-      if (!isNullOrEmptyString(videoId)) {
-        youtubeUrl.searchParams.append("playlist", videoId)
-      }
-    }
-
-    if (autoplay) {
-      youtubeUrl.searchParams.append("autoplay", "1")
-    }
-
-    if (muted) {
-      youtubeUrl.searchParams.append("mute", "1")
-    }
-
-    return youtubeUrl.toString()
-  }
-
   // Is this a YouTube link? If so we need a fancier tag.
   // NOTE: This part assumes the URL is already an "embed" link.
   if (type === VideoProto.Type.YOUTUBE_IFRAME) {
@@ -251,7 +253,7 @@ function Video({
         // stays as the fallback when the author did not provide a description.
         // Blank input must fall back too, or the iframe ends up untitled.
         title={accessibleName ?? url}
-        src={getYoutubeSrc(url)}
+        src={youtubeSrc}
         allow="autoplay; encrypted-media"
         allowFullScreen
         onLoad={markVideoLoaded}

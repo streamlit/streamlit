@@ -141,8 +141,9 @@ export const ElementContainer = memo(function ElementContainer({
         {/* Keep the timing provider mounted in both modes so turning timing
             on or off doesn't remount the element. */}
         <ElementTimingContext.Provider value={timingHandle}>
-          {/* Inside Suspense, so an element that fails to render still lets
-              the probe commit, and its error message counts as its content. */}
+          {/* Inside Suspense, so when the element fails to render,
+              ElementContentCommitted still commits and the error message
+              counts as the element's content. */}
           <ErrorBoundary>{children}</ErrorBoundary>
           {timingHandle && (
             <ElementContentCommitted

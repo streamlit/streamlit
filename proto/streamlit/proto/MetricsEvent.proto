@@ -102,10 +102,10 @@ message MetricsEvent {
   // Same as PageProfile.query_usage.
   QueryUsage query_usage = 57;
   // 58-59 are held for planned rerun-reason fields.
-  // Joins the pageProfile and renderTiming events of one script run,
-  // together with session_id. Index of the run within this page load,
-  // starting at 0 for the first run after the page loads. Unset when render
-  // timing isn't measured (local apps, usage stats off).
+  // Index of the script run within this page load, starting at 0 for the
+  // first run. Together with session_id, joins a run's pageProfile and
+  // renderTiming events. Unset when render timing isn't measured (local
+  // apps, usage stats off).
   optional int64 run_index = 60;
   // Set on renderTiming events only. See RenderTiming.
   RenderTiming render_timing = 61;
@@ -168,9 +168,11 @@ message RenderTiming {
   // overlap. The rest of the gap is mostly charts and the dataframe grid
   // drawing. Not waited on: st.audio, Components v2 (including st.pdf), and,
   // on reruns, dataframes and Plotly and deck.gl charts redrawing.
-  // Code-split element bundles loading.
+  //
+  // Time spent loading code-split element bundles.
   int64 code_loading_ms = 6;
-  // Images, video and iframes (including custom components) loading.
+  // Time spent loading images, video and iframes (including custom
+  // components).
   int64 media_loading_ms = 7;
 
   // Number of new or changed elements in the viewport that counted toward
@@ -204,11 +206,11 @@ message RenderTiming {
   // rerun request, so the user's whole wait is input_delay_ms plus a
   // milestone. It covers delays before the request is sent, such as widget
   // debounces and a busy main thread. Each input counts toward one request
-  // at most. Unset for automatic reruns (such as run_every fragments) and
-  // history navigation, including when one is requested while a user's
-  // rerun request is still pending, and when no uncounted input happened in
-  // the 2 seconds before the request, such as for hover-driven chart
-  // selections or inputs inside an iframe.
+  // at most. Unset for automatic reruns (such as run_every fragments),
+  // history navigation and reruns the host requests, including when one of
+  // these joins a user's pending rerun request. Also unset when no uncounted
+  // input happened in the 2 seconds before the request, such as for
+  // hover-driven chart selections or inputs inside an iframe.
   optional int64 input_delay_ms = 15;
 }
 

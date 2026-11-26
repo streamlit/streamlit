@@ -232,7 +232,10 @@ function updateRecord(record: ElementRecord, change: () => void): void {
 }
 
 /** Records the record's paint as the run's first content if it's earliest. */
-function noteFirstContent(record: ElementRecord): void {
+function noteFirstContent(
+  record: ElementRecord,
+  shownAt = record.readyAt
+): void {
   const { run, readyAt } = record
   if (
     !record.isContent ||
@@ -241,7 +244,8 @@ function noteFirstContent(record: ElementRecord): void {
   ) {
     return
   }
-  run.firstContentAt = Math.min(run.firstContentAt ?? readyAt, readyAt)
+  const contentAt = Math.max(readyAt, shownAt ?? readyAt)
+  run.firstContentAt = Math.min(run.firstContentAt ?? contentAt, contentAt)
 }
 
 /** Returns the largest lower bound in `bounds` that `size` reaches. */
@@ -439,11 +443,10 @@ export class RenderTimingTracker {
   }
 
   /**
-   * Called when the browser sends a rerun request. Pass `canFollowInput:
-   * false` for requests that no input in the page caused: automatic reruns
-   * such as `run_every` fragment timers, and history navigation, whose
-   * browser buttons aren't page events. Such a request also drops the input
-   * delay of a request still waiting for its run.
+   * Called when the browser sends a rerun request. Set `canFollowInput:
+   * false` when no page input caused the request, such as an automatic
+   * fragment rerun, history navigation or a rerun the host requested. This
+   * also clears input delay from a request already waiting for its run.
    */
   rerunRequested({
     canFollowInput = true,
@@ -559,7 +562,7 @@ export class RenderTimingTracker {
             this.finalize(run, this.isComplete(run) ? "complete" : "timedOut")
           })
         }, RENDER_TIMING_TIMEOUT_MS)
-        this.evaluate(run)
+        this.scheduleCompletionCheck(run)
       })
     })
     return run.runIndex
@@ -730,7 +733,7 @@ export class RenderTimingTracker {
     }
     if (!run.isFinalized) {
       run.changeCount++
-      this.evaluate(run)
+      this.scheduleCompletionCheck(run)
     }
   }
 
@@ -771,17 +774,22 @@ export class RenderTimingTracker {
   ): void {
     if (run.isFinalized) return
 
+    const now = this.env.now()
     for (const entry of entries) {
       const record = run.recordsByTarget.get(entry.target)
       if (!record) continue
+      // An element painted offscreen counts as content from when it scrolls
+      // into view. One the observer hadn't reported yet was shown when it
+      // was painted.
+      const shownAt = record.isIntersecting === false ? now : record.readyAt
       updateRecord(record, () => {
         record.isIntersecting = entry.isIntersecting
       })
       record.wasEverIntersecting ||= entry.isIntersecting
-      noteFirstContent(record)
+      if (entry.isIntersecting) noteFirstContent(record, shownAt)
     }
     run.changeCount++
-    this.evaluate(run)
+    this.scheduleCompletionCheck(run)
   }
 
   /**
@@ -817,7 +825,7 @@ export class RenderTimingTracker {
       run.recordsToCheck.clear()
       if (hasNewReady) {
         run.changeCount++
-        this.evaluate(run)
+        this.scheduleCompletionCheck(run)
       }
     })
   }
@@ -831,7 +839,7 @@ export class RenderTimingTracker {
    * layout shifts and React commits still pending when it first looked
    * complete are taken into account.
    */
-  private evaluate(run: RunMeasurement): void {
+  private scheduleCompletionCheck(run: RunMeasurement): void {
     if (run.isFinalized || run.isSettling || !this.isComplete(run)) return
 
     run.isSettling = true
@@ -843,7 +851,7 @@ export class RenderTimingTracker {
         if (run.changeCount === changeCount && this.isComplete(run)) {
           this.finalize(run, "complete")
         } else {
-          this.evaluate(run)
+          this.scheduleCompletionCheck(run)
         }
       })
     })
