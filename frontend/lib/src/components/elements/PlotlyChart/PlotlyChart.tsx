@@ -140,7 +140,7 @@ export function PlotlyChart({
 
   const width = elWidth ?? 0
 
-  const markPlotDrawn = useElementLoadCallback("draw", true)
+  const markPlotLoaded = useElementLoadCallback("draw", true)
 
   // Load the initial figure spec from the element message
   const initialFigureSpec = useMemo<PlotlyFigureType>(() => {
@@ -608,7 +608,7 @@ export function PlotlyChart({
         }
         onInitialized={figure => {
           widgetMgr.setElementState(element.id, "figure", figure)
-          markPlotDrawn()
+          markPlotLoaded()
         }}
         // Update the figure state on every change to the figure itself:
         onUpdate={figure => {

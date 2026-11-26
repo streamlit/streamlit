@@ -20,8 +20,12 @@ import type { RenderTiming } from "@streamlit/protobuf"
 
 const LOG = getLogger("RenderTimingTracker")
 
-/** Asynchronous work an element can wait on before it is fully drawn. */
-export type ElementLoadKind = "draw" | "media"
+/**
+ * Asynchronous work an element can wait on before it is fully drawn: code
+ * loading behind the element's own Suspense boundary, a chart library
+ * drawing, or media loading.
+ */
+export type ElementLoadKind = "code" | "draw" | "media"
 
 /**
  * How long after the script finishes to wait for visible elements to report
@@ -199,6 +203,7 @@ function noteFirstContent(record: ElementRecord): void {
   run.firstContentAt = Math.min(run.firstContentAt ?? readyAt, readyAt)
 }
 
+/** Returns the largest lower bound in `bounds` that `size` reaches. */
 function getBucket(size: number, bounds: number[]): number {
   return bounds.reduce((bucket, bound) => (size >= bound ? bound : bucket), 0)
 }
@@ -807,24 +812,31 @@ export class RenderTimingTracker {
         : undefined
     const gapEnd = fullyLoadedAt ?? now
 
+    const getLoads = (
+      record: ElementRecord,
+      kind: ElementLoadKind
+    ): LoadInterval[] => [
+      ...record.loadIntervals.filter(load => load.kind === kind),
+      ...Array.from(record.pendingLoads.values())
+        .filter(load => load.kind === kind)
+        .map(load => ({ ...load, end: gapEnd })),
+    ]
     const mediaLoadingMs = Math.round(
       getUnionLength(
-        visible.flatMap(record => [
-          ...record.loadIntervals.filter(load => load.kind === "media"),
-          ...Array.from(record.pendingLoads.values())
-            .filter(load => load.kind === "media")
-            .map(load => ({ start: load.start, end: gapEnd })),
-        ]),
+        visible.flatMap(record => getLoads(record, "media")),
         scriptFinishedAt,
         gapEnd
       )
     )
     const codeLoadingMs = Math.round(
       getUnionLength(
-        visible.map(record => ({
-          start: record.registeredAt,
-          end: record.contentCommittedAt ?? gapEnd,
-        })),
+        visible.flatMap(record => [
+          {
+            start: record.registeredAt,
+            end: record.contentCommittedAt ?? gapEnd,
+          },
+          ...getLoads(record, "code"),
+        ]),
         scriptFinishedAt,
         gapEnd
       )

@@ -1424,6 +1424,17 @@ export class App extends PureComponent<Props, State> {
     })
   }
 
+  private async initializeMetrics(gatherUsageStats: boolean): Promise<void> {
+    await this.metricsMgr.initialize({
+      gatherUsageStats,
+      sendMessageToHost: this.hostCommunicationMgr.sendMessageToHost,
+    })
+    // Metrics can also be off with usage stats on, for example when the host
+    // sets metricsUrl to "off". The disposed tracker stays in context and
+    // ignores every call, so elements don't re-render.
+    if (!this.metricsMgr.isActive) this.renderTimingTracker?.dispose()
+  }
+
   handleRenderTimingReport = (report: RenderTimingReport): void => {
     this.metricsMgr.enqueue("renderTiming", report)
   }
@@ -1731,10 +1742,7 @@ export class App extends PureComponent<Props, State> {
     )
 
     // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-    this.metricsMgr.initialize({
-      gatherUsageStats: config.gatherUsageStats,
-      sendMessageToHost: this.hostCommunicationMgr.sendMessageToHost,
-    })
+    this.initializeMetrics(config.gatherUsageStats)
 
     if (!config.gatherUsageStats) {
       this.renderTimingTracker?.dispose()

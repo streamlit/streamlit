@@ -862,6 +862,22 @@ describe("App", () => {
       ])
       expect(getEnqueueCalls("renderTiming")).toEqual([])
     })
+
+    it("stops measuring once metrics resolve as off", async () => {
+      vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
+      renderApp(getProps())
+      getStoredValue<MetricsManager>(MetricsManager).setMetricsConfig("off")
+
+      sendMeasuredNewSession()
+      await act(async () => {
+        await Promise.resolve()
+      })
+      sendForwardMessage("pageProfile", { execTime: 5 })
+
+      expect(getEnqueueCalls("pageProfile")).toEqual([
+        ["pageProfile", expect.not.objectContaining({ runIndex: 0 })],
+      ])
+    })
   })
 
   it("adds the messages received for the run to the pageProfile event", () => {

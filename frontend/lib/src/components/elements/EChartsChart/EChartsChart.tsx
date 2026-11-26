@@ -337,7 +337,6 @@ export function EChartsChart({
     opErrors.theme ??
     opErrors.resize ??
     null
-  useElementLoadState("draw", hasRendered || renderError !== null)
 
   // Parse the spec and replace its Arrow `dataset.source` placeholders with
   // rows. Memoized on the spec string, which embeds each dataset's content
@@ -375,6 +374,10 @@ export function EChartsChart({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the spec embeds each dataset's content hash, so element.datasets only changes when element.spec does
   }, [element.spec])
+  useElementLoadState(
+    "draw",
+    hasRendered || renderError !== null || parseError !== null
+  )
 
   // Log spec problems that would otherwise only show on the page: a spec
   // error replaces the chart, and an unknown series type leaves it blank. The

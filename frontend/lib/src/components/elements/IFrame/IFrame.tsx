@@ -132,7 +132,7 @@ function IFrame({
     : getNonEmptyString(element.srcdoc)
 
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const handleLoad = useElementLoadCallback("media", src ?? rawSrcDoc)
+  const markFrameLoaded = useElementLoadCallback("media", src ?? rawSrcDoc)
   const [contentDimensions, setContentDimensions] =
     useState<ContentDimensions>({ width: null, height: null })
 
@@ -237,7 +237,7 @@ function IFrame({
       tabIndex={element.tabIndex ?? undefined}
       width={contentWidth}
       height={contentHeight}
-      onLoad={handleLoad}
+      onLoad={markFrameLoaded}
     />
   )
 }

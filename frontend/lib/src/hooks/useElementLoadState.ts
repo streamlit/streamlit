@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-import { useCallback, useContext, useId, useLayoutEffect } from "react"
+import { useCallback, useContext, useId, useLayoutEffect, useRef } from "react"
 
 import { ElementTimingContext } from "~lib/components/core/RenderTimingContext"
 import type { ElementLoadKind } from "~lib/util/performance/RenderTimingTracker"
 
 /**
  * Tells the browser's render timing metrics whether an element is still
- * waiting on asynchronous work before it's fully drawn: a chart library
- * drawing (`"draw"`) or media loading (`"media"`). The element counts as
- * fully loaded only once every call in it passes `isLoaded: true`, or the
- * calling component unmounts.
+ * waiting on asynchronous work before it's fully drawn: code loading
+ * behind the element's own Suspense boundary (`"code"`), a chart library
+ * drawing (`"draw"`) or media loading (`"media"`). The element stays
+ * pending until every call passes `isLoaded: true`, or until the calling
+ * component unmounts.
  *
  * Does nothing when render timing isn't measured.
  */
@@ -38,11 +39,14 @@ export function useElementLoadState(
 /**
  * Like `useElementLoadState`, for work that finishes in an event handler
  * (such as an image's `load` event), without adding state or re-renders.
- * The work identified by `workKey` (for example the image URL) counts as
- * pending from when it commits until the returned callback is called, and
- * again whenever `workKey` changes. Pass a constant (such as `true`) for work
- * that happens once per mount; it then isn't tracked again when the element's
- * payload changes. Pass null or undefined when the element has no such work.
+ * The work identified by `workKey` counts as pending from when it commits
+ * until the returned callback is called. `workKey` can be:
+ *
+ * - A value that changes with the work, such as an image URL: each new
+ *   value is tracked again, and the callbacks of earlier values do nothing.
+ * - A constant, such as `true`: the work is tracked once per mount, not
+ *   again when the element's payload changes.
+ * - `null` or `undefined`: the element has no such work.
  *
  * Does nothing when render timing isn't measured.
  */
@@ -52,10 +56,12 @@ export function useElementLoadCallback(
 ): () => void {
   const handle = useContext(ElementTimingContext)
   const slotId = useId()
+  const pendingWorkKeyRef = useRef<unknown>(undefined)
 
   useLayoutEffect(() => {
     if (!handle || workKey === null || workKey === undefined) return
 
+    pendingWorkKeyRef.current = workKey
     handle.setLoading(slotId, kind, true)
     return () => {
       handle.setLoading(slotId, kind, false)
@@ -63,6 +69,7 @@ export function useElementLoadCallback(
   }, [handle, slotId, kind, workKey])
 
   return useCallback(() => {
+    if (pendingWorkKeyRef.current !== workKey) return
     handle?.setLoading(slotId, kind, false)
-  }, [handle, slotId, kind])
+  }, [handle, slotId, kind, workKey])
 }

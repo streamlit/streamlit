@@ -102,12 +102,12 @@ message MetricsEvent {
   // Same as PageProfile.query_usage.
   QueryUsage query_usage = 57;
   // 58-59 are held for planned rerun-reason fields.
-  // Index of the script run within this page load, starting at 0 for the
-  // first run after the page loads. Set on pageProfile and renderTiming
-  // events; together with session_id it joins the two events of one run.
-  // Unset when render timing isn't measured (local apps, usage stats off).
+  // Joins the pageProfile and renderTiming events of one script run,
+  // together with session_id. Index of the run within this page load,
+  // starting at 0 for the first run after the page loads. Unset when render
+  // timing isn't measured (local apps, usage stats off).
   optional int64 run_index = 60;
-  // Render Timing Event field:
+  // Set on renderTiming events only. See RenderTiming.
   RenderTiming render_timing = 61;
   // Same as PageProfile.arrow_bytes.
   optional int64 arrow_bytes = 62;
@@ -188,9 +188,13 @@ message RenderTiming {
   bool was_superseded = 12;
   // Visible elements didn't finish loading within the timeout after the
   // script finished. An element that fails to render counts as loaded once
-  // its error message is painted.
+  // its error message is painted. A chart library that fails without an
+  // error message, such as a Vega spec that doesn't compile, shows up as a
+  // timeout.
   bool timed_out = 13;
-  // Number of visible elements that hadn't finished loading at the timeout.
+  // Number of elements that hadn't finished loading at the timeout: visible
+  // elements, and elements whose visibility hadn't been reported yet. The
+  // latter aren't in visible_elements, so this can be the larger number.
   int32 timed_out_elements = 14;
 }
 

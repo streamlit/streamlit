@@ -164,7 +164,7 @@ const Image = ({
   }, [image.caption, onCaptionPlainTextChange, safeLink])
 
   const src = buildMediaURL(image.url)
-  const markImageSettled = useElementLoadCallback("media", src)
+  const markImageLoaded = useElementLoadCallback("media", src)
 
   const imageElement = (
     // oxlint-disable-next-line jsx-a11y/alt-text
@@ -172,9 +172,9 @@ const Image = ({
       style={imgStyle}
       src={src}
       alt={imgAlt}
-      onLoad={markImageSettled}
+      onLoad={markImageLoaded}
       onError={e => {
-        markImageSettled()
+        markImageLoaded()
         handleImageError(e)
       }}
       crossOrigin={crossOrigin}

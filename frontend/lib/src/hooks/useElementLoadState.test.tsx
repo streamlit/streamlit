@@ -179,6 +179,21 @@ describe("useElementLoadCallback", () => {
     expect(handle.loadingSlots.size).toBe(1)
   })
 
+  it("ignores a completion of work that a new work key replaced", () => {
+    const handle = tracker.createElementHandle()
+    const { result, rerender } = renderWithHandle(handle, "a.png")
+    const markOldWorkLoaded = result.current
+
+    rerender({ workKey: "b.png" })
+    markOldWorkLoaded()
+
+    expect(handle.loadingSlots.size).toBe(1)
+
+    result.current()
+
+    expect(handle.loadingSlots.size).toBe(0)
+  })
+
   it.each([null, undefined])(
     "doesn't report work for a %s work key",
     workKey => {

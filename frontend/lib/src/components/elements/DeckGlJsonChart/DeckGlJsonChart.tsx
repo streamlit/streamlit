@@ -127,7 +127,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     setIsInitialized(true)
   }, [])
 
-  const handleDeckLoad = useElementLoadCallback("draw", true)
+  const markDeckLoaded = useElementLoadCallback("draw", true)
 
   const handleClick = useCallback(
     (info: PickingInfo) => {
@@ -278,7 +278,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
             viewState={viewState}
             onViewStateChange={onViewStateChange}
             layers={isInitialized ? deck.layers : EMPTY_LAYERS}
-            onLoad={handleDeckLoad}
+            onLoad={markDeckLoaded}
             getTooltip={createTooltip}
             // @ts-expect-error There is a type mismatch due to our versions of the libraries
             ContextProvider={MapContext.Provider}

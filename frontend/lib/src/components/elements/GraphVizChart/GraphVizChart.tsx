@@ -105,7 +105,7 @@ function GraphVizChart({
 
   const shouldUseContainerHeight = shouldHeightStretch(heightConfig)
 
-  const markGraphDrawn = useElementLoadCallback("draw", element.spec)
+  const markGraphLoaded = useElementLoadCallback("draw", element.spec)
 
   useEffect(() => {
     try {
@@ -126,13 +126,13 @@ function GraphVizChart({
           if (chartElement) {
             sanitizeGraphVizLinkUris(chartElement)
           }
-          markGraphDrawn()
+          markGraphLoaded()
         })
     } catch (error) {
       LOG.error(error)
-      markGraphDrawn()
+      markGraphLoaded()
     }
-  }, [chartId, element.engine, element.spec, markGraphDrawn])
+  }, [chartId, element.engine, element.spec, markGraphLoaded])
 
   // Name the container only when alt is non-blank. A whitespace aria-label
   // computes to an empty accessible name, which is worse than none.

@@ -189,6 +189,11 @@ export class MetricsManager {
     this.initialized = true
   }
 
+  /** Whether events are sent anywhere. False until `initialize` resolves. */
+  public get isActive(): boolean {
+    return this.initialized && this.actuallySendMetrics
+  }
+
   public enqueue(
     evName: EventName,
     evData: Partial<MetricsEvent.$Properties> = {}

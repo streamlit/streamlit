@@ -61,9 +61,7 @@ function Video({
 
   let crossOrigin = useCrossOriginAttribute(url)
 
-  // Browsers that decide not to preload fire `suspend` instead of
-  // `loadeddata`, so either one ends the load.
-  const handleLoadSettled = useElementLoadCallback("media", url)
+  const markVideoLoaded = useElementLoadCallback("media", url)
 
   const preventAutoplay = useMemo<boolean>(() => {
     if (!element.id) {
@@ -237,7 +235,7 @@ function Video({
         src={getYoutubeSrc(url)}
         allow="autoplay; encrypted-media"
         allowFullScreen
-        onLoad={handleLoadSettled}
+        onLoad={markVideoLoaded}
       />
     )
   }
@@ -245,7 +243,7 @@ function Video({
   const handleVideoError = (
     e: React.SyntheticEvent<HTMLVideoElement>
   ): void => {
-    handleLoadSettled()
+    markVideoLoaded()
     const videoUrl = e.currentTarget.src
     LOG.error(`Client Error: Video source error - ${videoUrl}`)
     endpoints.sendClientErrorToHost(
@@ -276,8 +274,10 @@ function Video({
       autoPlay={autoplay && !preventAutoplay}
       src={endpoints.buildMediaURL(url)}
       crossOrigin={crossOrigin}
-      onLoadedData={handleLoadSettled}
-      onSuspend={handleLoadSettled}
+      onLoadedData={markVideoLoaded}
+      // Browsers that decide not to preload fire `suspend` instead of
+      // `loadeddata`, so either one ends the load.
+      onSuspend={markVideoLoaded}
       onError={handleVideoError}
     >
       {subtitles.map((subtitle: SubtitleTrack.$Properties, idx: number) => (

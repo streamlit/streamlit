@@ -217,7 +217,7 @@ function DataFrame({
   const visibleRegionRef = useRef<Rectangle | null>(null)
   // The grid reports its first visible region once it has laid out and drawn
   // its canvas, which is when the dataframe counts as drawn.
-  const markGridDrawn = useElementLoadCallback("draw", true)
+  const markGridLoaded = useElementLoadCallback("draw", true)
   // Stores original data row indices that need remapping after a sort operation.
   // Used to preserve row selections (single-row, multi-row, and
   // single-row-required modes) when columns are sorted on the frontend.
@@ -1021,14 +1021,14 @@ function DataFrame({
   const handleVisibleRegionChanged = useCallback(
     (range: Rectangle): void => {
       if (visibleRegionRef.current === null) {
-        markGridDrawn()
+        markGridLoaded()
       }
       visibleRegionRef.current = range
       if (isLazy) {
         onVisibleRegionChanged(range)
       }
     },
-    [isLazy, onVisibleRegionChanged, markGridDrawn]
+    [isLazy, onVisibleRegionChanged, markGridLoaded]
   )
 
   return (

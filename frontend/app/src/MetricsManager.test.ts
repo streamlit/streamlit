@@ -169,6 +169,23 @@ describe("initialize", () => {
     expect(mm.actuallySendMetrics).toBe(false)
   })
 
+  it.each([
+    ["an HTTPS URL", DEFAULT_METRICS_CONFIG, true, true],
+    ["postMessage", "postMessage", true, true],
+    ["off", "off", true, false],
+    ["a URL with usage stats off", DEFAULT_METRICS_CONFIG, false, false],
+  ])(
+    "reports whether it's active once initialized, for %s",
+    async (_, metricsConfig, gatherUsageStats, isActive) => {
+      const mm = getMetricsManager(undefined, metricsConfig)
+      expect(mm.isActive).toBe(false)
+
+      await mm.initialize({ gatherUsageStats })
+
+      expect(mm.isActive).toBe(isActive)
+    }
+  )
+
   it("does not call requestDefaultMetricsConfig when metrics config set", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
