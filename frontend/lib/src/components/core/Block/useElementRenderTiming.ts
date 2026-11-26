@@ -39,7 +39,7 @@ interface ElementRenderTiming {
  * time it commits a new or changed element payload. Payloads are compared by
  * identity: `AppRoot` keeps the existing payload object when an element's
  * hash is unchanged, so an element the script sends again unchanged doesn't
- * register again.
+ * register again, and its effect doesn't run.
  */
 export function useElementRenderTiming(
   node: ElementNode
@@ -62,7 +62,10 @@ export function useElementRenderTiming(
       element.type ?? "",
       container
     )
-  }, [handle, element, scriptRunId])
+    // Every rerun gives each element node a new scriptRunId, but the tracker
+    // only registers a payload it hasn't seen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handle, element])
 
   useEffect(() => {
     return () => {

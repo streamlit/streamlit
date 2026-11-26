@@ -641,6 +641,53 @@ describe("ElementContainer", () => {
       expect(onMount).toHaveBeenCalledTimes(1)
       tracker.dispose()
     })
+
+    it("registers an element again only when its payload changes", () => {
+      const tracker = new RenderTimingTracker({ onReport: vi.fn() })
+      const createHandle = tracker.createElementHandle.bind(tracker)
+      let elementCommitted = vi.fn()
+      vi.spyOn(tracker, "createElementHandle").mockImplementation(() => {
+        const handle = createHandle()
+        elementCommitted = vi.spyOn(handle, "elementCommitted")
+        return handle
+      })
+      const renderNode = (node: ElementNode): ReactElement => (
+        <RenderTimingContext.Provider value={tracker}>
+          <ElementContainer
+            node={node}
+            config={ElementContainerConfig.DEFAULT}
+            isStale={false}
+          >
+            <div>Content</div>
+          </ElementContainer>
+        </RenderTimingContext.Provider>
+      )
+
+      const { rerender } = render(renderNode(mockNode))
+      expect(elementCommitted).toHaveBeenCalledTimes(1)
+
+      rerender(
+        renderNode({ ...mockNode, scriptRunId: "next-run" } as ElementNode)
+      )
+      expect(elementCommitted).toHaveBeenCalledTimes(1)
+
+      const changedElement = { ...mockNode.element }
+      rerender(
+        renderNode({
+          ...mockNode,
+          element: changedElement,
+          scriptRunId: "third-run",
+        } as ElementNode)
+      )
+      expect(elementCommitted).toHaveBeenCalledTimes(2)
+      expect(elementCommitted).toHaveBeenLastCalledWith(
+        "third-run",
+        changedElement,
+        "markdown",
+        expect.any(HTMLElement)
+      )
+      tracker.dispose()
+    })
   })
 
   describe("stretch size containment", () => {
