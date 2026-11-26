@@ -416,6 +416,20 @@ describe("RenderTimingTracker", () => {
       expect((await finishRerun(RUN_ID, 1100)).inputDelayMs).toBe(100)
     })
 
+    it("drops the input delay when a request that can't follow input joins it before the run starts", async () => {
+      await finishFirstRun()
+
+      browser.input(900)
+      browser.time = 1000
+      tracker.rerunRequested()
+      browser.time = 1030
+      tracker.rerunRequested({ canFollowInput: false })
+
+      const renderTiming = await finishRerun(RUN_ID, 1100)
+      expect(renderTiming.inputDelayMs).toBeUndefined()
+      expect(renderTiming.scriptFinishedMs).toBe(200)
+    })
+
     it("doesn't report an input delay for the first run or a run without a request", async () => {
       browser.input(50)
       tracker.runStarted("run-0")

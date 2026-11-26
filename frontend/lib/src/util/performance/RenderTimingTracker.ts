@@ -442,7 +442,8 @@ export class RenderTimingTracker {
    * Called when the browser sends a rerun request. Pass `canFollowInput:
    * false` for requests that no input in the page caused: automatic reruns
    * such as `run_every` fragment timers, and history navigation, whose
-   * browser buttons aren't page events.
+   * browser buttons aren't page events. Such a request also drops the input
+   * delay of a request still waiting for its run.
    */
   rerunRequested({
     canFollowInput = true,
@@ -454,6 +455,10 @@ export class RenderTimingTracker {
         this.pendingInputDelayMs = canFollowInput
           ? this.getInputDelay(now)
           : undefined
+      } else if (!canFollowInput) {
+        // The run that answers the joined requests may be this one, which
+        // no input caused.
+        this.pendingInputDelayMs = undefined
       }
       if (canFollowInput) this.lastInputAt = undefined
       const { run } = this
