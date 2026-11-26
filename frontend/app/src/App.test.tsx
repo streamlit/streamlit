@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act } from "react"
+import { act, StrictMode } from "react"
 
 import {
   render,
@@ -62,6 +62,7 @@ import {
   lightTheme,
   LocalStore,
   mockSessionInfoProps,
+  RenderTimingTracker,
   RootStyleProvider,
   ScriptRunState,
   SessionInfo,
@@ -109,8 +110,8 @@ vi.mock("@streamlit/utils", async () => {
   // We must use Object.defineProperty to ensure the getter works correctly
   const mocked = {
     ...actual,
-    // jsdom serves tests from localhost, so the load milestone tests override
-    // this to measure a hosted app.
+    // jsdom serves tests from localhost, so the load milestone and render
+    // timing tests override this to measure a hosted app.
     isLocalOrPrivateHostname: vi.fn(
       (actual as { isLocalOrPrivateHostname: (hostname: string) => boolean })
         .isLocalOrPrivateHostname
@@ -765,6 +766,199 @@ describe("App", () => {
     sendNewSession(NEW_SESSION_JSON)
 
     expect(metricsManager.enqueue).toHaveBeenCalledWith("updateReport")
+  })
+
+  describe("render timing", () => {
+    const sendNewSessionWithUsageStats = (gatherUsageStats = true): void => {
+      sendNewSession({
+        ...NEW_SESSION_JSON,
+        config: { ...NEW_SESSION_JSON.config, gatherUsageStats },
+      })
+    }
+
+    const getEnqueueCalls = (eventName: string): unknown[][] =>
+      vi
+        .mocked(getStoredValue<MetricsManager>(MetricsManager).enqueue)
+        .mock.calls.filter(([name]) => name === eventName)
+
+    it("joins the renderTiming event to the run's pageProfile event", async () => {
+      vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
+      renderApp(getProps())
+
+      sendNewSessionWithUsageStats()
+      sendForwardMessage("pageProfile", { execTime: 5 })
+
+      expect(getEnqueueCalls("pageProfile")).toEqual([
+        ["pageProfile", expect.objectContaining({ runIndex: 0 })],
+      ])
+      await waitFor(() => {
+        expect(getEnqueueCalls("renderTiming")).toEqual([
+          [
+            "renderTiming",
+            {
+              runIndex: 0,
+              renderTiming: expect.objectContaining({
+                fullyLoadedMs: expect.any(Number),
+                wasSuperseded: false,
+              }),
+            },
+          ],
+        ])
+      })
+    })
+
+    it("doesn't attribute automatic reruns to the user's last input", () => {
+      vi.useFakeTimers()
+      vi.mocked(isEmbed).mockReturnValue(false)
+      vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
+      const rerunRequested = vi.spyOn(
+        RenderTimingTracker.prototype,
+        "rerunRequested"
+      )
+      try {
+        renderApp(getProps())
+        sendNewSessionWithUsageStats()
+
+        act(() => {
+          sendForwardMessage("autoRerun", {
+            interval: 1.0,
+            fragmentId: "myFragmentId",
+          })
+          vi.advanceTimersByTime(1000)
+        })
+
+        expect(rerunRequested).toHaveBeenCalledWith({ canFollowInput: false })
+      } finally {
+        rerunRequested.mockRestore()
+        vi.useRealTimers()
+      }
+    })
+
+    it("keeps measuring after a StrictMode remount", () => {
+      vi.mocked(isLocalOrPrivateHostname).mockReturnValue(false)
+      try {
+        render(
+          <StrictMode>
+            <RootStyleProvider theme={getDefaultTheme()}>
+              <WindowDimensionsProvider>
+                <App {...getProps()} />
+              </WindowDimensionsProvider>
+            </RootStyleProvider>
+          </StrictMode>
+        )
+
+        sendNewSessionWithUsageStats()
+        sendForwardMessage("pageProfile", { execTime: 5 })
+
+        expect(getEnqueueCalls("pageProfile")).toEqual([
+          ["pageProfile", expect.objectContaining({ runIndex: 0 })],
+        ])
+      } finally {
+        vi.mocked(isLocalOrPrivateHostname).mockReset()
+      }
+    })
+
+    it("doesn't measure apps served from a local address", () => {
+      renderApp(getProps())
+
+      sendNewSessionWithUsageStats()
+      sendForwardMessage("pageProfile", { execTime: 5 })
+
+      expect(isLocalOrPrivateHostname).toHaveBeenLastCalledWith(
+        window.location.hostname
+      )
+      expect(getEnqueueCalls("pageProfile")).toEqual([
+        ["pageProfile", expect.not.objectContaining({ runIndex: 0 })],
+      ])
+    })
+
+    it("doesn't measure when usage stats are off", () => {
+      vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
+      renderApp(getProps())
+
+      sendNewSessionWithUsageStats(false)
+      sendForwardMessage("pageProfile", { execTime: 5 })
+
+      expect(getEnqueueCalls("pageProfile")).toEqual([
+        ["pageProfile", expect.not.objectContaining({ runIndex: 0 })],
+      ])
+    })
+
+    it("reports a run cut short by a reconnect under the run's own session", () => {
+      vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
+      renderApp(getProps())
+      const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
+      const sessionIdsOfReports: string[] = []
+      vi.mocked(
+        getStoredValue<MetricsManager>(MetricsManager).enqueue
+      ).mockImplementation(eventName => {
+        if (eventName === "renderTiming") {
+          sessionIdsOfReports.push(sessionInfo.current.sessionId)
+        }
+      })
+
+      sendNewSessionWithUsageStats()
+      sendForwardMessage("pageProfile", { execTime: 5 })
+      sendScriptFinished(ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY)
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: false,
+      })
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.PINGING_SERVER
+        )
+      })
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+      // A run the server starts, such as a rerun on save.
+      sendNewSession(
+        {
+          ...NEW_SESSION_JSON,
+          initialize: { ...NEW_SESSION_JSON.initialize, sessionId: "new" },
+        },
+        { ...RUN_IDENTITY_JSON, scriptRunId: "reconnected_run_id" }
+      )
+
+      expect(sessionIdsOfReports).toEqual(["sessionId"])
+    })
+
+    it("keeps measuring when the metrics config fails to load", async () => {
+      vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"))
+      renderApp(getProps())
+
+      sendNewSessionWithUsageStats()
+      await act(async () => {
+        await new Promise(resolve => {
+          setTimeout(resolve, 50)
+        })
+      })
+      sendForwardMessage("pageProfile", { execTime: 5 })
+
+      expect(getEnqueueCalls("pageProfile")).toEqual([
+        ["pageProfile", expect.objectContaining({ runIndex: 0 })],
+      ])
+    })
+
+    it("stops measuring once the host turns metrics off", async () => {
+      vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
+      renderApp(getProps())
+      getStoredValue<MetricsManager>(MetricsManager).setMetricsConfig("off")
+
+      sendNewSessionWithUsageStats()
+      await act(async () => {
+        await Promise.resolve()
+      })
+      sendForwardMessage("pageProfile", { execTime: 5 })
+
+      expect(getEnqueueCalls("pageProfile")).toEqual([
+        ["pageProfile", expect.not.objectContaining({ runIndex: 0 })],
+      ])
+    })
   })
 
   it("adds the messages received for the run to the pageProfile event", () => {
