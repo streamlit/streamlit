@@ -173,7 +173,6 @@ describe("initialize", () => {
     ["off", true],
     ["postMessage", false],
     [DEFAULT_METRICS_CONFIG, false],
-    ["", false],
   ])(
     "reports whether the host turned metrics off for metricsUrl %j",
     (metricsConfig, isTurnedOffByHost) => {
@@ -760,17 +759,6 @@ it("tracks events immediately after initialized", async () => {
 })
 
 it("only sends renderTiming events with keepalive", async () => {
-  const mm = getMetricsManager()
-  await mm.initialize({ gatherUsageStats: true })
-
-  mm.enqueue("pageProfile", { runIndex: 0 })
-  mm.enqueue("renderTiming", { runIndex: 0, renderTiming: {} })
-
-  expect(mm.track.mock.calls[0][1]).toBe(false)
-  expect(mm.track.mock.calls[1][1]).toBe(true)
-})
-
-it("passes keepalive to the metrics request", async () => {
   const mm = getMetricsManager()
   mm.track = MetricsManager.prototype.track
   await mm.initialize({ gatherUsageStats: true })

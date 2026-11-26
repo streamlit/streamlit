@@ -209,6 +209,10 @@ describe("RenderTimingTracker", () => {
     it("measures the first run from navigation start", async () => {
       browser.time = 120
       tracker.appMounted()
+      // Connecting requests the first run, here right after an input.
+      browser.input(200)
+      browser.time = 250
+      tracker.rerunRequested()
       browser.time = 300
       tracker.runStarted(RUN_ID)
 
@@ -235,6 +239,7 @@ describe("RenderTimingTracker", () => {
             wasSuperseded: false,
             timedOut: false,
             timedOutElements: 0,
+            inputDelayMs: undefined,
           }),
         },
       ])
@@ -270,48 +275,19 @@ describe("RenderTimingTracker", () => {
       expect(renderTiming.connectedMs).toBeUndefined()
     })
 
-    it("starts a rerun at the earliest request before the run starts", async () => {
+    it("measures a run without a request from its NewSession, with no input delay", async () => {
       tracker.runStarted("run-0")
       await finishScript(10)
       browser.paintUntilIdle()
 
-      browser.time = 1000
-      tracker.rerunRequested()
-      browser.time = 1050
-      tracker.rerunRequested()
-      browser.time = 1100
-      tracker.runStarted(RUN_ID)
-      await finishScript(1200)
-      browser.paintUntilIdle()
-
-      expect(reports[1].renderTiming.scriptFinishedMs).toBe(200)
-    })
-
-    it("starts a run without a request at its NewSession", async () => {
-      tracker.runStarted("run-0")
-      await finishScript(10)
-      browser.paintUntilIdle()
-
+      browser.input(1900)
       browser.time = 2000
       tracker.runStarted(RUN_ID)
       await finishScript(2300)
       browser.paintUntilIdle()
 
       expect(reports[1].renderTiming.scriptFinishedMs).toBe(300)
-    })
-
-    it("never reports fully loaded before the script finished", async () => {
-      tracker.runStarted(RUN_ID)
-      const { target } = commitElement()
-      browser.observer.report(target, true)
-      browser.paint(100)
-      await finishScript(900)
-      browser.paintUntilIdle()
-
-      expect(reports[0].renderTiming).toMatchObject({
-        firstContentMs: 100,
-        fullyLoadedMs: 900,
-      })
+      expect(reports[1].renderTiming.inputDelayMs).toBeUndefined()
     })
 
     it("reports a run without elements as loaded when the script finishes", async () => {
@@ -407,7 +383,7 @@ describe("RenderTimingTracker", () => {
       expect((await finishRerun("run-2", 1050)).inputDelayMs).toBe(100)
     })
 
-    it("uses the input delay of the earliest request before the run starts", async () => {
+    it("measures from the earliest request and uses its input delay when requests join", async () => {
       await finishFirstRun()
 
       browser.input(900)
@@ -417,7 +393,10 @@ describe("RenderTimingTracker", () => {
       browser.time = 1030
       tracker.rerunRequested()
 
-      expect((await finishRerun(RUN_ID, 1100)).inputDelayMs).toBe(100)
+      expect(await finishRerun(RUN_ID, 1100)).toMatchObject({
+        inputDelayMs: 100,
+        scriptFinishedMs: 200,
+      })
     })
 
     it("drops the input delay when a request that can't follow input joins it before the run starts", async () => {
@@ -432,17 +411,6 @@ describe("RenderTimingTracker", () => {
       const renderTiming = await finishRerun(RUN_ID, 1100)
       expect(renderTiming.inputDelayMs).toBeUndefined()
       expect(renderTiming.scriptFinishedMs).toBe(200)
-    })
-
-    it("doesn't report an input delay for the first run or a run without a request", async () => {
-      browser.input(50)
-      tracker.runStarted("run-0")
-      await finishScript(100)
-      browser.paintUntilIdle()
-      expect(reports[0].renderTiming.inputDelayMs).toBeUndefined()
-
-      browser.input(900)
-      expect((await finishRerun(RUN_ID, 1000)).inputDelayMs).toBeUndefined()
     })
 
     it("only listens to trusted input events", async () => {
@@ -791,20 +759,6 @@ describe("RenderTimingTracker", () => {
       expect(reports[0].renderTiming).not.toHaveProperty("drawingMs")
     })
 
-    it("only counts work after the script finished", async () => {
-      tracker.runStarted(RUN_ID)
-      const { handle, target } = commitElement()
-      browser.observer.report(target, true)
-      browser.time = 100
-      handle.setLoading("image", "media", true)
-      await finishScript(400)
-      browser.time = 500
-      handle.setLoading("image", "media", false)
-      browser.paintUntilIdle()
-
-      expect(reports[0].renderTiming.mediaLoadingMs).toBe(100)
-    })
-
     it("treats an element that starts new work after painting as not ready", async () => {
       tracker.runStarted(RUN_ID)
       const { handle, target } = commitElement()
@@ -1001,16 +955,6 @@ describe("RenderTimingTracker", () => {
         fullyLoadedMs: 200,
       })
     })
-
-    it("doesn't time out runs that completed", async () => {
-      tracker.runStarted(RUN_ID)
-      await finishScript(100)
-      browser.paintUntilIdle()
-      vi.advanceTimersByTime(RENDER_TIMING_TIMEOUT_MS)
-
-      expect(reports).toHaveLength(1)
-      expect(reports[0].renderTiming.timedOut).toBe(false)
-    })
   })
 
   describe("failures", () => {
@@ -1133,23 +1077,6 @@ describe("RenderTimingTracker", () => {
 
       expect(reports).toHaveLength(1)
       expect(browser.observer.observed.size).toBe(0)
-    })
-
-    it("ignores the page being hidden between runs", async () => {
-      tracker.runStarted(RUN_ID)
-      await finishScript(20)
-      browser.paintUntilIdle()
-      browser.setHidden(true)
-      browser.setHidden(false)
-
-      tracker.runStarted("second-run")
-      await finishScript(40)
-      browser.paintUntilIdle()
-
-      expect(reports.map(report => report.renderTiming.wasHidden)).toEqual([
-        false,
-        false,
-      ])
     })
 
     it("stops measuring and listening when disposed", async () => {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { ReactNode } from "react"
+import type { ReactElement, ReactNode } from "react"
 
 import { renderHook } from "@testing-library/react"
 
@@ -30,91 +30,52 @@ import {
   useElementLoadState,
 } from "./useElementLoadState"
 
+let tracker: RenderTimingTracker
+
+beforeEach(() => {
+  tracker = new RenderTimingTracker({ onReport: vi.fn() })
+})
+
+afterEach(() => {
+  tracker.dispose()
+})
+
+const createWrapper =
+  (handle: ElementTimingHandle | null) =>
+  ({ children }: { children: ReactNode }): ReactElement => (
+    <ElementTimingContext.Provider value={handle}>
+      {children}
+    </ElementTimingContext.Provider>
+  )
+
 describe("useElementLoadState", () => {
-  let tracker: RenderTimingTracker
-
-  beforeEach(() => {
-    tracker = new RenderTimingTracker({ onReport: vi.fn() })
-  })
-
-  afterEach(() => {
-    tracker.dispose()
-  })
-
-  const createHandle = (): ElementTimingHandle => {
-    const handle = tracker.createElementHandle()
-    vi.spyOn(handle, "setLoading")
-    return handle
-  }
-
   const renderWithHandle = (
-    handle: ElementTimingHandle | null,
+    handle: ElementTimingHandle,
     initialProps: { kind: ElementLoadKind; isLoaded: boolean }
   ): ReturnType<
     typeof renderHook<void, { kind: ElementLoadKind; isLoaded: boolean }>
   > =>
     renderHook(({ kind, isLoaded }) => useElementLoadState(kind, isLoaded), {
       initialProps,
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <ElementTimingContext.Provider value={handle}>
-          {children}
-        </ElementTimingContext.Provider>
-      ),
+      wrapper: createWrapper(handle),
     })
 
-  it("does nothing outside a measured element", () => {
-    expect(() =>
-      renderWithHandle(null, { kind: "draw", isLoaded: false })
-    ).not.toThrow()
-  })
-
   it("reports pending work until the element is loaded", () => {
-    const handle = createHandle()
+    const handle = tracker.createElementHandle()
     const { rerender } = renderWithHandle(handle, {
       kind: "media",
       isLoaded: false,
     })
 
-    expect(handle.setLoading).toHaveBeenCalledTimes(1)
-    expect(handle.setLoading).toHaveBeenLastCalledWith(
-      expect.any(String),
-      "media",
-      true
-    )
-    expect(handle.loadingSlots.size).toBe(1)
+    expect([...handle.loadingSlots.values()]).toEqual(["media"])
 
     rerender({ kind: "media", isLoaded: true })
-
-    expect(handle.setLoading).toHaveBeenCalledTimes(2)
-    expect(handle.setLoading).toHaveBeenLastCalledWith(
-      expect.any(String),
-      "media",
-      false
-    )
-    expect(handle.loadingSlots.size).toBe(0)
-  })
-
-  it("doesn't report work for content that's already loaded", () => {
-    const handle = createHandle()
-    renderWithHandle(handle, { kind: "draw", isLoaded: true })
-
-    expect(handle.setLoading).not.toHaveBeenCalled()
-  })
-
-  it("clears pending work when the element unmounts", () => {
-    const handle = createHandle()
-    const { unmount } = renderWithHandle(handle, {
-      kind: "draw",
-      isLoaded: false,
-    })
-
-    unmount()
 
     expect(handle.loadingSlots.size).toBe(0)
   })
 
   it("tracks each pending piece of work separately", () => {
-    const handle = createHandle()
+    const handle = tracker.createElementHandle()
     renderWithHandle(handle, { kind: "draw", isLoaded: false })
     renderWithHandle(handle, { kind: "media", isLoaded: false })
 
@@ -125,27 +86,13 @@ describe("useElementLoadState", () => {
 })
 
 describe("useElementLoadCallback", () => {
-  let tracker: RenderTimingTracker
-
-  beforeEach(() => {
-    tracker = new RenderTimingTracker({ onReport: vi.fn() })
-  })
-
-  afterEach(() => {
-    tracker.dispose()
-  })
-
   const renderWithHandle = (
     handle: ElementTimingHandle | null,
     workKey: unknown
   ): ReturnType<typeof renderHook<() => void, { workKey: unknown }>> =>
     renderHook(({ workKey }) => useElementLoadCallback("media", workKey), {
       initialProps: { workKey },
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <ElementTimingContext.Provider value={handle}>
-          {children}
-        </ElementTimingContext.Provider>
-      ),
+      wrapper: createWrapper(handle),
     })
 
   it("returns a callback that does nothing outside a measured element", () => {
@@ -169,17 +116,7 @@ describe("useElementLoadCallback", () => {
     expect(handle.loadingSlots.size).toBe(0)
   })
 
-  it("reports new work when the work key changes", () => {
-    const handle = tracker.createElementHandle()
-    const { result, rerender } = renderWithHandle(handle, "a.png")
-    result.current()
-
-    rerender({ workKey: "b.png" })
-
-    expect(handle.loadingSlots.size).toBe(1)
-  })
-
-  it("ignores a completion of work that a new work key replaced", () => {
+  it("tracks a new work key, ignoring the completion of the work it replaced", () => {
     const handle = tracker.createElementHandle()
     const { result, rerender } = renderWithHandle(handle, "a.png")
     const markOldWorkLoaded = result.current

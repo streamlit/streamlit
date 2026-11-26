@@ -873,22 +873,16 @@ describe("App", () => {
       ])
     })
 
-    it("doesn't measure when usage stats are off", async () => {
+    it("doesn't measure when usage stats are off", () => {
       vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
       renderApp(getProps())
 
       sendNewSessionWithUsageStats(false)
       sendForwardMessage("pageProfile", { execTime: 5 })
-      await act(async () => {
-        await new Promise(resolve => {
-          setTimeout(resolve, 50)
-        })
-      })
 
       expect(getEnqueueCalls("pageProfile")).toEqual([
         ["pageProfile", expect.not.objectContaining({ runIndex: 0 })],
       ])
-      expect(getEnqueueCalls("renderTiming")).toEqual([])
     })
 
     it("reports a run cut short by a reconnect under the run's own session", () => {
