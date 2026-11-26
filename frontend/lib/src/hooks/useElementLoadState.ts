@@ -14,10 +14,32 @@
  * limitations under the License.
  */
 
-import { useCallback, useContext, useId, useLayoutEffect, useRef } from "react"
+import {
+  type RefObject,
+  useCallback,
+  useContext,
+  useId,
+  useLayoutEffect,
+  useRef,
+} from "react"
 
 import { ElementTimingContext } from "~lib/components/core/RenderTimingContext"
 import type { ElementLoadKind } from "~lib/util/performance/RenderTimingTracker"
+
+function hasMediaLoaded(
+  node: HTMLImageElement | HTMLMediaElement | null | undefined
+): boolean {
+  if (node instanceof HTMLImageElement) return node.complete
+  if (node instanceof HTMLMediaElement) {
+    // A browser that decides not to preload stops at NETWORK_IDLE and fires
+    // `suspend` instead of `loadeddata`.
+    return (
+      node.readyState >= node.HAVE_CURRENT_DATA ||
+      node.networkState === node.NETWORK_IDLE
+    )
+  }
+  return false
+}
 
 /**
  * Tells the browser's render timing metrics whether an element is still
@@ -53,11 +75,16 @@ export function useElementLoadState(
  *   again when the element's payload changes.
  * - `null` or `undefined`: the element has no such work.
  *
+ * Pass `mediaRef` when the work is an `<img>`, `<video>` or `<audio>`
+ * loading, so a resource that finished before the element committed doesn't
+ * count as pending.
+ *
  * Does nothing when render timing isn't measured.
  */
 export function useElementLoadCallback(
   kind: ElementLoadKind,
-  workKey: unknown
+  workKey: unknown,
+  mediaRef?: RefObject<HTMLImageElement | HTMLMediaElement | null>
 ): () => void {
   const handle = useContext(ElementTimingContext)
   const slotId = useId()
@@ -67,11 +94,14 @@ export function useElementLoadCallback(
     if (!handle || workKey === null || workKey === undefined) return
 
     pendingWorkKeyRef.current = workKey
+    // A cached resource can finish loading while a time-sliced render is
+    // paused, before React commits the element and can deliver its event.
+    if (hasMediaLoaded(mediaRef?.current)) return
     handle.setLoading(slotId, kind, true)
     return () => {
       handle.setLoading(slotId, kind, false)
     }
-  }, [handle, slotId, kind, workKey])
+  }, [handle, slotId, kind, workKey, mediaRef])
 
   return useCallback(() => {
     if (pendingWorkKeyRef.current !== workKey) return

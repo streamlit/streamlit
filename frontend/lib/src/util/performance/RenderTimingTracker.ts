@@ -165,8 +165,9 @@ interface RunMeasurement {
   viewportSize?: { width: number; height: number }
   timeoutId?: ReturnType<typeof setTimeout>
   /**
-   * Incremented on every change that can affect completion. `evaluate`
-   * compares it across two frames to detect that the run has settled.
+   * Incremented on every change that can affect completion.
+   * `scheduleCompletionCheck` compares it across two frames to detect that
+   * the run has settled.
    */
   changeCount: number
   isSettling: boolean
@@ -231,11 +232,12 @@ function updateRecord(record: ElementRecord, change: () => void): void {
   record.run.waitingCount += Number(isWaitingOn(record)) - Number(wasWaiting)
 }
 
-/** Records the record's paint as the run's first content if it's earliest. */
-function noteFirstContent(
-  record: ElementRecord,
-  shownAt = record.readyAt
-): void {
+/**
+ * Records when the record's content was first shown as the run's first
+ * content if it's earliest: its paint, or `scrolledInAt` if it was painted
+ * offscreen.
+ */
+function noteFirstContent(record: ElementRecord, scrolledInAt?: number): void {
   const { run, readyAt } = record
   if (
     !record.isContent ||
@@ -244,8 +246,8 @@ function noteFirstContent(
   ) {
     return
   }
-  const contentAt = Math.max(readyAt, shownAt ?? readyAt)
-  run.firstContentAt = Math.min(run.firstContentAt ?? contentAt, contentAt)
+  const shownAt = scrolledInAt ?? readyAt
+  run.firstContentAt = Math.min(run.firstContentAt ?? shownAt, shownAt)
 }
 
 /** Returns the largest lower bound in `bounds` that `size` reaches. */
@@ -778,15 +780,13 @@ export class RenderTimingTracker {
     for (const entry of entries) {
       const record = run.recordsByTarget.get(entry.target)
       if (!record) continue
-      // An element painted offscreen counts as content from when it scrolls
-      // into view. One the observer hadn't reported yet was shown when it
-      // was painted.
-      const shownAt = record.isIntersecting === false ? now : record.readyAt
+      // One the observer hadn't reported yet was shown when it was painted.
+      const scrolledInAt = record.isIntersecting === false ? now : undefined
       updateRecord(record, () => {
         record.isIntersecting = entry.isIntersecting
       })
       record.wasEverIntersecting ||= entry.isIntersecting
-      if (entry.isIntersecting) noteFirstContent(record, shownAt)
+      if (entry.isIntersecting) noteFirstContent(record, scrolledInAt)
     }
     run.changeCount++
     this.scheduleCompletionCheck(run)

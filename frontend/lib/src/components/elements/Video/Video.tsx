@@ -14,14 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  memo,
-  type ReactElement,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-} from "react"
+import { memo, type ReactElement, useEffect, useMemo, useRef } from "react"
 
 import { getLogger } from "loglevel"
 
@@ -102,19 +95,11 @@ function Video({
 
   const youtubeSrc =
     type === VideoProto.Type.YOUTUBE_IFRAME ? getYoutubeSrc(url) : undefined
-  const markVideoLoaded = useElementLoadCallback("media", youtubeSrc ?? url)
-  // A cached video can finish loading while a time-sliced render is paused,
-  // before React commits it and can deliver `loadeddata` or `suspend`.
-  useLayoutEffect(() => {
-    const video = videoRef.current
-    if (
-      video &&
-      (video.readyState >= video.HAVE_CURRENT_DATA ||
-        video.networkState === video.NETWORK_IDLE)
-    ) {
-      markVideoLoaded()
-    }
-  }, [markVideoLoaded])
+  const markVideoLoaded = useElementLoadCallback(
+    "media",
+    youtubeSrc ?? url,
+    videoRef
+  )
 
   const preventAutoplay = useMemo<boolean>(() => {
     if (!element.id) {
