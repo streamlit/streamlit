@@ -150,13 +150,47 @@ with st.container(horizontal=True, height=180, key="horizontal_chart"):
 
 st.markdown("After the horizontal chart")
 
+st.markdown(
+    """
+    <style>
+    .st-key-fixed_height_chart_row {
+        background: linear-gradient(
+            to right,
+            #1010f0 0 44px,
+            transparent 44px 72px,
+            #00b83f 72px 108px,
+            transparent 108px
+        );
+        forced-color-adjust: none;
+        print-color-adjust: exact;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 with st.container(height=420, key="fixed_height_chart_row"):
     fixed_left, fixed_right = st.columns(2)
     fixed_left.bar_chart(pd.DataFrame({"value": [3, 1, 2]}), height=160)
-    fixed_right.line_chart(pd.DataFrame({"value": [1, 2, 3]}), height=160)
+    fixed_right.dataframe(
+        pd.DataFrame({"name": ["a", "b"], "value": [1, 2]}),
+        hide_index=True,
+        height=160,
+    )
     st.area_chart(pd.DataFrame({"value": [2, 3, 1]}), height="stretch")
 
 st.markdown("After the fixed-height chart row")
+
+with st.container(key="fixed_height_cards_row"):
+    fixed_card_left, fixed_card_right = st.columns(2)
+    with fixed_card_left:
+        with st.container(height=220, border=True, key="fixed_height_card_left"):
+            st.bar_chart(pd.DataFrame({"value": [2, 1, 3]}), height=160)
+    with fixed_card_right:
+        with st.container(height=220, border=True, key="fixed_height_card_right"):
+            st.line_chart(pd.DataFrame({"value": [1, 3, 2]}), height=160)
+
+st.markdown("After the fixed-height cards row")
 
 with st.container(key="page_links"):
     st.page_link("http://www.example.com", label="First page link")

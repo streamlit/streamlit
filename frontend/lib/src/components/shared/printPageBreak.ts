@@ -25,6 +25,13 @@ import { PrintLayout } from "~lib/components/core/Block/ElementContainerConfig"
 export const PRINT_INACTIVE_ATTRIBUTE = "data-st-inactive"
 
 /**
+ * Marks a pixel- or rem-height vertical container. Print keeps its height, so
+ * column rows inside it do not stack. Horizontal containers, forms, and tabs
+ * are not marked.
+ */
+export const PRINT_FIXED_HEIGHT_ATTRIBUTE = "data-st-print-fixed-height"
+
+/**
  * Excludes an element that is mounted but not on the printed page: inside a
  * closed tab or a collapsed expander.
  */

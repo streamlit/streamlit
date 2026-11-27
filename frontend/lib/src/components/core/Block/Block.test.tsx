@@ -37,6 +37,7 @@ import {
 } from "~lib/AppNode"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
+import { PRINT_FIXED_HEIGHT_ATTRIBUTE } from "~lib/components/shared/printPageBreak"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import {
   forwardMsgMetadata,
@@ -558,6 +559,59 @@ describe("FlexBoxContainer layout props", () => {
           justify: BlockProto.FlexContainer.Justify.JUSTIFY_CENTER,
         },
       })
+
+    it.each([
+      [
+        "pixel-height vertical",
+        BlockProto.FlexContainer.Direction.VERTICAL,
+        { pixelHeight: 400 },
+        true,
+      ],
+      [
+        "rem-height vertical",
+        BlockProto.FlexContainer.Direction.VERTICAL,
+        { remHeight: 20 },
+        true,
+      ],
+      [
+        "content-height vertical",
+        BlockProto.FlexContainer.Direction.VERTICAL,
+        { useContent: true },
+        false,
+      ],
+      [
+        "stretch-height vertical",
+        BlockProto.FlexContainer.Direction.VERTICAL,
+        { useStretch: true },
+        false,
+      ],
+      [
+        "fixed-height horizontal",
+        BlockProto.FlexContainer.Direction.HORIZONTAL,
+        { pixelHeight: 400 },
+        false,
+      ],
+    ])(
+      "sets the fixed-height print attribute only on pixel- or rem-height vertical containers: %s",
+      (_label, direction, heightConfig, expected) => {
+        renderWithContexts(
+          makeVerticalBlockComponent(
+            makeVerticalBlock([], {
+              heightConfig,
+              flexContainer: { direction },
+            })
+          )
+        )
+
+        const testId =
+          direction === BlockProto.FlexContainer.Direction.VERTICAL
+            ? "stVerticalBlock"
+            : "stHorizontalBlock"
+        expect(
+          screen.getByTestId(testId).hasAttribute(PRINT_FIXED_HEIGHT_ATTRIBUTE)
+        ).toBe(expected)
+      }
+    )
 
     it("keeps flex for a stretch-height container in a fixed-height parent", () => {
       renderWithContexts(

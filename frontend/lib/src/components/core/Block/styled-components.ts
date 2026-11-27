@@ -30,6 +30,7 @@ import { Direction } from "~lib/components/core/Layout/utils"
 import { ANIMATION_STYLES as SKELETON_PULSE_STYLES } from "~lib/components/elements/Skeleton/styled-components"
 import {
   PRINT_CHART_CARD_SELECTOR,
+  PRINT_FIXED_HEIGHT_ATTRIBUTE,
   PRINT_VISIBLE_FILTER,
   printKeepTogetherRules,
 } from "~lib/components/shared/printPageBreak"
@@ -59,32 +60,42 @@ const CHECKBOX_WRAPPER_SELECTOR = ".stCheckbox"
 export const PRINT_BORDERED_COLUMN_CLASS = "stPrintBorderedColumn"
 
 /**
- * Content that makes a printed column row stack into one column: an element
- * that keeps a width measured on screen (see `PrintLayout`). A border alone
- * does not stack the row, so a row of bordered metric cards stays side by
- * side.
+ * A row stacks in print when it contains a visible element that keeps its
+ * screen width (see `PrintLayout`). A border alone does not stack the row, so
+ * a row of bordered metric cards stays side by side.
  */
-const PRINT_STACK_TRIGGER = `:is(.${PrintLayout.FIXED_WIDTH}, .${PrintLayout.GRAPHIC})`
+const PRINT_STACK_TRIGGER = `:is(.${PrintLayout.FIXED_WIDTH}, .${PrintLayout.GRAPHIC})${PRINT_VISIBLE_FILTER}`
 
 /**
  * Relative selector for a dataframe, table, or chart that prints inside a
  * direct child column. It has no leading `&`, so wrap it in `&:has(...)`.
  */
-const PRINT_STACK_TRIGGER_IN_COLUMN = `> .stColumn ${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER}`
+const PRINT_STACK_TRIGGER_IN_COLUMN = `> .stColumn ${PRINT_STACK_TRIGGER}`
+
+/** Condition for a column row that stacks on the printed page. */
+const PRINT_STACK_COLUMNS_CONDITION = `:not([${PRINT_FIXED_HEIGHT_ATTRIBUTE}] *):has(${PRINT_STACK_TRIGGER_IN_COLUMN})`
+
+const PRINT_STACK_COLUMNS_ROW = `&${PRINT_STACK_COLUMNS_CONDITION}`
+
+const PRINT_KEEP_TOGETHER_BORDERED_COLUMNS = `&:has(> .stColumn.${PRINT_BORDERED_COLUMN_CLASS}):not(${PRINT_STACK_COLUMNS_CONDITION})`
 
 /**
  * Emotion selector for this horizontal container when it is not an
  * `st.columns` row and it holds a dataframe, table, or chart on the printed
- * page. The leading `&` is this flex container.
+ * page. A row inside a fixed-height vertical container stays side by side so
+ * the container can keep its height. The leading `&` is this flex container.
  */
-const PRINT_STACK_HORIZONTAL_CONTAINER = `&:not(:has(> .stColumn)):has(${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER})`
+const PRINT_STACK_HORIZONTAL_CONTAINER = `&:not([${PRINT_FIXED_HEIGHT_ATTRIBUTE}] *):not(:has(> .stColumn)):has(${PRINT_STACK_TRIGGER})`
 
 /**
  * Relative selector for a descendant column row or horizontal container that
- * stacks in print because it holds a dataframe, table, or chart. It has no
- * leading `&`, so wrap it in `&:has(...)`.
+ * stacks in print because it holds a dataframe, table, or chart. Rows inside a
+ * fixed-height vertical container never stack: the container keeps its height,
+ * so a stacked row would be cut off or stretch the container and its
+ * background over the content below. This selector has no leading `&`, so wrap
+ * it in `&:has(...)`.
  */
-const PRINT_STACKING_ROW = `.stHorizontalBlock ${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER}`
+const PRINT_STACKING_ROW = `.stHorizontalBlock:not([${PRINT_FIXED_HEIGHT_ATTRIBUTE}] *) ${PRINT_STACK_TRIGGER}`
 
 const GLOBAL_ELEMENTS = new Set(["balloons", "snow"])
 
@@ -559,9 +570,11 @@ export const StyledFlexContainerBlock =
         (hasDefiniteHeight ?? isFixedLengthHeight(height))
       const keepsPrintFlex =
         keepsPrintFlexForAlignment || keepsPrintFlexForHeight
-      // A height that fit a side-by-side row cuts off the row once it
-      // stacks, and print cannot scroll, so the block grows to fit it. It
-      // prints as a block box then, unless it centers or end-aligns.
+      // Print cannot scroll, so a definite-height block without the fixed-height
+      // print marker grows to fit a stacked descendant row. Examples are a
+      // fixed-row grid cell or a stretch block in a fixed-height horizontal
+      // container. Rows inside a marked block never stack, so a pixel or rem
+      // height keeps its height.
       const stackedRowHeightReleaseRules: CSSObject = keepsPrintFlexForHeight
         ? {
             [`&:has(${PRINT_STACKING_ROW})`]: {
@@ -586,9 +599,8 @@ export const StyledFlexContainerBlock =
           ? {
               // A row of bordered cards that stays side by side prints like
               // one card, so a page break does not cut every card at once.
-              [`&:has(> .stColumn.${PRINT_BORDERED_COLUMN_CLASS}):not(:has(${PRINT_STACK_TRIGGER_IN_COLUMN}))`]:
-                printKeepTogetherRules,
-              [`&:has(${PRINT_STACK_TRIGGER_IN_COLUMN})`]: {
+              [PRINT_KEEP_TOGETHER_BORDERED_COLUMNS]: printKeepTogetherRules,
+              [PRINT_STACK_COLUMNS_ROW]: {
                 display: "block",
                 "> .stColumn": {
                   display: "block",
@@ -793,9 +805,10 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
         hasDefiniteHeight !== true && {
           display: "block",
         }),
-      // A row that stacks in print outgrows a fixed height that fit it side
-      // by side, whether the height is on the row's own container or on a
-      // container around it, so the wrapper follows its content's height.
+      // A row that stacks in print outgrows the fixed height of its own
+      // horizontal container, so this wrapper follows its content's height.
+      // Rows inside a fixed-height vertical container do not stack (see
+      // PRINT_STACK_TRIGGER).
       [`&:has(${PRINT_STACKING_ROW})`]: {
         display: "block",
         flex: "0 0 auto",

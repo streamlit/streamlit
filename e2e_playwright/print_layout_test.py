@@ -463,42 +463,94 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
 
     wait_until(app, horizontal_chart_stacks)
 
-    # A vertical fixed-height container fits the chart row side by side, but
-    # not once it stacks. Print cannot scroll, so the container grows to fit
-    # both charts instead of clipping the second one. A stretch-height chart
-    # below the row keeps a usable height instead of collapsing onto the
-    # next element.
+    # A pixel-height vertical container keeps its height in print. Its chart
+    # and dataframe stay side by side, so the container's custom background
+    # does not stretch over the content below. The stretch-height chart under
+    # the row still fills the remaining space.
     fixed_height_container = get_element_by_key(app, "fixed_height_chart_row")
     fixed_height_charts = fixed_height_container.get_by_test_id("stVegaLiteChart")
+    fixed_height_dataframe = fixed_height_container.get_by_test_id("stDataFrame")
     after_fixed_height = app.get_by_text("After the fixed-height chart row", exact=True)
-    expect(fixed_height_charts).to_have_count(3)
+    expect(fixed_height_charts).to_have_count(2)
+    expect(fixed_height_dataframe).to_be_visible()
     expect(after_fixed_height).to_be_visible()
 
-    def fixed_height_container_grows() -> None:
+    def fixed_height_container_stays_bounded() -> None:
         container_box = fixed_height_container.bounding_box()
         first_box = fixed_height_charts.nth(0).bounding_box()
-        second_box = fixed_height_charts.nth(1).bounding_box()
-        stretch_box = fixed_height_charts.nth(2).bounding_box()
+        dataframe_box = fixed_height_dataframe.bounding_box()
+        stretch_box = fixed_height_charts.nth(1).bounding_box()
         after_box = after_fixed_height.bounding_box()
         assert container_box is not None
         assert first_box is not None
-        assert second_box is not None
+        assert dataframe_box is not None
         assert stretch_box is not None
         assert after_box is not None
         container_bottom = container_box["y"] + container_box["height"]
-        assert first_box["y"] + first_box["height"] <= second_box["y"] + 1
-        assert second_box["y"] + second_box["height"] <= stretch_box["y"] + 1
+        assert abs(container_box["height"] - 420) < 2
+        assert abs(first_box["y"] - dataframe_box["y"]) < 2
+        assert dataframe_box["x"] >= first_box["x"] + first_box["width"] - 1
+        assert (
+            max(
+                first_box["y"] + first_box["height"],
+                dataframe_box["y"] + dataframe_box["height"],
+            )
+            <= stretch_box["y"] + 1
+        )
         assert stretch_box["height"] > 100
         assert stretch_box["y"] + stretch_box["height"] <= container_bottom + 1
         assert container_bottom <= after_box["y"] + 1
 
-    wait_until(app, fixed_height_container_grows)
-    assert (
-        fixed_height_container.evaluate(
-            "element => getComputedStyle(element).overflowY"
-        )
-        == "visible"
+    wait_until(app, fixed_height_container_stays_bounded)
+    fixed_height_style = fixed_height_container.evaluate(
+        """element => {
+            const style = getComputedStyle(element)
+            return {
+                backgroundImage: style.backgroundImage,
+                overflowY: style.overflowY,
+            }
+        }"""
     )
+    assert fixed_height_style["backgroundImage"].startswith("linear-gradient")
+    assert fixed_height_style["overflowY"] == "auto"
+
+    # An outer column row still stacks when its charts are inside fixed-height
+    # cards. The cards themselves keep their explicit heights.
+    fixed_cards_row = get_element_by_key(app, "fixed_height_cards_row")
+    fixed_card_columns = fixed_cards_row.get_by_test_id("stColumn")
+    fixed_cards = [
+        get_element_by_key(app, "fixed_height_card_left"),
+        get_element_by_key(app, "fixed_height_card_right"),
+    ]
+    after_fixed_cards = app.get_by_text("After the fixed-height cards row", exact=True)
+    expect(fixed_card_columns).to_have_count(2)
+    for card in fixed_cards:
+        expect(card.get_by_test_id("stVegaLiteChart")).to_be_visible()
+    expect(after_fixed_cards).to_be_visible()
+
+    def fixed_height_cards_stack() -> None:
+        row_box = fixed_cards_row.bounding_box()
+        column_boxes = [fixed_card_columns.nth(i).bounding_box() for i in range(2)]
+        card_boxes = [card.bounding_box() for card in fixed_cards]
+        after_box = after_fixed_cards.bounding_box()
+        assert row_box is not None
+        assert all(box is not None for box in column_boxes)
+        assert all(box is not None for box in card_boxes)
+        assert after_box is not None
+        first_column_box, second_column_box = column_boxes
+        first_card_box, second_card_box = card_boxes
+        assert first_column_box is not None
+        assert second_column_box is not None
+        assert first_card_box is not None
+        assert second_card_box is not None
+        assert first_column_box["y"] + first_column_box["height"] <= (
+            second_column_box["y"] + 1
+        )
+        assert abs(first_card_box["height"] - 220) < 2
+        assert abs(second_card_box["height"] - 220) < 2
+        assert second_card_box["y"] + second_card_box["height"] <= (after_box["y"] + 1)
+
+    wait_until(app, fixed_height_cards_stack)
 
     # Stretch-height charts keep a usable height when their fixed-height
     # horizontal container stacks and grows to fit its children.

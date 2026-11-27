@@ -48,6 +48,7 @@ import Dialog from "~lib/components/elements/Dialog/Dialog"
 import Expander from "~lib/components/elements/Expander/Expander"
 import Popover from "~lib/components/elements/Popover/Popover"
 import Tabs, { type TabProps } from "~lib/components/elements/Tabs/Tabs"
+import { PRINT_FIXED_HEIGHT_ATTRIBUTE } from "~lib/components/shared/printPageBreak"
 import Form from "~lib/components/widgets/Form/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
@@ -384,6 +385,13 @@ export const FlexBoxContainer = (
           .filter(Boolean)
           .join(" ")}
         data-testid={getClassnamePrefix(direction)}
+        {...{
+          [PRINT_FIXED_HEIGHT_ATTRIBUTE]:
+            direction === Direction.VERTICAL &&
+            heightContextProps.hasFixedHeight
+              ? "true"
+              : undefined,
+        }}
         data-test-wrap={String(wrap)}
         ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
         data-test-scroll-behavior={
