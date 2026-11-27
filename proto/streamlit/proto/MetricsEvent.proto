@@ -101,7 +101,14 @@ message MetricsEvent {
   ParallelFragmentUsage parallel_fragment_usage = 56;
   // Same as PageProfile.query_usage.
   QueryUsage query_usage = 57;
-  // 58-61 are held for planned rerun-reason and render-timing fields.
+  // 58-59 are held for planned rerun-reason fields.
+  // Index of the script run within this page load, starting at 0 for the
+  // first run. Together with session_id, joins a run's pageProfile and
+  // renderTiming events. Unset when render timing isn't measured (local
+  // apps, usage stats off).
+  optional int64 run_index = 60;
+  // Set on renderTiming events only. See RenderTiming.
+  RenderTiming render_timing = 61;
   // Same as PageProfile.arrow_bytes.
   optional int64 arrow_bytes = 62;
   // Messages the browser received for this script run. Not in PageProfile,
@@ -140,6 +147,68 @@ message ReceivedMessages {
   int64 cached_messages = 2;
   // Total size of the cached messages those references resolved to.
   int64 cached_bytes = 3;
+}
+
+// Browser-side timing of one script run, sent in a renderTiming event once
+// every visible element of the run has finished loading, or earlier when the
+// run is hidden, superseded or times out. Durations only; no app content.
+//
+// first_content_ms and fully_loaded_ms are milliseconds from the same run
+// start as the pageProfile event's app_shell_ready_ms, connected_ms and
+// script_finished_ms, so the milestones of a run can be compared across its
+// two events. Milestones that weren't reached are unset.
+//
+// New or changed elements are those the run sent with content different
+// from what the page already showed. Elements the script sends again
+// unchanged keep their payload and don't count.
+message RenderTiming {
+  // When the first new or changed element of the run was painted, counting
+  // only elements that were in the viewport, and not skeletons, spinners,
+  // progress bars, st.empty or st.space.
+  optional int64 first_content_ms = 1;
+  // When every new or changed element of the run in the viewport had
+  // finished drawing, and never before script_finished_ms. Unset when the
+  // run was hidden, superseded or timed out.
+  optional int64 fully_loaded_ms = 2;
+
+  // Time after the script finished (until fully_loaded_ms, or the timeout)
+  // that visible elements spent waiting on each kind of work. Each field is
+  // the time at least one visible element was waiting, so the two can
+  // overlap. The rest of the gap is mostly charts and the dataframe grid
+  // drawing. Not waited on: st.audio, Components v2 (including st.pdf), and,
+  // on reruns, dataframes and Plotly and deck.gl charts redrawing.
+  //
+  // Time spent loading code-split element bundles.
+  int64 code_loading_ms = 3;
+  // Time spent loading images, video and iframes (including custom
+  // components).
+  int64 media_loading_ms = 4;
+
+  // Number of new or changed elements in the viewport that counted toward
+  // fully_loaded_ms.
+  int32 visible_elements = 5;
+  // Lower bound in CSS pixels of the viewport width and height bucket.
+  int32 viewport_width_bucket = 6;
+  int32 viewport_height_bucket = 7;
+
+  // The page was hidden (for example a background tab) at some point while
+  // the run was measured. Hidden pages don't paint, so timings are not
+  // representative.
+  bool was_hidden = 8;
+  // Another rerun was requested or started before this run fully loaded.
+  // That includes run_every fragment reruns, which can supersede a slow
+  // first load.
+  bool was_superseded = 9;
+  // Visible elements didn't finish loading within the timeout after the
+  // script finished. An element that fails to render counts as loaded once
+  // its error message is painted. A chart library that fails without an
+  // error message, such as a Vega spec that doesn't compile, shows up as a
+  // timeout.
+  bool timed_out = 10;
+  // Number of elements that hadn't finished loading at the timeout: visible
+  // elements, and elements whose visibility hadn't been reported yet. The
+  // latter aren't in visible_elements, so this can be the larger number.
+  int32 timed_out_elements = 11;
 }
 
 message BrowserInfo {
