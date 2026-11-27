@@ -490,7 +490,6 @@ describe("ElementContainer", () => {
       expect(reports).toHaveLength(1)
       expect(reports[0].renderTiming).toMatchObject({
         firstContentMs: 150,
-        scriptFinishedMs: 100,
         fullyLoadedMs: 150,
         visibleElements: 1,
         codeLoadingMs: 0,

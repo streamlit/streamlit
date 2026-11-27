@@ -207,8 +207,6 @@ describe("RenderTimingTracker", () => {
 
   describe("milestones", () => {
     it("measures the first run from navigation start", async () => {
-      browser.time = 120
-      tracker.appMounted()
       // Connecting requests the first run, here right after an input.
       browser.input(200)
       browser.time = 250
@@ -229,10 +227,7 @@ describe("RenderTimingTracker", () => {
         {
           runIndex: 0,
           renderTiming: expect.objectContaining({
-            appShellReadyMs: 120,
-            connectedMs: 300,
             firstContentMs: 450,
-            scriptFinishedMs: 500,
             fullyLoadedMs: 500,
             visibleElements: 1,
             wasHidden: false,
@@ -268,11 +263,8 @@ describe("RenderTimingTracker", () => {
       expect(runIndex).toBe(1)
       expect(renderTiming).toMatchObject({
         firstContentMs: 350,
-        scriptFinishedMs: 200,
         fullyLoadedMs: 350,
       })
-      expect(renderTiming.appShellReadyMs).toBeUndefined()
-      expect(renderTiming.connectedMs).toBeUndefined()
     })
 
     it("measures a run without a request from its NewSession, with no input delay", async () => {
@@ -286,7 +278,7 @@ describe("RenderTimingTracker", () => {
       await finishScript(2300)
       browser.paintUntilIdle()
 
-      expect(reports[1].renderTiming.scriptFinishedMs).toBe(300)
+      expect(reports[1].renderTiming.fullyLoadedMs).toBe(300)
       expect(reports[1].renderTiming.inputDelayMs).toBeUndefined()
     })
 
@@ -296,7 +288,6 @@ describe("RenderTimingTracker", () => {
       browser.paintUntilIdle()
 
       expect(reports[0].renderTiming).toMatchObject({
-        scriptFinishedMs: 250,
         fullyLoadedMs: 250,
         visibleElements: 0,
       })
@@ -340,7 +331,7 @@ describe("RenderTimingTracker", () => {
 
       expect(await finishRerun(RUN_ID, 1100)).toMatchObject({
         inputDelayMs: 150,
-        scriptFinishedMs: 200,
+        fullyLoadedMs: 200,
       })
     })
 
@@ -395,7 +386,7 @@ describe("RenderTimingTracker", () => {
 
       expect(await finishRerun(RUN_ID, 1100)).toMatchObject({
         inputDelayMs: 100,
-        scriptFinishedMs: 200,
+        fullyLoadedMs: 200,
       })
     })
 
@@ -410,7 +401,7 @@ describe("RenderTimingTracker", () => {
 
       const renderTiming = await finishRerun(RUN_ID, 1100)
       expect(renderTiming.inputDelayMs).toBeUndefined()
-      expect(renderTiming.scriptFinishedMs).toBe(200)
+      expect(renderTiming.fullyLoadedMs).toBe(200)
     })
 
     it("only listens to trusted input events", async () => {
@@ -751,7 +742,6 @@ describe("RenderTimingTracker", () => {
       browser.paintUntilIdle()
 
       expect(reports[0].renderTiming).toMatchObject({
-        scriptFinishedMs: 500,
         fullyLoadedMs: 1150,
         codeLoadingMs: 200,
         mediaLoadingMs: 400,

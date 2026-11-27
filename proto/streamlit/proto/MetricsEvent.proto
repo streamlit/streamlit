@@ -153,35 +153,25 @@ message ReceivedMessages {
 // every visible element of the run has finished loading, or earlier when the
 // run is hidden, superseded or times out. Durations only; no app content.
 //
-// Fields ending in _ms, other than input_delay_ms and the *_loading_ms
-// durations, are milliseconds from the start of the run: navigation
-// start for the first run of a page load (run_index 0), otherwise the time
-// the browser sent the rerun request. Milestones that weren't reached are
-// unset.
+// first_content_ms and fully_loaded_ms are milliseconds from the same run
+// start as the pageProfile event's app_shell_ready_ms, connected_ms and
+// script_finished_ms, so the milestones of a run can be compared across its
+// two events. Milestones that weren't reached are unset.
 //
 // New or changed elements are those the run sent with content different
 // from what the page already showed. Elements the script sends again
 // unchanged keep their payload and don't count.
 message RenderTiming {
-  // First run only: when the frontend app mounted, after the HTML and
-  // JavaScript were downloaded and run.
-  optional int64 app_shell_ready_ms = 1;
-  // First run only: when the first NewSession was handled, after the
-  // WebSocket opened and the session started.
-  optional int64 connected_ms = 2;
   // When the first new or changed element of the run was painted, counting
   // only elements that were in the viewport, and not skeletons, spinners,
   // progress bars, st.empty or st.space.
-  optional int64 first_content_ms = 3;
-  // When the PageProfile message was handled. Same end point as
-  // MetricsEvent.total_load_time.
-  optional int64 script_finished_ms = 4;
+  optional int64 first_content_ms = 1;
   // When every new or changed element of the run in the viewport had
   // finished drawing, and never before script_finished_ms. Unset when the
   // run was hidden, superseded or timed out.
-  optional int64 fully_loaded_ms = 5;
+  optional int64 fully_loaded_ms = 2;
 
-  // Time after script_finished_ms (until fully_loaded_ms, or the timeout)
+  // Time after the script finished (until fully_loaded_ms, or the timeout)
   // that visible elements spent waiting on each kind of work. Each field is
   // the time at least one visible element was waiting, so the two can
   // overlap. The rest of the gap is mostly charts and the dataframe grid
@@ -189,36 +179,36 @@ message RenderTiming {
   // on reruns, dataframes and Plotly and deck.gl charts redrawing.
   //
   // Time spent loading code-split element bundles.
-  int64 code_loading_ms = 6;
+  int64 code_loading_ms = 3;
   // Time spent loading images, video and iframes (including custom
   // components).
-  int64 media_loading_ms = 7;
+  int64 media_loading_ms = 4;
 
   // Number of new or changed elements in the viewport that counted toward
   // fully_loaded_ms.
-  int32 visible_elements = 8;
+  int32 visible_elements = 5;
   // Lower bound in CSS pixels of the viewport width and height bucket.
-  int32 viewport_width_bucket = 9;
-  int32 viewport_height_bucket = 10;
+  int32 viewport_width_bucket = 6;
+  int32 viewport_height_bucket = 7;
 
   // The page was hidden (for example a background tab) at some point while
   // the run was measured. Hidden pages don't paint, so timings are not
   // representative.
-  bool was_hidden = 11;
+  bool was_hidden = 8;
   // Another rerun was requested or started before this run fully loaded.
   // That includes run_every fragment reruns, which can supersede a slow
   // first load.
-  bool was_superseded = 12;
+  bool was_superseded = 9;
   // Visible elements didn't finish loading within the timeout after the
   // script finished. An element that fails to render counts as loaded once
   // its error message is painted. A chart library that fails without an
   // error message, such as a Vega spec that doesn't compile, shows up as a
   // timeout.
-  bool timed_out = 13;
+  bool timed_out = 10;
   // Number of elements that hadn't finished loading at the timeout: visible
   // elements, and elements whose visibility hadn't been reported yet. The
   // latter aren't in visible_elements, so this can be the larger number.
-  int32 timed_out_elements = 14;
+  int32 timed_out_elements = 11;
 
   // Reruns only: milliseconds from the user's last input in the page (a
   // pointer release, click, key press, file drop or committed change) to the
@@ -230,7 +220,7 @@ message RenderTiming {
   // rerun request. Also unset when no uncounted
   // input happened in the 2 seconds before the request, such as for
   // hover-driven chart selections or inputs inside an iframe.
-  optional int64 input_delay_ms = 15;
+  optional int64 input_delay_ms = 12;
 }
 
 message BrowserInfo {

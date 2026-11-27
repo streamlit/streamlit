@@ -135,8 +135,6 @@ interface RunMeasurement {
   readonly runIndex: number
   readonly scriptRunId: string
   readonly startAt: number
-  readonly appShellReadyAt?: number
-  readonly connectedAt?: number
   scriptFinishedAt?: number
   readonly inputDelayMs?: number
   /**
@@ -370,8 +368,6 @@ export class RenderTimingTracker {
 
   private readonly onReport: (report: RenderTimingReport) => void
 
-  private appShellReadyAt?: number
-
   private wasHiddenBeforeFirstRun: boolean
 
   private nextRunIndex = 0
@@ -426,13 +422,6 @@ export class RenderTimingTracker {
 
   createElementHandle(): ElementTimingHandle {
     return new ElementTimingHandle(this)
-  }
-
-  /** Called when the frontend app mounts. */
-  appMounted(): void {
-    this.guard(() => {
-      this.appShellReadyAt ??= this.env.now()
-    })
   }
 
   /**
@@ -496,8 +485,6 @@ export class RenderTimingTracker {
       scriptRunId,
       startAt: isFirstRun ? 0 : (this.pendingRequestAt ?? now),
       inputDelayMs: isFirstRun ? undefined : this.pendingInputDelayMs,
-      appShellReadyAt: isFirstRun ? this.appShellReadyAt : undefined,
-      connectedAt: isFirstRun ? now : undefined,
       wasHidden:
         (isFirstRun && this.wasHiddenBeforeFirstRun) ||
         this.env.isPageHidden(),
@@ -917,10 +904,7 @@ export class RenderTimingTracker {
         : 0
 
     return {
-      appShellReadyMs: toRunTime(run.appShellReadyAt),
-      connectedMs: toRunTime(run.connectedAt),
       firstContentMs: toRunTime(run.firstContentAt),
-      scriptFinishedMs: toRunTime(scriptFinishedAt),
       fullyLoadedMs: toRunTime(fullyLoadedAt),
       codeLoadingMs,
       mediaLoadingMs,
