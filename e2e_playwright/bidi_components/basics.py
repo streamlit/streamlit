@@ -625,3 +625,36 @@ export default function(component) {
             "label": "Hello World",
         },
     )
+
+
+st.divider()
+
+with st.container():
+    st.subheader("Shared module")
+
+    # Identical inline JS must share one ES module instance. A module-level
+    # id is the same in both mounts only when they import the same URL.
+    _SHARED_JS = """
+const moduleId = Math.random().toString(36).slice(2)
+export default function(component) {
+  const { parentElement, name } = component
+  const el = document.createElement("p")
+  el.textContent = name + " module id: " + moduleId
+  parentElement.appendChild(el)
+}
+"""
+
+    _SHARED_A = st.components.v2.component(
+        "bidi_shared_a",
+        js=_SHARED_JS,
+        isolate_styles=False,
+    )
+    _SHARED_B = st.components.v2.component(
+        "bidi_shared_b",
+        js=_SHARED_JS,
+        isolate_styles=False,
+    )
+
+    _SHARED_A(key="shared_module_a")
+    _SHARED_B(key="shared_module_b")
+    st.button("shared module rerun")

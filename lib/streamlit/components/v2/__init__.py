@@ -327,7 +327,9 @@ def component(
     js : str or None
         Inline JavaScript. This can be one of the following strings:
 
-        - Raw JavaScript (without a ``<script>`` block).
+        - Raw JavaScript (without a ``<script>`` block). Inline source is
+          served from a content-addressed URL so it is not resent on every
+          rerun.
         - A path or glob to a JS file, relative to the component's
           asset directory.
 

@@ -35,6 +35,28 @@ describe("ComponentRegistry", () => {
     expect(url).toEqual(endpoint.buildBidiComponentURL("foo", "bundle.js"))
   })
 
+  it("omits the component name for content-addressed inline JS", () => {
+    const endpoint = mockEndpoints()
+    const registry = new ComponentRegistry(endpoint)
+    const path = "__inline__/abc.js"
+
+    registry.getBidiComponentURL("foo", path)
+    registry.getBidiComponentURL("bar", path)
+
+    expect(endpoint.buildBidiComponentURL).toHaveBeenCalledWith(
+      "__inline__",
+      "abc.js"
+    )
+    expect(endpoint.buildBidiComponentURL).toHaveBeenLastCalledWith(
+      "__inline__",
+      "abc.js"
+    )
+    expect(endpoint.buildBidiComponentURL).not.toHaveBeenCalledWith(
+      "foo",
+      path
+    )
+  })
+
   it("Dispatches messages to listeners", () => {
     const registry = new ComponentRegistry(mockEndpoints())
     // @ts-expect-error - onMessageEvent is private

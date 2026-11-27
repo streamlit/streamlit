@@ -36,6 +36,7 @@ from streamlit.components.v2.component_registry import (
     BidiComponentDefinition,
     BidiComponentRegistry,
 )
+from streamlit.components.v2.inline_asset_store import InlineAssetStore, inline_js_url
 from streamlit.logger import get_logger
 
 if TYPE_CHECKING:
@@ -131,6 +132,7 @@ class BidiComponentManager:
         self._file_watcher = file_watcher or ComponentFileWatcher(
             self._on_components_changed
         )
+        self._inline_assets = InlineAssetStore()
 
     def record_api_inputs(
         self, component_key: str, css: str | None, js: str | None
@@ -186,7 +188,12 @@ class BidiComponentManager:
         definition : BidiComponentDefinition
             The component definition to register.
         """
+        old = self.get(definition.name)
         self._registry.register(definition)
+        self._sync_inline_js_pin(
+            old.js_content if old is not None else None,
+            definition.js_content,
+        )
 
     def get(self, name: str) -> BidiComponentDefinition | None:
         """Get a component definition by name.
@@ -277,6 +284,7 @@ class BidiComponentManager:
         )
         if self._registry.register_if_missing_or_placeholder(definition):
             self.record_api_inputs(component_key, css, js)
+            self._sync_inline_js_pin(None, definition.js_content)
 
     def get_component_asset_root(self, name: str) -> Path | None:
         """Get the asset root for a manifest-backed component.
@@ -294,6 +302,26 @@ class BidiComponentManager:
         """
         return self._manifest_handler.get_asset_root(name)
 
+    def get_inline_js_url(self, content: str) -> str:
+        """Store inline JavaScript and return its content-addressed URL.
+
+        Parameters
+        ----------
+        content : str
+            The JavaScript module source.
+
+        Returns
+        -------
+        str
+            A path like ``"__inline__/<sha256>.js"``. Identical content always
+            maps to the same path, independent of the component name.
+        """
+        return self._inline_assets.add_js(content)
+
+    def get_inline_asset(self, url: str) -> str | None:
+        """Return inline content previously stored under ``url``, if retained."""
+        return self._inline_assets.get(url)
+
     def unregister(self, name: str) -> None:
         """Unregister a component by name.
 
@@ -302,11 +330,14 @@ class BidiComponentManager:
         name : str
             The name of the component to unregister.
         """
+        old = self.get(name)
         self._registry.unregister(name)
+        self._sync_inline_js_pin(old.js_content if old is not None else None, None)
 
     def clear(self) -> None:
         """Clear all registered components."""
         self._registry.clear()
+        self._inline_assets.clear_pins()
 
     def get_component_path(self, name: str) -> str | None:
         """Get the filesystem path for a manifest-backed component.
@@ -417,11 +448,34 @@ class BidiComponentManager:
         """
         for name in component_names:
             try:
+                old = self.get(name)
                 updated_def = self._recompute_definition_from_api(name)
                 if updated_def is not None:
                     self._registry.update_component(updated_def)
+                    self._sync_inline_js_pin(
+                        old.js_content if old is not None else None,
+                        updated_def.js_content,
+                    )
             except Exception:
                 _LOGGER.exception("Failed to update component after change: %s", name)
+
+    def _sync_inline_js_pin(self, old_js: str | None, new_js: str | None) -> None:
+        """Pin inline JS that a registered definition currently references.
+
+        Pinned content is skipped during store eviction so a URL handed to the
+        browser stays fetchable for as long as that definition exists.
+        """
+        old = old_js if isinstance(old_js, str) else None
+        new = new_js if isinstance(new_js, str) else None
+        if old == new:
+            if new is not None:
+                self._inline_assets.add_js(new)
+            return
+        if old is not None:
+            self._inline_assets.unpin(inline_js_url(old))
+        if new is not None:
+            url = self._inline_assets.add_js(new)
+            self._inline_assets.pin(url)
 
     def _recompute_definition_from_api(
         self, component_name: str
