@@ -700,6 +700,240 @@ def test_build_logout_url_preserves_existing_query() -> None:
     assert result.count("?") == 1
 
 
+@pytest.mark.parametrize(
+    ("section", "expected"),
+    [
+        (AttrDict({}), {}),
+        (AttrDict({"expose_tokens": ["id"]}), {}),
+        (
+            AttrDict({"logout_params": {"logout_hint": "{email}"}}),
+            {"logout_hint": "{email}"},
+        ),
+        (
+            AttrDict(
+                {
+                    "logout_params": {
+                        "federated": True,
+                        "legacy": False,
+                        "audience": None,
+                    }
+                }
+            ),
+            {"federated": "true", "legacy": "false", "audience": ""},
+        ),
+    ],
+    ids=["absent_section", "key_absent", "valid_table", "coerced_values"],
+)
+def test_get_logout_params_config(
+    section: AttrDict,
+    expected: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Read and coerce ``[auth].logout_params``, returning ``{}`` when unset."""
+    monkeypatch.setattr(auth_util, "get_secrets_auth_section", lambda: section)
+    assert auth_util.get_logout_params_config() == expected
+
+
+@pytest.mark.parametrize(
+    "invalid_value",
+    ["not-a-table", ["a", "b"]],
+    ids=["string", "list"],
+)
+def test_get_logout_params_config_raises_on_non_table(
+    invalid_value: object,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Raise ``StreamlitAuthError`` when ``logout_params`` is not a table."""
+    monkeypatch.setattr(
+        auth_util,
+        "get_secrets_auth_section",
+        lambda: AttrDict({"logout_params": invalid_value}),
+    )
+    with pytest.raises(StreamlitAuthError, match="logout_params"):
+        auth_util.get_logout_params_config()
+
+
+@pytest.mark.parametrize(
+    ("value", "namespace", "expected"),
+    [
+        ("true", {}, "true"),
+        ("https://x/y", {}, "https://x/y"),
+        ("{email}", {"email": "a@b.com"}, "a@b.com"),
+        ("prefix-{sub}", {"sub": "123"}, "prefix-123"),
+        ("{email}-{sub}", {"email": "a@b.com", "sub": "123"}, "a@b.com-123"),
+        ("{email}-{sub}", {"email": "a@b.com"}, None),
+        ("{missing}", {}, None),
+        ("{email}", {"email": ""}, None),
+        ("{email}", {"email": None}, None),
+        ("{count}", {"count": 0}, "0"),
+        ("{roles}", {"roles": ["admin", "user"]}, None),
+        ("{address}", {"address": {"city": "NYC"}}, None),
+        ("{weird-key}", {}, "{weird-key}"),
+    ],
+    ids=[
+        "no_placeholder_literal",
+        "no_placeholder_url",
+        "single_field",
+        "mixed_literal_and_field",
+        "multiple_fields",
+        "multiple_fields_one_missing",
+        "missing_field",
+        "empty_field_value",
+        "none_field_value",
+        "scalar_zero_value",
+        "structured_list_value",
+        "structured_dict_value",
+        "non_matching_braces",
+    ],
+)
+def test_resolve_logout_param_template(
+    value: str,
+    namespace: dict[str, Any],
+    expected: str | None,
+) -> None:
+    """Resolve ``{field}`` placeholders, omitting on missing/empty values."""
+    assert auth_util._resolve_logout_param_template(value, namespace) == expected
+
+
+@pytest.mark.parametrize(
+    (
+        "end_session_endpoint",
+        "id_token",
+        "logout_params",
+        "user_claims",
+        "must_contain",
+        "must_not_contain",
+    ),
+    [
+        # Rename (AWS Cognito): move post_logout_redirect_uri -> redirect_uri and
+        # drop id_token_hint.
+        (
+            "https://provider.com/logout",
+            "test-id-token",
+            {
+                "redirect_uri": "{post_logout_redirect_uri}",
+                "post_logout_redirect_uri": "",
+                "id_token_hint": "",
+            },
+            None,
+            ["redirect_uri=https%3A%2F%2Fmyapp.com%2Foauth2callback"],
+            ["post_logout_redirect_uri=", "id_token_hint="],
+        ),
+        # Add from claim (MS Entra): substitute {email} from the user claims.
+        (
+            "https://provider.com/logout",
+            None,
+            {"logout_hint": "{email}"},
+            {"email": "a@b.com"},
+            [
+                "logout_hint=a%40b.com",
+                "client_id=test-client-id",
+                "post_logout_redirect_uri=https%3A%2F%2Fmyapp.com%2Foauth2callback",
+            ],
+            [],
+        ),
+        # Static value without a placeholder is sent as-is.
+        (
+            "https://provider.com/logout",
+            None,
+            {"federated": "true"},
+            None,
+            ["federated=true", "client_id=test-client-id"],
+            [],
+        ),
+        # Removing a default param via an empty-string value.
+        (
+            "https://provider.com/logout",
+            None,
+            {"client_id": ""},
+            None,
+            ["post_logout_redirect_uri="],
+            ["client_id="],
+        ),
+        # Omit-on-missing: {sub} is absent from the namespace.
+        (
+            "https://provider.com/logout",
+            None,
+            {"audience": "{sub}"},
+            {"email": "a@b.com"},
+            ["client_id=test-client-id"],
+            ["audience="],
+        ),
+        # Omit-on-missing must not drop a default of the same name: an
+        # unresolvable {sub} template on ``client_id`` keeps the default value.
+        (
+            "https://provider.com/logout",
+            None,
+            {"client_id": "{sub}"},
+            {"email": "a@b.com"},
+            ["client_id=test-client-id"],
+            [],
+        ),
+        # {id_token_hint} without an ID token is treated as a missing standard
+        # value and omitted, even if a same-named user claim exists.
+        (
+            "https://provider.com/logout",
+            None,
+            {"logout_hint": "{id_token_hint}"},
+            {"id_token_hint": "leaked-claim"},
+            ["client_id=test-client-id"],
+            ["logout_hint=", "leaked-claim"],
+        ),
+        # Existing endpoint query params are preserved alongside logout_params.
+        (
+            "https://provider.com/logout?existing=value",
+            None,
+            {"federated": "true"},
+            None,
+            ["existing=value", "federated=true"],
+            [],
+        ),
+        # An empty-string value also drops a param baked into the endpoint URL,
+        # not just Streamlit's computed defaults.
+        (
+            "https://provider.com/logout?id_token_hint=stale",
+            "test-id-token",
+            {"id_token_hint": ""},
+            None,
+            ["client_id=test-client-id"],
+            ["id_token_hint="],
+        ),
+    ],
+    ids=[
+        "rename_cognito",
+        "add_from_claim_entra",
+        "static_param",
+        "remove_default",
+        "omit_on_missing",
+        "omit_on_missing_keeps_default",
+        "omit_id_token_hint_without_token",
+        "preserves_existing_query",
+        "remove_preexisting_endpoint_param",
+    ],
+)
+def test_build_logout_url_with_logout_params(
+    end_session_endpoint: str,
+    id_token: str | None,
+    logout_params: dict[str, str],
+    user_claims: dict[str, Any] | None,
+    must_contain: list[str],
+    must_not_contain: list[str],
+) -> None:
+    """Merge, template, and remove params via ``logout_params`` in ``build_logout_url``."""
+    result = auth_util.build_logout_url(
+        end_session_endpoint=end_session_endpoint,
+        client_id="test-client-id",
+        post_logout_redirect_uri="https://myapp.com/oauth2callback",
+        id_token=id_token,
+        logout_params=logout_params,
+        user_claims=user_claims,
+    )
+    for fragment in must_contain:
+        assert fragment in result
+    for fragment in must_not_contain:
+        assert fragment not in result
+
+
 def test_auth_cache_get_dict() -> None:
     """Verify ``AuthCache.get_dict`` returns the internal cache dictionary."""
     cache = AuthCache()
