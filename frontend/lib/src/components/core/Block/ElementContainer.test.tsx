@@ -37,6 +37,7 @@ import {
   RenderTimingContext,
 } from "~lib/components/core/RenderTimingContext"
 import type * as SkeletonStyles from "~lib/components/elements/Skeleton/styled-components"
+import { useElementLoadState } from "~lib/hooks/useElementLoadState"
 import { render } from "~lib/test_util"
 import {
   type RenderTimingReport,
@@ -451,6 +452,11 @@ describe("ElementContainer", () => {
       })
     }
 
+    function DrawingChart({ isDrawn }: { isDrawn: boolean }): ReactElement {
+      useElementLoadState("draw", isDrawn)
+      return <div>chart</div>
+    }
+
     it("doesn't provide an element timing handle without a tracker", () => {
       let handle: unknown
       function Probe(): null {
@@ -528,6 +534,38 @@ describe("ElementContainer", () => {
       tracker.dispose()
     })
 
+    it("waits for work reported with useElementLoadState", async () => {
+      const { tracker, reports, setTime, paintUntilIdle } =
+        createTimedTracker()
+      tracker.runStarted(mockNode.scriptRunId)
+      setTime(100)
+      const { rerender } = renderTimed(
+        tracker,
+        <DrawingChart isDrawn={false} />
+      )
+      await finishScript(tracker)
+      paintUntilIdle()
+
+      expect(reports).toHaveLength(0)
+
+      setTime(300)
+      rerender(
+        <RenderTimingContext.Provider value={tracker}>
+          <ElementContainer
+            node={mockNode}
+            config={ElementContainerConfig.DEFAULT}
+            isStale={false}
+          >
+            <DrawingChart isDrawn />
+          </ElementContainer>
+        </RenderTimingContext.Provider>
+      )
+      paintUntilIdle()
+
+      expect(reports[0].renderTiming.fullyLoadedMs).toBe(300)
+      tracker.dispose()
+    })
+
     it("reports an element that fails to render once its error is painted", async () => {
       vi.spyOn(console, "error").mockImplementation(() => {})
       const ThrowingElement = (): never => {
@@ -564,7 +602,10 @@ describe("ElementContainer", () => {
       })
       tracker.runStarted(mockNode.scriptRunId)
 
-      const { unmount } = renderTimed(tracker, <div>chart</div>)
+      const { unmount } = renderTimed(
+        tracker,
+        <DrawingChart isDrawn={false} />
+      )
       await finishScript(tracker)
 
       expect(screen.getByText("chart")).toBeVisible()

@@ -59,7 +59,7 @@ import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.s
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
-import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
+import { CodeLoadingSkeleton } from "~lib/components/elements/Skeleton/CodeLoadingSkeleton"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
@@ -723,11 +723,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   if (language.toLowerCase() === "mermaid" && !isStreaming) {
     return (
       <ErrorBoundary>
-        <Suspense
-          fallback={
-            <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
-          }
-        >
+        <Suspense fallback={<CodeLoadingSkeleton />}>
           <MermaidChart source={codeText} />
         </Suspense>
       </ErrorBoundary>
@@ -736,11 +732,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
 
   return (
     <ErrorBoundary>
-      <Suspense
-        fallback={
-          <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
-        }
-      >
+      <Suspense fallback={<CodeLoadingSkeleton />}>
         <StreamlitSyntaxHighlighter
           language={language}
           showLineNumbers={false}
@@ -1508,7 +1500,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   if (isLoadingPlugins) {
     return (
       <ErrorBoundary>
-        <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
+        <CodeLoadingSkeleton />
       </ErrorBoundary>
     )
   }
