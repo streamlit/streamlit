@@ -25,7 +25,7 @@ import {
   useState,
 } from "react"
 
-import type { CalendarDate } from "@internationalized/date"
+import type { CalendarDate, DateValue } from "@internationalized/date"
 
 import type { DateInput as DateInputProto } from "@streamlit/protobuf"
 import { isNullOrEmptyString } from "@streamlit/utils"
@@ -45,6 +45,7 @@ import type { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   calendarDateToIso,
   createDateErrorMessage,
+  createIsDateUnavailable,
   datesEqual,
   type DateValidationErrorType,
   formatCalendarDate,
@@ -120,6 +121,27 @@ function DateInput({
       }
     : undefined
 
+  const { locale } = useContext(LibConfigContext)
+
+  const minDateCalendar = useMemo(() => getMinDate(element), [element])
+  const maxDateCalendar = useMemo(() => getMaxCalendarDate(element), [element])
+  const isDateUnavailable = useMemo(
+    () => createIsDateUnavailable(element),
+    [element]
+  )
+
+  const persistWidgetState = useCallback(
+    (
+      el: DateInputProto,
+      mgr: WidgetStateManager,
+      vws: ValueWithSource<string[]>,
+      fragId: string | undefined
+    ) => {
+      updateWidgetMgrState(el, mgr, vws, fragId, isDateUnavailable)
+    },
+    [isDateUnavailable]
+  )
+
   const [value, setValueWithSource] = useBasicWidgetState<
     string[],
     DateInputProto
@@ -127,7 +149,7 @@ function DateInput({
     getStateFromWidgetMgr,
     getDefaultStateFromProto,
     getCurrStateFromProto,
-    updateWidgetMgrState,
+    updateWidgetMgrState: persistWidgetState,
     element,
     widgetMgr,
     fragmentId,
@@ -140,11 +162,6 @@ function DateInput({
     lastWrittenIsoRef.current = value
     pendingIsoRef.current = value
   }
-
-  const { locale } = useContext(LibConfigContext)
-
-  const minDateCalendar = useMemo(() => getMinDate(element), [element])
-  const maxDateCalendar = useMemo(() => getMaxCalendarDate(element), [element])
 
   // Lifted here so both SingleDateInput and RangeDateInput share the same
   // visible-month. Seeded with a concrete date so it stays controlled for
@@ -233,7 +250,8 @@ function DateInput({
         const err = validateDate(
           calendarDate,
           minDateCalendar,
-          maxDateCalendar
+          maxDateCalendar,
+          isDateUnavailable
         )
         if (err) {
           errorType = err
@@ -273,7 +291,7 @@ function DateInput({
         // Inside a form, write synchronously so submit in the same event
         // sees the staged value. Form widget writes do not schedule a rerun.
         if (inForm) {
-          updateWidgetMgrState(
+          persistWidgetState(
             element,
             widgetMgr,
             { value: written, fromUser },
@@ -289,8 +307,10 @@ function DateInput({
       element,
       fragmentId,
       inForm,
+      isDateUnavailable,
       maxDateCalendar,
       minDateCalendar,
+      persistWidgetState,
       setValueWithSource,
       value,
       widgetMgr,
@@ -315,12 +335,23 @@ function DateInput({
     (date: CalendarDate | null): void => {
       resetError()
       if (!date) return
-      const errorType = validateDate(date, minDateCalendar, maxDateCalendar)
+      const errorType = validateDate(
+        date,
+        minDateCalendar,
+        maxDateCalendar,
+        isDateUnavailable
+      )
       if (errorType) {
         setError(buildErrorMessage(errorType))
       }
     },
-    [buildErrorMessage, maxDateCalendar, minDateCalendar, resetError]
+    [
+      buildErrorMessage,
+      isDateUnavailable,
+      maxDateCalendar,
+      minDateCalendar,
+      resetError,
+    ]
   )
 
   // Range mode's change handler — validates each date independently.
@@ -542,6 +573,7 @@ function DateInput({
           onClose={handleClose}
           formCommit={inForm ? handleSingleChange : undefined}
           formResetKey={formResetKey}
+          isDateUnavailable={isDateUnavailable ?? undefined}
         />
       )}
     </div>
@@ -567,18 +599,21 @@ function updateWidgetMgrState(
   element: DateInputProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<string[]>,
-  fragmentId: string | undefined
+  fragmentId: string | undefined,
+  isDateUnavailable: ((date: DateValue) => boolean) | null = null
 ): void {
   const minDate = getMinDate(element)
   const maxDate = getMaxCalendarDate(element)
 
   // Guard: invalid values must never reach the backend. This catches
-  // out-of-range dates and unparsable ISO strings (e.g. malformed
-  // query-param seeds). Empty arrays are valid (cleared input).
+  // unavailable or out-of-range dates and unparsable ISO strings (for
+  // example, malformed query-parameter seeds). Empty arrays are valid
+  // cleared input.
+  const unavailable = isDateUnavailable ?? createIsDateUnavailable(element)
   const isValid = vws.value.every(iso => {
     const calendarDate = isoToCalendarDate(iso)
     if (!calendarDate) return false
-    return !validateDate(calendarDate, minDate, maxDate)
+    return !validateDate(calendarDate, minDate, maxDate, unavailable)
   })
 
   if (isValid) {

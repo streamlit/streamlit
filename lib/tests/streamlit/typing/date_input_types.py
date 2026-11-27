@@ -212,3 +212,26 @@ if TYPE_CHECKING:
         ),
         date,
     )
+
+    # Explicit values stay typed date; value=None opts into date | None.
+    assert_type(
+        date_input("foo", date(2024, 1, 1), disabled_dates=["saturday", "sunday"]),
+        date,
+    )
+    assert_type(
+        date_input("foo", date(2024, 1, 1), enabled_dates=[date(2024, 1, 1)]),
+        date,
+    )
+    assert_type(
+        date_input("foo", value="today", enabled_dates=["monday"]),
+        date,
+    )
+    assert_type(
+        date_input("foo", enabled_dates=["monday", "tuesday", "wednesday"]),
+        date,
+    )
+    empty_dates: list[date] = []
+    assert_type(
+        date_input("foo", value=None, enabled_dates=empty_dates),
+        date | None,
+    )

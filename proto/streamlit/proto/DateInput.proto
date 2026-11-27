@@ -42,5 +42,23 @@ message DateInput {
   bool ignore_rerun = 15;
   // If true, empty values cannot be committed (client-side).
   bool required = 16;
-  // Next: 17
+
+  // How exact dates and weekdays restrict selection inside min/max.
+  // NONE: no availability filter (existing behavior).
+  // ALLOW: only listed exact dates and weekdays are selectable.
+  // BLOCK: listed exact dates and weekdays are not selectable.
+  enum AvailabilityMode {
+    NONE = 0;
+    ALLOW = 1;
+    BLOCK = 2;
+  }
+  AvailabilityMode availability_mode = 17;
+  // Exact dates in ISO YYYY-MM-DD used by availability_mode. In ALLOW mode
+  // these are selectable; in BLOCK mode they are not. The backend omits exact
+  // dates outside min/max.
+  repeated string filter_dates = 18;
+  // ISO-8601 weekday numbers (Monday=1 … Sunday=7) used by availability_mode.
+  // In ALLOW mode these weekdays are selectable; in BLOCK mode they are not.
+  repeated int32 filter_weekdays = 19;
+  // Next: 20
 }

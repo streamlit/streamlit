@@ -16,13 +16,15 @@
 
 import {
   CalendarDate,
+  type DateValue,
   getLocalTimeZone,
   parseDate,
+  toCalendarDate,
   today,
 } from "@internationalized/date"
 import type { DateSegment as IDateSegment } from "react-stately"
 
-import type { DateInput as DateInputProto } from "@streamlit/protobuf"
+import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 /**
  * Date utilities using `@internationalized/date`. Wire format is always
@@ -220,16 +222,55 @@ export function getQuickSelectPresets(): QuickSelectPreset[] {
   ].map(({ id, label, start }) => ({ id, label, start, end }))
 }
 
-export type DateValidationErrorType = "beforeMin" | "afterMax" | null
+export type DateValidationErrorType =
+  | "beforeMin"
+  | "afterMax"
+  | "unavailable"
+  | null
+
+/** ISO-8601 weekday (Monday=1 … Sunday=7), independent of locale week start. */
+export function getIsoWeekday(date: CalendarDate): number {
+  const jsDay = date.toDate("UTC").getUTCDay()
+  return jsDay === 0 ? 7 : jsDay
+}
+
+/**
+ * Build a shared availability predicate from the DateInput proto.
+ * Returns null when availability is not configured (NONE).
+ */
+export function createIsDateUnavailable(
+  element: DateInputProto
+): ((date: DateValue) => boolean) | null {
+  const mode = element.availabilityMode
+  if (mode === DateInputProto.AvailabilityMode.NONE) {
+    return null
+  }
+
+  const exactDates = new Set(element.filterDates)
+  const weekdays = new Set(element.filterWeekdays)
+
+  // React Aria types the prop as `(DateValue) => boolean`; convert so we can
+  // reuse CalendarDate helpers for ISO and weekday checks.
+  return (date: DateValue): boolean => {
+    const calendarDate = toCalendarDate(date)
+    const iso = calendarDateToIso(calendarDate)
+    const matches =
+      exactDates.has(iso) || weekdays.has(getIsoWeekday(calendarDate))
+    return mode === DateInputProto.AvailabilityMode.ALLOW ? !matches : matches
+  }
+}
 
 export function validateDate(
   date: CalendarDate | null,
   minDate: CalendarDate,
-  maxDate: CalendarDate | undefined
+  maxDate: CalendarDate | undefined,
+  isDateUnavailable?: ((date: DateValue) => boolean) | null
 ): DateValidationErrorType {
   if (!date) return null
+  // Bounds take precedence over availability when both apply.
   if (maxDate && date.compare(maxDate) > 0) return "afterMax"
   if (date.compare(minDate) < 0) return "beforeMin"
+  if (isDateUnavailable?.(date) === true) return "unavailable"
   return null
 }
 
@@ -252,8 +293,8 @@ export function formatCalendarDate(
 }
 
 /**
- * Builds the out-of-range tooltip. In range mode, the message identifies the
- * violated bound rather than the edited field because either endpoint can
+ * Builds the date-validation tooltip. In range mode, a bounds error identifies
+ * the violated bound rather than the edited field because either endpoint can
  * violate either bound.
  */
 export function createDateErrorMessage(
@@ -263,6 +304,10 @@ export function createDateErrorMessage(
   maxDateString: string
 ): string | null {
   if (!errorType) return null
+
+  if (errorType === "unavailable") {
+    return "**Error**: Date is unavailable. Choose an available date."
+  }
 
   if (errorType === "afterMax") {
     return `**Error**: Date set outside allowed range. Please select a date on or before ${maxDateString}.`

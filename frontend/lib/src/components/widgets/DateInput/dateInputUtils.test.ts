@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { CalendarDate } from "@internationalized/date"
+import {
+  BuddhistCalendar,
+  CalendarDate,
+  type DateValue,
+  toCalendar,
+  toCalendarDate,
+} from "@internationalized/date"
 import type { DateSegment as IDateSegment } from "react-stately"
 
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
@@ -24,9 +30,11 @@ import {
   calendarDateFromSegments,
   calendarDateToIso,
   createDateErrorMessage,
+  createIsDateUnavailable,
   formatCalendarDate,
   getFocusedDateFallback,
   getInitialFocusedDate,
+  getIsoWeekday,
   getMaxDate,
   getMinDate,
   getQuickSelectPresets,
@@ -758,5 +766,117 @@ describe("calendarDateFromSegments", () => {
         makeSegment("day", "10"),
       ])
     ).toBeNull()
+  })
+})
+
+describe("createIsDateUnavailable", () => {
+  it("returns null when availability is NONE", () => {
+    const element = DateInputProto.create({
+      availabilityMode: DateInputProto.AvailabilityMode.NONE,
+    })
+    expect(createIsDateUnavailable(element)).toBeNull()
+  })
+
+  it("blocks matching weekdays in BLOCK mode", () => {
+    const element = DateInputProto.create({
+      availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
+      filterWeekdays: [6, 7],
+    })
+    const isUnavailable = createIsDateUnavailable(element)
+    expect(isUnavailable).not.toBeNull()
+    if (isUnavailable === null) {
+      throw new Error("expected BLOCK predicate")
+    }
+    // 2024-03-09 is Saturday, 2024-03-11 is Monday
+    expect(isUnavailable(new CalendarDate(2024, 3, 9))).toBe(true)
+    expect(isUnavailable(new CalendarDate(2024, 3, 11))).toBe(false)
+  })
+
+  it("allows only matching dates and weekdays in ALLOW mode", () => {
+    const element = DateInputProto.create({
+      availabilityMode: DateInputProto.AvailabilityMode.ALLOW,
+      filterDates: ["2024-03-11"],
+      filterWeekdays: [1],
+    })
+    const isUnavailable = createIsDateUnavailable(element)
+    expect(isUnavailable).not.toBeNull()
+    if (isUnavailable === null) {
+      throw new Error("expected ALLOW predicate")
+    }
+    expect(isUnavailable(new CalendarDate(2024, 3, 11))).toBe(false) // listed
+    expect(isUnavailable(new CalendarDate(2024, 3, 18))).toBe(false) // Monday
+    expect(isUnavailable(new CalendarDate(2024, 3, 12))).toBe(true) // Tuesday
+  })
+
+  it("returns ISO weekdays with Monday as 1 and Sunday as 7", () => {
+    expect(getIsoWeekday(new CalendarDate(2024, 3, 11))).toBe(1)
+    expect(getIsoWeekday(new CalendarDate(2024, 3, 10))).toBe(7)
+  })
+
+  it("matches exact dates from non-Gregorian CalendarDate values", () => {
+    // React Aria passes Buddhist/Persian dates in those locales; toString()
+    // still yields Gregorian ISO that matches backend filter_dates.
+    const element = DateInputProto.create({
+      availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
+      filterDates: ["2024-03-09"],
+      filterWeekdays: [6],
+    })
+    const isUnavailable = createIsDateUnavailable(element)
+    expect(isUnavailable).not.toBeNull()
+    if (isUnavailable === null) {
+      throw new Error("expected BLOCK predicate")
+    }
+    const gregorianSaturday = new CalendarDate(2024, 3, 9)
+    const buddhistSaturday = toCalendar(
+      gregorianSaturday,
+      new BuddhistCalendar()
+    )
+    expect(buddhistSaturday.year).toBe(2567)
+    expect(calendarDateToIso(buddhistSaturday)).toBe("2024-03-09")
+    expect(isUnavailable(buddhistSaturday)).toBe(true)
+    const buddhistMonday = toCalendar(
+      new CalendarDate(2024, 3, 11),
+      new BuddhistCalendar()
+    )
+    expect(isUnavailable(buddhistMonday)).toBe(false)
+  })
+})
+
+describe("validateDate with availability", () => {
+  const minDate = new CalendarDate(2020, 1, 1)
+  const maxDate = new CalendarDate(2030, 12, 31)
+  const weekendsUnavailable = (d: DateValue): boolean => {
+    const day = getIsoWeekday(toCalendarDate(d))
+    return day === 6 || day === 7
+  }
+
+  it("returns unavailable for blocked dates inside bounds", () => {
+    expect(
+      validateDate(
+        new CalendarDate(2024, 3, 9),
+        minDate,
+        maxDate,
+        weekendsUnavailable
+      )
+    ).toBe("unavailable")
+  })
+
+  it("prefers bounds errors over unavailable", () => {
+    expect(
+      validateDate(
+        new CalendarDate(2019, 1, 1),
+        minDate,
+        maxDate,
+        weekendsUnavailable
+      )
+    ).toBe("beforeMin")
+  })
+})
+
+describe("createDateErrorMessage unavailable", () => {
+  it("returns the unavailable message", () => {
+    expect(createDateErrorMessage("unavailable", false, "", "")).toBe(
+      "**Error**: Date is unavailable. Choose an available date."
+    )
   })
 })

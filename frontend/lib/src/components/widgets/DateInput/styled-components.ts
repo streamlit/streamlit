@@ -648,10 +648,20 @@ export const StyledCalendarCell = styled(CalendarCell, {
       boxShadow: `inset 0 0 0 ${borderWidth} ${primary}`,
     },
 
-    "&[data-disabled], &[data-unavailable]": {
+    "&[data-disabled]": {
       color: theme.colors.fadedText40,
       cursor: "not-allowed",
       boxShadow: "none",
+    },
+
+    // Availability-blocked cells: strike-through at full contrast, still
+    // focusable (keep the focus ring). Out-of-range cells can also carry
+    // data-unavailable; :not([data-disabled]) leaves them to the style above.
+    "&[data-unavailable]:not([data-disabled])": {
+      color: theme.colors.bodyText,
+      textDecoration: "line-through",
+      textDecorationThickness: "1px",
+      cursor: "not-allowed",
     },
 
     "&[data-outside-month]": {
@@ -661,8 +671,9 @@ export const StyledCalendarCell = styled(CalendarCell, {
     // React Aria sets data-today; :not([data-outside-month]) keeps the
     // mark on the visible month only. Underline intentionally blends with
     // the primary fill when today is also selected. Hardcoded px because
-    // text-decoration has no related theme token.
-    "&[data-today]:not([data-outside-month])": {
+    // text-decoration has no related theme token. Keep line-through when
+    // today itself is unavailable.
+    "&[data-today]:not([data-outside-month]):not([data-unavailable])": {
       textDecorationLine: "underline",
       textDecorationColor: primary,
       textDecorationThickness: "2px",

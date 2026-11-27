@@ -32,7 +32,7 @@ import {
 import { CalendarToday, ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { FloatingPortal } from "@floating-ui/react"
-import type { CalendarDate } from "@internationalized/date"
+import type { CalendarDate, DateValue } from "@internationalized/date"
 import {
   CalendarGridBody,
   CalendarGridHeader,
@@ -136,6 +136,8 @@ interface SingleDateInputProps {
    * reset its local displayValue to the parent's value prop (which may not
    * have changed if segment edits were never committed). */
   formResetKey: number
+  /** When set, dates matching the predicate cannot be selected. */
+  isDateUnavailable?: (date: DateValue) => boolean
 }
 
 /** True when close/blur should notify the parent, including a full clear
@@ -205,6 +207,7 @@ function SingleDateInput({
   onClose,
   formCommit,
   formResetKey,
+  isDateUnavailable,
 }: SingleDateInputProps): ReactElement {
   const theme = useEmotionTheme()
   const id = useId()
@@ -811,6 +814,7 @@ function SingleDateInput({
                 onChange={handleFieldChange}
                 minValue={minDate}
                 maxValue={maxDate}
+                isDateUnavailable={isDateUnavailable}
                 shouldForceLeadingZeros
                 isDisabled={disabled}
               >
@@ -884,6 +888,9 @@ function SingleDateInput({
               <StyledVisuallyHidden id={popoverDescId}>
                 Use arrow keys to navigate dates. Enter to select. Escape to
                 close.
+                {isDateUnavailable
+                  ? " Some dates are unavailable and cannot be selected."
+                  : null}
               </StyledVisuallyHidden>
             )}
             {/* Calendar locale is the visitor's locale (not the field's
@@ -895,6 +902,7 @@ function SingleDateInput({
                 onChange={handleCalendarChange}
                 minValue={minDate}
                 maxValue={maxDate}
+                isDateUnavailable={isDateUnavailable}
                 focusedValue={focusedValue}
                 onFocusChange={onFocusChange}
               >

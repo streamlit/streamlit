@@ -7244,6 +7244,122 @@ describe("DateInput no-op interactions", () => {
     return { sendRerunBackMsg, setStringArrayValueSpy, props }
   }
 
+  it("does not commit an unavailable calendar date", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, setStringArrayValueSpy } = renderWithRerunSpy({
+      default: ["2024-03-08"],
+      min: "2024-01-01",
+      availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
+      filterWeekdays: [6, 7],
+    })
+
+    const region = screen.getByTestId("stDateInput")
+    await user.click(getSingleDateSegments(region).year)
+    const sat = await screen.findByLabelText(/Saturday, March 9, 2024/)
+    expect(sat).toHaveAttribute("aria-disabled", "true")
+    expect(sat).toHaveAttribute("data-unavailable", "true")
+    await user.click(sat)
+    await flushScheduledRerun()
+
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+    await user.click(await screen.findByLabelText(/Monday, March 11, 2024/))
+    await flushScheduledRerun()
+    expect(setStringArrayValueSpy).toHaveBeenCalled()
+    expect(sendRerunBackMsg).toHaveBeenCalledOnce()
+  })
+
+  it("does not strike through out-of-range unavailable cells", async () => {
+    // ALLOW mode marks every out-of-range day unavailable; those cells also
+    // get data-disabled. Strike-through must not override the faded style.
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          default: ["2024-03-15"],
+          min: "2024-03-01",
+          max: "2024-03-31",
+          availabilityMode: DateInputProto.AvailabilityMode.ALLOW,
+          filterWeekdays: [1],
+        })}
+      />
+    )
+    const region = screen.getByTestId("stDateInput")
+    await user.click(getSingleDateSegments(region).year)
+    const inRangeUnavailable = await screen.findByLabelText(
+      /Saturday, March 9, 2024/
+    )
+    expect(inRangeUnavailable).toHaveAttribute("data-unavailable", "true")
+    expect(inRangeUnavailable).not.toHaveAttribute("data-disabled")
+    expect(getComputedStyle(inRangeUnavailable).textDecoration).toMatch(
+      /line-through/
+    )
+
+    const outOfRange = await screen.findByLabelText(
+      /Thursday, February 29, 2024/
+    )
+    expect(outOfRange).toHaveAttribute("data-disabled", "true")
+    expect(outOfRange).toHaveAttribute("data-unavailable", "true")
+    expect(getComputedStyle(outOfRange).textDecoration).not.toMatch(
+      /line-through/
+    )
+  })
+
+  it("does not commit a typed unavailable date and shows an error", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, setStringArrayValueSpy } = renderWithRerunSpy({
+      default: ["2024-03-08"],
+      min: "2024-01-01",
+      format: "YYYY/MM/DD",
+      availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
+      filterWeekdays: [6, 7],
+    })
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    await typeIntoSegment(user, year, "2024")
+    await typeIntoSegment(user, month, "03")
+    await typeIntoSegment(user, day, "09")
+
+    const errorIcon = await screen.findByTestId("stTooltipErrorHoverTarget")
+    expect(errorIcon).toBeVisible()
+    act(() => setInteractionModality("pointer"))
+    await user.hover(errorIcon)
+    expect(
+      await screen.findByTestId("stTooltipErrorContent")
+    ).toHaveTextContent(
+      "Error: Date is unavailable. Choose an available date."
+    )
+
+    await user.keyboard("{Escape}")
+    await flushScheduledRerun()
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not commit a pasted unavailable date", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, setStringArrayValueSpy } = renderWithRerunSpy({
+      default: ["2024-03-08"],
+      min: "2024-01-01",
+      format: "YYYY/MM/DD",
+      availabilityMode: DateInputProto.AvailabilityMode.BLOCK,
+      filterWeekdays: [6, 7],
+    })
+
+    const region = screen.getByTestId("stDateInput")
+    await user.click(getSingleDateSegments(region).year)
+    await user.paste("2024/03/09")
+    await flushScheduledRerun()
+
+    expect(
+      await screen.findByTestId("stTooltipErrorHoverTarget")
+    ).toBeVisible()
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
   it("does not commit or rerun when re-picking the selected calendar date", async () => {
     const user = userEvent.setup()
     const { sendRerunBackMsg, setStringArrayValueSpy, props } =
