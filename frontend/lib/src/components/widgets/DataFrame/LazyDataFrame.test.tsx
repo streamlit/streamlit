@@ -19,8 +19,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
+import type { ElementNode } from "~lib/AppNode"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
+import type { RenderTimingReport } from "~lib/util/performance/RenderTimingTracker"
 
 import type { DataFrameProps } from "./DataFrame"
 import type * as LazyDataFrameModule from "./LazyDataFrame"
@@ -102,4 +104,91 @@ describe("LazyDataFrame", () => {
       })
     }
   )
+
+  it("keeps the DataFrame pending for render timing until its lazy component loads", async () => {
+    // Imported after resetModules so they share LazyDataFrame's contexts.
+    const [
+      { LazyDataFrame },
+      { ElementContainer },
+      { ElementContainerConfig },
+      { RenderTimingContext },
+      { RenderTimingTracker },
+      testUtil,
+    ] = await Promise.all([
+      Promise.resolve(lazyModule),
+      import("~lib/components/core/Block/ElementContainer"),
+      import("~lib/components/core/Block/ElementContainerConfig"),
+      import("~lib/components/core/RenderTimingContext"),
+      import("~lib/util/performance/RenderTimingTracker"),
+      import("~lib/test_util"),
+    ])
+    let time = 0
+    let paintQueue: (() => void)[] = []
+    const paintUntilIdle = (): void => {
+      for (let i = 0; i < 20 && paintQueue.length > 0; i++) {
+        const callbacks = paintQueue
+        paintQueue = []
+        callbacks.forEach(callback => callback())
+      }
+    }
+    const reports: RenderTimingReport[] = []
+    const tracker = new RenderTimingTracker({
+      onReport: report => reports.push(report),
+      environment: {
+        now: () => time,
+        afterNextPaint: callback => {
+          paintQueue.push(callback)
+        },
+        createIntersectionObserver: () => undefined,
+        isPageHidden: () => false,
+      },
+    })
+    const node = {
+      element: { type: "arrowDataFrame", arrowDataFrame: element },
+      metadata: {},
+      scriptRunId: "run",
+    } as unknown as ElementNode
+
+    tracker.runStarted("run")
+    testUtil.render(
+      <RenderTimingContext.Provider value={tracker}>
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={false}
+        >
+          <LazyDataFrame
+            element={element}
+            disabled={false}
+            widgetMgr={undefined}
+          />
+        </ElementContainer>
+      </RenderTimingContext.Provider>
+    )
+    time = 10
+    tracker.scriptFinished()
+    await act(async () => {
+      await Promise.resolve()
+    })
+    paintUntilIdle()
+    expect(reports).toEqual([])
+
+    time = 50
+    await vi.waitFor(() => expect(mockDataFrameModule.loads).toBe(1))
+    act(() => {
+      mockDataFrameModule.release()
+    })
+    await screen.findByTestId("mockDataFrame")
+    paintUntilIdle()
+
+    expect(reports).toEqual([
+      expect.objectContaining({
+        renderTiming: expect.objectContaining({
+          fullyLoadedMs: 50,
+          codeLoadingMs: 40,
+        }),
+      }),
+    ])
+    tracker.dispose()
+  })
 })

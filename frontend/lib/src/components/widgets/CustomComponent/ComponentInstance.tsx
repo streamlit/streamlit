@@ -38,6 +38,7 @@ import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
 import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
 import ErrorElement from "~lib/components/shared/ErrorElement/ErrorElement"
+import { useElementLoadState } from "~lib/hooks/useElementLoadState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useTimeout from "~lib/hooks/useTimeout"
 import { COMMUNITY_URL, COMPONENT_DEVELOPER_URL } from "~lib/urls"
@@ -228,6 +229,12 @@ function ComponentInstance(props: Props): ReactElement {
   // Starts as `undefined` so that `setIsReadyTimeout(false)` on COMPONENT_READY
   // is a real state change and re-renders to hide the loading skeleton.
   const [isReadyTimeout, setIsReadyTimeout] = useState<boolean>()
+  // The iframe stays hidden behind the skeleton until COMPONENT_READY, which
+  // sets isReadyTimeout to false, or until the ready warning replaces it.
+  useElementLoadState(
+    "media",
+    componentError !== undefined || isReadyTimeout !== undefined
+  )
   // Initial iframe height comes from args.height, e.g. my_custom_component(height=100)
   // or st.pdf, which sends a numeric string. Numbers and numeric strings are used;
   // "stretch", empty, boolean, and missing values are unspecified and the iframe

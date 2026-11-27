@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { Video as VideoProto } from "@streamlit/protobuf"
 
+import { ElementTimingContext } from "~lib/components/core/RenderTimingContext"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
+import { RenderTimingTracker } from "~lib/util/performance/RenderTimingTracker"
 import type { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
 import Video, { type VideoProps } from "./Video"
@@ -81,6 +83,67 @@ describe("Video Element", () => {
     const videoElement = await screen.findByTestId("stVideo")
     expect(videoElement).toBeInTheDocument()
     expect(videoElement.classList).toContain("stVideo")
+  })
+
+  it.each(["loadedData", "suspend"] as const)(
+    "reports the video as loading for render timing until %s",
+    eventName => {
+      const tracker = new RenderTimingTracker({ onReport: vi.fn() })
+      const handle = tracker.createElementHandle()
+      render(
+        <ElementTimingContext.Provider value={handle}>
+          <Video {...getProps()} />
+        </ElementTimingContext.Provider>
+      )
+      expect(handle.loadingSlots.size).toBe(1)
+
+      fireEvent[eventName](screen.getByTestId("stVideo"))
+      expect(handle.loadingSlots.size).toBe(0)
+      tracker.dispose()
+    }
+  )
+
+  it("waits for a YouTube video again when only its player options change", () => {
+    const tracker = new RenderTimingTracker({ onReport: vi.fn() })
+    const handle = tracker.createElementHandle()
+    const youtubeProps = (startTime: number): VideoProps =>
+      getProps({
+        url: "https://www.youtube.com/embed/_T8LGqJtuGc",
+        type: VideoProto.Type.YOUTUBE_IFRAME,
+        startTime,
+      })
+    const { rerender } = render(
+      <ElementTimingContext.Provider value={handle}>
+        <Video {...youtubeProps(0)} />
+      </ElementTimingContext.Provider>
+    )
+    fireEvent.load(screen.getByTestId("stVideo"))
+    expect(handle.loadingSlots.size).toBe(0)
+
+    rerender(
+      <ElementTimingContext.Provider value={handle}>
+        <Video {...youtubeProps(10)} />
+      </ElementTimingContext.Provider>
+    )
+    expect(handle.loadingSlots.size).toBe(1)
+    tracker.dispose()
+  })
+
+  it("counts a video that loaded before it committed as loaded", () => {
+    const readyStateSpy = vi
+      .spyOn(HTMLMediaElement.prototype, "readyState", "get")
+      .mockReturnValue(HTMLMediaElement.HAVE_ENOUGH_DATA)
+    const tracker = new RenderTimingTracker({ onReport: vi.fn() })
+    const handle = tracker.createElementHandle()
+    render(
+      <ElementTimingContext.Provider value={handle}>
+        <Video {...getProps()} />
+      </ElementTimingContext.Provider>
+    )
+
+    expect(handle.loadingSlots.size).toBe(0)
+    tracker.dispose()
+    readyStateSpy.mockRestore()
   })
 
   it("has controls", async () => {
