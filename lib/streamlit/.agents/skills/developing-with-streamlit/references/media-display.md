@@ -63,7 +63,7 @@ Renders a PDF inline from a path, URL, bytes, or file-like object (`height` defa
 
 ## Logo: st.logo
 
-`st.logo` pins a brand image to the top of the sidebar/header — distinct from `st.image`, which places an image in the page's content flow. See [design.md](design.md). It has no `alt` parameter because Streamlit treats the logo as app chrome, not page content.
+`st.logo` pins a brand image to the top of the sidebar/header — distinct from `st.image`, which places an image in the page's content flow. See [design.md](design.md). It has no `alt` parameter because Streamlit treats the logo as app chrome, not page content. Resize it with `size=` (`"small"`, `"medium"`, `"large"`, or a max height in pixels) and `icon_size=` for the header logo shown when the sidebar is closed or absent (defaults to `size`), not with CSS.
 
 ## References
 

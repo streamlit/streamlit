@@ -189,7 +189,7 @@ Prefer these over CSS beyond the classic five (`primaryColor`, `backgroundColor`
 primaryColor = "#0969da"           # Buttons, links, active elements
 backgroundColor = "#ffffff"        # Main content background
 secondaryBackgroundColor = "#f6f8fa"  # Widget backgrounds
-textColor = "#1F2328"              # Body text
+textColor = "#1F2328"              # Body text; charts derive axis text and gridlines from it
 
 linkColor = "#0969da"              # Defaults to blueTextColor
 codeTextColor = "#1F2328"          # Unset follows body text; greenTextColor when surfaces/primary differ
