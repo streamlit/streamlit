@@ -108,13 +108,14 @@ message MetricsEvent {
   // because only the browser measures it.
   ReceivedMessages received_messages = 63;
 
-  // Browser loading milestones known when the run's PageProfile message is
-  // handled, in milliseconds from the start of the run: navigation start for
-  // the first run of a page load, otherwise when the browser sent the rerun
-  // request, or when the run's NewSession was handled if the browser didn't
-  // request the run. Not in PageProfile, because only the browser measures
-  // them. Unset for apps served from a local or private-network address,
-  // which measure a developer's machine rather than the app's users.
+  // Browser load milestones for the run, in milliseconds from the run's
+  // start. Only the browser measures them, so they aren't in PageProfile. A
+  // run starts at:
+  // - Navigation start, for the first run of a page load.
+  // - The browser's first rerun request since the previous run started.
+  // - Its NewSession message, if the browser didn't request the run.
+  // Unset for apps served from a local or private-network address, which
+  // measure a developer's machine rather than the app's users.
   //
   // First run only: when the frontend app mounted, after the HTML and
   // JavaScript were downloaded and run.

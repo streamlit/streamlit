@@ -14,26 +14,26 @@
  * limitations under the License.
  */
 
-/** Milestones reported on a run's pageProfile metrics event. */
+/** Milestones for a run's pageProfile metrics event. */
 export interface RunMilestones {
   appShellReadyMs?: number
   connectedMs?: number
   scriptFinishedMs: number
 }
 
+/** A run waiting for its PageProfile message, in `performance.now()` times. */
 interface Run {
   startAt: number
-  appShellReadyAt?: number
-  connectedAt?: number
+  appShellReadyAt?: number // first run only
+  connectedAt?: number // first run only
 }
 
 /**
- * Records when each script run reached the loading milestones known by the
- * time its PageProfile message is handled, for MetricsEvent's
- * app_shell_ready_ms, connected_ms and script_finished_ms. Times are measured
- * from the start of the run: navigation start for the first run of a page
- * load, otherwise the first rerun request sent since the previous run
- * started, or the run's NewSession if the browser didn't request it.
+ * Measures each script run's load milestones for its pageProfile metrics
+ * event, in milliseconds from the run's start. A run starts at:
+ * - Navigation start, for the first run of a page load.
+ * - The browser's first rerun request since the previous run started.
+ * - Its NewSession message, if the browser didn't request the run.
  */
 export class RunMilestonesTracker {
   private readonly now: () => number
@@ -55,12 +55,18 @@ export class RunMilestonesTracker {
     this.appShellReadyAt ??= this.now()
   }
 
-  /** Called when the browser sends a rerun request. */
+  /**
+   * Called when the browser sends a rerun request. Later requests before the
+   * next run starts join the same run, so only the first one counts.
+   */
   public rerunRequested(): void {
     this.pendingRequestAt ??= this.now()
   }
 
-  /** Called when a NewSession message starts a run. */
+  /**
+   * Called when a NewSession message starts a run. Drops any earlier run that
+   * never got its PageProfile message.
+   */
   public runStarted(): void {
     const now = this.now()
     const isFirstRun = !this.hasStartedRun

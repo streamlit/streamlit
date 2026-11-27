@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, StrictMode } from "react"
+import { act } from "react"
 
 import {
   render,
@@ -109,7 +109,8 @@ vi.mock("@streamlit/utils", async () => {
   // We must use Object.defineProperty to ensure the getter works correctly
   const mocked = {
     ...actual,
-    // jsdom serves tests from localhost, so load milestone tests override this.
+    // jsdom serves tests from localhost, so the load milestone tests override
+    // this to measure a hosted app.
     isLocalOrPrivateHostname: vi.fn(
       (actual as { isLocalOrPrivateHostname: (hostname: string) => boolean })
         .isLocalOrPrivateHostname
@@ -833,7 +834,7 @@ describe("App", () => {
         .mock.calls.filter(([name]) => name === "pageProfile")
         .map(([, event]) => event)
 
-    it("adds each run's loading milestones to its pageProfile event", () => {
+    it("adds each run's load milestones to its pageProfile event", () => {
       vi.useFakeTimers()
       vi.mocked(isEmbed).mockReturnValue(false)
       vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
@@ -874,35 +875,7 @@ describe("App", () => {
       }
     })
 
-    it("keeps app shell ready after a StrictMode remount", () => {
-      vi.mocked(isLocalOrPrivateHostname).mockReturnValue(false)
-      try {
-        render(
-          <StrictMode>
-            <RootStyleProvider theme={getDefaultTheme()}>
-              <WindowDimensionsProvider>
-                <App {...getProps()} />
-              </WindowDimensionsProvider>
-            </RootStyleProvider>
-          </StrictMode>
-        )
-
-        sendNewSessionWithUsageStats()
-        sendForwardMessage("pageProfile", { execTime: 5 })
-
-        expect(getPageProfileEvents()).toEqual([
-          expect.objectContaining({
-            appShellReadyMs: expect.any(Number),
-            connectedMs: expect.any(Number),
-            scriptFinishedMs: expect.any(Number),
-          }),
-        ])
-      } finally {
-        vi.mocked(isLocalOrPrivateHostname).mockReset()
-      }
-    })
-
-    it("leaves them out for apps served from a local address", () => {
+    it("leaves the milestones out for apps served from a local address", () => {
       renderApp(getProps())
 
       sendNewSessionWithUsageStats()

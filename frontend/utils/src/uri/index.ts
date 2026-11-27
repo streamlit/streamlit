@@ -59,8 +59,7 @@ const IPV6_FIRST_GROUP_RE = /^\[([0-9a-f]{1,4}):/
  * - Private IPv6 addresses: unique-local `fc00::/7` and link-local
  *   `fe80::/10`.
  *
- * Hostnames are expected in `URL.hostname` form, so IPv6 addresses are
- * bracketed.
+ * Expects a `URL.hostname` value, so IPv6 addresses must be bracketed.
  */
 export function isLocalOrPrivateHostname(hostname: string): boolean {
   const host = hostname.toLowerCase()

@@ -331,11 +331,15 @@ export class App extends PureComponent<Props, State> {
   private readonly receivedMessagesTracker = new ReceivedMessagesTracker()
 
   /**
-   * Records each run's loading milestones for its pageProfile event. Null
+   * Records each run's load milestones for its pageProfile event. Null
    * for apps served from a local address, which measure a developer's
    * machine rather than the app's users.
    */
-  private runMilestonesTracker: RunMilestonesTracker | null = null
+  private readonly runMilestonesTracker = isLocalOrPrivateHostname(
+    window.location.hostname
+  )
+    ? null
+    : new RunMilestonesTracker()
 
   private readonly sessionEventDispatcher = new SessionEventDispatcher()
 
@@ -823,12 +827,6 @@ export class App extends PureComponent<Props, State> {
   }
 
   override componentDidMount(): void {
-    if (
-      !this.runMilestonesTracker &&
-      !isLocalOrPrivateHostname(window.location.hostname)
-    ) {
-      this.runMilestonesTracker = new RunMilestonesTracker()
-    }
     this.runMilestonesTracker?.appMounted()
 
     // Initialize connection manager here, to avoid

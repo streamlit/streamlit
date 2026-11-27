@@ -78,7 +78,7 @@ describe("RunMilestonesTracker", () => {
     expect(tracker.scriptFinished()).toEqual({ scriptFinishedMs: 250 })
   })
 
-  it("measures a reconnect's run from its rerun request", () => {
+  it("drops a run that never got its PageProfile when the next run starts", () => {
     const { tracker, setTime } = createTracker()
     tracker.runStarted()
 
@@ -107,6 +107,12 @@ describe("RunMilestonesTracker", () => {
     tracker.runStarted()
     setTime(3500)
     expect(tracker.scriptFinished()).toEqual({ scriptFinishedMs: 500 })
+
+    // The request belongs to that run only.
+    setTime(4000)
+    tracker.runStarted()
+    setTime(4100)
+    expect(tracker.scriptFinished()).toEqual({ scriptFinishedMs: 100 })
   })
 
   it("reports each run once", () => {
