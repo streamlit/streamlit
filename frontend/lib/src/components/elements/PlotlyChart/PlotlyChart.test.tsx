@@ -720,6 +720,61 @@ describe("PlotlyChart Component", () => {
     )
   })
 
+  it("ignores the click Plotly emits right after a double-click", () => {
+    vi.useFakeTimers()
+    try {
+      const element = new PlotlyChartProto({
+        ...DEFAULT_ELEMENT,
+        selectionMode: [PlotlyChartProto.SelectionMode.POINTS],
+      })
+      renderComponent({ element })
+      const mockEvent = {} as Readonly<Plotly.PlotMouseEvent>
+
+      act(() => {
+        getLastPlotProps().onDoubleClick?.()
+        getLastPlotProps().onClick?.(mockEvent)
+      })
+
+      expect(sendEmptySelection).toHaveBeenCalled()
+      expect(handleClickEvent).not.toHaveBeenCalled()
+
+      act(() => {
+        vi.advanceTimersByTime(0)
+        getLastPlotProps().onClick?.(mockEvent)
+      })
+
+      expect(handleClickEvent).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("handles the next click after a double-click off the data", () => {
+    vi.useFakeTimers()
+    try {
+      const element = new PlotlyChartProto({
+        ...DEFAULT_ELEMENT,
+        selectionMode: [PlotlyChartProto.SelectionMode.POINTS],
+      })
+      renderComponent({ element })
+      const mockEvent = {} as Readonly<Plotly.PlotMouseEvent>
+
+      act(() => {
+        getLastPlotProps().onDoubleClick?.()
+      })
+      act(() => {
+        vi.advanceTimersByTime(0)
+      })
+      act(() => {
+        getLastPlotProps().onClick?.(mockEvent)
+      })
+
+      expect(handleClickEvent).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("does not attach a click handler when point selection is not enabled", () => {
     renderComponent()
 

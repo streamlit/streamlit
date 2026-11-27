@@ -96,6 +96,79 @@ interface PlotlyHierarchicalPoint extends Plotly.PlotDatum {
   percentParent?: number
 }
 
+interface PlotlyHeatmapOrImagePoint extends Plotly.PlotDatum {
+  z?: unknown
+  color?: unknown
+  colormodel?: string
+}
+
+interface PlotlyHistogram2dPoint extends Plotly.PlotDatum {
+  z?: unknown
+  /** The [row, col] index of the clicked bin. */
+  binNumber?: number[]
+  /** Indices of the samples that fall into the clicked bin. */
+  pointNumbers?: number[]
+}
+
+interface PlotlySankeyEndpoint {
+  label?: string
+  pointNumber?: number
+}
+
+interface PlotlySankeyPoint extends Plotly.PlotDatum {
+  label?: string
+  value?: number
+  source?: PlotlySankeyEndpoint
+  target?: PlotlySankeyEndpoint
+}
+
+/** A clicked point mapped into the shape of a single-point selection. */
+interface ClickSelection {
+  point: Record<string, unknown>
+  pointIndices: number[]
+}
+
+const HEATMAP_OR_IMAGE_TRACE_TYPES = new Set(["heatmap", "image"])
+
+/**
+ * Returns the trace type of a clicked point. Sankey click points only carry
+ * `trace`, while cartesian points carry `fullData` and `data`.
+ */
+function getTraceType(point: Plotly.PlotDatum): string | undefined {
+  const { trace, fullData, data } = point as unknown as {
+    trace?: { type?: string }
+    fullData?: { type?: string }
+    data?: { type?: string }
+  }
+  return trace?.type ?? fullData?.type ?? data?.type
+}
+
+/**
+ * Converts typed arrays (such as image pixels read from a canvas) to plain
+ * arrays, because JSON serializes typed arrays as index-keyed objects.
+ */
+function toPlainArray(value: unknown): unknown {
+  return ArrayBuffer.isView(value)
+    ? Array.from(value as unknown as ArrayLike<number>)
+    : value
+}
+
+function scalarPointIndices(pointNumber: unknown): number[] {
+  return typeof pointNumber === "number" ? [pointNumber] : []
+}
+
+function sankeyEndpoint(
+  endpoint: PlotlySankeyEndpoint | undefined
+): Record<string, unknown> | undefined {
+  if (!endpoint) {
+    return undefined
+  }
+  return {
+    label: endpoint.label,
+    pointNumber: endpoint.pointNumber,
+  }
+}
+
 // This is the state that is sent to the backend
 // This needs to be the same structure that is also defined
 // in the Python code. Uses snake case to be compatible with the
@@ -243,6 +316,15 @@ export function handleSelection(
     return
   }
 
+  // Clicking a trace without selectable points (heatmap, histogram2d, image)
+  // emits plotly_selected with an empty points array right before
+  // plotly_click, which handleClickEvent maps into the selection. Committing
+  // this empty selection first would cause an extra rerun. Double-click emits
+  // an event without a points array, so it still clears the selection.
+  if (event.points?.length === 0 && !event.selections?.length) {
+    return
+  }
+
   const selectionState: PlotlyWidgetState = {
     selection: {
       points: [],
@@ -380,9 +462,126 @@ export function sendEmptySelection(
 }
 
 /**
- * Handles click events from hierarchical charts (treemap, sunburst) that don't
- * emit plotly_selected events but do emit plotly_click events.
- * The click data is sent as selection state to maintain API consistency.
+ * Commits a single clicked point as the selection, unless it matches the
+ * stored selection.
+ */
+function writeClickSelection(
+  widgetMgr: WidgetStateManager,
+  element: PlotlyChartProto,
+  fragmentId: string | undefined,
+  { point, pointIndices }: ClickSelection
+): void {
+  const selectionState: PlotlyWidgetState = {
+    selection: {
+      points: [keysToSnakeCase(point)],
+      point_indices: pointIndices,
+      box: [],
+      lasso: [],
+    },
+  }
+
+  const currentSelectionState = widgetMgr.getStringValue(element)
+  const newSelectionState = JSON.stringify(selectionState)
+  if (currentSelectionState !== newSelectionState) {
+    widgetMgr.setStringValue(element.id, newSelectionState, {
+      formId: element.formId,
+      fragmentId,
+      fromUser: true,
+    })
+  }
+}
+
+function mapHierarchicalClick(
+  point: PlotlyHierarchicalPoint
+): ClickSelection | undefined {
+  if (point.id === undefined || point.parent === undefined) {
+    return undefined
+  }
+  return {
+    point: {
+      label: point.label,
+      id: point.id,
+      parent: point.parent,
+      value: point.value,
+      currentPath: point.currentPath,
+      percentRoot: point.percentRoot,
+      percentEntry: point.percentEntry,
+      percentParent: point.percentParent,
+      pointNumber: point.pointNumber,
+      curveNumber: point.curveNumber,
+    },
+    pointIndices: scalarPointIndices(point.pointNumber),
+  }
+}
+
+function mapHeatmapOrImageClick(
+  point: PlotlyHeatmapOrImagePoint
+): ClickSelection | undefined {
+  const type = getTraceType(point)
+  if (type === undefined || !HEATMAP_OR_IMAGE_TRACE_TYPES.has(type)) {
+    return undefined
+  }
+  return {
+    point: {
+      x: point.x,
+      y: point.y,
+      z: toPlainArray(point.z),
+      color: toPlainArray(point.color),
+      colormodel: point.colormodel,
+      customdata: toPlainArray(point.customdata),
+      pointNumber: point.pointNumber,
+      curveNumber: point.curveNumber,
+    },
+    // point_indices is list[int], so the [row, col] index stays only on the point.
+    pointIndices: [],
+  }
+}
+
+function mapHistogram2dClick(
+  point: PlotlyHistogram2dPoint
+): ClickSelection | undefined {
+  if (getTraceType(point) !== "histogram2d") {
+    return undefined
+  }
+  const sampleIndices = Array.isArray(point.pointNumbers)
+    ? point.pointNumbers
+    : []
+  return {
+    point: {
+      x: point.x,
+      y: point.y,
+      z: point.z,
+      binNumber: point.binNumber,
+      pointNumbers: sampleIndices,
+      curveNumber: point.curveNumber,
+    },
+    // Matches 1D histogram selections, which report the binned samples.
+    pointIndices: sampleIndices,
+  }
+}
+
+function mapSankeyClick(point: PlotlySankeyPoint): ClickSelection | undefined {
+  if (getTraceType(point) !== "sankey") {
+    return undefined
+  }
+  return {
+    point: {
+      label: point.label,
+      value: point.value,
+      customdata: toPlainArray(point.customdata),
+      pointNumber: point.pointNumber,
+      curveNumber: point.curveNumber,
+      source: sankeyEndpoint(point.source),
+      target: sankeyEndpoint(point.target),
+    },
+    pointIndices: scalarPointIndices(point.pointNumber),
+  }
+}
+
+/**
+ * Maps clicks on traces that don't emit plotly_selected (treemap, sunburst,
+ * heatmap, histogram2d, image, Sankey) into selection state. Scatter and other
+ * selectable traces go through handleSelection instead.
  *
  * @param event The Plotly click event, or undefined when Plotly invokes the
  *   callback without event data. A present event includes points.
@@ -400,46 +599,17 @@ export function handleClickEvent(
     return
   }
 
-  const point = event.points[0] as PlotlyHierarchicalPoint
+  const point = event.points[0] as PlotlyHierarchicalPoint &
+    PlotlyHeatmapOrImagePoint &
+    PlotlyHistogram2dPoint &
+    PlotlySankeyPoint
 
-  // Check if this is a hierarchical chart click (treemap/sunburst)
-  // These charts have 'id' and 'parent' properties in their click events
-  if (point.id === undefined || point.parent === undefined) {
-    // Not a treemap/sunburst click, ignore
-    return
-  }
-
-  const selectionState: PlotlyWidgetState = {
-    selection: {
-      points: [
-        keysToSnakeCase({
-          label: point.label,
-          id: point.id,
-          parent: point.parent,
-          value: point.value,
-          currentPath: point.currentPath,
-          percentRoot: point.percentRoot,
-          percentEntry: point.percentEntry,
-          percentParent: point.percentParent,
-          pointNumber: point.pointNumber,
-          curveNumber: point.curveNumber,
-        }),
-      ],
-      point_indices: notNullOrUndefined(point.pointNumber)
-        ? [point.pointNumber]
-        : [],
-      box: [],
-      lasso: [],
-    },
-  }
-
-  const currentSelectionState = widgetMgr.getStringValue(element)
-  const newSelectionState = JSON.stringify(selectionState)
-  if (currentSelectionState !== newSelectionState) {
-    widgetMgr.setStringValue(element.id, newSelectionState, {
-      formId: element.formId,
-      fragmentId,
-      fromUser: true,
-    })
+  const selection =
+    mapHierarchicalClick(point) ??
+    mapHeatmapOrImageClick(point) ??
+    mapHistogram2dClick(point) ??
+    mapSankeyClick(point)
+  if (selection) {
+    writeClickSelection(widgetMgr, element, fragmentId, selection)
   }
 }

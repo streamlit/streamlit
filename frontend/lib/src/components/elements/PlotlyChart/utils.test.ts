@@ -200,6 +200,20 @@ describe("PlotlyChart utils", () => {
       )
     })
 
+    it("ignores the empty event Plotly emits before a click on a heatmap", () => {
+      const event = {
+        points: [],
+        selections: [],
+      } as unknown as Plotly.PlotSelectionEvent
+      const widgetMgr = getWidgetMgr()
+      storeSelection(widgetMgr, proto)
+
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      handleSelection(event, widgetMgr, proto, mockFragmentId)
+      expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+    })
+
     it("should process events with points correctly", () => {
       const event = {
         points: [
@@ -526,8 +540,16 @@ describe("PlotlyChart utils", () => {
       ["undefined event", undefined],
       ["event with empty points array", { points: [] }],
       [
-        "non-hierarchical chart click (no id/parent)",
-        { points: [{ x: 100, y: 200, pointIndex: 1 }] },
+        "scatter click that already uses plotly_selected",
+        {
+          points: [
+            { x: 100, y: 200, pointIndex: 1, data: { type: "scatter" } },
+          ],
+        },
+      ],
+      [
+        "point without a trace type",
+        { points: [{ label: "A1", value: 10, pointNumber: 0 }] },
       ],
     ])("should return early for %s", (_desc, event) => {
       const widgetMgr = getWidgetMgr()
@@ -590,6 +612,156 @@ describe("PlotlyChart utils", () => {
       expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
         proto.id,
         expect.stringContaining('"point_indices":[]'),
+        { formId: proto.formId, fragmentId: mockFragmentId, fromUser: true }
+      )
+    })
+
+    it("should process heatmap clicks with a 2d point_number", () => {
+      const event = {
+        points: [
+          {
+            x: 10,
+            y: 4,
+            z: -0.40317694697317963,
+            customdata: "cell-4-10",
+            pointNumber: [4, 10],
+            curveNumber: 0,
+            fullData: { type: "heatmap" },
+          },
+        ],
+      } as unknown as Plotly.PlotMouseEvent
+      const widgetMgr = getWidgetMgr()
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      handleClickEvent(event, widgetMgr, proto, mockFragmentId)
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+        proto.id,
+        '{"selection":{"points":[{"x":10,"y":4,"z":-0.40317694697317963,"customdata":"cell-4-10","point_number":[4,10],"curve_number":0}],"point_indices":[],"box":[],"lasso":[]}}',
+        { formId: proto.formId, fragmentId: mockFragmentId, fromUser: true }
+      )
+    })
+
+    it.each([
+      ["plain arrays", [180, 18, 101], [180, 18, 101]],
+      [
+        "typed arrays from a source-backed image",
+        new Uint8ClampedArray([180, 18, 101]),
+        new Uint8ClampedArray([180, 18, 101]),
+      ],
+    ])(
+      "should process image clicks with color and z as %s",
+      (_desc, color, z) => {
+        const event = {
+          points: [
+            {
+              x: 80,
+              y: 50,
+              z,
+              color,
+              colormodel: "rgb",
+              pointNumber: [50, 80],
+              curveNumber: 0,
+              fullData: { type: "image" },
+            },
+          ],
+        } as unknown as Plotly.PlotMouseEvent
+        const widgetMgr = getWidgetMgr()
+        vi.spyOn(widgetMgr, "setStringValue")
+
+        handleClickEvent(event, widgetMgr, proto, mockFragmentId)
+
+        expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+          proto.id,
+          '{"selection":{"points":[{"x":80,"y":50,"z":[180,18,101],"color":[180,18,101],"colormodel":"rgb","point_number":[50,80],"curve_number":0}],"point_indices":[],"box":[],"lasso":[]}}',
+          { formId: proto.formId, fragmentId: mockFragmentId, fromUser: true }
+        )
+      }
+    )
+
+    it("should process histogram2d clicks with the bin and its samples", () => {
+      const event = {
+        points: [
+          {
+            x: 1.5,
+            y: 2.5,
+            z: 3,
+            binNumber: [2, 1],
+            pointNumbers: [4, 7, 9],
+            pointIndices: [4, 7, 9],
+            curveNumber: 0,
+            fullData: { type: "histogram2d" },
+          },
+        ],
+      } as unknown as Plotly.PlotMouseEvent
+      const widgetMgr = getWidgetMgr()
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      handleClickEvent(event, widgetMgr, proto, mockFragmentId)
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+        proto.id,
+        '{"selection":{"points":[{"x":1.5,"y":2.5,"z":3,"bin_number":[2,1],"point_numbers":[4,7,9],"curve_number":0}],"point_indices":[4,7,9],"box":[],"lasso":[]}}',
+        { formId: proto.formId, fragmentId: mockFragmentId, fromUser: true }
+      )
+    })
+
+    it.each([
+      [
+        "labeled node",
+        { label: "A1", customdata: "node-a1" },
+        '{"label":"A1","value":10,"customdata":"node-a1","point_number":0,"curve_number":0}',
+      ],
+      [
+        "node without a label",
+        {},
+        '{"value":10,"point_number":0,"curve_number":0}',
+      ],
+    ])("should process Sankey clicks on a %s", (_desc, extra, expected) => {
+      const event = {
+        points: [
+          {
+            ...extra,
+            value: 10,
+            pointNumber: 0,
+            curveNumber: 0,
+            trace: { type: "sankey" },
+          },
+        ],
+      } as unknown as Plotly.PlotMouseEvent
+      const widgetMgr = getWidgetMgr()
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      handleClickEvent(event, widgetMgr, proto, mockFragmentId)
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+        proto.id,
+        `{"selection":{"points":[${expected}],"point_indices":[0],"box":[],"lasso":[]}}`,
+        { formId: proto.formId, fragmentId: mockFragmentId, fromUser: true }
+      )
+    })
+
+    it("should process Sankey link clicks with source and target", () => {
+      const event = {
+        points: [
+          {
+            value: 8,
+            pointNumber: 0,
+            curveNumber: 0,
+            source: { label: "A1", pointNumber: 0 },
+            target: { label: "B1", pointNumber: 2 },
+            trace: { type: "sankey" },
+          },
+        ],
+      } as unknown as Plotly.PlotMouseEvent
+      const widgetMgr = getWidgetMgr()
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      handleClickEvent(event, widgetMgr, proto, mockFragmentId)
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+        proto.id,
+        '{"selection":{"points":[{"value":8,"point_number":0,"curve_number":0,"source":{"label":"A1","point_number":0},"target":{"label":"B1","point_number":2}}],"point_indices":[0],"box":[],"lasso":[]}}',
         { formId: proto.formId, fragmentId: mockFragmentId, fromUser: true }
       )
     })

@@ -22,6 +22,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -423,11 +424,20 @@ export function PlotlyChart({
     [element.id, widgetMgr, fragmentId]
   )
 
+  // Plotly emits plotly_click right after plotly_doubleclick for the same
+  // double-click. Mapping that click would reselect the point that the
+  // double-click just cleared.
+  const ignoreNextClickRef = useRef(false)
+
   /**
-   * Callback to handle click events on hierarchical charts (treemap, sunburst).
+   * Callback to handle click events on traces that don't emit plotly_selected.
    */
   const handleClickCallback = useCallback(
     (event: Readonly<Plotly.PlotMouseEvent>): void => {
+      if (ignoreNextClickRef.current) {
+        ignoreNextClickRef.current = false
+        return
+      }
       handleClickEvent(event, widgetMgr, element, fragmentId)
     },
     // Using element.id instead of element: the proto object gets a new reference
@@ -482,6 +492,22 @@ export function PlotlyChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- element intentionally omitted; use stable id.
     [element.id, widgetMgr, fragmentId, restartResetSelectionTimeout]
   )
+
+  // A double-click off the data emits no click, so the flag must not swallow
+  // the next real click.
+  const { restart: restartIgnoreNextClickTimeout } = useTimeout(
+    () => {
+      ignoreNextClickRef.current = false
+    },
+    0,
+    { autoStart: false }
+  )
+
+  const handleDoubleClickCallback = useCallback((): void => {
+    ignoreNextClickRef.current = true
+    restartIgnoreNextClickTimeout()
+    resetSelectionsCallback()
+  }, [resetSelectionsCallback, restartIgnoreNextClickTimeout])
 
   // This is required for the form clearing functionality:
   useEffect(() => {
@@ -581,14 +607,14 @@ export function PlotlyChart({
           overflow: "hidden",
         }}
         onSelected={isSelectionActivated ? handleSelectionCallback : () => {}}
-        // Handle click events for hierarchical charts (treemap, sunburst)
-        // that don't emit plotly_selected but do emit plotly_click
+        // Clicks on traces that don't emit plotly_selected (treemap, sunburst,
+        // heatmap, histogram2d, image, Sankey) are mapped into selection state.
         onClick={isPointsSelectionActivated ? handleClickCallback : undefined}
         // Double click is needed to make it easier to the user to
         // reset the selection. The default handling can be a bit annoying
         // sometimes.
         onDoubleClick={
-          isSelectionActivated ? () => resetSelectionsCallback() : undefined
+          isSelectionActivated ? handleDoubleClickCallback : undefined
         }
         onDeselect={
           isSelectionActivated

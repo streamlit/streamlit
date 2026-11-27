@@ -124,9 +124,20 @@ class PlotlySelectionState(ReadOnlyAttributeDictionary):
         ``point_indices``. If additional information has been assigned to your
         points, such as size or legend group, this is also included.
 
+        To select Sankey nodes by clicking, set ``arrangement="fixed"`` on the
+        Sankey trace. With other arrangements, Chromium- and WebKit-based
+        browsers treat a node click as the start of a drag, and no selection
+        is returned. Link clicks work with any arrangement. A selected Sankey
+        link includes ``source`` and ``target``; a selected node doesn't.
+        Double-clicking a Sankey chart doesn't clear its selection.
+
     point_indices : list[int]
         The numerical indices of all selected data points in the chart. The
-        details of each identified point are included in ``points``.
+        details of each identified point are included in ``points``. Heatmap
+        and image clicks leave this list empty. Each point's ``point_number``
+        holds its 2D ``[row, col]`` index instead. A 2D histogram click lists
+        the indices of the samples in the clicked bin, and the point's
+        ``bin_number`` holds the bin's ``[row, col]`` index.
 
     box : list[dict[str, Any]]
         The metadata related to the box selection. This includes the

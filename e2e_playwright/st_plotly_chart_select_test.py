@@ -357,3 +357,49 @@ def test_click_on_sunburst_displays_selection_data(app: Page):
     # Should display the selected segment info
     expect(app.get_by_text("Selected:")).to_be_attached()
     expect(app.get_by_text("ID:")).to_be_attached()
+
+
+def test_click_on_heatmap_displays_selection_data(app: Page):
+    """Test that clicking a heatmap cell emits selection data."""
+    chart = get_element_by_key(app, "heatmap_chart")
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_be_visible()
+
+    expect(app.get_by_text("No heatmap selection")).to_be_attached()
+
+    chart.locator(".nsewdrag").click(position={"x": 80, "y": 80})
+    wait_for_app_run(app)
+
+    # The click lands in the top-left cell: row "Z" (index 2), column "A".
+    expect(app.get_by_text("Heatmap selection:")).to_be_attached()
+    expect(app.get_by_text("No heatmap selection")).not_to_be_attached()
+    expect(app.get_by_text("Heatmap z: 30")).to_be_attached()
+    expect(app.get_by_text("Heatmap point_number: [2, 0]")).to_be_attached()
+
+
+def test_click_on_sankey_node_then_link_updates_selection(app: Page):
+    """Test that Sankey node and link clicks emit selection data, and that a
+    second click replaces the first selection.
+    """
+    chart = get_element_by_key(app, "sankey_chart")
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_be_visible()
+
+    expect(app.get_by_text("No sankey selection")).to_be_attached()
+
+    chart.locator(".sankey-node").first.click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Sankey selection:")).to_be_attached()
+    expect(app.get_by_text("No sankey selection")).not_to_be_attached()
+    expect(app.get_by_text("Sankey label: A1")).to_be_attached()
+    expect(app.get_by_text("Sankey value: 10")).to_be_attached()
+    expect(app.get_by_text("Sankey link:")).not_to_be_attached()
+
+    chart.locator(".sankey-link").first.click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Sankey link: A1 to B1")).to_be_attached()
+    expect(app.get_by_text("Sankey value: 8")).to_be_attached()
+    expect(app.get_by_text("Sankey label: A1")).not_to_be_attached()
+    expect(app.get_by_text("Sankey value: 10")).not_to_be_attached()
