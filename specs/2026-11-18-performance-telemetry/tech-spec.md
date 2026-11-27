@@ -412,7 +412,7 @@ A message sent as a reference to a copy the browser has cached counts toward byt
 
 ### Render timing
 
-Render timing is measured only in the browser and sent as its own `renderTiming` event, because fully loaded happens after the `pageProfile` event is sent. Holding back the `pageProfile` event instead would lose it whenever a slow page is closed while loading, which is the case that matters most, and would let a failure in element tracking delay or drop the server's numbers. Every milestone, including app shell ready, connected and script finished, is a field of the `renderTiming` event, so they share one start time and analysis reads them from one event. The `pageProfile` event only gets the run index.
+Render timing is measured only in the browser. App shell ready, connected and script finished are known when the run's `PageProfile` message is handled, so they're fields on the `pageProfile` event. The rest is sent as its own `renderTiming` event, because fully loaded happens later. Holding back the `pageProfile` event instead would lose it whenever a slow page is closed while loading, which is the case that matters most, and would let a failure in element tracking delay or drop the server's numbers.
 
 #### Joining to the run
 
@@ -476,10 +476,10 @@ The tracker is provided through `RenderTimingContext`, but only once the first `
 componentDidMount()     → tracker.appMounted()                // app shell ready
 sendRerunBackMsg()      → tracker.rerunRequested({ canFollowInput })  // the next run's start and input delay; supersedes a run still loading
 handleNewSession()      → tracker.runStarted(scriptRunId)     // connected, for run 0; reports a run still loading as superseded
-handlePageProfileMsg()  → tracker.scriptFinished()           // script finished; returns the run index for the pageProfile event
+handlePageProfileMsg()  → tracker.scriptFinished()           // script finished; returns the run index and milestones for the pageProfile event
 ```
 
-`scriptFinished()` records the script finished time and returns the run index, which is set on the `pageProfile` event. It defers the rest of its work to a microtask, so the `pageProfile` event is always sent before the run's `renderTiming` event. It then starts the 30-second timeout and checks whether the run is already complete.
+`scriptFinished()` returns the run index and the app shell ready, connected and script finished times at once, so they're set on the `pageProfile` event. It defers the rest of its work to a microtask, so the `pageProfile` event is always sent before the run's `renderTiming` event. It then starts the 30-second timeout and checks whether the run is already complete.
 
 #### Input delay
 

@@ -209,7 +209,7 @@ Benchmarks also can't say how common a problem is. Telemetry shows which milesto
 
 Apps served from a local address, such as `localhost` or a private-network IP, don't record render timing, because they measure a developer's machine rather than the people using the app.
 
-Fully loaded is known only once the page has loaded or the run is cut short, after the run's `pageProfile` event is sent. So render timing, including the milestones known earlier, is sent in a separate `renderTiming` event, joined to the `pageProfile` event by session ID and a per-page-load run index. Holding back the `pageProfile` event until then would risk losing the server's numbers for the slow loads that users abandon.
+App shell ready, connected and script finished are known when the run's `PageProfile` message arrives, so they're sent on the run's `pageProfile` event. The rest is known only once the page has loaded or the run is cut short, so it's sent in a separate `renderTiming` event, joined to the `pageProfile` event by session ID and a per-page-load run index. Holding back the `pageProfile` event until then would risk losing the server's numbers for the slow loads that users abandon.
 
 ### Open questions
 
