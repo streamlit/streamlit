@@ -115,7 +115,26 @@ message MetricsEvent {
   // because only the browser measures it.
   ReceivedMessages received_messages = 63;
 
-  // Next ID: 64
+  // Browser load milestones for the run, in milliseconds from the run's
+  // start. Only the browser measures them, so they aren't in PageProfile. A
+  // run starts at:
+  // - Navigation start, for the first run of a page load.
+  // - The browser's first rerun request since the previous run started.
+  // - Its NewSession message, if the browser didn't request the run.
+  // Unset for apps served from a local or private-network address, which
+  // measure a developer's machine rather than the app's users.
+  //
+  // First run only: when the frontend app mounted, after the HTML and
+  // JavaScript were downloaded and run.
+  optional int64 app_shell_ready_ms = 64;
+  // First run only: when the first NewSession was handled, after the
+  // WebSocket opened and the session started.
+  optional int64 connected_ms = 65;
+  // When the PageProfile message was handled. Same end point as
+  // total_load_time.
+  optional int64 script_finished_ms = 66;
+
+  // Next ID: 67
 }
 
 // ForwardMsgs the browser received for one script run, from its NewSession

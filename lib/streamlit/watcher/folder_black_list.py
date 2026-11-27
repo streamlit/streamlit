@@ -67,6 +67,11 @@ class FolderBlackList:
     def __repr__(self) -> str:
         return util.repr_(self)
 
+    @property
+    def patterns(self) -> tuple[str, ...]:
+        """The folder globs this black list matches against."""
+        return tuple(self._folder_blacklist)
+
     def is_blacklisted(self, filepath: str) -> bool:
         """Test if filepath is in the blacklist.
 
