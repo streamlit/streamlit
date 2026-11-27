@@ -43,6 +43,7 @@ export type { LibConfigContextProps } from "./components/core/LibConfigContext"
 export { NavigationContext } from "./components/core/NavigationContext"
 export type { NavigationContextProps } from "./components/core/NavigationContext"
 export { PortalProvider } from "./components/core/Portal/PortalProvider"
+export { RenderTimingContext } from "./components/core/RenderTimingContext"
 export {
   INITIAL_SCRIPT_RUN_ID,
   ScriptRunContext,
@@ -209,6 +210,8 @@ export { ensureError } from "./util/ErrorHandling"
 export { useIsOverflowing } from "./util/Hooks"
 export { isMobile } from "./util/isMobile"
 export { mark, measure } from "./util/performance/fns"
+export { RenderTimingTracker } from "./util/performance/RenderTimingTracker"
+export type { RenderTimingReport } from "./util/performance/RenderTimingTracker"
 export type {
   StPerformanceMark,
   StPerformanceMetric,

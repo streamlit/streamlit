@@ -34,6 +34,8 @@ import {
   type LibConfigContextProps,
   NavigationContext,
   type NavigationContextProps,
+  RenderTimingContext,
+  type RenderTimingTracker,
   ScriptRunContext,
   type ScriptRunContextProps,
   type ScriptRunState,
@@ -111,6 +113,11 @@ type BackendOperationContextValues = {
   backendOperationClient?: BackendOperationClient
 }
 
+type RenderTimingContextValues = {
+  /** Null when render timing isn't measured. */
+  renderTimingTracker?: RenderTimingTracker | null
+}
+
 type SkillsInstallContextValues = {
   /** Whether the in-error "install skills" callout is allowed to show. */
   skillsInstallEnabled?: boolean
@@ -129,6 +136,7 @@ type StreamlitContextProviderProps = PropsWithChildren<
     ScriptRunContextValues &
     FormsContextValues &
     BackendOperationContextValues &
+    RenderTimingContextValues &
     SkillsInstallContextValues
 >
 
@@ -177,6 +185,8 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   formsData,
   // BackendOperationContext
   backendOperationClient,
+  // RenderTimingContext
+  renderTimingTracker = null,
   // SkillsInstallContext
   skillsInstallEnabled,
   onInstallSkills,
@@ -363,7 +373,11 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
                     <SkillsInstallContext.Provider
                       value={skillsInstallContextProps}
                     >
-                      {children}
+                      <RenderTimingContext.Provider
+                        value={renderTimingTracker}
+                      >
+                        {children}
+                      </RenderTimingContext.Provider>
                     </SkillsInstallContext.Provider>
                   </FormsContext.Provider>
                 </ScriptRunContext.Provider>
