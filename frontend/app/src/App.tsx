@@ -155,6 +155,7 @@ import {
 } from "@streamlit/protobuf"
 import {
   isLocalhost,
+  isLocalOrPrivateHostname,
   isNullOrUndefined,
   localStorageAvailable,
   notNullOrUndefined,
@@ -175,6 +176,7 @@ import {
   getRunIdentity,
   type RunIdentity,
 } from "./util/runIdentity"
+import { RunMilestonesTracker } from "./util/RunMilestonesTracker"
 import type { ThemeManager } from "./util/useThemeManager"
 
 // vite config builds global variable PACKAGE_METADATA
@@ -327,6 +329,13 @@ export class App extends PureComponent<Props, State> {
   private readonly metricsMgr = new MetricsManager(this.sessionInfo)
 
   private readonly receivedMessagesTracker = new ReceivedMessagesTracker()
+
+  /**
+   * Records each run's loading milestones for its pageProfile event. Null
+   * for apps served from a local address, which measure a developer's
+   * machine rather than the app's users.
+   */
+  private runMilestonesTracker: RunMilestonesTracker | null = null
 
   private readonly sessionEventDispatcher = new SessionEventDispatcher()
 
@@ -814,6 +823,14 @@ export class App extends PureComponent<Props, State> {
   }
 
   override componentDidMount(): void {
+    if (
+      !this.runMilestonesTracker &&
+      !isLocalOrPrivateHostname(window.location.hostname)
+    ) {
+      this.runMilestonesTracker = new RunMilestonesTracker()
+    }
+    this.runMilestonesTracker?.appMounted()
+
     // Initialize connection manager here, to avoid
     // "Can't call setState on a component that is not yet mounted." error.
     this.initializeConnectionManager()
@@ -1393,6 +1410,7 @@ export class App extends PureComponent<Props, State> {
       ),
       browserInfo,
       receivedMessages: this.receivedMessagesTracker.getRunTotals(),
+      ...this.runMilestonesTracker?.scriptFinished(),
     })
   }
 
@@ -1590,6 +1608,7 @@ export class App extends PureComponent<Props, State> {
     // Set this flag to indicate that we have received a NewSession message
     // after the latest rerun request:
     this.hasReceivedNewSession = true
+    this.runMilestonesTracker?.runStarted()
 
     // NewSession is attributed to the latest BackMsg (rerunEpoch). Keep
     // history replaceState only when that BackMsg was history navigation;
@@ -2589,6 +2608,7 @@ export class App extends PureComponent<Props, State> {
       this.historyNavigationEpoch = this.rerunEpoch
     }
 
+    this.runMilestonesTracker?.rerunRequested()
     this.sendBackMsg(
       new BackMsg({
         rerunScript: {
