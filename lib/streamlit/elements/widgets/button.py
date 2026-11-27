@@ -35,7 +35,12 @@ from urllib.parse import parse_qs
 from streamlit import runtime
 from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
-from streamlit.elements.lib.layout_utils import Width, create_layout_config
+from streamlit.elements.lib.layout_utils import (
+    ButtonLikeSize,
+    Width,
+    create_layout_config,
+    get_button_like_size_proto,
+)
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.shortcut_utils import normalize_shortcut
 from streamlit.elements.lib.utils import (
@@ -180,6 +185,7 @@ class ButtonMixin:
         width: Width = "content",
         shortcut: str | None = None,
         wrap: bool | None = None,
+        size: ButtonLikeSize = "medium",
     ) -> bool:
         r"""Display a button widget.
 
@@ -350,6 +356,20 @@ class ButtonMixin:
             ``help`` is set, hovering reveals the full label. Icons and
             keyboard shortcuts remain visible.
 
+        size : "xxsmall", "xsmall", "small", "medium", or "large"
+            The minimum height of the button. This can be one of the following:
+
+            - ``"xxsmall"``: 1.5rem.
+            - ``"xsmall"``: 1.75rem.
+            - ``"small"``: 2rem.
+            - ``"medium"`` (default): 2.5rem, matching text inputs and
+              select boxes.
+            - ``"large"``: 3rem.
+
+            Each size also sets its own padding. The label font size doesn't
+            change, and a label that wraps onto several lines makes the button
+            taller.
+
         Returns
         -------
         bool
@@ -444,6 +464,7 @@ class ButtonMixin:
             width=width,
             shortcut=shortcut,
             wrap=wrap,
+            size=size,
         )
 
     @gather_metrics("download_button")
@@ -467,6 +488,7 @@ class ButtonMixin:
         width: Width = "content",
         shortcut: str | None = None,
         wrap: bool | None = None,
+        size: ButtonLikeSize = "medium",
     ) -> bool:
         r"""Display a download button widget.
 
@@ -697,6 +719,20 @@ class ButtonMixin:
             ``help`` is set, hovering reveals the full label. Icons and
             keyboard shortcuts remain visible.
 
+        size : "xxsmall", "xsmall", "small", "medium", or "large"
+            The minimum height of the button. This can be one of the following:
+
+            - ``"xxsmall"``: 1.5rem.
+            - ``"xsmall"``: 1.75rem.
+            - ``"small"``: 2rem.
+            - ``"medium"`` (default): 2.5rem, matching text inputs and
+              select boxes.
+            - ``"large"``: 3rem.
+
+            Each size also sets its own padding. The label font size doesn't
+            change, and a label that wraps onto several lines makes the button
+            taller.
+
         Returns
         -------
         bool
@@ -863,6 +899,7 @@ class ButtonMixin:
             width=width,
             shortcut=shortcut,
             wrap=wrap,
+            size=size,
         )
 
     @overload
@@ -884,6 +921,7 @@ class ButtonMixin:
         width: Width = "content",
         shortcut: str | None = None,
         wrap: bool | None = None,
+        size: ButtonLikeSize = "medium",
     ) -> DeltaGenerator: ...
 
     @overload
@@ -905,6 +943,7 @@ class ButtonMixin:
         width: Width = "content",
         shortcut: str | None = None,
         wrap: bool | None = None,
+        size: ButtonLikeSize = "medium",
     ) -> bool: ...
 
     @overload
@@ -926,6 +965,7 @@ class ButtonMixin:
         width: Width = "content",
         shortcut: str | None = None,
         wrap: bool | None = None,
+        size: ButtonLikeSize = "medium",
     ) -> bool: ...
 
     @gather_metrics("link_button")
@@ -947,6 +987,7 @@ class ButtonMixin:
         width: Width = "content",
         shortcut: str | None = None,
         wrap: bool | None = None,
+        size: ButtonLikeSize = "medium",
     ) -> bool | DeltaGenerator:
         r"""Display a link button element.
 
@@ -1130,6 +1171,20 @@ class ButtonMixin:
             ``help`` is set, hovering reveals the full label. Icons and
             keyboard shortcuts remain visible.
 
+        size : "xxsmall", "xsmall", "small", "medium", or "large"
+            The minimum height of the button. This can be one of the following:
+
+            - ``"xxsmall"``: 1.5rem.
+            - ``"xsmall"``: 1.75rem.
+            - ``"small"``: 2rem.
+            - ``"medium"`` (default): 2.5rem, matching text inputs and
+              select boxes.
+            - ``"large"``: 3rem.
+
+            Each size also sets its own padding. The label font size doesn't
+            change, and a label that wraps onto several lines makes the button
+            taller.
+
         Returns
         -------
         element or bool
@@ -1175,6 +1230,7 @@ class ButtonMixin:
             width=width,
             shortcut=shortcut,
             wrap=wrap,
+            size=size,
             ctx=ctx,
         )
 
@@ -1419,9 +1475,11 @@ class ButtonMixin:
         width: Width = "content",
         shortcut: str | None = None,
         wrap: bool | None = None,
+        size: ButtonLikeSize = "medium",
     ) -> bool:
         key = to_key(key)
         label = "" if label is None else to_str(label)
+        size_proto = get_button_like_size_proto(size)
 
         on_click_callback = validate_on_change_mode(
             on_click,
@@ -1469,6 +1527,7 @@ class ButtonMixin:
         download_button_proto.type = type
         if wrap is not None:
             download_button_proto.wrap = wrap
+        download_button_proto.size = size_proto
         download_button_proto.disabled = disabled
         marshall_file(
             self.dg._get_delta_path_str(),
@@ -1557,10 +1616,12 @@ class ButtonMixin:
         width: Width = "content",
         shortcut: str | None = None,
         wrap: bool | None = None,
+        size: ButtonLikeSize = "medium",
         ctx: ScriptRunContext | None = None,
     ) -> bool | DeltaGenerator:
         key = to_key(key)
         label = "" if label is None else to_str(label)
+        size_proto = get_button_like_size_proto(size)
         on_click_callback = validate_on_change_mode(
             on_click,
             supported_modes=("rerun", "ignore"),
@@ -1610,6 +1671,7 @@ class ButtonMixin:
         link_button_proto.ignore_rerun = ignore_rerun
         if wrap is not None:
             link_button_proto.wrap = wrap
+        link_button_proto.size = size_proto
 
         if help is not None:
             link_button_proto.help = to_help_str(help)
@@ -1812,9 +1874,11 @@ class ButtonMixin:
         width: Width = "content",
         shortcut: str | None = None,
         wrap: bool | None = None,
+        size: ButtonLikeSize = "medium",
     ) -> bool:
         key = to_key(key)
         label = "" if label is None else to_str(label)
+        size_proto = get_button_like_size_proto(size)
         on_click = validate_on_change_mode(
             on_click,
             supported_modes=(),
@@ -1878,6 +1942,7 @@ class ButtonMixin:
         button_proto.disabled = disabled
         if wrap is not None:
             button_proto.wrap = wrap
+        button_proto.size = size_proto
 
         if help is not None:
             button_proto.help = to_help_str(help)

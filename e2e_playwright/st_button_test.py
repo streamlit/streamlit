@@ -36,7 +36,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-TOTAL_BUTTONS = 43
+TOTAL_BUTTONS = 48
 
 WRAP_LABEL = "Regenerate the complete quarterly report now"
 
@@ -444,3 +444,10 @@ def test_wrap_false_keeps_icon_and_shortcut_visible(app: Page):
     expect(container.locator("kbd")).to_be_visible()
     # The full label is still exposed via the native title.
     expect(container.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+
+
+def test_button_sizes(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Every size renders in the size row."""
+    sizes = get_element_by_key(themed_app, "button_sizes")
+    expect(sizes.get_by_test_id("stButton")).to_have_count(5)
+    assert_snapshot(sizes, name="st_button-sizes")

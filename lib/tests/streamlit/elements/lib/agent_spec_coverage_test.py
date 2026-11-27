@@ -113,6 +113,7 @@ _OMITTED_EVERYWHERE: dict[str, str] = {
 _OMITTED: dict[str, dict[str, str]] = {
     "altair_chart": {"altair_chart": _CONTENT, "theme": _PRESENTATION},
     "audio": {"sample_rate": _ENCODING},
+    "button": {"size": _PRESENTATION},
     "checkbox": {"value": _STARTING_VALUE},
     "code": {"wrap_lines": _PRESENTATION},
     "color_picker": {"value": _STARTING_VALUE},
@@ -125,12 +126,14 @@ _OMITTED: dict[str, dict[str, str]] = {
     },
     "date_input": {"value": _STARTING_VALUE},
     "datetime_input": {"value": _STARTING_VALUE},
+    "download_button": {"size": _PRESENTATION},
     "echarts_chart": {
         "spec": _CONTENT,
         "renderer": _PRESENTATION,
         "theme": _PRESENTATION,
     },
     "exception": {"exception": _CONTENT},
+    "form_submit_button": {"size": _PRESENTATION},
     "grid": {
         "columns": _PRESENTATION,
         "min_column_width": _PRESENTATION,
@@ -146,6 +149,7 @@ _OMITTED: dict[str, dict[str, str]] = {
         "clamp": _ENCODING,
         "output_format": _ENCODING,
     },
+    "link_button": {"size": _PRESENTATION},
     "markdown": {"anchors": _BROWSER_AFFORDANCE},
     "multiselect": {"select_all": _BROWSER_AFFORDANCE},
     "number_input": {"value": _STARTING_VALUE},

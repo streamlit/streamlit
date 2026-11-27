@@ -346,6 +346,8 @@ EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION = {
     "label_visibility",
     # wrap only controls label text wrapping, not widget identity.
     "wrap",
+    # size only controls the button height, not widget identity.
+    "size",
     # on_change callbacks and similar/related parameters.
     "args",
     "kwargs",

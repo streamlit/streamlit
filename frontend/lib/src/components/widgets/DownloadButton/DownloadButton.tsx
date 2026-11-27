@@ -34,6 +34,7 @@ import BaseButton, {
   BaseButtonSize,
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
+import { mapProtoButtonSize } from "~lib/components/shared/BaseButton/buttonSize"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
 import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
@@ -61,6 +62,7 @@ function DownloadButton(props: Props): ReactElement {
   // title, skipped when help is set since help provides the tooltip.
   const wrap = useResolvedWrap(element.wrap)
   const addTitleTooltip = !wrap && !help
+  const controlSize = mapProtoButtonSize(element.size)
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -204,6 +206,7 @@ function DownloadButton(props: Props): ReactElement {
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
+          controlSize={controlSize}
           disabled={disabled || isLoading}
           onClick={handleDownloadClick}
           containerWidth={true}

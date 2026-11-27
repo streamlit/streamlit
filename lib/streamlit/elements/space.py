@@ -52,8 +52,8 @@ class SpaceMixin:
               ``st.container`` and ``st.columns``.
             - ``"small"`` (default): 0.75rem, which is the height of a widget
               label. This is useful for aligning buttons with labeled widgets.
-            - ``"medium"``: 2.5rem, which is the height of a button or
-              (unlabeled) input field.
+            - ``"medium"``: 2.5rem, which is the height of a default-sized
+              button or (unlabeled) input field.
             - ``"large"``: 4.25rem, which is the height of a labeled input
               field or unlabeled media widget, like ``st.file_uploader``.
             - ``"xlarge"``: 6rem, matching the ``"xlarge"`` gap in

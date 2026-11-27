@@ -48,6 +48,7 @@ const BaseButton = forwardRef(function BaseButton(
   const {
     kind,
     size,
+    controlSize,
     disabled,
     onClick,
     containerWidth,
@@ -96,6 +97,7 @@ const BaseButton = forwardRef(function BaseButton(
       ref={ref}
       kind={kind}
       size={size ?? BaseButtonSize.MEDIUM}
+      controlSize={controlSize ?? "medium"}
       containerWidth={containerWidth ?? false}
       disabled={disabled ?? false}
       onClick={onClick ?? (() => {})}

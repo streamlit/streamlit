@@ -185,6 +185,8 @@ with st.container(horizontal=True, wrap=False):
     st.button("Delete")
 ```
 
+For compact toolbars, `st.button`, `st.download_button`, `st.form_submit_button`, and `st.link_button` accept `size` (`"xxsmall"` to `"large"`, default `"medium"`). It changes the button's height and padding, not its font size.
+
 ## Aligning elements
 
 Use `horizontal_alignment` on containers to position elements:

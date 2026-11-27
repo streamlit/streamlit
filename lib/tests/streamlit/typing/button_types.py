@@ -76,6 +76,13 @@ if TYPE_CHECKING:
     assert_type(button("Wrap", wrap=False), bool)
     assert_type(button("Wrap", wrap=None), bool)
 
+    # Button with size parameter
+    assert_type(button("Size", size="xxsmall"), bool)
+    assert_type(button("Size", size="xsmall"), bool)
+    assert_type(button("Size", size="small"), bool)
+    assert_type(button("Size", size="medium"), bool)
+    assert_type(button("Size", size="large"), bool)
+
     # Button with on_click callback
     def my_callback() -> None:
         pass
@@ -107,6 +114,7 @@ if TYPE_CHECKING:
             width="stretch",
             shortcut="Enter",
             wrap=False,
+            size="large",
         ),
         bool,
     )
@@ -174,6 +182,13 @@ if TYPE_CHECKING:
     assert_type(download_button("Download", data="content", wrap=False), bool)
     assert_type(download_button("Download", data="content", wrap=None), bool)
 
+    # Download button with size parameter
+    assert_type(download_button("Download", data="content", size="xxsmall"), bool)
+    assert_type(download_button("Download", data="content", size="xsmall"), bool)
+    assert_type(download_button("Download", data="content", size="small"), bool)
+    assert_type(download_button("Download", data="content", size="medium"), bool)
+    assert_type(download_button("Download", data="content", size="large"), bool)
+
     # Download button with all parameters combined
     assert_type(
         download_button(
@@ -194,6 +209,7 @@ if TYPE_CHECKING:
             width="stretch",
             shortcut="Ctrl+Shift+D",
             wrap=False,
+            size="large",
         ),
         bool,
     )
@@ -268,6 +284,23 @@ if TYPE_CHECKING:
     assert_type(link_button("Link", "https://example.com", wrap=False), DeltaGenerator)
     assert_type(link_button("Link", "https://example.com", wrap=None), DeltaGenerator)
 
+    # Link button with size parameter
+    assert_type(
+        link_button("Link", "https://example.com", size="xxsmall"), DeltaGenerator
+    )
+    assert_type(
+        link_button("Link", "https://example.com", size="xsmall"), DeltaGenerator
+    )
+    assert_type(
+        link_button("Link", "https://example.com", size="small"), DeltaGenerator
+    )
+    assert_type(
+        link_button("Link", "https://example.com", size="medium"), DeltaGenerator
+    )
+    assert_type(
+        link_button("Link", "https://example.com", size="large"), DeltaGenerator
+    )
+
     # Link button with on_click parameter - supports "rerun", "ignore", or callable
     assert_type(
         link_button("Link", "https://example.com", on_click="ignore"), DeltaGenerator
@@ -311,6 +344,7 @@ if TYPE_CHECKING:
             width="stretch",
             shortcut="Ctrl+Shift+S",
             wrap=False,
+            size="large",
         ),
         bool,
     )
@@ -422,6 +456,13 @@ if TYPE_CHECKING:
     assert_type(form_submit_button("Submit", wrap=False), bool)
     assert_type(form_submit_button("Submit", wrap=None), bool)
 
+    # Form submit button with size parameter
+    assert_type(form_submit_button("Submit", size="xxsmall"), bool)
+    assert_type(form_submit_button("Submit", size="xsmall"), bool)
+    assert_type(form_submit_button("Submit", size="small"), bool)
+    assert_type(form_submit_button("Submit", size="medium"), bool)
+    assert_type(form_submit_button("Submit", size="large"), bool)
+
     # Form submit button with on_click callback
     assert_type(form_submit_button("Submit", on_click=my_callback), bool)
     assert_type(
@@ -452,6 +493,7 @@ if TYPE_CHECKING:
             width="stretch",
             shortcut="Ctrl+Enter",
             wrap=False,
+            size="large",
         ),
         bool,
     )

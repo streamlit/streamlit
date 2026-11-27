@@ -39,9 +39,11 @@ from streamlit.navigation.page import Page
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
 )
+from streamlit.proto.ButtonLikeSize_pb2 import ButtonLikeSize as ButtonLikeSizeProto
 from streamlit.proto.DownloadButton_pb2 import (
     DownloadButton as DownloadButtonProto,
 )
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -581,6 +583,75 @@ class ButtonTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitDuplicateElementId):
             st.button("same label", wrap=False)
 
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name != "page_link"
+        ]
+    )
+    def test_button_size_default(self, name: str, command: Callable[..., Any]):
+        """By default size is "medium", the standard 2.5rem button height."""
+        command()
+        el = getattr(self.get_delta_from_queue().new_element, name)
+        assert el.size == ButtonLikeSizeProto.BUTTON_LIKE_SIZE_MEDIUM
+
+    @parameterized.expand(
+        [
+            (name, command, size, proto_value)
+            for name, command in get_button_command_matrix()
+            if name != "page_link"
+            for size, proto_value in [
+                ("xxsmall", ButtonLikeSizeProto.BUTTON_LIKE_SIZE_XXSMALL),
+                ("xsmall", ButtonLikeSizeProto.BUTTON_LIKE_SIZE_XSMALL),
+                ("small", ButtonLikeSizeProto.BUTTON_LIKE_SIZE_SMALL),
+                ("medium", ButtonLikeSizeProto.BUTTON_LIKE_SIZE_MEDIUM),
+                ("large", ButtonLikeSizeProto.BUTTON_LIKE_SIZE_LARGE),
+            ]
+        ]
+    )
+    def test_button_size(
+        self, name: str, command: Callable[..., Any], size: str, proto_value: int
+    ):
+        """The size parameter is forwarded to the button proto."""
+        command(size=size)
+        el = getattr(self.get_delta_from_queue().new_element, name)
+        assert el.size == proto_value
+
+    @parameterized.expand(
+        [
+            (name, command)
+            for name, command in get_button_command_matrix()
+            if name != "page_link"
+        ]
+    )
+    def test_button_invalid_size(self, name: str, command: Callable[..., Any]):
+        """An unknown size raises a StreamlitValueError listing the options."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            command(size="huge")
+        assert "size" in str(exc_info.value)
+        assert "'xxsmall'" in str(exc_info.value)
+
+    def test_button_invalid_size_does_not_register_element_id(self):
+        """A rejected size, even an unhashable one, doesn't reserve the element ID."""
+        with pytest.raises(StreamlitValueError):
+            st.button("retry label", size=[])  # type: ignore[arg-type]
+        st.button("retry label")
+
+    def test_button_size_excluded_from_id(self):
+        """`size` is presentation-only and does not change the element ID.
+
+        Two otherwise identical buttons that differ only in size therefore collide.
+        """
+        st.button("same label")
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.button("same label", size="small")
+
+    def test_page_link_does_not_support_size(self):
+        """st.page_link is intentionally excluded from the size parameter."""
+        with pytest.raises(TypeError):
+            st.page_link("https://example.com", label="Example", size="small")
+
     def test_page_link_does_not_support_wrap(self):
         """st.page_link is intentionally excluded from the wrap parameter."""
         with pytest.raises(TypeError):
@@ -929,3 +1000,26 @@ class ButtonTest(DeltaGeneratorTestCase):
         """Invalid on_click values report on_click, not on_change."""
         with pytest.raises(StreamlitValueError, match="Invalid `on_click` value"):
             st.link_button("test", url="https://example.com", on_click=123)  # type: ignore[arg-type]
+
+
+def test_size_is_available_on_apptest_elements() -> None:
+    """AppTest exposes the size of every button command on the element proto."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.button("Button", size="xsmall")
+        st.download_button("Download", "data", size="small")
+        st.link_button("Link", "https://example.com", size="large")
+        with st.form("form"):
+            st.form_submit_button("Submit", size="xxsmall")
+
+    at = AppTest.from_function(script).run()
+
+    assert not at.exception
+    sizes = ButtonLikeSizeProto
+    # st.form_submit_button renders as a button element, after st.button.
+    assert at.button[0].proto.size == sizes.BUTTON_LIKE_SIZE_XSMALL
+    assert at.download_button[0].proto.size == sizes.BUTTON_LIKE_SIZE_SMALL
+    assert at.link_button[0].proto.size == sizes.BUTTON_LIKE_SIZE_LARGE
+    assert at.button[1].proto.size == sizes.BUTTON_LIKE_SIZE_XXSMALL

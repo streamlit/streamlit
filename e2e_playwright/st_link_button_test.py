@@ -27,7 +27,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-LINK_BUTTON_ELEMENTS = 21
+LINK_BUTTON_ELEMENTS = 26
 
 
 def _click_link_and_wait_for_rerun(app: Page, link: Locator) -> None:
@@ -189,3 +189,10 @@ def test_wrap_false_truncates_and_sets_native_title(app: Page):
             "Regenerate the complete quarterly report now", exact=True
         )
     ).to_be_visible()
+
+
+def test_link_button_sizes(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Every size renders in the size row."""
+    sizes = get_element_by_key(themed_app, "link_button_sizes")
+    expect(sizes.get_by_test_id("stLinkButton")).to_have_count(5)
+    assert_snapshot(sizes, name="st_link_button-sizes")

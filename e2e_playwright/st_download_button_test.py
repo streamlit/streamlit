@@ -36,7 +36,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-DOWNLOAD_BUTTON_ELEMENTS = 20
+DOWNLOAD_BUTTON_ELEMENTS = 25
 
 
 def check_download_button_source_error_count(messages: list[str], expected_count: int):
@@ -359,3 +359,10 @@ def test_wrap_false_truncates_and_sets_native_title(app: Page):
             "Regenerate the complete quarterly report now", exact=True
         )
     ).to_be_visible()
+
+
+def test_download_button_sizes(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Every size renders in the size row."""
+    sizes = get_element_by_key(themed_app, "download_button_sizes")
+    expect(sizes.get_by_test_id("stDownloadButton")).to_have_count(5)
+    assert_snapshot(sizes, name="st_download_button-sizes")

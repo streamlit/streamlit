@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from datetime import date, time
+from typing import Literal
 
 import streamlit as st
 
@@ -312,3 +313,19 @@ with st.form("wrap_submit_form"):
         wrap=False,
         key="wrap_false_submit_button",
     )
+
+# Keep all sizes in one keyed row so the snapshot compares their relative
+# dimensions.
+SIZES: list[Literal["xxsmall", "xsmall", "small", "medium", "large"]] = [
+    "xxsmall",
+    "xsmall",
+    "small",
+    "medium",
+    "large",
+]
+with (
+    st.form("size_form"),
+    st.container(horizontal=True, key="form_submit_button_sizes"),
+):
+    for size in SIZES:
+        st.form_submit_button(size, size=size, key=f"form_submit_button_size_{size}")

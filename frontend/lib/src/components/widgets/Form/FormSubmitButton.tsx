@@ -25,6 +25,7 @@ import BaseButton, {
   BaseButtonSize,
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
+import { mapProtoButtonSize } from "~lib/components/shared/BaseButton/buttonSize"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
 import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
@@ -50,6 +51,7 @@ export const FormSubmitButton = memo(function FormSubmitButton(
   // title, skipped when help is set since help provides the tooltip.
   const wrap = useResolvedWrap(element.wrap)
   const addTitleTooltip = !wrap && !element.help
+  const controlSize = mapProtoButtonSize(element.size)
 
   const { formsData } = useRequiredContext(FormsContext)
   const hasInProgressUpload = formsData.formsWithUploads.has(formId)
@@ -88,6 +90,7 @@ export const FormSubmitButton = memo(function FormSubmitButton(
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
+          controlSize={controlSize}
           containerWidth={true}
           disabled={isDisabled}
           onClick={handleSubmit}

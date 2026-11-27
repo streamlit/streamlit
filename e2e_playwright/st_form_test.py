@@ -339,8 +339,13 @@ def test_form_height_configurations(app: Page, assert_snapshot: ImageCompareFunc
 
 def test_forms_in_columns(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that forms render correctly within columns."""
-    # Get the columns container and snapshot the entire columns layout
-    columns_container = app.get_by_test_id("stHorizontalBlock").last
+    # Pick the horizontal block that contains forms. The size row's horizontal
+    # container sits inside a form and contains none.
+    columns_container = (
+        app.get_by_test_id("stHorizontalBlock")
+        .filter(has=app.get_by_test_id("stForm"))
+        .last
+    )
     columns_container.scroll_into_view_if_needed()
     assert_snapshot(columns_container, name="st_form-columns")
 
@@ -456,3 +461,12 @@ def test_wrap_false_submit_button_truncates_and_sets_native_title(app: Page):
             "Regenerate the complete quarterly report now", exact=True
         )
     ).to_be_visible()
+
+
+def test_form_submit_button_sizes(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Every size renders in the size row."""
+    sizes = get_element_by_key(themed_app, "form_submit_button_sizes")
+    expect(sizes.get_by_test_id("stFormSubmitButton")).to_have_count(5)
+    assert_snapshot(sizes, name="st_form-submit_button_sizes")
