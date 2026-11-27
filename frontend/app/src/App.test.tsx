@@ -95,6 +95,7 @@ import {
   type StopAutoRerun,
   TextInput,
 } from "@streamlit/protobuf"
+import { isLocalOrPrivateHostname } from "@streamlit/utils"
 
 import { App, LOG, type Props } from "./App"
 import { SKILLS_NUDGE_SNOOZED_AT_KEY } from "./components/SkillsNudgeToast/skillsNudge"
@@ -106,7 +107,15 @@ vi.mock("@streamlit/utils", async () => {
 
   // Create a new object with the getter defined properly
   // We must use Object.defineProperty to ensure the getter works correctly
-  const mocked = { ...actual }
+  const mocked = {
+    ...actual,
+    // jsdom serves tests from localhost, so the load milestone tests override
+    // this to measure a hosted app.
+    isLocalOrPrivateHostname: vi.fn(
+      (actual as { isLocalOrPrivateHostname: (hostname: string) => boolean })
+        .isLocalOrPrivateHostname
+    ),
+  }
   Object.defineProperty(mocked, "StreamlitConfig", {
     get() {
       return globalThis.__mockStreamlitConfig
@@ -809,6 +818,77 @@ describe("App", () => {
         },
       })
     )
+  })
+
+  describe("load milestones", () => {
+    const sendNewSessionWithUsageStats = (): void => {
+      sendNewSession({
+        ...NEW_SESSION_JSON,
+        config: { ...NEW_SESSION_JSON.config, gatherUsageStats: true },
+      })
+    }
+
+    const getPageProfileEvents = (): unknown[] =>
+      vi
+        .mocked(getStoredValue<MetricsManager>(MetricsManager).enqueue)
+        .mock.calls.filter(([name]) => name === "pageProfile")
+        .map(([, event]) => event)
+
+    it("adds each run's load milestones to its pageProfile event", () => {
+      vi.useFakeTimers()
+      vi.mocked(isEmbed).mockReturnValue(false)
+      vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
+      let time = 100
+      const now = vi.spyOn(performance, "now").mockImplementation(() => time)
+      try {
+        renderApp(getProps())
+        time = 300
+        sendNewSessionWithUsageStats()
+        time = 900
+        sendForwardMessage("pageProfile", { execTime: 5 })
+
+        time = 5000
+        act(() => {
+          sendForwardMessage("autoRerun", {
+            interval: 1.0,
+            fragmentId: "myFragmentId",
+          })
+          vi.advanceTimersByTime(1000)
+        })
+        time = 5200
+        sendNewSessionWithUsageStats()
+        time = 5600
+        sendForwardMessage("pageProfile", { execTime: 5 })
+
+        const [firstRun, rerun] = getPageProfileEvents()
+        expect(firstRun).toMatchObject({
+          appShellReadyMs: 100,
+          connectedMs: 300,
+          scriptFinishedMs: 900,
+        })
+        expect(rerun).toMatchObject({ scriptFinishedMs: 600 })
+        expect(rerun).not.toHaveProperty("appShellReadyMs")
+        expect(rerun).not.toHaveProperty("connectedMs")
+      } finally {
+        now.mockRestore()
+        vi.useRealTimers()
+      }
+    })
+
+    it("leaves the milestones out for apps served from a local address", () => {
+      renderApp(getProps())
+
+      sendNewSessionWithUsageStats()
+      sendForwardMessage("pageProfile", { execTime: 5 })
+
+      expect(isLocalOrPrivateHostname).toHaveBeenLastCalledWith(
+        window.location.hostname
+      )
+      const [event] = getPageProfileEvents()
+      expect(event).not.toHaveProperty("appShellReadyMs")
+      expect(event).not.toHaveProperty("connectedMs")
+      expect(event).not.toHaveProperty("scriptFinishedMs")
+    })
   })
 
   it("reruns when the user presses 'r'", async () => {
@@ -5088,7 +5168,10 @@ describe("App", () => {
     it("does not show skeleton when embedded with hide_loading_screen option", () => {
       // This tests the embedding use case where the host wants to hide loading screens
       Object.defineProperty(window, "location", {
-        value: { search: "?embed_options=hide_loading_screen" },
+        value: {
+          hostname: "localhost",
+          search: "?embed_options=hide_loading_screen",
+        },
         writable: true,
         configurable: true,
       })
@@ -5106,7 +5189,10 @@ describe("App", () => {
     it("shows 'Please wait...' text when embedded with V1 loading screen", async () => {
       // This tests backwards compatibility for older embedding integrations
       Object.defineProperty(window, "location", {
-        value: { search: "?embed_options=show_loading_screen_v1" },
+        value: {
+          hostname: "localhost",
+          search: "?embed_options=show_loading_screen_v1",
+        },
         writable: true,
         configurable: true,
       })
