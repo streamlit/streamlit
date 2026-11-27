@@ -307,6 +307,40 @@ describe("DateInput", () => {
       expect(field).toContainElement(clearButton)
       expect(scroller).not.toContainElement(clearButton)
     })
+
+    it("opens the calendar and commits a picked date when rendered in the sidebar", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <IsSidebarContext.Provider value={true}>
+          <DateInput {...props} />
+        </IsSidebarContext.Provider>
+      )
+      spy.mockClear()
+
+      await user.click(
+        getSingleDateSegments(screen.getByTestId("stDateInput")).year
+      )
+      const calendar = await screen.findByTestId("stDateInputCalendar")
+      expect(calendar).toBeVisible()
+
+      await user.click(
+        within(calendar).getByRole("button", { name: /January 25, 1970/ })
+      )
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(spy).toHaveBeenCalledWith(props.element.id, ["1970-01-25"], {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
+    })
   })
 
   describe("disabled state", () => {
@@ -539,6 +573,28 @@ describe("DateInput", () => {
       })
       expect(month).toHaveTextContent(originalDateWire.split("-")[1])
       expect(day).toHaveTextContent(originalDateWire.split("-")[2])
+    })
+
+    it("does not open the calendar when the clear button receives focus", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        value: ["2020-01-10"],
+        setValue: true,
+      })
+      render(<DateInput {...props} />)
+
+      act(() => {
+        screen.getByRole("button", { name: "Clear date" }).focus()
+      })
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+
+      await user.click(
+        getSingleDateSegments(screen.getByTestId("stDateInput")).year
+      )
+      expect(await screen.findByTestId("stDateInputCalendar")).toBeVisible()
     })
   })
 
@@ -3131,6 +3187,65 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
       "dialog"
     )
   })
+
+  it("Alt+ArrowDown reopens a closed calendar in active mode", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const { day } = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await user.click(day)
+    await screen.findByTestId("stDateInputCalendar")
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(day).toHaveFocus()
+
+    await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    expect(calendar).toHaveAttribute("role", "dialog")
+    await waitFor(() => {
+      expect(
+        within(calendar).getByRole("button", { name: /January 20, 1970/ })
+      ).toHaveFocus()
+    })
+    expect(day).not.toHaveFocus()
+    expect(screen.getByTestId("stDateInputCalendarButton")).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    )
+  })
+
+  it("Shift+Tab from the first calendar control wraps focus to the focused day", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({ default: ["2020-06-15"], min: "2000-01-01" })}
+      />
+    )
+
+    const { year } = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await user.click(year)
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    await user.keyboard("{Alt>}{ArrowDown}{/Alt}")
+    const selectedDay = within(calendar).getByRole("button", {
+      name: /June 15, 2020/,
+    })
+    await waitFor(() => {
+      expect(selectedDay).toHaveFocus()
+    })
+
+    const prevMonthBtn = within(calendar).getByLabelText("Previous month")
+    act(() => prevMonthBtn.focus())
+    await user.tab({ shift: true })
+
+    expect(selectedDay).toHaveFocus()
+    expect(prevMonthBtn).not.toHaveFocus()
+    expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+  })
 })
 
 describe("DateInput range-mode active calendar (Alt+ArrowDown)", () => {
@@ -3617,6 +3732,73 @@ describe("DateInput single-mode paste handling", () => {
         )
       ).toBe(true)
     })
+  })
+
+  it("pasting digits into a segment replaces only that segment", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    spy.mockClear()
+
+    const { year, month, day } = getSingleDateSegments(
+      screen.getByTestId("stDateInput")
+    )
+    await user.click(day)
+    await user.paste("25")
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        ["1970-01-25"],
+        expect.objectContaining({ fromUser: true })
+      )
+    })
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(day).toHaveTextContent("25")
+    expect(month).toHaveTextContent("01")
+    expect(year).toHaveTextContent("1970")
+  })
+
+  it("rejects pasting a day that does not exist in the current month", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: ["2019-02-06"] })
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    spy.mockClear()
+
+    const { day } = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await user.click(day)
+    await user.paste("31")
+
+    expect(spy).not.toHaveBeenCalled()
+    expect(day).toHaveTextContent("06")
+    expect(day).not.toHaveTextContent("31")
+    expect(props.widgetMgr.getStringArrayValue(props.element)).toEqual([
+      "2019-02-06",
+    ])
+  })
+
+  it("ignores a paste into a focused segment once the widget is disabled", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { rerender } = render(<DateInput {...props} />)
+
+    const { year, month, day } = getSingleDateSegments(
+      screen.getByTestId("stDateInput")
+    )
+    await user.click(year)
+    rerender(<DateInput {...props} disabled />)
+    expect(year).toHaveFocus()
+    spy.mockClear()
+
+    await user.paste("2024/03/15")
+
+    expect(spy).not.toHaveBeenCalled()
+    expect(year).toHaveTextContent("1970")
+    expect(month).toHaveTextContent("01")
+    expect(day).toHaveTextContent("20")
   })
 })
 
@@ -4452,23 +4634,70 @@ describe("DateInput range-mode Escape with the calendar closed", () => {
   )
 })
 
-describe("DateInput range-mode commit-on-blur", () => {
-  /** Moves focus to a control outside the widget while the calendar is
-   * still open, so the field blur (not an outside pointerdown) closes it. */
-  const renderWithOutsideButton = (props: Props): void => {
-    render(
-      <>
-        <DateInput {...props} />
-        <button type="button">Outside</button>
-      </>
-    )
-  }
-  const focusOutsideButton = (): void => {
-    act(() => {
-      screen.getByRole("button", { name: "Outside" }).focus()
-    })
-  }
+/** Renders the widget next to an "Outside" button that tests can focus. */
+const renderWithOutsideButton = (props: Props): void => {
+  render(
+    <>
+      <DateInput {...props} />
+      <button type="button">Outside</button>
+    </>
+  )
+}
 
+/** Moves focus to the "Outside" button while the calendar is still open,
+ * so the field blur (not an outside pointerdown) closes it. */
+const focusOutsideButton = (): void => {
+  act(() => {
+    screen.getByRole("button", { name: "Outside" }).focus()
+  })
+}
+
+describe("DateInput single-mode commit-on-blur", () => {
+  it.each([
+    ["outside a form", "", 1],
+    ["inside a form", "form", 0],
+  ])(
+    "commits the typed date when focus moves to another control with the calendar open (%s)",
+    async (_label, formId, expectedReruns) => {
+      const user = userEvent.setup()
+      const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+      widgetMgr.setFormSubmitBehaviors("form", true)
+      const props = getProps({ formId }, { widgetMgr })
+      const spy = vi.spyOn(widgetMgr, "setStringArrayValue")
+      renderWithOutsideButton(props)
+      spy.mockClear()
+      sendRerunBackMsg.mockClear()
+
+      const { day } = getSingleDateSegments(screen.getByTestId("stDateInput"))
+      await typeIntoSegment(user, day, "25")
+      expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+      expect(spy).not.toHaveBeenCalled()
+
+      focusOutsideButton()
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        ["1970-01-25"],
+        expect.objectContaining({ formId, fromUser: true })
+      )
+      expect(spy.mock.calls.map(([, value]) => value)).not.toContainEqual([
+        originalDateWire,
+      ])
+      expect(widgetMgr.getStringArrayValue(props.element)).toEqual([
+        "1970-01-25",
+      ])
+      await waitForRerunFlush()
+      expect(sendRerunBackMsg).toHaveBeenCalledTimes(expectedReruns)
+    }
+  )
+})
+
+describe("DateInput range-mode commit-on-blur", () => {
   it.each([
     ["outside a form", "", 1],
     ["inside a form", "form", 0],

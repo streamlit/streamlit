@@ -34,9 +34,11 @@ import {
   openMenu,
 } from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import {
   ConnectionManager,
   ConnectionState,
+  DefaultStreamlitEndpoints,
   type ErrorDetails,
   mockEndpoints,
   type ReceivedMessageSize,
@@ -62,6 +64,7 @@ import {
   lightTheme,
   LocalStore,
   mockSessionInfoProps,
+  type PresetThemeName,
   RootStyleProvider,
   ScriptRunState,
   SessionInfo,
@@ -74,13 +77,16 @@ import { mockWindowLocation } from "@streamlit/lib/testing"
 import {
   type AuthRedirect,
   type AutoRerun,
+  type BackendOperationResponse,
   Config,
   CustomThemeConfig,
   type Delta,
   type Element,
   Exception,
+  type FileURLsResponse,
   ForwardMsg,
   ForwardMsgMetadata,
+  GitInfo,
   type Logo,
   Navigation,
   type NewSession,
@@ -388,6 +394,8 @@ vi.mock("moment", () => ({
   })),
 }))
 
+vi.mock("iframe-resizer/js/iframeResizer.contentWindow", () => ({}))
+
 // Mock needed for Block.tsx
 class ResizeObserver {
   observe(): void {}
@@ -447,11 +455,15 @@ type ForwardMsgType =
   | ForwardMsg.ScriptFinishedStatus
   | AuthRedirect.$Properties
   | AutoRerun.$Properties
+  | BackendOperationResponse.$Properties
+  | FileURLsResponse.$Properties
+  | GitInfo.$Properties
   | Logo.$Properties
   | Navigation.$Properties
   | NewSession.$Properties
   | PageConfig.$Properties
   | PageInfo.$Properties
+  | PageProfile.$Properties
   | ParentMessage.$Properties
   | PageNotFound.$Properties
   | PageProfile.$Properties
@@ -6035,9 +6047,10 @@ describe("App", () => {
 
   describe("handles HostCommunication messaging", () => {
     function prepareHostCommunicationManager(
-      options = {}
+      options = {},
+      props: Props = getProps()
     ): HostCommunicationManager {
-      renderApp(getProps())
+      renderApp(props)
 
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
         HostCommunicationManager
@@ -6848,6 +6861,289 @@ describe("App", () => {
       expect(sendUpdateWidgetsMessageSpy).toHaveBeenCalled()
     })
 
+    it("does not send a rerun after the host terminates the websocket connection", () => {
+      prepareHostCommunicationManager()
+      const connectionManager = getMockConnectionManager(true)
+      const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+      try {
+        fireWindowPostMessage({ type: "TERMINATE_WEBSOCKET_CONNECTION" })
+        fireWindowPostMessage({
+          type: "REQUEST_PAGE_CHANGE",
+          pageScriptHash: "hash1",
+        })
+
+        expect(logErrorSpy).toHaveBeenCalledWith(
+          "Cannot send rerun backMessage when disconnected from server."
+        )
+        expect(connectionManager.sendMessage).not.toHaveBeenCalled()
+      } finally {
+        logErrorSpy.mockRestore()
+      }
+    })
+
+    it.each<PresetThemeName>(["Light", "Dark"])(
+      "switches to the %s preset theme when the host requests it",
+      themeName => {
+        const props = getProps()
+        prepareHostCommunicationManager({}, props)
+
+        fireWindowPostMessage({ type: "SET_CUSTOM_THEME_CONFIG", themeName })
+
+        expect(props.theme.setTheme).toHaveBeenCalledWith(
+          expect.objectContaining({ name: themeName })
+        )
+        expect(props.theme.setImportedTheme).not.toHaveBeenCalled()
+      }
+    )
+
+    it("imports the host theme instead of a preset when a custom theme is active", () => {
+      const props = getProps({
+        theme: {
+          ...getProps().theme,
+          activeTheme: { ...lightTheme, name: CUSTOM_THEME_NAME },
+        },
+      })
+      prepareHostCommunicationManager({}, props)
+      const themeInfo = { primaryColor: "blue" }
+
+      fireWindowPostMessage({
+        type: "SET_CUSTOM_THEME_CONFIG",
+        themeName: "Dark",
+        themeInfo,
+      })
+
+      expect(props.theme.setImportedTheme).toHaveBeenCalledWith(themeInfo)
+      expect(props.theme.setTheme).not.toHaveBeenCalled()
+    })
+
+    it("passes the host file upload config to the endpoints", () => {
+      prepareHostCommunicationManager()
+      const endpoints = getStoredValue<ReturnType<typeof mockEndpoints>>(
+        DefaultStreamlitEndpoints
+      )
+      endpoints.setFileUploadClientConfig = vi.fn()
+      const uploadConfig = {
+        prefix: "https://upload.streamlit.test/",
+        headers: { "X-Upload-Token": "token" },
+      }
+
+      fireWindowPostMessage({
+        type: "SET_FILE_UPLOAD_CLIENT_CONFIG",
+        ...uploadConfig,
+      })
+
+      expect(endpoints.setFileUploadClientConfig).toHaveBeenCalledWith(
+        uploadConfig
+      )
+    })
+
+    it("builds sidebar page links from the host page link base URL", () => {
+      prepareHostCommunicationManager()
+      const endpoints = getStoredValue<ReturnType<typeof mockEndpoints>>(
+        DefaultStreamlitEndpoints
+      )
+      const pageLinkBaseUrl = "https://share.streamlit.test/my-app"
+
+      sendNewSession({
+        ...NEW_SESSION_JSON,
+        appPages: [],
+        pageScriptHash: "hash1",
+      })
+      sendForwardMessage("navigation", {
+        appPages: [
+          {
+            pageScriptHash: "hash1",
+            pageName: "page1",
+            urlPathname: "page1",
+            isDefault: true,
+          },
+          { pageScriptHash: "hash2", pageName: "page2", urlPathname: "page2" },
+        ],
+        pageScriptHash: "hash1",
+        position: Navigation.Position.SIDEBAR,
+        sections: [],
+      })
+
+      expect(endpoints.buildAppPageURL).not.toHaveBeenCalledWith(
+        pageLinkBaseUrl,
+        expect.anything()
+      )
+
+      fireWindowPostMessage({
+        type: "SET_PAGE_LINK_BASE_URL",
+        pageLinkBaseUrl,
+      })
+
+      expect(endpoints.buildAppPageURL).toHaveBeenCalledWith(
+        pageLinkBaseUrl,
+        expect.objectContaining({ pageName: "page2" })
+      )
+    })
+
+    it("attaches host-provided app metadata to metrics on the next session", () => {
+      prepareHostCommunicationManager()
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+      const setMetadataSpy = vi.spyOn(metricsMgr, "setMetadata")
+      const metadata = { hostedAt: "streamlit.test", repo: "my-repo" }
+
+      fireWindowPostMessage({ type: "SET_METADATA", metadata })
+
+      expect(setMetadataSpy).not.toHaveBeenCalled()
+
+      sendNewSession(NEW_SESSION_JSON)
+
+      expect(setMetadataSpy).toHaveBeenCalledWith(metadata)
+    })
+
+    it.each([
+      ["STOP_SCRIPT", "Cannot stop app when disconnected from server."],
+      ["CLEAR_CACHE", "Cannot clear cache: disconnected from server"],
+      [
+        "SEND_APP_HEARTBEAT",
+        "Cannot send app heartbeat: disconnected from server",
+      ],
+    ] as const)(
+      "logs an error instead of handling %s while disconnected",
+      (type, expectedError) => {
+        prepareHostCommunicationManager()
+        const connectionManager = getMockConnectionManager(false)
+        const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+        try {
+          fireWindowPostMessage({ type })
+
+          expect(logErrorSpy).toHaveBeenCalledWith(expectedError)
+          expect(connectionManager.sendMessage).not.toHaveBeenCalled()
+          expect(connectionManager.onHeartbeatSent).not.toHaveBeenCalled()
+        } finally {
+          logErrorSpy.mockRestore()
+        }
+      }
+    )
+
+    it("does not request a stop when the script is not running", () => {
+      const hostCommunicationMgr = prepareHostCommunicationManager()
+      const connectionManager = getMockConnectionManager(true)
+
+      fireWindowPostMessage({ type: "STOP_SCRIPT" })
+
+      expect(connectionManager.sendMessage).not.toHaveBeenCalled()
+      expect(hostCommunicationMgr.sendMessageToHost).not.toHaveBeenCalledWith({
+        type: "SCRIPT_RUN_STATE_CHANGED",
+        scriptRunState: ScriptRunState.STOP_REQUESTED,
+      })
+    })
+
+    it("waits for the script to finish running before printing", () => {
+      vi.useFakeTimers()
+      const printSpy = vi.spyOn(window, "print").mockImplementation(() => {})
+      try {
+        prepareHostCommunicationManager()
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: true,
+        })
+
+        fireWindowPostMessage({ type: "PRINT_APP" })
+        act(() => {
+          vi.advanceTimersByTime(500)
+        })
+
+        expect(printSpy).not.toHaveBeenCalled()
+
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: false,
+        })
+        act(() => {
+          vi.advanceTimersByTime(500)
+        })
+
+        expect(printSpy).toHaveBeenCalledTimes(1)
+      } finally {
+        printSpy.mockRestore()
+        vi.useRealTimers()
+      }
+    })
+
+    it("forwards websocket and endpoint client errors to the host", () => {
+      const hostCommunicationMgr = prepareHostCommunicationManager()
+
+      getMockConnectionManagerProp("sendClientError")(
+        1006,
+        "Websocket closed",
+        "ws://localhost:8501/_stcore/stream"
+      )
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "CLIENT_ERROR",
+        component: "Websocket Connection",
+        error: 1006,
+        message: "Websocket closed",
+        source: "ws://localhost:8501/_stcore/stream",
+      })
+
+      const endpointsProps = vi
+        .mocked(DefaultStreamlitEndpoints)
+        .mock.calls.at(-1)?.[0]
+      endpointsProps?.sendClientError(
+        "Image",
+        404,
+        "Not found",
+        "https://example.com/image.png",
+        "my_component"
+      )
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "CLIENT_ERROR",
+        component: "Image",
+        error: 404,
+        message: "Not found",
+        source: "https://example.com/image.png",
+        customComponentName: "my_component",
+      })
+    })
+
+    describe("host ownership", () => {
+      let prevWindowLocation: Location
+
+      beforeEach(() => {
+        prevWindowLocation = window.location
+      })
+
+      afterEach(() => {
+        Object.defineProperty(window, "location", {
+          value: prevWindowLocation,
+          writable: true,
+          configurable: true,
+        })
+      })
+
+      it("enables developer shortcuts on a remote host once the host marks the user as owner", async () => {
+        vi.useFakeTimers()
+        try {
+          mockWindowLocation("remote.streamlit.test")
+          prepareHostCommunicationManager()
+          sendNewSession(NEW_SESSION_JSON)
+          getMockConnectionManager(true)
+          const user = userEvent.setup({
+            advanceTimers: advanceUserEventTimers,
+          })
+
+          await user.keyboard("c")
+
+          expect(
+            screen.queryByTestId("stClearCacheDialog")
+          ).not.toBeInTheDocument()
+
+          fireWindowPostMessage({ type: "SET_IS_OWNER", isOwner: true })
+
+          await openCacheModal()
+        } finally {
+          vi.useRealTimers()
+        }
+      })
+    })
+
     describe("blocks error dialogs when the host config option is set", () => {
       it("blocks script compile error dialog", () => {
         const hostCommunicationMgr = prepareHostCommunicationManager({
@@ -7294,6 +7590,514 @@ describe("App", () => {
       )
       // @ts-expect-error - pushState is not typed as a vitest mock
       window.history.pushState.mockClear()
+    })
+  })
+
+  describe("main menu and status widget actions", () => {
+    const DEVELOPER_NEW_SESSION_JSON: NewSession.$Properties = {
+      ...NEW_SESSION_JSON,
+      config: {
+        ...NEW_SESSION_JSON.config,
+        allowRunOnSave: true,
+        toolbarMode: Config.ToolbarMode.DEVELOPER,
+      },
+    }
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    /**
+     * Connects and starts a developer session. Connecting requests a script
+     * run, so sent messages are cleared to leave only the action under test.
+     */
+    function startConnectedDeveloperSession(): ConnectionManager {
+      const connectionManager = getMockConnectionManager(true)
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+      sendNewSession(DEVELOPER_NEW_SESSION_JSON)
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: false,
+      })
+      vi.mocked(connectionManager.sendMessage).mockClear()
+      return connectionManager
+    }
+
+    function getSentBackMsgs(
+      connectionManager: ConnectionManager
+    ): Record<string, unknown>[] {
+      return vi
+        .mocked(connectionManager.sendMessage)
+        .mock.calls.map(([backMsg]) => backMsg.toJSON())
+    }
+
+    it("enables run on save from the Auto rerun menu toggle", async () => {
+      const user = userEvent.setup()
+      renderApp(getProps())
+      const connectionManager = startConnectedDeveloperSession()
+
+      await openMenu()
+      const toggle = screen.getByRole("menuitemcheckbox", {
+        name: "Auto rerun",
+      })
+      expect(toggle).toHaveAttribute("aria-checked", "false")
+
+      await user.click(toggle)
+
+      expect(getSentBackMsgs(connectionManager)).toStrictEqual([
+        { setRunOnSave: true },
+      ])
+    })
+
+    it("enables run on save and reruns when Always rerun is clicked after a file change", async () => {
+      const user = userEvent.setup()
+      renderApp(getProps())
+      const connectionManager = startConnectedDeveloperSession()
+
+      sendForwardMessage("sessionEvent", { type: "scriptChangedOnDisk" })
+      await user.click(screen.getByRole("button", { name: "Always rerun" }))
+
+      const sentBackMsgs = getSentBackMsgs(connectionManager)
+      expect(sentBackMsgs).toHaveLength(2)
+      expect(sentBackMsgs[0]).toStrictEqual({ setRunOnSave: true })
+      expect(sentBackMsgs[1]).toHaveProperty("rerunScript")
+    })
+
+    it("shows the page config about text in the About dialog", async () => {
+      const user = userEvent.setup()
+      renderApp(getProps())
+      sendNewSession(NEW_SESSION_JSON)
+      sendForwardMessage("pageConfigChanged", {
+        menuItems: { aboutSectionMd: "Made with Streamlit" },
+      })
+
+      await openMenu()
+      await user.click(screen.getByRole("menuitem", { name: "About" }))
+
+      const dialog = await screen.findByRole("dialog")
+      expect(within(dialog).getByText("Made with Streamlit")).toBeVisible()
+    })
+
+    it("removes the About menu item when the page config clears the about text", async () => {
+      renderApp(getProps())
+      sendNewSession(NEW_SESSION_JSON)
+      sendForwardMessage("pageConfigChanged", {
+        menuItems: { aboutSectionMd: "Made with Streamlit" },
+      })
+      sendForwardMessage("pageConfigChanged", {
+        menuItems: { clearAboutMd: true },
+      })
+
+      await openMenu()
+
+      const menuLabels = getMenuLabels()
+      expect(menuLabels).toContain("Print")
+      expect(menuLabels).not.toContain("About")
+    })
+
+    it("starts a screencast recording named after the script", async () => {
+      const isSupportedSpy = vi
+        .spyOn(ScreenCastRecorder, "isSupportedBrowser")
+        .mockReturnValue(true)
+      try {
+        const user = userEvent.setup()
+        const props = getProps()
+        renderApp(props)
+        sendNewSession(NEW_SESSION_JSON)
+
+        await openMenu()
+        await user.click(
+          screen.getByRole("menuitem", { name: "Record screen" })
+        )
+
+        expect(props.screenCast.startRecording).toHaveBeenCalledWith(
+          expect.stringMatching(/^streamlit-scriptName-\d{4}(-\d{2}){5}$/)
+        )
+      } finally {
+        isSupportedSpy.mockRestore()
+      }
+    })
+
+    it("loads git info and opens the deploy dialog when Deploy is clicked", async () => {
+      const user = userEvent.setup()
+      renderApp(getProps())
+      const connectionManager = startConnectedDeveloperSession()
+
+      await user.click(screen.getByRole("button", { name: "Deploy" }))
+
+      expect(getSentBackMsgs(connectionManager)).toStrictEqual([
+        { loadGitInfo: true },
+      ])
+      expect(
+        await screen.findByText("Deploy unlimited public apps")
+      ).toBeVisible()
+      expect(screen.queryByText("Unable to deploy")).not.toBeInTheDocument()
+    })
+
+    it("shows a deploy error when no git repository was detected", async () => {
+      const user = userEvent.setup()
+      renderApp(getProps())
+      startConnectedDeveloperSession()
+
+      await user.click(screen.getByRole("button", { name: "Deploy" }))
+      await user.click(
+        await screen.findByRole("button", { name: "Deploy now" })
+      )
+
+      expect(await screen.findByText("Unable to deploy")).toBeVisible()
+      expect(
+        screen.queryByText("Deploy unlimited public apps")
+      ).not.toBeInTheDocument()
+    })
+
+    it("uses the received git info to explain why the app can't be deployed", async () => {
+      const user = userEvent.setup()
+      renderApp(getProps())
+      startConnectedDeveloperSession()
+
+      sendForwardMessage("gitInfoChanged", {
+        repository: "streamlit/my-app",
+        branch: "main",
+        module: "streamlit_app.py",
+        untrackedFiles: [],
+        state: GitInfo.GitStates.HEAD_DETACHED,
+      })
+      await user.click(screen.getByRole("button", { name: "Deploy" }))
+      await user.click(
+        await screen.findByRole("button", { name: "Deploy now" })
+      )
+
+      expect(
+        await screen.findByText("This Git tree is in a detached HEAD state.")
+      ).toBeVisible()
+    })
+
+    it("still opens the deploy dialog but skips loading git info when disconnected", async () => {
+      const user = userEvent.setup()
+      renderApp(getProps())
+      sendNewSession(DEVELOPER_NEW_SESSION_JSON)
+      const connectionManager = getMockConnectionManager(false)
+      const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+
+      await user.click(screen.getByRole("button", { name: "Deploy" }))
+
+      expect(logErrorSpy).toHaveBeenCalledWith(
+        "Cannot load git information when disconnected from server."
+      )
+      expect(connectionManager.sendMessage).not.toHaveBeenCalled()
+      expect(
+        await screen.findByText("Deploy unlimited public apps")
+      ).toBeVisible()
+    })
+
+    it("does not rerun via the 'r' shortcut while disconnected", async () => {
+      const user = userEvent.setup()
+      renderApp(getProps())
+      const connectionManager = getMockConnectionManager(false)
+      const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+
+      await user.keyboard("r")
+
+      expect(logErrorSpy).toHaveBeenCalledWith(
+        "Cannot rerun script when disconnected from server."
+      )
+      expect(connectionManager.sendMessage).not.toHaveBeenCalled()
+    })
+
+    it("does not open the clear cache dialog via the 'c' shortcut while disconnected", async () => {
+      const user = userEvent.setup()
+      renderApp(getProps())
+      sendNewSession(DEVELOPER_NEW_SESSION_JSON)
+      getMockConnectionManager(false)
+      const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+
+      await user.keyboard("c")
+
+      expect(logErrorSpy).toHaveBeenCalledWith(
+        "Cannot clear cache: disconnected from server"
+      )
+      expect(
+        screen.queryByTestId("stClearCacheDialog")
+      ).not.toBeInTheDocument()
+    })
+
+    it("reports a dark color scheme in rerun requests when a dark theme is active", async () => {
+      const user = userEvent.setup()
+      renderApp(
+        getProps({
+          theme: { ...getProps().theme, activeTheme: darkTheme },
+        })
+      )
+      const connectionManager = getMockConnectionManager(true)
+
+      await user.keyboard("r")
+
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      expect(
+        vi.mocked(connectionManager.sendMessage).mock.calls[0][0].rerunScript
+          ?.contextInfo?.colorScheme
+      ).toBe("dark")
+    })
+  })
+
+  describe("forward message handling", () => {
+    it("enqueues page profile metrics with app context", () => {
+      renderApp(getProps())
+      sendNewSession(NEW_SESSION_JSON)
+      sendForwardMessage("navigation", NAVIGATION_JSON)
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      sendForwardMessage("pageProfile", {
+        commands: [{ name: "markdown", time: 10 }],
+        execTime: 100,
+        prepTime: 5,
+      })
+
+      expect(metricsMgr.enqueue).toHaveBeenCalledWith(
+        "pageProfile",
+        expect.objectContaining({
+          isFragmentRun: false,
+          numPages: 1,
+          pageScriptHash: "page_script_hash",
+          activeTheme: lightTheme.name,
+          totalLoadTime: expect.any(Number),
+        })
+      )
+    })
+
+    it("passes file URL responses to the upload client", () => {
+      renderApp(getProps())
+      const fileUploadClient =
+        getStoredValue<FileUploadClient>(FileUploadClient)
+      const onFileURLsResponseSpy = vi.spyOn(
+        fileUploadClient,
+        "onFileURLsResponse"
+      )
+
+      sendForwardMessage("fileUrlsResponse", {
+        responseId: "myRequestId",
+        fileUrls: [{ uploadUrl: "https://upload", deleteUrl: "https://del" }],
+      })
+
+      expect(onFileURLsResponseSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ responseId: "myRequestId" })
+      )
+    })
+
+    it("updates the favicon from the page config", () => {
+      renderApp(getProps())
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+
+      sendForwardMessage("pageConfigChanged", { favicon: ":material/home:" })
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_PAGE_FAVICON",
+        favicon:
+          "https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/home/default/24px.svg",
+      })
+    })
+
+    it("closes the script compile error dialog once the script runs again", async () => {
+      renderApp(getProps())
+      sendNewSession(NEW_SESSION_JSON)
+
+      sendForwardMessage(
+        "sessionEvent",
+        SessionEvent.create({
+          scriptCompilationException: Exception.create({
+            message: "invalid syntax",
+          }),
+        })
+      )
+
+      expect(await screen.findByText("invalid syntax")).toBeVisible()
+
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+
+      await waitFor(() => {
+        expect(screen.queryByText("invalid syntax")).not.toBeInTheDocument()
+      })
+    })
+
+    it("dismisses the connection error dialog on reconnect without rerunning", () => {
+      renderApp(getProps())
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+      sendNewSession(NEW_SESSION_JSON)
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: false,
+      })
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.PINGING_SERVER
+        )
+      })
+      act(() => {
+        getMockConnectionManagerProp("onConnectionError")({
+          message: "Connection lost",
+        })
+      })
+
+      expect(screen.getByText("Connection error")).toBeVisible()
+
+      vi.mocked(widgetStateManager.sendUpdateWidgetsMessage).mockClear()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      expect(screen.queryByText("Connection error")).not.toBeInTheDocument()
+      expect(
+        widgetStateManager.sendUpdateWidgetsMessage
+      ).not.toHaveBeenCalled()
+    })
+
+    it("provides the previous session id when reconnecting", () => {
+      renderApp(getProps())
+      const getLastSessionId = getMockConnectionManagerProp(
+        "getLastSessionId"
+      ) as () => string | undefined
+
+      expect(getLastSessionId()).toBeUndefined()
+
+      const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
+      sessionInfo.setCurrent(
+        mockSessionInfoProps({ sessionId: "previousSessionId" })
+      )
+      sessionInfo.setCurrent(
+        mockSessionInfoProps({ sessionId: "newSessionId" })
+      )
+
+      expect(getLastSessionId()).toBe("previousSessionId")
+    })
+  })
+
+  describe("window.streamlitDebug", () => {
+    it.each([
+      ["shutdownRuntime", "debugShutdownRuntime"],
+      ["disconnectWebsocket", "debugDisconnectWebsocket"],
+    ] as const)(
+      "%s sends the %s BackMsg only while connected",
+      (debugFunction, backMsgField) => {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager(false)
+
+        window.streamlitDebug[debugFunction]()
+
+        expect(connectionManager.sendMessage).not.toHaveBeenCalled()
+
+        getMockConnectionManager(true)
+        window.streamlitDebug[debugFunction]()
+
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+        expect(
+          vi.mocked(connectionManager.sendMessage).mock.calls[0][0].toJSON()
+        ).toStrictEqual({ [backMsgField]: true })
+      }
+    )
+
+    describe("clearForwardMsgCache", () => {
+      let prevWindowLocation: Location
+
+      beforeEach(() => {
+        prevWindowLocation = window.location
+      })
+
+      afterEach(() => {
+        Object.defineProperty(window, "location", {
+          value: prevWindowLocation,
+          writable: true,
+          configurable: true,
+        })
+      })
+
+      function renderWithCachedMessage(): Map<string, unknown> {
+        renderApp(getProps())
+        const messages = new Map<string, unknown>([["hash", {}]])
+        Object.assign(getMockConnectionManager(), {
+          websocketConnection: { cache: { messages } },
+        })
+        return messages
+      }
+
+      it("clears the cached ForwardMsgs on localhost", () => {
+        mockWindowLocation("localhost")
+        const messages = renderWithCachedMessage()
+
+        window.streamlitDebug.clearForwardMsgCache()
+
+        expect(messages.size).toBe(0)
+      })
+
+      it("keeps the cached ForwardMsgs on a remote host", () => {
+        mockWindowLocation("remote.streamlit.test")
+        const messages = renderWithCachedMessage()
+
+        window.streamlitDebug.clearForwardMsgCache()
+
+        expect(messages.size).toBe(1)
+      })
+    })
+  })
+
+  describe("iframe resizer", () => {
+    let originalParent: Window
+
+    beforeEach(() => {
+      originalParent = window.parent
+      Object.defineProperty(window, "parent", {
+        value: { postMessage: vi.fn() },
+        writable: true,
+        configurable: true,
+      })
+    })
+
+    afterEach(() => {
+      Object.defineProperty(window, "parent", {
+        value: originalParent,
+        writable: true,
+        configurable: true,
+      })
+      document
+        .querySelectorAll("body > [data-iframe-height]")
+        .forEach(el => el.remove())
+      // @ts-expect-error - iFrameResizer is declared as required on Window
+      delete window.iFrameResizer
+    })
+
+    it("reports the rounded-up bottom of the lowest tagged element as the iframe height", () => {
+      renderApp(getProps())
+
+      expect(window.iFrameResizer.heightCalculationMethod()).toBe(0)
+
+      const bottoms = [120.2, 340.6]
+      bottoms.forEach(bottom => {
+        const el = document.createElement("div")
+        el.setAttribute("data-iframe-height", "")
+        vi.spyOn(el, "getBoundingClientRect").mockReturnValue({
+          bottom,
+        } as DOMRect)
+        document.body.appendChild(el)
+      })
+
+      expect(window.iFrameResizer.heightCalculationMethod()).toBe(341)
     })
   })
 })
@@ -9007,6 +9811,52 @@ describe("Skills install nudge", () => {
     // Both stores are written: the browser flag AND the server-side marker.
     expect(window.localStorage.getItem("stSkillsNudgeDismissed")).toBe("true")
     expect(dismissSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("sends the install request over the websocket and completes on the server response", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderApp(getProps())
+    sendRecommendingNewSession()
+    const connectionManager = getMockConnectionManager(true)
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+
+    expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+    const { backendOperationRequest } = vi.mocked(
+      connectionManager.sendMessage
+    ).mock.calls[0][0]
+    expect(backendOperationRequest?.installSkills).toBeTruthy()
+    expect(screen.queryByText("Skills installed")).not.toBeInTheDocument()
+
+    sendForwardMessage("backendOperationResponse", {
+      requestId: backendOperationRequest?.requestId,
+      installSkills: { detail: "Installed to .agents/skills" },
+    })
+    await flushInstall()
+
+    expect(screen.getByText("Skills installed")).toBeVisible()
+    expect(screen.getByText("Installed to .agents/skills")).toBeVisible()
+  })
+
+  it("still dismisses permanently when persisting Don't show again to the server fails", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const logWarnSpy = vi.spyOn(LOG, "warn").mockImplementation(() => {})
+    renderApp(getProps())
+    sendRecommendingNewSession()
+    getMockConnectionManager(false)
+
+    await user.click(screen.getByRole("button", { name: "Don't show again" }))
+    await flushInstall()
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    expect(logWarnSpy).toHaveBeenCalledWith(
+      "Failed to persist skills nudge dismissal",
+      expect.any(Error)
+    )
+    expect(window.localStorage.getItem("stSkillsNudgeDismissed")).toBe("true")
   })
 
   it("stays visible while an app toast comes and goes (coexistence)", () => {
