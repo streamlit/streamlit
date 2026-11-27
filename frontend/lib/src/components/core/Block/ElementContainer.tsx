@@ -20,18 +20,22 @@ import {
   type ReactNode,
   Suspense,
   useContext,
+  useLayoutEffect,
 } from "react"
 
 import type { ElementNode } from "~lib/AppNode"
+import { ElementTimingContext } from "~lib/components/core/RenderTimingContext"
 import { ViewStateContext } from "~lib/components/core/ViewStateContext"
 import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
+import type { ElementTimingHandle } from "~lib/util/performance/RenderTimingTracker"
 import { getElementId } from "~lib/util/utils"
 
 import type { ElementContainerConfig } from "./ElementContainerConfig"
 import { RetainedElementContext } from "./RetainedElementContext"
 import { PendingSkeletonOverlay } from "./SkeletonPlaceholders"
 import { StyledElementContainerLayoutWrapper } from "./StyledElementContainerLayoutWrapper"
+import { useElementRenderTiming } from "./useElementRenderTiming"
 import { convertKeyToClassName, getKeyFromId } from "./utils"
 
 export interface ElementContainerProps {
@@ -46,10 +50,28 @@ export interface ElementContainerProps {
 }
 
 /**
+ * Tells render timing when the element's code has loaded and its content is
+ * in the DOM. It renders after the element inside the same Suspense boundary,
+ * so its layout effect runs only once the element itself has committed.
+ */
+function ElementContentCommitted({
+  handle,
+  version,
+}: {
+  handle: ElementTimingHandle
+  version: unknown
+}): null {
+  useLayoutEffect(() => {
+    handle.contentCommitted(version)
+  }, [handle, version])
+  return null
+}
+
+/**
  * Wrapper component that encapsulates the element container layers:
  * - StyledElementContainerLayoutWrapper (layout styling)
- * - ErrorBoundary (error handling)
  * - Suspense (lazy loading fallback)
+ * - ErrorBoundary (error handling)
  *
  * Used in each case block of RawElementNodeRenderer to wrap elements
  * with their specific configuration.
@@ -85,9 +107,11 @@ export const ElementContainer = memo(function ElementContainer({
   // Like the stale fade, the overlay is off while any element is in fullscreen.
   const hasPendingSkeleton =
     node.pendingSkeleton !== undefined && !isFullScreen
+  const { handle: timingHandle, containerRef } = useElementRenderTiming(node)
 
   return (
     <StyledElementContainerLayoutWrapper
+      containerRef={containerRef}
       className={[
         "stElementContainer",
         "element-container",
@@ -107,15 +131,28 @@ export const ElementContainer = memo(function ElementContainer({
       node={node}
       config={config}
     >
-      <ErrorBoundary>
-        <Suspense
-          fallback={
+      <Suspense
+        fallback={
+          <ErrorBoundary>
             <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
-          }
-        >
-          {children}
-        </Suspense>
-      </ErrorBoundary>
+          </ErrorBoundary>
+        }
+      >
+        {/* Keep the timing provider mounted in both modes so turning timing
+            on or off doesn't remount the element. */}
+        <ElementTimingContext.Provider value={timingHandle}>
+          {/* Inside Suspense, so when the element fails to render,
+              ElementContentCommitted still commits and the error message
+              counts as the element's content. */}
+          <ErrorBoundary>{children}</ErrorBoundary>
+          {timingHandle && (
+            <ElementContentCommitted
+              handle={timingHandle}
+              version={node.element}
+            />
+          )}
+        </ElementTimingContext.Provider>
+      </Suspense>
       {hasPendingSkeleton && <PendingSkeletonOverlay />}
     </StyledElementContainerLayoutWrapper>
   )

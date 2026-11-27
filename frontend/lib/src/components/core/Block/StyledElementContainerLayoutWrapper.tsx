@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { type FC, useMemo } from "react"
+import { type FC, type Ref, useMemo } from "react"
 
 import type { ElementNode } from "~lib/AppNode"
 import { StyledElementContainer } from "~lib/components/core/Block/styled-components"
@@ -42,8 +42,9 @@ export const StyledElementContainerLayoutWrapper: FC<
   > & {
     node: ElementNode
     config: ElementContainerConfig
+    containerRef?: Ref<HTMLDivElement>
   }
-> = ({ node, config, ...rest }) => {
+> = ({ node, config, containerRef, ...rest }) => {
   const { hasDefiniteHeight = false, isInHorizontalLayout } =
     useRequiredContext(FlexContext)
 
@@ -104,5 +105,12 @@ export const StyledElementContainerLayoutWrapper: FC<
       ? "size"
       : undefined
 
-  return <StyledElementContainer {...rest} {...styles} contain={contain} />
+  return (
+    <StyledElementContainer
+      ref={containerRef}
+      {...rest}
+      {...styles}
+      contain={contain}
+    />
+  )
 }
