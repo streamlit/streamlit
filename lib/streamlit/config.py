@@ -3154,6 +3154,7 @@ def _convert_env_var_value(config_option: ConfigOption, raw_value: str) -> Any:
 def _update_config_with_env_vars(
     config_options: dict[str, ConfigOption],
     overridden_keys: Collection[str] = (),
+    previous_options: dict[str, ConfigOption] | None = None,
 ) -> None:
     """Update the config system by parsing the environment variables.
 
@@ -3166,8 +3167,10 @@ def _update_config_with_env_vars(
       does. A value that cannot be converted is logged and ignored.
 
     Startup validation (`_validate_env_vars`) raises before the server starts.
-    This function only logs and keeps the previous value, so a later config
-    reload cannot crash a running server.
+    This function only logs, so a later config reload cannot crash a running
+    server. If `previous_options` holds a value that was loaded from the same
+    environment variable, that value is kept. Otherwise the option keeps the
+    value from the config files or its default.
     """
     import click
 
@@ -3188,6 +3191,9 @@ def _update_config_with_env_vars(
             _LOGGER.error(  # noqa: TRY400
                 "Ignoring invalid environment variable: %s", exc.format_message()
             )
+            previous = (previous_options or {}).get(opt_name)
+            if previous is not None and previous.where_defined == _DEFINED_BY_ENV_VAR:
+                _set_option(opt_name, previous.value, _DEFINED_BY_ENV_VAR)
             continue
         if converted_value != ():
             _set_option(opt_name, converted_value, _DEFINED_BY_ENV_VAR)
@@ -3477,7 +3483,9 @@ def get_config_options(
             _update_config_with_toml(file_contents, filename)
 
         _update_config_with_env_vars(
-            _config_options, overridden_keys=options_from_flags.keys()
+            _config_options,
+            overridden_keys=options_from_flags.keys(),
+            previous_options=old_options,
         )
 
         for opt_name, opt_val in options_from_flags.items():

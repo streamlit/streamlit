@@ -170,6 +170,36 @@ def test_invalid_env_var_is_logged_and_ignored(
     assert "not a valid integer" in message
 
 
+def test_reload_with_invalid_env_var_keeps_the_previous_env_value(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A reload does not drop a value that was loaded from the same env var."""
+    monkeypatch.setenv(_env_var("server.maxUploadSize"), "10")
+    config.get_config_options(force_reparse=True)
+    assert config.get_option("server.maxUploadSize") == 10
+
+    monkeypatch.setenv(_env_var("server.maxUploadSize"), "abc")
+    with patch.object(config, "_LOGGER") as logger:
+        config.get_config_options(force_reparse=True)
+
+    assert config.get_option("server.maxUploadSize") == 10
+    logger.error.assert_called_once()
+
+
+def test_reload_with_invalid_env_var_ignores_a_previous_non_env_value(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Only a previous env value is restored. Other sources are not."""
+    config.get_config_options(force_reparse=True)
+    config.set_option("server.maxUploadSize", 10)
+
+    monkeypatch.setenv(_env_var("server.maxUploadSize"), "abc")
+    with patch.object(config, "_LOGGER"):
+        config.get_config_options(force_reparse=True)
+
+    assert config.get_option("server.maxUploadSize") == 200
+
+
 def test_invalid_env_var_overridden_by_flag_is_not_logged(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
