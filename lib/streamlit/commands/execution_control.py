@@ -379,6 +379,19 @@ def switch_page(  # type: ignore[misc]
     architecture. Arbitrary Python scripts and URLs can't be passed to
     ``st.switch_page``.
 
+    If you only need a link to another page, use ``st.page_link`` instead. It
+    switches pages without running the current page again. Use
+    ``st.switch_page`` when you need a button, or when the switch depends on
+    your app's logic.
+
+    To switch pages when a user clicks a button, call ``st.switch_page`` from
+    the button's ``on_click`` callback so Streamlit goes straight to the new
+    page. Calling it inside an ``if st.button(...)`` block makes Streamlit
+    rerun the current page up to that call first, which is slower and can
+    briefly show the current page again. Call ``st.switch_page`` in the body
+    of your script only when the switch depends on your app's logic, such as
+    redirecting a user who isn't logged in.
+
     Parameters
     ----------
     page : str, Path, or Page
@@ -434,12 +447,9 @@ def switch_page(  # type: ignore[misc]
 
     >>> import streamlit as st
     >>>
-    >>> if st.button("Home"):
-    >>>     st.switch_page("your_app.py")
-    >>> if st.button("Page 1"):
-    >>>     st.switch_page("pages/page_1.py")
-    >>> if st.button("Page 2"):
-    >>>     st.switch_page("pages/page_2.py")
+    >>> st.button("Home", on_click=st.switch_page, args=("your_app.py",))
+    >>> st.button("Page 1", on_click=st.switch_page, args=("pages/page_1.py",))
+    >>> st.button("Page 2", on_click=st.switch_page, args=("pages/page_2.py",))
 
     .. output::
         https://doc-switch-page.streamlit.app/
@@ -449,6 +459,8 @@ def switch_page(  # type: ignore[misc]
 
     The following example shows how to pass query parameters when switching to a
     different page. This example uses ``st.navigation`` to create a multipage app.
+    To link to a page with query parameters without a button, use
+    ``st.page_link`` with its ``query_params`` parameter instead.
 
     .. code-block:: text
 
@@ -460,8 +472,12 @@ def switch_page(  # type: ignore[misc]
     >>>
     >>> def page_1():
     >>>     st.title("Page 1")
-    >>>     if st.button("Switch to Page 2"):
-    >>>         st.switch_page("page_2.py", query_params={"utm_source": "page_1"})
+    >>>     st.button(
+    >>>         "Switch to Page 2",
+    >>>         on_click=st.switch_page,
+    >>>         args=("page_2.py",),
+    >>>         kwargs={"query_params": {"utm_source": "page_1"}},
+    >>>     )
     >>>
     >>> pg = st.navigation([page_1, "page_2.py"])
     >>> pg.run()
@@ -469,6 +485,29 @@ def switch_page(  # type: ignore[misc]
     .. output::
         https://doc-switch-page-query-params.streamlit.app/
         height: 350px
+
+    **Example 3: Switching pages based on app logic**
+
+    When the switch depends on your app's state rather than a user action,
+    call ``st.switch_page`` in the body of the page. The following
+    ``dashboard.py`` page sends users to a login page until they have signed
+    in. ``login.py`` must be a page in ``st.navigation``. Put this check in a
+    page file, not in the entrypoint file, because the entrypoint runs before
+    every page, including ``login.py``.
+
+    .. code-block:: text
+
+        your-repository/
+        ├── dashboard.py
+        ├── login.py
+        └── your_app.py
+
+    >>> import streamlit as st
+    >>>
+    >>> if not st.session_state.get("logged_in"):
+    >>>     st.switch_page("login.py")
+    >>>
+    >>> st.title("Dashboard")
 
     """
     _check_not_parallel_worker("st.switch_page")

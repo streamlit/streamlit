@@ -144,6 +144,8 @@ st.button("Save", on_click=save)
 
 Calling `st.rerun()` or `st.switch_page()` inside a callback ends that callback immediately (statements after the call don't run). Streamlit still runs the interaction's other callbacks before performing the rerun or navigation.
 
+For a button that changes pages, call `st.switch_page` from `on_click`. See [Switching pages from code](multipage-apps.md#switching-pages-from-code).
+
 `on_change` can also be `"ignore"` or `"rerun"` instead of a callback on some widgets. `"ignore"` updates the widget without a rerun; see [Skip reruns on individual widgets](performance.md#skip-reruns-on-individual-widgets-advanced).
 
 ## Initialization patterns
