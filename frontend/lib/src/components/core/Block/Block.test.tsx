@@ -37,6 +37,7 @@ import {
 } from "~lib/AppNode"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
+import { PRINT_FIXED_HEIGHT_ATTRIBUTE } from "~lib/components/shared/printPageBreak"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import {
   forwardMsgMetadata,
@@ -607,7 +608,7 @@ describe("FlexBoxContainer layout props", () => {
             ? "stVerticalBlock"
             : "stHorizontalBlock"
         expect(
-          screen.getByTestId(testId).hasAttribute("data-st-print-fixed-height")
+          screen.getByTestId(testId).hasAttribute(PRINT_FIXED_HEIGHT_ATTRIBUTE)
         ).toBe(expected)
       }
     )

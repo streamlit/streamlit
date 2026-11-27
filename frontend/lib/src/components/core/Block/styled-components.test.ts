@@ -22,6 +22,7 @@ import { describe, expect, it } from "vitest"
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { Direction } from "~lib/components/core/Layout/utils"
+import { PRINT_FIXED_HEIGHT_ATTRIBUTE } from "~lib/components/shared/printPageBreak"
 import { PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
 import { render } from "~lib/test_util"
 
@@ -84,7 +85,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).not.toContain("container-type")
     expect(css).toContain(":not([data-st-inactive] *)")
     expect(css).toContain("details:not([open])")
-    expect(css).toContain(":not([data-st-print-fixed-height] *)")
+    expect(css).toContain(`:not([${PRINT_FIXED_HEIGHT_ATTRIBUTE}] *)`)
     expect(css).not.toContain("data-testid")
     expect(css).toContain(">.stColumn")
     expect(css).toContain("display:block")
@@ -259,12 +260,13 @@ describe("StyledFlexContainerBlock print layout", () => {
       )
     )
 
-    // Print cannot scroll, so the stacked row would be cut off at the
-    // fixed height. The block grows to fit it as a block box.
+    // A definite-height block without the fixed-height print marker, such as a
+    // fixed-row grid cell, grows to fit a stacked row because print cannot
+    // scroll.
     expect(css).toMatch(
       /:has\(\.stHorizontalBlock :is\(\.stPrintFixedWidth[^{]*\{height:auto;max-height:none;overflow:visible;display:block/
     )
-    expect(css).toContain(":not([data-st-print-fixed-height] *)")
+    expect(css).toContain(`:not([${PRINT_FIXED_HEIGHT_ATTRIBUTE}] *)`)
     expect(css).toContain("margin-bottom:17px")
     // A stretch-height element was sized by the fixed height through size
     // containment. It drops containment so it keeps its content's height.
