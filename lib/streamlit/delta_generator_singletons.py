@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.card_container import CardContainer
     from streamlit.elements.lib.dialog import Dialog
     from streamlit.elements.lib.grid_container import GridContainer
     from streamlit.elements.lib.mutable_expander_container import ExpanderContainer
@@ -64,6 +65,7 @@ class DeltaGeneratorSingleton:
         popover_container_cls: type[PopoverContainer],
         skeleton_placeholder_cls: type[SkeletonPlaceholder],
         grid_container_cls: type[GridContainer],
+        card_container_cls: type[CardContainer],
     ) -> None:
         """Registers and initializes all delta-generator classes.
 
@@ -86,6 +88,8 @@ class DeltaGeneratorSingleton:
             The delta-generator class used as return value for `st.skeleton`.
         grid_container_cls : type[GridContainer]
             The delta-generator class used as return value for `st.grid`.
+        card_container_cls : type[CardContainer]
+            The delta-generator class used as return value for `st.card`.
 
         Raises
         ------
@@ -113,6 +117,7 @@ class DeltaGeneratorSingleton:
         self._popover_container_cls = popover_container_cls
         self._skeleton_placeholder_cls = skeleton_placeholder_cls
         self._grid_container_cls = grid_container_cls
+        self._card_container_cls = card_container_cls
 
     @property
     def main_dg(self) -> DeltaGenerator:
@@ -180,6 +185,13 @@ class DeltaGeneratorSingleton:
         DeltaGenerator, this is used to avoid circular imports.
         """
         return self._grid_container_cls
+
+    @property
+    def card_container_cls(self) -> type[CardContainer]:
+        """Stub for CardContainer. Since CardContainer inherits from
+        DeltaGenerator, this is used to avoid circular imports.
+        """
+        return self._card_container_cls
 
 
 def get_dg_singleton_instance() -> DeltaGeneratorSingleton:

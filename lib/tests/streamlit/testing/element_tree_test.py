@@ -4794,3 +4794,81 @@ def test_checkbox_reports_pending_value_and_display_element_has_no_widget_state(
     assert _has_pending_value(checkbox)
     assert get_widget_state(checkbox).bool_value is True
     assert get_widget_state(at.text[0]) is None
+
+
+def test_card_exposes_header_fields() -> None:
+    """``at.card`` exposes the card's own fields without shadowing queries."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.card(
+            "Revenue",
+            icon=":material/payments:",
+            caption="Last 12 months",
+            help="Monthly recurring revenue",
+            border=False,
+            background=True,
+            width=400,
+            height="content",
+            key="revenue",
+        ):
+            st.caption("Inside the card")
+            st.text("body")
+
+    at = AppTest.from_function(script).run()
+
+    assert len(at.card) == 1
+    card = at.card[0]
+    assert card.key == "revenue"
+    assert card.label == "Revenue"
+    assert card.icon == ":material/payments:"
+    assert card.caption_text == "Last 12 months"
+    assert card.help_text == "Monthly recurring revenue"
+    assert card.border is False
+    assert card.background is True
+    assert card.width == 400
+    assert card.height == "content"
+    # `caption` is still the collection of `st.caption` elements in the card.
+    assert [c.value for c in card.caption] == ["Inside the card"]
+    assert card.text[0].value == "body"
+    assert at.card(key="revenue") == card
+    assert list(at.get("card")) == list(at.card)
+
+
+def test_card_defaults_and_nesting() -> None:
+    """Card defaults match the proto, and cards can be nested."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.card("Outer", key="outer"):
+            st.card("Inner", border=False, key="inner")
+
+    at = AppTest.from_function(script).run()
+
+    assert [c.label for c in at.card] == ["Outer", "Inner"]
+    assert at.card[0].border is True
+    assert at.card[0].background is False
+    assert at.card[0].width == "stretch"
+    assert at.card[0].height == "stretch"
+    assert len(at.card[0].card) == 1
+    assert at.card[0].card[0].key == "inner"
+
+
+def test_container_excludes_card_internals() -> None:
+    """The card's slot and body blocks must not appear in ``at.container``."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.card("Panel", key="panel"):
+            st.text("inside")
+            with st.container(key="nested"):
+                st.text("nested")
+
+    at = AppTest.from_function(script).run()
+
+    assert {node.key for node in at.container} == {"nested"}
+    assert len(at.card) == 1
+    assert [t.value for t in at.card[0].text] == ["inside", "nested"]

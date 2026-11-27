@@ -24,7 +24,7 @@ import {
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import type { BlockNode } from "~lib/AppNode"
+import { BlockNode } from "~lib/AppNode"
 import {
   FlexContext,
   FlexContextProvider,
@@ -43,6 +43,7 @@ import {
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
+import Card from "~lib/components/elements/Card/Card"
 import ChatMessage from "~lib/components/elements/ChatMessage/ChatMessage"
 import Dialog from "~lib/components/elements/Dialog/Dialog"
 import Expander from "~lib/components/elements/Expander/Expander"
@@ -426,6 +427,9 @@ export const BlockNodeRenderer = (
     minStretchBehavior = "14rem"
   } else if (MEDIUM_STRETCH_BEHAVIOR.has(node.deltaBlock.type ?? "")) {
     minStretchBehavior = "8rem"
+  } else if (node.deltaBlock.type === "card") {
+    // A card's header has to work down to the minimum st.grid column width.
+    minStretchBehavior = "12.5rem"
   } else if (node.deltaBlock.type === "chatMessage") {
     if (node.isEmpty) {
       minStretchBehavior = "8rem"
@@ -593,6 +597,35 @@ export const BlockNodeRenderer = (
       >
         {child}
       </Expander>
+    )
+  }
+
+  if (node.deltaBlock.card) {
+    keyClassOnWrapper = true
+    // The card's children are its `header_extras` slot (0), `actions` slot (1),
+    // and body (2). Empty slots render nothing.
+    const renderCardSlot = (index: number): ReactNode => {
+      const slot = node.children[index]
+      if (!(slot instanceof BlockNode) || slot.isEmpty) {
+        return null
+      }
+      return (
+        <BlockNodeRenderer
+          {...childProps}
+          node={slot}
+          disableFullscreenMode={disableFullscreenMode}
+        />
+      )
+    }
+    containerElement = (
+      <Card
+        element={node.deltaBlock.card as BlockProto.Card}
+        {...getHeightContextProps(node.deltaBlock.heightConfig)}
+        isStale={isStale}
+        headerExtras={renderCardSlot(0)}
+        actions={renderCardSlot(1)}
+        body={renderCardSlot(2)}
+      />
     )
   }
 

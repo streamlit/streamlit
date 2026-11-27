@@ -35,6 +35,7 @@ message Block {
     FlexContainer flex_container = 13;
     Transparent transparent = 17;
     GridContainer grid_container = 19;
+    Card card = 21;
   }
 
   bool allow_empty = 8;
@@ -146,6 +147,25 @@ message Block {
     // Original `expanded=` default. The frontend omits the query param when the
     // expander matches this value. Distinct from `expanded`, which is current state.
     optional bool default_expanded = 8;
+  }
+
+  // A titled panel with a header and a body. Its children are always three
+  // blocks, in this order: the header extras slot, the actions slot, and the
+  // body. Width, height, and the key (`id`) are on the parent Block.
+  message Card {
+    // The card title. Inline Markdown.
+    string label = 1;
+    // An emoji or Material icon shown before the label.
+    string icon = 2;
+    // A short line under the label. Inline Markdown.
+    string caption = 3;
+    // Tooltip text for the help icon beside the label.
+    string help = 4;
+    // Whether to draw an outline.
+    bool border = 5;
+    // Whether to fill the card with the theme's secondary background and
+    // swap the colors of its children.
+    bool background = 6;
   }
 
   message Dialog {
@@ -305,5 +325,5 @@ message Block {
     bool column_span_all = 3;
   }
 
-  // Next ID: 21
+  // Next ID: 22
 }

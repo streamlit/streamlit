@@ -47,6 +47,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.cache_resource` | Cache a shared resource returned by a function. Use it for global objects such as database connections, ML models, or clients that should be reused across reruns and sessions. |
 | `st.camera_input` | Display a widget that returns pictures from the user's webcam. It returns an `UploadedFile` with the captured image when the user takes a picture, and `None` before then. |
 | `st.caption` | Display text in small font. Use it for secondary text, notes, or metadata beneath primary content. |
+| `st.card` | Insert a container with a built-in header of label, icon, caption, and help. Use it for dashboard cards and other titled, framed groups of elements. |
 | `st.chat_input` | Display a chat input widget. It is designed for conversational apps and returns the submitted message or uploaded files depending on configuration. |
 | `st.chat_message` | Insert a chat message container. Use it to render messages from users, assistants, or named speakers. |
 | `st.checkbox` | Display a checkbox widget. It returns a boolean value. |

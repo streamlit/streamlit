@@ -51,10 +51,22 @@ function measureEllipsis(el: Element): OverflowMeasure {
   if (scrollWidth === 0 && clientWidth === 0) {
     return "unmeasured"
   }
-  if (scrollWidth <= clientWidth + ELLIPSIS_OVERFLOW_TOLERANCE_PX) {
-    return "fits"
+  if (scrollWidth > clientWidth + ELLIPSIS_OVERFLOW_TOLERANCE_PX) {
+    return getComputedStyle(el).textOverflow === "ellipsis"
+      ? "overflow"
+      : "fits"
   }
-  return getComputedStyle(el).textOverflow === "ellipsis" ? "overflow" : "fits"
+  // A line clamp cuts off whole lines, so the overflow is vertical.
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Required to detect a clamped label
+  const scrollHeight = el.scrollHeight
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Required to detect a clamped label
+  const clientHeight = el.clientHeight
+  if (scrollHeight > clientHeight + ELLIPSIS_OVERFLOW_TOLERANCE_PX) {
+    return getComputedStyle(el).webkitLineClamp === "none"
+      ? "fits"
+      : "overflow"
+  }
+  return "fits"
 }
 
 /**
@@ -129,14 +141,15 @@ interface LabelTitleTooltipRefs<
 
 /**
  * Syncs a native browser tooltip (`title`) exposing the full label text so a
- * label truncated with an ellipsis (e.g. `wrap=false`) can still be read on
- * hover.
+ * label truncated with an ellipsis (e.g. `wrap=false`) or a line clamp can
+ * still be read on hover.
  *
  * - The hook reads rendered plain text from the DOM so a Markdown label is
  *   shown without its raw syntax (Markdown only yields plain text after it
  *   renders).
  * - The native `title` is set only when the host, or an ellipsis box inside
- *   it, is actually clipped (`scrollWidth` wider than `clientWidth`). A label
+ *   it, is actually clipped (`scrollWidth` wider than `clientWidth`, or
+ *   `scrollHeight` taller than `clientHeight` under a line clamp). A label
  *   that fits does not get a title. Overflow is measured when the label
  *   renders, once more when `document.fonts.ready` settles, and again if the
  *   label had no box at mount once it is first laid out. A later resize or
