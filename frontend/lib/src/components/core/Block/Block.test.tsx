@@ -592,7 +592,7 @@ describe("FlexBoxContainer layout props", () => {
         false,
       ],
     ])(
-      "marks only fixed-height vertical containers as print boundaries: %s",
+      "sets the fixed-height print attribute only on pixel- or rem-height vertical containers: %s",
       (_label, direction, heightConfig, expected) => {
         renderWithContexts(
           makeVerticalBlockComponent(

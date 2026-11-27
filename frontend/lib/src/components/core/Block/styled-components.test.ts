@@ -85,7 +85,14 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).not.toContain("container-type")
     expect(css).toContain(":not([data-st-inactive] *)")
     expect(css).toContain("details:not([open])")
-    expect(css).toContain(`:not([${PRINT_FIXED_HEIGHT_ATTRIBUTE}] *)`)
+    expect(css).toMatch(
+      new RegExp(
+        `:not\\(\\[${PRINT_FIXED_HEIGHT_ATTRIBUTE}\\] \\*\\):has\\(> ?\\.stColumn :is`
+      )
+    )
+    expect(css).not.toContain(
+      `details:not([open]) *):not([${PRINT_FIXED_HEIGHT_ATTRIBUTE}] *)`
+    )
     expect(css).not.toContain("data-testid")
     expect(css).toContain(">.stColumn")
     expect(css).toContain("display:block")
@@ -139,10 +146,14 @@ describe("StyledFlexContainerBlock print layout", () => {
     // `.stColumn` rule. Each stacked child keeps its own width, capped to
     // the container, and the gap becomes a bottom margin.
     expect(css).toMatch(
-      /:not\(:has\(> ?\.stColumn\)\):has\(:is\(\.stPrintFixedWidth[^{]*\{display:block;height:auto;overflow:visible/
+      new RegExp(
+        `:not\\(\\[${PRINT_FIXED_HEIGHT_ATTRIBUTE}\\] \\*\\):not\\(:has\\(> ?\\.stColumn\\)\\):has\\(:is\\(\\.stPrintFixedWidth[^{]*\\{display:block;height:auto;overflow:visible`
+      )
     )
     expect(css).toMatch(
-      /:not\(:has\(> ?\.stColumn\)\):has\([^{]*> ?\*\{max-width:100%;min-width:0/
+      new RegExp(
+        `:not\\(\\[${PRINT_FIXED_HEIGHT_ATTRIBUTE}\\] \\*\\):not\\(:has\\(> ?\\.stColumn\\)\\):has\\([^{]*> ?\\*\\{max-width:100%;min-width:0`
+      )
     )
     expect(css).not.toMatch(
       /:not\(:has\(> ?\.stColumn\)\):has\([^{]*> ?\*\{[^}]*(?<!max-|min-)width:100%/
@@ -194,7 +205,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     // The whole row only stays together while it is not stacked.
     expect(css).toMatch(
       new RegExp(
-        `:has\\(>\\s?\\.stColumn\\.${PRINT_BORDERED_COLUMN_CLASS}\\):not\\(:has\\(>\\s?\\.stColumn :is\\(\\.stPrintFixedWidth[^{]*\\{break-inside:avoid`
+        `:has\\(>\\s?\\.stColumn\\.${PRINT_BORDERED_COLUMN_CLASS}\\):not\\(:not\\(\\[${PRINT_FIXED_HEIGHT_ATTRIBUTE}\\] \\*\\):has\\(>\\s?\\.stColumn :is\\(\\.stPrintFixedWidth[^{]*\\{break-inside:avoid`
       )
     )
     // A single bordered chart column is kept together by StyledColumn.
@@ -264,14 +275,17 @@ describe("StyledFlexContainerBlock print layout", () => {
     // fixed-row grid cell, grows to fit a stacked row because print cannot
     // scroll.
     expect(css).toMatch(
-      /:has\(\.stHorizontalBlock :is\(\.stPrintFixedWidth[^{]*\{height:auto;max-height:none;overflow:visible;display:block/
+      new RegExp(
+        `:has\\(\\.stHorizontalBlock:not\\(\\[${PRINT_FIXED_HEIGHT_ATTRIBUTE}\\] \\*\\) :is\\(\\.stPrintFixedWidth[^{]*\\{height:auto;max-height:none;overflow:visible;display:block`
+      )
     )
-    expect(css).toContain(`:not([${PRINT_FIXED_HEIGHT_ATTRIBUTE}] *)`)
     expect(css).toContain("margin-bottom:17px")
     // A stretch-height element was sized by the fixed height through size
     // containment. It drops containment so it keeps its content's height.
     expect(css).toMatch(
-      /:has\(\.stHorizontalBlock [^{]*>[^{]*\{contain:none;?\}/
+      new RegExp(
+        `:has\\(\\.stHorizontalBlock:not\\(\\[${PRINT_FIXED_HEIGHT_ATTRIBUTE}\\] \\*\\)[^{]*>[^{]*\\{contain:none;?\\}`
+      )
     )
 
     const centered = cssOf(
@@ -285,7 +299,9 @@ describe("StyledFlexContainerBlock print layout", () => {
       )
     )
     expect(centered).toMatch(
-      /:has\(\.stHorizontalBlock [^{]*\{height:auto;max-height:none;overflow:visible;?\}/
+      new RegExp(
+        `:has\\(\\.stHorizontalBlock:not\\(\\[${PRINT_FIXED_HEIGHT_ATTRIBUTE}\\] \\*\\)[^{]*\\{height:auto;max-height:none;overflow:visible;?\\}`
+      )
     )
     expect(centered).not.toContain("display:block")
 
@@ -632,7 +648,9 @@ describe("StyledLayoutWrapper print layout", () => {
 
     // The row can be the wrapper's own container or nested inside it.
     expect(css).toMatch(
-      /:has\(\.stHorizontalBlock :is\(\.stPrintFixedWidth[^{]*\{display:block;[^}]*flex:0 0 auto;height:auto;max-height:none/
+      new RegExp(
+        `:has\\(\\.stHorizontalBlock:not\\(\\[${PRINT_FIXED_HEIGHT_ATTRIBUTE}\\] \\*\\) :is\\(\\.stPrintFixedWidth[^{]*\\{display:block;[^}]*flex:0 0 auto;height:auto;max-height:none`
+      )
     )
     expect(css).not.toContain(":has(> .stHorizontalBlock")
   })

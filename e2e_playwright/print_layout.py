@@ -181,6 +181,17 @@ with st.container(height=420, key="fixed_height_chart_row"):
 
 st.markdown("After the fixed-height chart row")
 
+with st.container(key="fixed_height_cards_row"):
+    fixed_card_left, fixed_card_right = st.columns(2)
+    with fixed_card_left:
+        with st.container(height=220, border=True, key="fixed_height_card_left"):
+            st.bar_chart(pd.DataFrame({"value": [2, 1, 3]}), height=160)
+    with fixed_card_right:
+        with st.container(height=220, border=True, key="fixed_height_card_right"):
+            st.line_chart(pd.DataFrame({"value": [1, 3, 2]}), height=160)
+
+st.markdown("After the fixed-height cards row")
+
 with st.container(key="page_links"):
     st.page_link("http://www.example.com", label="First page link")
     st.page_link("http://www.example.com", label="Second page link")
