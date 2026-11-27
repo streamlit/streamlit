@@ -58,9 +58,11 @@ clear entries from disk for a single `@st.cache_data` decorated function if
 
 from __future__ import annotations
 
+import contextlib
 import math
 import os
 import shutil
+import uuid
 from typing import Final
 
 from streamlit import errors
@@ -151,6 +153,13 @@ class LocalDiskCacheStorage(CacheStorage):
                     return bytes(value)
             except FileNotFoundError:
                 raise CacheStorageKeyNotFoundError("Key not found in disk cache")
+            except errors.Error as ex:
+                # streamlit_read raises this for an empty file, which an
+                # interrupted write can leave behind. Treat it as a miss so the
+                # value is recomputed and the file rewritten.
+                _LOGGER.warning("Discarding empty disk cache file for key %s", key)
+                self.delete(key)
+                raise CacheStorageKeyNotFoundError("Empty file in disk cache") from ex
             except Exception as ex:
                 _LOGGER.exception("Error reading from cache")
                 raise CacheStorageError("Unable to read from cache") from ex
@@ -163,17 +172,24 @@ class LocalDiskCacheStorage(CacheStorage):
         """Sets the value for a given key."""
         if self.persist == "disk":
             path = self._get_cache_file_path(key)
+            # Write to a temporary file and rename it into place, so readers
+            # never see a partially written entry and an interrupted write
+            # never leaves an empty one.
+            temp_path = os.path.join(
+                os.path.dirname(path),
+                f".{os.path.basename(path)}.{uuid.uuid4().hex}.tmp",
+            )
             try:
-                with streamlit_write(path, binary=True) as output:
-                    output.write(value)
-            except errors.Error as ex:
-                _LOGGER.debug("Unable to write to cache", exc_info=ex)
-                # Clean up file so we don't leave zero byte files.
                 try:
-                    os.remove(path)
-                except (FileNotFoundError, OSError):
-                    # If we can't remove the file, it's not a big deal.
-                    pass
+                    with streamlit_write(temp_path, binary=True) as output:
+                        output.write(value)
+                    os.replace(temp_path, path)
+                finally:
+                    # The temporary file only remains if the write or rename failed.
+                    with contextlib.suppress(OSError):
+                        os.remove(temp_path)
+            except (errors.Error, OSError) as ex:
+                _LOGGER.debug("Unable to write to cache", exc_info=ex)
                 raise CacheStorageError("Unable to write to cache") from ex
 
     def delete(self, key: str) -> None:
