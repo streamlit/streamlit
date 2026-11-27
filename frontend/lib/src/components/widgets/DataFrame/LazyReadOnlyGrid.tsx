@@ -16,7 +16,7 @@
 
 import { lazy, type ReactElement, Suspense } from "react"
 
-import { CodeLoadingSkeleton } from "~lib/components/elements/Skeleton/CodeLoadingSkeleton"
+import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 
 import type { ReadOnlyGridProps } from "./ReadOnlyGrid"
@@ -43,7 +43,11 @@ export function LazyReadOnlyGrid(props: ReadOnlyGridProps): ReactElement {
     <ErrorBoundary>
       <Suspense
         fallback={
-          <CodeLoadingSkeleton height={height ? `${height}px` : undefined} />
+          <SquareSkeleton
+            data-testid="stSkeleton"
+            aria-hidden="true"
+            height={height ? `${height}px` : undefined}
+          />
         }
       >
         <ReadOnlyGrid {...props} />

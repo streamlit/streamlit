@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
@@ -22,11 +22,9 @@ import {
   type streamlit,
 } from "@streamlit/protobuf"
 
-import { ElementTimingContext } from "~lib/components/core/RenderTimingContext"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
-import { RenderTimingTracker } from "~lib/util/performance/RenderTimingTracker"
 
 import ImageList, { type ImageListProps } from "./ImageList"
 
@@ -78,42 +76,6 @@ describe("ImageList Element", () => {
     const props = getProps()
     render(<ImageList {...props} />)
     expect(screen.getAllByRole("img")).toHaveLength(2)
-  })
-
-  it("reports each image as loading for render timing until it loads or fails", () => {
-    const tracker = new RenderTimingTracker({ onReport: vi.fn() })
-    const handle = tracker.createElementHandle()
-    render(
-      <ElementTimingContext.Provider value={handle}>
-        <ImageList {...getProps()} />
-      </ElementTimingContext.Provider>
-    )
-    const [loaded, failed] = screen.getAllByRole("img")
-    expect(handle.loadingSlots.size).toBe(2)
-
-    fireEvent.load(loaded)
-    expect(handle.loadingSlots.size).toBe(1)
-
-    fireEvent.error(failed)
-    expect(handle.loadingSlots.size).toBe(0)
-    tracker.dispose()
-  })
-
-  it("counts images that loaded before they committed as loaded", () => {
-    const completeSpy = vi
-      .spyOn(HTMLImageElement.prototype, "complete", "get")
-      .mockReturnValue(true)
-    const tracker = new RenderTimingTracker({ onReport: vi.fn() })
-    const handle = tracker.createElementHandle()
-    render(
-      <ElementTimingContext.Provider value={handle}>
-        <ImageList {...getProps()} />
-      </ElementTimingContext.Provider>
-    )
-
-    expect(handle.loadingSlots.size).toBe(0)
-    tracker.dispose()
-    completeSpy.mockRestore()
   })
 
   describe("Link parameter", () => {

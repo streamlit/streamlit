@@ -49,7 +49,6 @@ import { LazyReadOnlyGrid } from "~lib/components/widgets/DataFrame/LazyReadOnly
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import type { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
-import { useElementLoadState } from "~lib/hooks/useElementLoadState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { downloadDataUrl } from "~lib/util/downloadDataUrl"
@@ -374,10 +373,6 @@ export function EChartsChart({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the spec embeds each dataset's content hash, so element.datasets only changes when element.spec does
   }, [element.spec])
-  useElementLoadState(
-    "draw",
-    hasRendered || renderError !== null || parseError !== null
-  )
 
   // Log spec problems that would otherwise only show on the page: a spec
   // error replaces the chart, and an unknown series type leaves it blank. The

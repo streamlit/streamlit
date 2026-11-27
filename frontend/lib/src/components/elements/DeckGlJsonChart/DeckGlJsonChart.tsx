@@ -41,7 +41,6 @@ import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
-import { useElementLoadCallback } from "~lib/hooks/useElementLoadState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
@@ -126,8 +125,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     // script got re-executed.
     setIsInitialized(true)
   }, [])
-
-  const markDeckLoaded = useElementLoadCallback("draw", true)
 
   const handleClick = useCallback(
     (info: PickingInfo) => {
@@ -278,7 +275,6 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
             viewState={viewState}
             onViewStateChange={onViewStateChange}
             layers={isInitialized ? deck.layers : EMPTY_LAYERS}
-            onLoad={markDeckLoaded}
             getTooltip={createTooltip}
             // @ts-expect-error There is a type mismatch due to our versions of the libraries
             ContextProvider={MapContext.Provider}

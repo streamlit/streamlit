@@ -18,7 +18,6 @@ import { memo, type ReactElement, useEffect, useRef, useState } from "react"
 import type { IFrame as IFrameProto, streamlit } from "@streamlit/protobuf"
 import { isNullOrEmptyString } from "@streamlit/utils"
 
-import { useElementLoadCallback } from "~lib/hooks/useElementLoadState"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
@@ -132,7 +131,6 @@ function IFrame({
     : getNonEmptyString(element.srcdoc)
 
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const markFrameLoaded = useElementLoadCallback("media", src ?? rawSrcDoc)
   const [contentDimensions, setContentDimensions] =
     useState<ContentDimensions>({ width: null, height: null })
 
@@ -237,7 +235,6 @@ function IFrame({
       tabIndex={element.tabIndex ?? undefined}
       width={contentWidth}
       height={contentHeight}
-      onLoad={markFrameLoaded}
     />
   )
 }

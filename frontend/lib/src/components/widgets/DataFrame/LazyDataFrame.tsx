@@ -16,7 +16,7 @@
 
 import { type ComponentProps, lazy, type ReactElement, Suspense } from "react"
 
-import { CodeLoadingSkeleton } from "~lib/components/elements/Skeleton/CodeLoadingSkeleton"
+import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 
 const DataFrame = lazy(() => import("./DataFrame"))
 
@@ -34,7 +34,9 @@ export function LazyDataFrame(
   return (
     <Suspense
       fallback={
-        <CodeLoadingSkeleton
+        <SquareSkeleton
+          data-testid="stSkeleton"
+          aria-hidden="true"
           height={pixelHeight ? `${pixelHeight}px` : undefined}
         />
       }

@@ -33,13 +33,11 @@ import {
   streamlit,
 } from "@streamlit/protobuf"
 
-import { ElementTimingContext } from "~lib/components/core/RenderTimingContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import type * as LazyReadOnlyGridModule from "~lib/components/widgets/DataFrame/LazyReadOnlyGrid"
 import type * as FormClearHelperModule from "~lib/components/widgets/Form/FormClearHelper"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
-import { RenderTimingTracker } from "~lib/util/performance/RenderTimingTracker"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { EChartsChart } from "./EChartsChart"
@@ -1059,20 +1057,6 @@ describe("EChartsChart", () => {
     // No chart should be created for an invalid spec.
     expect(mockInit).not.toHaveBeenCalled()
     expect(screen.queryByTestId("stEChartsChart")).not.toBeInTheDocument()
-  })
-
-  it("counts an unparseable spec as drawn for render timing", () => {
-    const tracker = new RenderTimingTracker({ onReport: vi.fn() })
-    const handle = tracker.createElementHandle()
-    render(
-      <ElementTimingContext.Provider value={handle}>
-        <Wrapper element={createElement({ spec: "{not json" })} />
-      </ElementTimingContext.Provider>
-    )
-
-    expect(screen.getByTestId("stEChartsChartError")).toBeVisible()
-    expect(handle.loadingSlots.size).toBe(0)
-    tracker.dispose()
   })
 
   it.each([

@@ -22,7 +22,6 @@ import { type SubtitleTrack, Video as VideoProto } from "@streamlit/protobuf"
 import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
-import { useElementLoadCallback } from "~lib/hooks/useElementLoadState"
 import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import type { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
@@ -60,46 +59,6 @@ function Video({
     : trimmedAlt
 
   let crossOrigin = useCrossOriginAttribute(url)
-
-  const getYoutubeSrc = (urlArg: string): string => {
-    const youtubeUrl = new URL(urlArg)
-
-    if (startTime && !Number.isNaN(startTime)) {
-      youtubeUrl.searchParams.append("start", startTime.toString())
-    }
-
-    if (endTime && !Number.isNaN(endTime)) {
-      youtubeUrl.searchParams.append("end", endTime.toString())
-    }
-
-    if (loop) {
-      youtubeUrl.searchParams.append("loop", "1")
-      // When using the loop parameter, YouTube requires the playlist parameter to be set to the same video ID
-      const videoId = youtubeUrl.pathname.split("/").pop()
-
-      if (!isNullOrEmptyString(videoId)) {
-        youtubeUrl.searchParams.append("playlist", videoId)
-      }
-    }
-
-    if (autoplay) {
-      youtubeUrl.searchParams.append("autoplay", "1")
-    }
-
-    if (muted) {
-      youtubeUrl.searchParams.append("mute", "1")
-    }
-
-    return youtubeUrl.toString()
-  }
-
-  const youtubeSrc =
-    type === VideoProto.Type.YOUTUBE_IFRAME ? getYoutubeSrc(url) : undefined
-  const markVideoLoaded = useElementLoadCallback(
-    "media",
-    youtubeSrc ?? url,
-    videoRef
-  )
 
   const preventAutoplay = useMemo<boolean>(() => {
     if (!element.id) {
@@ -227,6 +186,38 @@ function Video({
     }
   }, [loop, startTime])
 
+  const getYoutubeSrc = (urlArg: string): string => {
+    const youtubeUrl = new URL(urlArg)
+
+    if (startTime && !Number.isNaN(startTime)) {
+      youtubeUrl.searchParams.append("start", startTime.toString())
+    }
+
+    if (endTime && !Number.isNaN(endTime)) {
+      youtubeUrl.searchParams.append("end", endTime.toString())
+    }
+
+    if (loop) {
+      youtubeUrl.searchParams.append("loop", "1")
+      // When using the loop parameter, YouTube requires the playlist parameter to be set to the same video ID
+      const videoId = youtubeUrl.pathname.split("/").pop()
+
+      if (!isNullOrEmptyString(videoId)) {
+        youtubeUrl.searchParams.append("playlist", videoId)
+      }
+    }
+
+    if (autoplay) {
+      youtubeUrl.searchParams.append("autoplay", "1")
+    }
+
+    if (muted) {
+      youtubeUrl.searchParams.append("mute", "1")
+    }
+
+    return youtubeUrl.toString()
+  }
+
   // Is this a YouTube link? If so we need a fancier tag.
   // NOTE: This part assumes the URL is already an "embed" link.
   if (type === VideoProto.Type.YOUTUBE_IFRAME) {
@@ -238,10 +229,9 @@ function Video({
         // stays as the fallback when the author did not provide a description.
         // Blank input must fall back too, or the iframe ends up untitled.
         title={accessibleName ?? url}
-        src={youtubeSrc}
+        src={getYoutubeSrc(url)}
         allow="autoplay; encrypted-media"
         allowFullScreen
-        onLoad={markVideoLoaded}
       />
     )
   }
@@ -249,7 +239,6 @@ function Video({
   const handleVideoError = (
     e: React.SyntheticEvent<HTMLVideoElement>
   ): void => {
-    markVideoLoaded()
     const videoUrl = e.currentTarget.src
     LOG.error(`Client Error: Video source error - ${videoUrl}`)
     endpoints.sendClientErrorToHost(
@@ -280,10 +269,6 @@ function Video({
       autoPlay={autoplay && !preventAutoplay}
       src={endpoints.buildMediaURL(url)}
       crossOrigin={crossOrigin}
-      onLoadedData={markVideoLoaded}
-      // Browsers that decide not to preload fire `suspend` instead of
-      // `loadeddata`, so either one ends the load.
-      onSuspend={markVideoLoaded}
       onError={handleVideoError}
     >
       {subtitles.map((subtitle: SubtitleTrack.$Properties, idx: number) => (

@@ -27,7 +27,6 @@ import {
 
 import {
   type ElementTimingHandle,
-  INPUT_ATTRIBUTION_WINDOW_MS,
   RENDER_TIMING_TIMEOUT_MS,
   type RenderTimingReport,
   RenderTimingTracker,
@@ -77,8 +76,6 @@ class FakeBrowser {
 
   private paintQueue: (() => void)[] = []
 
-  private readonly inputListeners = new Set<(timeStamp: number) => void>()
-
   readonly environment = {
     now: () => this.time,
     afterNextPaint: (callback: () => void) => {
@@ -92,21 +89,6 @@ class FakeBrowser {
     },
     isPageHidden: () => this.isHidden,
     getViewportSize: () => this.viewport,
-    listenForInput: (onInput: (timeStamp: number) => void) => {
-      this.inputListeners.add(onInput)
-      return () => {
-        this.inputListeners.delete(onInput)
-      }
-    },
-  }
-
-  /** Simulates a user input event at the given time. */
-  input(atTime: number): void {
-    this.inputListeners.forEach(onInput => onInput(atTime))
-  }
-
-  get inputListenerCount(): number {
-    return this.inputListeners.size
   }
 
   /** Advances the clock and paints one frame. */
@@ -207,8 +189,7 @@ describe("RenderTimingTracker", () => {
 
   describe("milestones", () => {
     it("measures the first run from navigation start", async () => {
-      // Connecting requests the first run, here right after an input.
-      browser.input(200)
+      // Connecting requests the first run.
       browser.time = 250
       tracker.rerunRequested()
       browser.time = 300
@@ -234,7 +215,6 @@ describe("RenderTimingTracker", () => {
             wasSuperseded: false,
             timedOut: false,
             timedOutElements: 0,
-            inputDelayMs: undefined,
           }),
         },
       ])
@@ -267,19 +247,17 @@ describe("RenderTimingTracker", () => {
       })
     })
 
-    it("measures a run without a request from its NewSession, with no input delay", async () => {
+    it("measures a run without a request from its NewSession", async () => {
       tracker.runStarted("run-0")
       await finishScript(10)
       browser.paintUntilIdle()
 
-      browser.input(1900)
       browser.time = 2000
       tracker.runStarted(RUN_ID)
       await finishScript(2300)
       browser.paintUntilIdle()
 
       expect(reports[1].renderTiming.fullyLoadedMs).toBe(300)
-      expect(reports[1].renderTiming.inputDelayMs).toBeUndefined()
     })
 
     it("reports a run without elements as loaded when the script finishes", async () => {
@@ -296,135 +274,6 @@ describe("RenderTimingTracker", () => {
 
     it("returns no run index when no run is measured", () => {
       expect(tracker.scriptFinished()).toBeUndefined()
-    })
-  })
-
-  describe("input delay", () => {
-    /** Finishes the first run so later runs are measured as reruns. */
-    const finishFirstRun = async (): Promise<void> => {
-      tracker.runStarted("run-0")
-      await finishScript(10)
-      browser.paintUntilIdle()
-    }
-
-    /** Starts and finishes a rerun, returning its renderTiming fields. */
-    const finishRerun = async (
-      scriptRunId: string,
-      atTime: number
-    ): Promise<RenderTimingReport["renderTiming"]> => {
-      browser.time = atTime
-      tracker.runStarted(scriptRunId)
-      await finishScript(atTime + 100)
-      browser.paintUntilIdle()
-      const report = reports.at(-1)
-      if (!report) throw new Error("No run was reported")
-      return report.renderTiming
-    }
-
-    it("reports the time from the last input to the rerun request", async () => {
-      await finishFirstRun()
-
-      browser.input(800)
-      browser.input(850)
-      browser.time = 1000
-      tracker.rerunRequested()
-
-      expect(await finishRerun(RUN_ID, 1100)).toMatchObject({
-        inputDelayMs: 150,
-        fullyLoadedMs: 200,
-      })
-    })
-
-    it("counts each input toward one request at most", async () => {
-      await finishFirstRun()
-
-      browser.input(900)
-      browser.time = 1000
-      tracker.rerunRequested()
-      expect((await finishRerun("run-1", 1050)).inputDelayMs).toBe(100)
-
-      browser.time = 1500
-      tracker.rerunRequested()
-      expect((await finishRerun("run-2", 1550)).inputDelayMs).toBeUndefined()
-    })
-
-    it("ignores inputs older than the attribution window", async () => {
-      await finishFirstRun()
-
-      browser.input(1000)
-      browser.time = 1000 + INPUT_ATTRIBUTION_WINDOW_MS + 1
-      tracker.rerunRequested()
-
-      expect(
-        (await finishRerun(RUN_ID, browser.time + 50)).inputDelayMs
-      ).toBeUndefined()
-    })
-
-    it("doesn't attribute an input to a request that can't follow one", async () => {
-      await finishFirstRun()
-
-      browser.input(900)
-      browser.time = 950
-      tracker.rerunRequested({ canFollowInput: false })
-      expect((await finishRerun("run-1", 980)).inputDelayMs).toBeUndefined()
-
-      // The input still belongs to the user's request that follows.
-      browser.time = 1000
-      tracker.rerunRequested()
-      expect((await finishRerun("run-2", 1050)).inputDelayMs).toBe(100)
-    })
-
-    it("measures from the earliest request and uses its input delay when requests join", async () => {
-      await finishFirstRun()
-
-      browser.input(900)
-      browser.time = 1000
-      tracker.rerunRequested()
-      browser.input(1020)
-      browser.time = 1030
-      tracker.rerunRequested()
-
-      expect(await finishRerun(RUN_ID, 1100)).toMatchObject({
-        inputDelayMs: 100,
-        fullyLoadedMs: 200,
-      })
-    })
-
-    it("drops the input delay when a request that can't follow input joins it before the run starts", async () => {
-      await finishFirstRun()
-
-      browser.input(900)
-      browser.time = 1000
-      tracker.rerunRequested()
-      browser.time = 1030
-      tracker.rerunRequested({ canFollowInput: false })
-
-      const renderTiming = await finishRerun(RUN_ID, 1100)
-      expect(renderTiming.inputDelayMs).toBeUndefined()
-      expect(renderTiming.fullyLoadedMs).toBe(200)
-    })
-
-    it("only listens to trusted input events", async () => {
-      tracker.dispose()
-      const addListener = vi.spyOn(document, "addEventListener")
-      const { listenForInput: _, ...environment } = browser.environment
-      tracker = new RenderTimingTracker({
-        onReport: report => reports.push(report),
-        environment,
-      })
-      expect(addListener).toHaveBeenCalledWith(
-        "pointerup",
-        expect.any(Function),
-        expect.objectContaining({ capture: true })
-      )
-      await finishFirstRun()
-
-      // Events created by scripts, as here, have isTrusted false.
-      document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }))
-      browser.time = 1000
-      tracker.rerunRequested()
-
-      expect((await finishRerun(RUN_ID, 1100)).inputDelayMs).toBeUndefined()
     })
   })
 
@@ -1083,7 +932,6 @@ describe("RenderTimingTracker", () => {
         "visibilitychange",
         expect.any(Function)
       )
-      expect(browser.inputListenerCount).toBe(0)
     })
   })
 })

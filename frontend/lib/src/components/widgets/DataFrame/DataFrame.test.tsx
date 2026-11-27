@@ -27,14 +27,12 @@ import { userEvent } from "@testing-library/user-event"
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
-import { ElementTimingContext } from "~lib/components/core/RenderTimingContext"
 import { Quiver } from "~lib/dataframes/Quiver"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import * as UseScrollbarGutterSize from "~lib/hooks/useScrollbarGutterSize"
 import { EMPTY } from "~lib/mocks/arrow/empty"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render, renderWithContexts } from "~lib/test_util"
-import { RenderTimingTracker } from "~lib/util/performance/RenderTimingTracker"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 // Track DataEditor calls for assertions - separate from the component so we can use forwardRef
@@ -239,28 +237,6 @@ describe("DataFrame widget", () => {
   it("renders without crashing", () => {
     render(<DataFrame {...props} />)
     expect(screen.getAllByTestId("stDataFrameResizable").length).toBe(1)
-  })
-
-  it("reports the grid as drawing for render timing until its first visible region", () => {
-    const tracker = new RenderTimingTracker({ onReport: vi.fn() })
-    const handle = tracker.createElementHandle()
-    render(
-      <ElementTimingContext.Provider value={handle}>
-        <DataFrame {...props} />
-      </ElementTimingContext.Provider>
-    )
-    expect(handle.loadingSlots.size).toBe(1)
-
-    act(() => {
-      invokeDataEditorCallback("onVisibleRegionChanged", {
-        x: 0,
-        y: 0,
-        width: 5,
-        height: 5,
-      })
-    })
-    expect(handle.loadingSlots.size).toBe(0)
-    tracker.dispose()
   })
 
   it("renders when widgetMgr is undefined", () => {

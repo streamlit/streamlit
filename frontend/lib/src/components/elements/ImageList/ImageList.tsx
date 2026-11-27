@@ -39,7 +39,6 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/Streamli
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar from "~lib/components/shared/Toolbar/Toolbar"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
-import { useElementLoadCallback } from "~lib/hooks/useElementLoadState"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { plainTextWithBlockGaps } from "~lib/util/plainText"
@@ -163,22 +162,13 @@ const Image = ({
     return () => observer.disconnect()
   }, [image.caption, onCaptionPlainTextChange, safeLink])
 
-  const src = buildMediaURL(image.url)
-  const imgRef = useRef<HTMLImageElement>(null)
-  const markImageLoaded = useElementLoadCallback("media", src, imgRef)
-
   const imageElement = (
     // oxlint-disable-next-line jsx-a11y/alt-text
     <img
-      ref={imgRef}
       style={imgStyle}
-      src={src}
+      src={buildMediaURL(image.url)}
       alt={imgAlt}
-      onLoad={markImageLoaded}
-      onError={e => {
-        markImageLoaded()
-        handleImageError(e)
-      }}
+      onError={handleImageError}
       crossOrigin={crossOrigin}
     />
   )

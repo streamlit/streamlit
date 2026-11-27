@@ -33,25 +33,6 @@ export type ElementLoadKind = "code" | "draw" | "media"
  */
 export const RENDER_TIMING_TIMEOUT_MS = 30_000
 
-/**
- * Longest time from the user's last input to a rerun request for the input
- * to count as the cause of the request. Older inputs are more likely to be
- * unrelated than to be a real delay.
- */
-export const INPUT_ATTRIBUTION_WINDOW_MS = 2_000
-
-/**
- * Events that end a discrete user interaction. Pointer moves and wheel
- * events are left out because they fire continuously.
- */
-const INPUT_EVENT_TYPES = [
-  "pointerup",
-  "click",
-  "keydown",
-  "change",
-  "drop",
-] as const
-
 /** Lower bounds, in CSS pixels, of the reported viewport size buckets. */
 const VIEWPORT_WIDTH_BUCKETS = [0, 480, 768, 1024, 1280, 1600, 1920]
 const VIEWPORT_HEIGHT_BUCKETS = [0, 480, 720, 900, 1080, 1440]
@@ -80,11 +61,6 @@ export interface RenderTimingEnvironment {
   ) => IntersectionObserver | undefined
   isPageHidden: () => boolean
   getViewportSize: () => { width: number; height: number }
-  /**
-   * Calls `onInput` with the timestamp of each user input event, on the
-   * same clock as `now`. Returns a function that stops listening.
-   */
-  listenForInput: (onInput: (timeStamp: number) => void) => () => void
 }
 
 /** One renderTiming metrics event. */
@@ -136,7 +112,6 @@ interface RunMeasurement {
   readonly scriptRunId: string
   readonly startAt: number
   scriptFinishedAt?: number
-  readonly inputDelayMs?: number
   /**
    * Earliest paint of content that was in the viewport. Kept on the run
    * because an element that changes during the run, such as streamed text,
@@ -195,22 +170,6 @@ const DEFAULT_ENVIRONMENT: RenderTimingEnvironment = {
     // eslint-disable-next-line no-restricted-properties, streamlit-custom/no-force-reflow-access -- Non-React class; see above.
     height: window.innerHeight,
   }),
-  listenForInput: onInput => {
-    // Captured on the document so a widget that stops propagation can't
-    // hide its input.
-    const listener = (event: Event): void => {
-      if (event.isTrusted) onInput(event.timeStamp)
-    }
-    const options = { capture: true, passive: true }
-    INPUT_EVENT_TYPES.forEach(type => {
-      document.addEventListener(type, listener, options)
-    })
-    return () => {
-      INPUT_EVENT_TYPES.forEach(type => {
-        document.removeEventListener(type, listener, options)
-      })
-    }
-  },
 }
 
 /** Whether the run can't complete until this record changes. */
@@ -375,14 +334,6 @@ export class RenderTimingTracker {
   /** Time of the earliest rerun request since the last run started. */
   private pendingRequestAt?: number
 
-  /** Input delay of the request at `pendingRequestAt`. */
-  private pendingInputDelayMs?: number
-
-  /** Time of the latest user input not yet attributed to a request. */
-  private lastInputAt?: number
-
-  private stopListeningForInput?: () => void
-
   private run?: RunMeasurement
 
   private isDisposed = false
@@ -399,10 +350,6 @@ export class RenderTimingTracker {
         env.createIntersectionObserver((entries, observer) => {
           this.guard(() => callback(entries, observer))
         }),
-      listenForInput: onInput =>
-        env.listenForInput(timeStamp => {
-          this.guard(() => onInput(timeStamp))
-        }),
     }
     this.onReport = onReport
     this.wasHiddenBeforeFirstRun = false
@@ -414,9 +361,6 @@ export class RenderTimingTracker {
         "visibilitychange",
         this.handleVisibilityChange
       )
-      this.stopListeningForInput = this.env.listenForInput(timeStamp => {
-        this.lastInputAt = timeStamp
-      })
     })
   }
 
@@ -424,28 +368,10 @@ export class RenderTimingTracker {
     return new ElementTimingHandle(this)
   }
 
-  /**
-   * Called when the browser sends a rerun request. Set `canFollowInput:
-   * false` when no page input caused the request, such as an automatic
-   * fragment rerun or history navigation. This also clears input delay from
-   * a request already waiting for its run.
-   */
-  rerunRequested({
-    canFollowInput = true,
-  }: { canFollowInput?: boolean } = {}): void {
+  /** Called when the browser sends a rerun request. */
+  rerunRequested(): void {
     this.guard(() => {
-      const now = this.env.now()
-      if (this.pendingRequestAt === undefined) {
-        this.pendingRequestAt = now
-        this.pendingInputDelayMs = canFollowInput
-          ? this.getInputDelay(now)
-          : undefined
-      } else if (!canFollowInput) {
-        // The run that answers the joined requests may be this one, which
-        // no input caused.
-        this.pendingInputDelayMs = undefined
-      }
-      if (canFollowInput) this.lastInputAt = undefined
+      this.pendingRequestAt ??= this.env.now()
       const { run } = this
       if (run && !run.isFinalized) {
         run.wasSuperseded = true
@@ -454,14 +380,6 @@ export class RenderTimingTracker {
         }
       }
     })
-  }
-
-  private getInputDelay(requestAt: number): number | undefined {
-    if (this.lastInputAt === undefined) return undefined
-    const delay = requestAt - this.lastInputAt
-    return delay >= 0 && delay <= INPUT_ATTRIBUTION_WINDOW_MS
-      ? Math.round(delay)
-      : undefined
   }
 
   /** Called when a NewSession message starts a run. */
@@ -484,7 +402,6 @@ export class RenderTimingTracker {
       runIndex,
       scriptRunId,
       startAt: isFirstRun ? 0 : (this.pendingRequestAt ?? now),
-      inputDelayMs: isFirstRun ? undefined : this.pendingInputDelayMs,
       wasHidden:
         (isFirstRun && this.wasHiddenBeforeFirstRun) ||
         this.env.isPageHidden(),
@@ -505,7 +422,6 @@ export class RenderTimingTracker {
       if (!run.isFinalized) run.viewportSize = this.env.getViewportSize()
     })
     this.pendingRequestAt = undefined
-    this.pendingInputDelayMs = undefined
     this.run = run
   }
 
@@ -561,7 +477,6 @@ export class RenderTimingTracker {
         "visibilitychange",
         this.handleVisibilityChange
       )
-      this.stopListeningForInput?.()
     } catch (error) {
       LOG.error("Failed to release render timing resources:", error)
     }
@@ -915,7 +830,6 @@ export class RenderTimingTracker {
       wasSuperseded: run.wasSuperseded,
       timedOut: reason === "timedOut",
       timedOutElements,
-      inputDelayMs: run.inputDelayMs,
     }
   }
 

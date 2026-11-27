@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import type { Mock, MockInstance } from "vitest"
 
 import {
@@ -22,7 +22,6 @@ import {
   SpecialArg,
 } from "@streamlit/protobuf"
 
-import { ElementTimingContext } from "~lib/components/core/RenderTimingContext"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { mockTheme } from "~lib/mocks/mockTheme"
@@ -32,7 +31,6 @@ import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "~lib/util/IFrameUtil"
-import { RenderTimingTracker } from "~lib/util/performance/RenderTimingTracker"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import ComponentInstance, {
@@ -362,55 +360,6 @@ describe("ComponentInstance", () => {
         })
       )
       expect(postMessage).toHaveBeenCalledWith(renderMsg(jsonArgs, []), "*")
-    })
-
-    it("counts as loading for render timing until COMPONENT_READY", () => {
-      const tracker = new RenderTimingTracker({ onReport: vi.fn() })
-      const handle = tracker.createElementHandle()
-      const setLoading = vi.spyOn(handle, "setLoading")
-      renderWithContexts(
-        <ElementTimingContext.Provider value={handle}>
-          <ComponentInstance
-            element={createElementProp()}
-            disabled={false}
-            widgetMgr={
-              new WidgetStateManager({
-                sendRerunBackMsg: vi.fn(),
-                formsDataChanged: vi.fn(),
-              })
-            }
-            componentRegistry={getComponentRegistry()}
-          />
-        </ElementTimingContext.Provider>
-      )
-      const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
-      expect(setLoading).toHaveBeenLastCalledWith(
-        expect.any(String),
-        "media",
-        true
-      )
-
-      // The iframe stays hidden after its document loads.
-      fireEvent.load(iframe)
-      expect(setLoading).toHaveBeenCalledTimes(1)
-
-      dispatchMessageEvent(
-        new MessageEvent("message", {
-          data: {
-            isStreamlitMessage: true,
-            apiVersion: 1,
-            type: ComponentMessageType.COMPONENT_READY,
-          },
-          // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
-          source: iframe.contentWindow,
-        })
-      )
-      expect(setLoading).toHaveBeenLastCalledWith(
-        expect.any(String),
-        "media",
-        false
-      )
-      tracker.dispose()
     })
 
     it("hides the skeleton and maintains iframe height of 0", () => {
