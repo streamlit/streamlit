@@ -559,6 +559,59 @@ describe("FlexBoxContainer layout props", () => {
         },
       })
 
+    it.each([
+      [
+        "pixel-height vertical",
+        BlockProto.FlexContainer.Direction.VERTICAL,
+        { pixelHeight: 400 },
+        true,
+      ],
+      [
+        "rem-height vertical",
+        BlockProto.FlexContainer.Direction.VERTICAL,
+        { remHeight: 20 },
+        true,
+      ],
+      [
+        "content-height vertical",
+        BlockProto.FlexContainer.Direction.VERTICAL,
+        { useContent: true },
+        false,
+      ],
+      [
+        "stretch-height vertical",
+        BlockProto.FlexContainer.Direction.VERTICAL,
+        { useStretch: true },
+        false,
+      ],
+      [
+        "fixed-height horizontal",
+        BlockProto.FlexContainer.Direction.HORIZONTAL,
+        { pixelHeight: 400 },
+        false,
+      ],
+    ])(
+      "marks only fixed-height vertical containers as print boundaries: %s",
+      (_label, direction, heightConfig, expected) => {
+        renderWithContexts(
+          makeVerticalBlockComponent(
+            makeVerticalBlock([], {
+              heightConfig,
+              flexContainer: { direction },
+            })
+          )
+        )
+
+        const testId =
+          direction === BlockProto.FlexContainer.Direction.VERTICAL
+            ? "stVerticalBlock"
+            : "stHorizontalBlock"
+        expect(
+          screen.getByTestId(testId).hasAttribute("data-st-print-fixed-height")
+        ).toBe(expected)
+      }
+    )
+
     it("keeps flex for a stretch-height container in a fixed-height parent", () => {
       renderWithContexts(
         makeVerticalBlockComponent(

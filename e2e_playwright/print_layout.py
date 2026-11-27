@@ -150,6 +150,25 @@ with st.container(horizontal=True, height=180, key="horizontal_chart"):
 
 st.markdown("After the horizontal chart")
 
+st.markdown(
+    """
+    <style>
+    .st-key-fixed_height_chart_row {
+        background: linear-gradient(
+            to right,
+            #1010f0 0 44px,
+            transparent 44px 72px,
+            #00b83f 72px 108px,
+            transparent 108px
+        );
+        forced-color-adjust: none;
+        print-color-adjust: exact;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 with st.container(height=420, key="fixed_height_chart_row"):
     fixed_left, fixed_right = st.columns(2)
     fixed_left.bar_chart(pd.DataFrame({"value": [3, 1, 2]}), height=160)

@@ -59,32 +59,32 @@ const CHECKBOX_WRAPPER_SELECTOR = ".stCheckbox"
 export const PRINT_BORDERED_COLUMN_CLASS = "stPrintBorderedColumn"
 
 /**
- * Content that makes a printed column row stack into one column: an element
- * that keeps a width measured on screen (see `PrintLayout`). A border alone
- * does not stack the row, so a row of bordered metric cards stays side by
- * side.
+ * A row stacks in print when it contains a visible element that keeps its
+ * screen width (see `PrintLayout`), unless the element is inside a fixed-height
+ * vertical container. A border alone does not stack the row, so a row of
+ * bordered metric cards stays side by side.
  */
-const PRINT_STACK_TRIGGER = `:is(.${PrintLayout.FIXED_WIDTH}, .${PrintLayout.GRAPHIC})`
+const PRINT_STACK_TRIGGER = `:is(.${PrintLayout.FIXED_WIDTH}, .${PrintLayout.GRAPHIC})${PRINT_VISIBLE_FILTER}:not([data-st-print-fixed-height] *)`
 
 /**
  * Relative selector for a dataframe, table, or chart that prints inside a
  * direct child column. It has no leading `&`, so wrap it in `&:has(...)`.
  */
-const PRINT_STACK_TRIGGER_IN_COLUMN = `> .stColumn ${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER}`
+const PRINT_STACK_TRIGGER_IN_COLUMN = `> .stColumn ${PRINT_STACK_TRIGGER}`
 
 /**
  * Emotion selector for this horizontal container when it is not an
  * `st.columns` row and it holds a dataframe, table, or chart on the printed
  * page. The leading `&` is this flex container.
  */
-const PRINT_STACK_HORIZONTAL_CONTAINER = `&:not(:has(> .stColumn)):has(${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER})`
+const PRINT_STACK_HORIZONTAL_CONTAINER = `&:not(:has(> .stColumn)):has(${PRINT_STACK_TRIGGER})`
 
 /**
  * Relative selector for a descendant column row or horizontal container that
  * stacks in print because it holds a dataframe, table, or chart. It has no
  * leading `&`, so wrap it in `&:has(...)`.
  */
-const PRINT_STACKING_ROW = `.stHorizontalBlock ${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER}`
+const PRINT_STACKING_ROW = `.stHorizontalBlock ${PRINT_STACK_TRIGGER}`
 
 const GLOBAL_ELEMENTS = new Set(["balloons", "snow"])
 

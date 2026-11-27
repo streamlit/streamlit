@@ -84,6 +84,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).not.toContain("container-type")
     expect(css).toContain(":not([data-st-inactive] *)")
     expect(css).toContain("details:not([open])")
+    expect(css).toContain(":not([data-st-print-fixed-height] *)")
     expect(css).not.toContain("data-testid")
     expect(css).toContain(">.stColumn")
     expect(css).toContain("display:block")
@@ -245,7 +246,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).not.toMatch(/\.css-[\w-]+ ?> ?:not\(:last-child\)/)
   })
 
-  it("releases a fixed height around a descendant row that stacks in print", () => {
+  it("releases a fixed height only when the descendant row can stack in print", () => {
     const css = cssOf(
       render(
         createElement(StyledFlexContainerBlock, {
@@ -263,6 +264,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).toMatch(
       /:has\(\.stHorizontalBlock :is\(\.stPrintFixedWidth[^{]*\{height:auto;max-height:none;overflow:visible;display:block/
     )
+    expect(css).toContain(":not([data-st-print-fixed-height] *)")
     expect(css).toContain("margin-bottom:17px")
     // A stretch-height element was sized by the fixed height through size
     // containment. It drops containment so it keeps its content's height.

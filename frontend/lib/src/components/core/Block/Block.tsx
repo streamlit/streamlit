@@ -384,6 +384,11 @@ export const FlexBoxContainer = (
           .filter(Boolean)
           .join(" ")}
         data-testid={getClassnamePrefix(direction)}
+        data-st-print-fixed-height={
+          direction === Direction.VERTICAL && heightContextProps.hasFixedHeight
+            ? "true"
+            : undefined
+        }
         data-test-wrap={String(wrap)}
         ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
         data-test-scroll-behavior={

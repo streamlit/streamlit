@@ -463,18 +463,17 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
 
     wait_until(app, horizontal_chart_stacks)
 
-    # A vertical fixed-height container fits the chart row side by side, but
-    # not once it stacks. Print cannot scroll, so the container grows to fit
-    # both charts instead of clipping the second one. A stretch-height chart
-    # below the row keeps a usable height instead of collapsing onto the
-    # next element.
+    # A vertical fixed-height container remains a print boundary. Its chart
+    # row stays side by side, so print does not release the container height
+    # and expand its custom background into a long patch. The stretch-height
+    # chart below the row still fills the remaining space.
     fixed_height_container = get_element_by_key(app, "fixed_height_chart_row")
     fixed_height_charts = fixed_height_container.get_by_test_id("stVegaLiteChart")
     after_fixed_height = app.get_by_text("After the fixed-height chart row", exact=True)
     expect(fixed_height_charts).to_have_count(3)
     expect(after_fixed_height).to_be_visible()
 
-    def fixed_height_container_grows() -> None:
+    def fixed_height_container_stays_bounded() -> None:
         container_box = fixed_height_container.bounding_box()
         first_box = fixed_height_charts.nth(0).bounding_box()
         second_box = fixed_height_charts.nth(1).bounding_box()
@@ -486,19 +485,26 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
         assert stretch_box is not None
         assert after_box is not None
         container_bottom = container_box["y"] + container_box["height"]
-        assert first_box["y"] + first_box["height"] <= second_box["y"] + 1
-        assert second_box["y"] + second_box["height"] <= stretch_box["y"] + 1
+        assert abs(container_box["height"] - 420) < 2
+        assert abs(first_box["y"] - second_box["y"]) < 2
+        assert second_box["x"] >= first_box["x"] + first_box["width"] - 1
+        assert first_box["y"] + first_box["height"] <= stretch_box["y"] + 1
         assert stretch_box["height"] > 100
         assert stretch_box["y"] + stretch_box["height"] <= container_bottom + 1
         assert container_bottom <= after_box["y"] + 1
 
-    wait_until(app, fixed_height_container_grows)
-    assert (
-        fixed_height_container.evaluate(
-            "element => getComputedStyle(element).overflowY"
-        )
-        == "visible"
+    wait_until(app, fixed_height_container_stays_bounded)
+    fixed_height_style = fixed_height_container.evaluate(
+        """element => {
+            const style = getComputedStyle(element)
+            return {
+                backgroundImage: style.backgroundImage,
+                overflowY: style.overflowY,
+            }
+        }"""
     )
+    assert fixed_height_style["backgroundImage"].startswith("linear-gradient")
+    assert fixed_height_style["overflowY"] == "auto"
 
     # Stretch-height charts keep a usable height when their fixed-height
     # horizontal container stacks and grows to fit its children.
