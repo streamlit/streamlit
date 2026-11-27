@@ -3161,16 +3161,16 @@ def _update_config_with_env_vars(
     This should only be called from get_config_options.
 
     - Sensitive options are stored as raw strings.
-    - Unset or empty variables, and options in `overridden_keys`, are skipped.
-      A higher-precedence source sets the overridden options.
-    - Other options are converted to their declared type, as `streamlit run`
-      does. A value that cannot be converted is logged and ignored.
+    - Skips unset or empty variables, and options in `overridden_keys`.
+      `get_config_options` applies those afterward from CLI flags or
+      `App.run(config=...)`.
+    - Converts other options to their declared type, as `streamlit run` does.
+      A value that cannot be converted is logged and not applied.
 
-    Startup validation (`_validate_env_vars`) raises before the server starts.
-    This function only logs, so a later config reload cannot crash a running
-    server. If `previous_options` holds a value that was loaded from the same
-    environment variable, that value is kept. Otherwise the option keeps the
-    value from the config files or its default.
+    This function only logs invalid values, so a config reload cannot crash a
+    running server; `_validate_env_vars` raises for them at startup. On a
+    reload, an option keeps the value it previously loaded from the same
+    variable, if any. Otherwise it keeps its config file or default value.
     """
     import click
 
@@ -3189,12 +3189,15 @@ def _update_config_with_env_vars(
             # Log without a traceback: the message already names the variable
             # and the bad value.
             _LOGGER.error(  # noqa: TRY400
-                "Ignoring invalid environment variable: %s", exc.format_message()
+                "Invalid environment variable, not applying it: %s",
+                exc.format_message(),
             )
             previous = (previous_options or {}).get(opt_name)
             if previous is not None and previous.where_defined == _DEFINED_BY_ENV_VAR:
                 _set_option(opt_name, previous.value, _DEFINED_BY_ENV_VAR)
             continue
+        # An empty multi-value result means unset, as in `streamlit run`.
+        # Keep 0 and False.
         if converted_value != ():
             _set_option(opt_name, converted_value, _DEFINED_BY_ENV_VAR)
 
