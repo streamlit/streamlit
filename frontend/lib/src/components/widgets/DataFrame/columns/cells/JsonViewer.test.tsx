@@ -17,7 +17,7 @@
 import type { Theme as GlideTheme } from "@glideapps/glide-data-grid"
 import { screen } from "@testing-library/react"
 
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 
 import { JsonViewer } from "./JsonViewer"
 
@@ -53,6 +53,15 @@ describe("JsonViewer", () => {
     // ReactJson component should be rendered
     expect(screen.getByText(/name/)).toBeInTheDocument()
     expect(screen.getByText(/test/)).toBeInTheDocument()
+  })
+
+  it("hides the clipboard copy icon when data export is disabled", () => {
+    const { container } = renderWithContexts(
+      <JsonViewer jsonValue={{ name: "test" }} theme={mockTheme} />,
+      { libConfigContext: { disableDataExport: true } }
+    )
+    expect(screen.getByTestId("stJsonColumnViewer")).toBeInTheDocument()
+    expect(container.querySelector(".copy-icon")).not.toBeInTheDocument()
   })
 
   it("renders invalid JSON as text", () => {

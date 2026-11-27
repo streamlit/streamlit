@@ -1,0 +1,219 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+
+import sys
+
+import pytest
+from playwright.sync_api import Locator, Page, expect
+
+from e2e_playwright.shared.app_utils import get_element_by_key
+from e2e_playwright.shared.dataframe_utils import click_on_cell
+
+COMMAND_KEY = "Meta" if sys.platform == "darwin" else "Control"
+
+
+@pytest.fixture(scope="module")
+def app_server_extra_args() -> list[str]:
+    return ["--client.disableDataExport=true"]
+
+
+def _expect_csv_export_hidden(dataframe: Locator) -> None:
+    dataframe.hover()
+    toolbar = dataframe.get_by_test_id("stElementToolbar")
+    expect(toolbar).to_be_attached()
+    expect(toolbar.get_by_label("Download as CSV")).not_to_be_attached()
+
+
+def _expect_copy_blocked(app: Page, grid: Locator) -> None:
+    click_on_cell(grid, 1, 0, column_width="small")
+
+    app.evaluate("navigator.clipboard.writeText('sentinel')")
+    app.keyboard.press(f"{COMMAND_KEY}+c")
+    # Copy is expected to be blocked, so there is no observable clipboard change
+    # to poll for. Give any (unwanted) async copy a chance to run before we
+    # assert the clipboard is untouched.
+    app.wait_for_timeout(200)
+
+    assert app.evaluate("navigator.clipboard.readText()") == "sentinel"
+
+
+def _expect_paste_allowed(app: Page, grid: Locator) -> None:
+    app.evaluate("navigator.clipboard.writeText('pasted-value')")
+    click_on_cell(grid, 1, 0, column_width="small")
+    app.keyboard.press(f"{COMMAND_KEY}+v")
+
+    expect(get_element_by_key(app, "editor-value")).to_contain_text("pasted-value")
+
+
+def _expect_cut_blocked(app: Page, grid: Locator) -> None:
+    click_on_cell(grid, 2, 0, column_width="small")
+
+    app.evaluate("navigator.clipboard.writeText('sentinel')")
+    app.keyboard.press(f"{COMMAND_KEY}+x")
+    app.wait_for_timeout(200)
+
+    assert app.evaluate("navigator.clipboard.readText()") == "sentinel"
+    expect(get_element_by_key(app, "editor-value")).to_contain_text("Bob")
+
+
+def _chart_toolbar(chart: Locator) -> Locator:
+    return chart.locator("..").get_by_test_id("stElementToolbar")
+
+
+def _get_read_only_dataframe(app: Page) -> Locator:
+    return get_element_by_key(app, "read-only-dataframe").get_by_test_id("stDataFrame")
+
+
+def _get_data_editor(app: Page) -> Locator:
+    return get_element_by_key(app, "editable-data-editor").get_by_test_id("stDataFrame")
+
+
+def _get_chart_container(app: Page) -> Locator:
+    return get_element_by_key(app, "chart-table-view")
+
+
+def _get_plotly(app: Page) -> Locator:
+    return get_element_by_key(app, "plotly").get_by_test_id("stPlotlyChart")
+
+
+def _get_echarts_container(app: Page) -> Locator:
+    return get_element_by_key(app, "echarts")
+
+
+def _get_mermaid_frame(app: Page) -> Locator:
+    return get_element_by_key(app, "mermaid").get_by_test_id("stFullScreenFrame")
+
+
+def _get_exception(app: Page) -> Locator:
+    return get_element_by_key(app, "exception").get_by_test_id("stException")
+
+
+def _show_chart_table_view(app: Page) -> Locator:
+    chart_container = _get_chart_container(app)
+    chart = chart_container.get_by_test_id("stVegaLiteChart").first
+    expect(chart).to_be_visible()
+
+    chart.hover(force=True)
+    chart.locator("..").get_by_test_id("stElementToolbar").get_by_label(
+        "Show Data"
+    ).click()
+
+    chart_table_view = chart_container.get_by_test_id("stDataFrame")
+    expect(chart_table_view).to_be_visible()
+    return chart_table_view
+
+
+def test_hides_export_and_copy_controls(app: Page):
+    read_only_dataframe = _get_read_only_dataframe(app)
+    data_editor = _get_data_editor(app)
+
+    _expect_csv_export_hidden(read_only_dataframe)
+    _expect_csv_export_hidden(data_editor)
+
+    chart_container = _get_chart_container(app)
+    chart = chart_container.get_by_test_id("stVegaLiteChart").first
+    expect(chart).to_be_visible()
+    # The PNG action appears only after the chart renders. Wait for the
+    # canvas or svg so a missing button means the flag hid it.
+    expect(chart.locator("canvas, svg").first).to_be_visible()
+
+    toolbar = _chart_toolbar(chart)
+    chart.hover(force=True)
+    expect(toolbar.get_by_label("Download as PNG")).not_to_be_attached()
+    expect(toolbar.get_by_label("Copy Vega-Lite spec")).not_to_be_attached()
+    expect(toolbar.get_by_label("Show Data")).to_be_visible()
+
+    chart_table_view = _show_chart_table_view(app)
+    expect(chart_table_view.get_by_label("Show chart")).to_be_visible()
+    _expect_csv_export_hidden(chart_table_view)
+
+    download_button = (
+        get_element_by_key(app, "download-button")
+        .get_by_test_id("stDownloadButton")
+        .get_by_role("button")
+    )
+    expect(download_button).to_be_visible()
+    expect(download_button).to_be_enabled()
+
+    code_block = get_element_by_key(app, "code-block").get_by_test_id("stCode")
+    expect(code_block).to_be_visible()
+    code_block.hover()
+    expect(code_block.get_by_label("Copy to clipboard")).not_to_be_attached()
+
+    json_element = get_element_by_key(app, "json").get_by_test_id("stJson")
+    expect(json_element).to_be_visible()
+    expect(json_element.locator(".copy-icon")).to_have_count(0)
+
+    plotly = _get_plotly(app)
+    plotly.scroll_into_view_if_needed()
+    expect(plotly.locator(".main-svg, canvas").first).to_be_visible()
+    plotly.hover()
+    expect(
+        plotly.get_by_role("button", name="Download plot as a PNG")
+    ).not_to_be_attached()
+    expect(plotly.get_by_role("button", name="Fullscreen")).to_be_visible()
+
+    echarts_container = _get_echarts_container(app)
+    echarts = echarts_container.get_by_test_id("stEChartsChart")
+    echarts.scroll_into_view_if_needed()
+    expect(echarts.locator("canvas")).to_be_visible()
+    echarts.hover()
+    expect(
+        echarts_container.get_by_role("button", name="Download as PNG")
+    ).not_to_be_attached()
+
+    mermaid_frame = _get_mermaid_frame(app)
+    mermaid_frame.scroll_into_view_if_needed()
+    expect(
+        mermaid_frame.get_by_test_id("stMermaidChart").locator("img")
+    ).to_be_visible()
+    mermaid_frame.hover()
+    mermaid_toolbar = mermaid_frame.get_by_test_id("stElementToolbar")
+    expect(
+        mermaid_toolbar.get_by_role("button", name="Download as PNG")
+    ).not_to_be_attached()
+    expect(
+        mermaid_toolbar.get_by_role("button", name="Copy to clipboard")
+    ).not_to_be_attached()
+
+    exception = _get_exception(app)
+    exception.scroll_into_view_if_needed()
+    expect(exception).to_be_visible()
+    expect(exception.get_by_role("button", name="Copy")).not_to_be_attached()
+    expect(exception.get_by_role("link", name="Ask Google")).not_to_be_attached()
+    expect(exception.get_by_role("link", name="Ask ChatGPT")).not_to_be_attached()
+
+
+@pytest.mark.only_browser("chromium")
+def test_disables_dataframe_and_editor_clipboard_copy(app: Page):
+    """Read-only dataframe and data editor copy/cut are blocked; paste still works.
+
+    Chromium-only: reliable clipboard read/write in Playwright.
+    """
+    app.context.grant_permissions(["clipboard-read", "clipboard-write"])
+
+    _expect_copy_blocked(app, _get_read_only_dataframe(app))
+    _expect_copy_blocked(app, _get_data_editor(app))
+    _expect_cut_blocked(app, _get_data_editor(app))
+    _expect_paste_allowed(app, _get_data_editor(app))
+
+
+@pytest.mark.only_browser("chromium")
+def test_disables_chart_table_view_clipboard_copy(app: Page):
+    """Chart table view copy is blocked. Chromium-only: reliable clipboard read/write in Playwright."""
+    app.context.grant_permissions(["clipboard-read", "clipboard-write"])
+
+    _expect_copy_blocked(app, _show_chart_table_view(app))

@@ -41,6 +41,7 @@ import {
   shouldHeightStretch,
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
@@ -123,6 +124,7 @@ export function PlotlyChart({
   heightConfig,
 }: Readonly<PlotlyChartProps>): ReactElement {
   const theme = useEmotionTheme()
+  const { disableDataExport = false } = useContext(LibConfigContext)
   const {
     expanded: isFullScreen,
     width: elWidth,
@@ -255,6 +257,10 @@ export function PlotlyChart({
       removeModeBarButton("sendChartToCloud")
     }
 
+    if (disableDataExport) {
+      removeModeBarButton("toImage")
+    }
+
     config.modeBarButtonsToRemove = modeBarButtonsToRemove
     return config
     // We want to reload the plotlyConfig object whenever the element id changes
@@ -269,6 +275,7 @@ export function PlotlyChart({
     isBoxSelectionActivated,
     collapse,
     expand,
+    disableDataExport,
   ])
 
   useEffect(() => {

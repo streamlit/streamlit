@@ -18,11 +18,13 @@ import {
   memo,
   type ReactElement,
   useCallback,
+  useContext,
   useEffect,
   useRef,
   useState,
 } from "react"
 
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
@@ -112,6 +114,7 @@ function ColumnMenu({
   }, [])
 
   const { isCopied, copyToClipboard } = useCopyToClipboard()
+  const { disableDataExport = false } = useContext(LibConfigContext)
 
   const { floatingStyles, setFloating, setReference } = useFloatingOverlay({
     open: true,
@@ -210,18 +213,22 @@ function ColumnMenu({
               </StyledTypeIconContainer>
               <StyledColumnNameWithIcon title={column.title}>
                 <StyledColumnNameText>{column.title}</StyledColumnNameText>
-                <StyledIconButton
-                  onClick={handleCopyNameToClipboard}
-                  title="Copy column name"
-                  aria-label="Copy column name"
-                >
-                  <DynamicIcon
-                    size="sm"
-                    iconValue={
-                      isCopied ? ":material/check:" : ":material/content_copy:"
-                    }
-                  />
-                </StyledIconButton>
+                {!disableDataExport && (
+                  <StyledIconButton
+                    onClick={handleCopyNameToClipboard}
+                    title="Copy column name"
+                    aria-label="Copy column name"
+                  >
+                    <DynamicIcon
+                      size="sm"
+                      iconValue={
+                        isCopied
+                          ? ":material/check:"
+                          : ":material/content_copy:"
+                      }
+                    />
+                  </StyledIconButton>
+                )}
               </StyledColumnNameWithIcon>
             </StyledColumnHeaderRow>
 

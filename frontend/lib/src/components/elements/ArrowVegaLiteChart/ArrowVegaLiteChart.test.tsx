@@ -668,7 +668,7 @@ describe("ArrowVegaLiteChart", () => {
     ).toBeTruthy()
   })
 
-  it("hides CSV export in table view when data export is disabled, but keeps PNG download", async () => {
+  it("hides CSV export in table view and PNG download when data export is disabled", async () => {
     const user = userEvent.setup()
     vegaEmbedMock.isViewReady = true
 
@@ -684,7 +684,10 @@ describe("ArrowVegaLiteChart", () => {
     // The toolbar is only shown (opacity > 0) on hover, so assert presence in
     // the DOM rather than visibility here.
     expect(
-      screen.getByRole("button", { name: "Download as PNG" })
+      screen.queryByRole("button", { name: "Download as PNG" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Show data" })
     ).toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Show data" }))
@@ -750,6 +753,16 @@ describe("ArrowVegaLiteChart", () => {
 
     await waitFor(() => expect(vegaEmbedMock.exportToPng).toHaveBeenCalled())
     expect(downloadFilename).toBe("2026-07-02T16-01_chart.png")
+  })
+
+  it("hides the copy spec toolbar action when data export is disabled", () => {
+    renderWithContexts(<ArrowVegaLiteChart {...getProps()} />, {
+      libConfigContext: { disableDataExport: true },
+    })
+
+    expect(
+      screen.queryByRole("button", { name: "Copy Vega-Lite spec" })
+    ).not.toBeInTheDocument()
   })
 
   it("shows the copy spec toolbar action on localhost", () => {

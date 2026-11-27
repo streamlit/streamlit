@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-import { memo, type ReactElement, useCallback } from "react"
+import { memo, type ReactElement, useCallback, useContext } from "react"
 
 import JSON5 from "json5"
 
 import type { Json as JsonProto } from "@streamlit/protobuf"
 
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import ErrorElement from "~lib/components/shared/ErrorElement/ErrorElement"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -43,6 +44,7 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
   const { tooltip, handleSelect, clearTooltip } = useJsonTooltip()
 
   const { copyToClipboard } = useCopyToClipboard()
+  const { disableDataExport = false } = useContext(LibConfigContext)
 
   const handleCopy = useCallback(
     (copy: OnCopyProps): void => {
@@ -81,8 +83,8 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
         displayObjectSize={false}
         name={false}
         theme={jsonTheme}
-        enableClipboard={handleCopy}
-        onSelect={handleSelect}
+        enableClipboard={disableDataExport ? false : handleCopy}
+        onSelect={disableDataExport ? undefined : handleSelect}
         showComma={false}
         style={{
           fontFamily: theme.genericFonts.codeFont,

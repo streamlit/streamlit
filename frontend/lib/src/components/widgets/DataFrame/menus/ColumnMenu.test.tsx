@@ -25,7 +25,7 @@ import {
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { sizes } from "~lib/theme/primitives/sizes"
 
 import ColumnMenu, { type ColumnMenuProps } from "./ColumnMenu"
@@ -331,6 +331,16 @@ describe("DataFrame ColumnMenu", () => {
   })
 
   describe("copy column name functionality (isCopied state)", () => {
+    it("hides the copy column name button when data export is disabled", () => {
+      renderWithContexts(<ColumnMenu {...defaultProps} />, {
+        libConfigContext: { disableDataExport: true },
+      })
+
+      expect(
+        screen.queryByRole("button", { name: "Copy column name" })
+      ).not.toBeInTheDocument()
+    })
+
     it("shows copy icon initially and switches to check icon after copy", async () => {
       mockWriteText.mockResolvedValue(undefined)
 
