@@ -587,12 +587,22 @@ class App:
         if __name__ == "__main__":
             app.run()
         """
+        import click
+
         from streamlit import config as streamlit_config
         from streamlit import runtime
         from streamlit.web import bootstrap
         from streamlit.web.server.starlette.starlette_server import UvicornRunner
 
         config_overrides = _validate_run_config(config)
+
+        # Fail like `streamlit run` does when an environment variable for a
+        # config option has an invalid value.
+        try:
+            streamlit_config._validate_env_vars(config_overrides)
+        except click.ClickException as exc:
+            exc.show()
+            raise SystemExit(exc.exit_code) from None
 
         if runtime.exists():
             raise StreamlitAPIException(
