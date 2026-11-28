@@ -42,6 +42,25 @@ if TYPE_CHECKING:
 GENERATED_ELEMENT_ID_PREFIX: Final = "$$ID"
 TESTING_KEY = "$$STREAMLIT_INTERNAL_KEY_TESTING"
 
+# When a fragment-only (``run_every``) auto-rerun is in progress, ``fragment_ids_this_run``
+# is populated with the IDs of the executing fragments.  The widget-cleanup pass in
+# ``SessionState._remove_stale_widgets`` uses this to distinguish between:
+#
+#   * A widget that genuinely no longer exists (should be removed).
+#   * A widget from a non-fragment part of the script that was not re-executed in this
+#     partial run (should be *preserved* until the next full-page run).
+#
+# In particular, widgets protected by the "interrupt-cleanup" pattern
+# (``st.session_state[key] = st.session_state.get(key, default)`` before a widget
+# declaration) must survive fragment auto-reruns, otherwise cross-page widget state
+# is silently dropped while ``run_every`` fragments are active.
+#
+# See: https://github.com/streamlit/streamlit/issues/10805
+FRAGMENT_AUTO_RERUN_WIDGET_PRESERVATION_NOTE: Final = (
+    "fragment_ids_this_run being set signals a partial (fragment-only) run; "
+    "widgets absent from _new_widget_state.widget_metadata must be preserved."
+)
+
 
 T = TypeVar("T")
 T_co = TypeVar("T_co", covariant=True)
