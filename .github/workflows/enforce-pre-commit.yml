@@ -58,4 +58,95 @@ jobs:
       - name: Install frontend dependencies
         run: cd frontend && yarn install
       - name: Run pre-commit hooks
-        run: PRE_COMMIT_NO_CONCURRENCY=true pre-commit run --show-diff-on-failure --color=always --all-files
+        run: |
+          # Run pre-commit and capture both output and exit code
+          set +e  # Don't exit on error
+          PRE_COMMIT_NO_CONCURRENCY=true pre-commit run --show-diff-on-failure --color=always --all-files 2>&1 | tee /tmp/precommit_output.txt
+          PRECOMMIT_EXIT_CODE=${PIPESTATUS[0]}
+          set -e  # Re-enable exit on error
+
+          # If pre-commit failed, provide specific instructions based on the output
+          if [ $PRECOMMIT_EXIT_CODE -ne 0 ]; then
+            echo ""
+            echo "============================================================================"
+            echo "❌ Pre-commit hooks failed!"
+            echo "============================================================================"
+            echo ""
+
+            # Read the pre-commit output for analysis
+            PRECOMMIT_OUTPUT=$(cat /tmp/precommit_output.txt || echo "")
+
+            # Check for specific hook failures and provide targeted instructions
+            # Look for specific hook patterns followed by "Failed" on the same line
+            if echo "$PRECOMMIT_OUTPUT" | grep -q "Check generated agent rules.*Failed"; then
+              echo "🔧 Agent rules are out of sync!"
+              echo ""
+              echo "Generated agent rules don't match their source AGENTS.md files."
+              echo ""
+              echo "If you modified AGENTS.md files:"
+              echo "   python scripts/generate_agent_rules.py"
+              echo "   git add .cursor/rules/ .github/instructions/"
+              echo ""
+              echo "If you modified generated files (.cursor/rules/ or .github/instructions/) directly:"
+              echo "   1. Update the corresponding AGENTS.md files to match your changes"
+              echo "   2. python scripts/generate_agent_rules.py"
+              echo "   3. git add .cursor/rules/ .github/instructions/"
+              echo ""
+              echo "Then commit the changes."
+              echo ""
+            fi
+
+            if echo "$PRECOMMIT_OUTPUT" | grep -q "ruff.*Failed"; then
+              echo "🔧 Python code formatting/linting issues detected!"
+              echo ""
+              echo "Fix Python issues with:"
+              echo "   make python-format    # Format Python files"
+              echo "   make python-lint      # Check for remaining issues"
+              echo ""
+            fi
+
+            if echo "$PRECOMMIT_OUTPUT" | grep -q "Prettier.*Failed"; then
+              echo "🔧 Frontend code formatting issues detected!"
+              echo ""
+              echo "Fix frontend formatting with:"
+              echo "   make frontend-format  # Format TypeScript/JavaScript files"
+              echo ""
+            fi
+
+            if echo "$PRECOMMIT_OUTPUT" | grep -q "Add license for all.*Failed\|Checks license headers.*Failed"; then
+              echo "🔧 Missing or incorrect license headers!"
+              echo ""
+              echo "License headers will be automatically added when you run:"
+              echo "   pre-commit run --all-files"
+              echo ""
+            fi
+
+            if echo "$PRECOMMIT_OUTPUT" | grep -q "Check VSCode/devcontainer sync.*Failed"; then
+              echo "🔧 VSCode/devcontainer files are out of sync!"
+              echo ""
+              echo "Update the sync with:"
+              echo "   python scripts/sync_vscode_devcontainer.py"
+              echo ""
+            fi
+
+            echo "🔧 General fix commands:"
+            echo ""
+            echo "1. Install pre-commit (if not already installed):"
+            echo "   pip install pre-commit"
+            echo "   pre-commit install"
+            echo ""
+            echo "2. Run the autofix command to fix most issues automatically:"
+            echo "   make autofix"
+            echo ""
+            echo "3. Run pre-commit locally to check your changes:"
+            echo "   pre-commit run --all-files"
+            echo ""
+            echo "4. Commit your changes and push again."
+            echo ""
+            echo "For more details, see: https://github.com/streamlit/streamlit/wiki/Contributing"
+            echo ""
+            echo "============================================================================"
+
+            # Exit with the original pre-commit exit code
+            exit $PRECOMMIT_EXIT_CODE
+          fi
